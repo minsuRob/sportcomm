@@ -1,8 +1,8 @@
 import React from "react";
 import { FlatList, View, Text } from "react-native";
-import { styled } from "nativewind/styled";
 
 // --- Type Definitions ---
+// This defines the shape of a single comment object.
 export interface Comment {
   id: string;
   content: string;
@@ -18,36 +18,37 @@ interface CommentListProps {
   comments: Comment[];
 }
 
-// --- Styled Components ---
-const CommentContainer = styled(
-  View,
-  "p-3 border-b border-gray-200 dark:border-gray-700",
-);
-const CommentHeader = styled(View, "flex-row items-center");
-const Nickname = styled(Text, "font-semibold text-gray-800 dark:text-gray-200");
-const Timestamp = styled(Text, "ml-2 text-xs text-gray-500");
-const Content = styled(Text, "mt-1 text-gray-700 dark:text-gray-300");
-const EmptyContainer = styled(View, "p-8 items-center");
-const EmptyText = styled(Text, "text-gray-500");
-
+// --- Sub-component for a single comment item ---
+// This keeps the main component logic clean and focuses on rendering one item.
 const CommentItem = ({ item }: { item: Comment }) => {
   return (
-    <CommentContainer>
-      <CommentHeader>
-        <Nickname>{item.author.nickname}</Nickname>
-        <Timestamp>{new Date(item.createdAt).toLocaleDateString()}</Timestamp>
-      </CommentHeader>
-      <Content>{item.content}</Content>
-    </CommentContainer>
+    <View className="p-3 border-b border-border">
+      <View className="flex-row items-center">
+        <Text className="font-semibold text-foreground">
+          {item.author.nickname}
+        </Text>
+        <Text className="ml-2 text-xs text-muted-foreground">
+          {new Date(item.createdAt).toLocaleDateString()}
+        </Text>
+      </View>
+      <Text className="mt-1 text-base text-foreground">{item.content}</Text>
+    </View>
   );
 };
 
+/**
+ * A reusable component to render a list of comments.
+ * It follows the NativeWind v4 pattern of using `className` for styling.
+ */
 export default function CommentList({ comments }: CommentListProps) {
+  // Handle the case where there are no comments to display.
   if (!comments || comments.length === 0) {
     return (
-      <EmptyContainer>
-        <EmptyText>No comments yet. Be the first to comment!</EmptyText>
-      </EmptyContainer>
+      <View className="p-8 items-center bg-card">
+        <Text className="text-muted-foreground">
+          No comments yet. Be the first to comment!
+        </Text>
+      </View>
     );
   }
 
@@ -56,7 +57,7 @@ export default function CommentList({ comments }: CommentListProps) {
       data={comments}
       renderItem={({ item }) => <CommentItem item={item} />}
       keyExtractor={(item) => item.id}
-      className="bg-white dark:bg-gray-800"
+      className="bg-card"
     />
   );
 }

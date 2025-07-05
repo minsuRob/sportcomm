@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
-import { styled } from "nativewind/styled";
+import { useMutation } from "urql";
 import {
   Heart,
   MessageCircle,
@@ -8,11 +8,9 @@ import {
   MoreHorizontal,
   Eye,
 } from "lucide-react-native";
-import { useMutation } from "urql";
-import { TOGGLE_LIKE } from "../lib/graphql";
+import { TOGGLE_LIKE } from "@/lib/graphql";
 
 // --- Type Definitions ---
-// In a larger app, these would live in a shared types file or be generated from the GraphQL schema.
 export enum PostType {
   ANALYSIS = "ANALYSIS",
   CHEERING = "CHEERING",
@@ -31,13 +29,10 @@ export interface Media {
   type: "image" | "video";
 }
 
-// The feed query only fetches comment IDs for performance.
 export interface Comment {
   id: string;
 }
 
-// This is the data shape the PostCard component expects as a prop.
-// It's derived from the GraphQL query result in FeedScreen.
 export interface Post {
   id: string;
   content: string;
@@ -50,90 +45,50 @@ export interface Post {
   likesCount: number;
   commentsCount: number;
   isLiked: boolean;
+  isMock?: boolean;
 }
 
 interface PostCardProps {
   post: Post;
 }
 
-// --- Styled Components ---
-const CardContainer = styled(
-  View,
-  "bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700",
-);
-const Header = styled(View, "flex-row items-center justify-between");
-const UserInfo = styled(View, "flex-row items-center");
-const Avatar = styled(Image, "w-12 h-12 rounded-full");
-const Nickname = styled(
-  Text,
-  "ml-3 font-bold text-lg text-gray-900 dark:text-white",
-);
-const PostContent = styled(
-  Text,
-  "my-3 text-base text-gray-800 dark:text-gray-300",
-);
-const MediaImage = styled(Image, "w-full h-56 rounded-lg bg-gray-200");
-const ActionBar = styled(
-  View,
-  "flex-row justify-around items-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-600",
-);
-const ActionButton = styled(TouchableOpacity, "flex-row items-center");
-const ActionText = styled(
-  Text,
-  "ml-2 text-sm text-gray-600 dark:text-gray-400",
-);
-const StatsContainer = styled(View, "flex-row items-center mt-2");
-const StatText = styled(Text, "text-sm text-gray-500 dark:text-gray-400 mr-4");
-const CommentPreviewContainer = styled(View, "mt-2");
-const CommentText = styled(Text, "text-sm text-gray-500 dark:text-gray-400");
-const PostTypeText = styled(Text, "text-white text-xs font-bold");
-
 // --- Helper Function ---
 const getPostTypeStyle = (type: PostType) => {
   switch (type) {
     case PostType.ANALYSIS:
-      return { badge: "bg-indigo-500", text: "ANALYSIS" };
+      return { badge: "bg-indigo-500", text: "Analysis" };
     case PostType.HIGHLIGHT:
-      return { badge: "bg-amber-500", text: "HIGHLIGHT" };
+      return { badge: "bg-amber-500", text: "Highlight" };
     case PostType.CHEERING:
     default:
-      return { badge: "bg-green-500", text: "CHEERING" };
+      return { badge: "bg-green-500", text: "Cheering" };
   }
 };
 
 // --- The Component ---
 export default function PostCard({ post }: PostCardProps) {
-  // Local state for optimistic UI updates on "like" actions.
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likesCount, setLikesCount] = useState(post.likesCount);
 
-  // Effect to re-sync local state if the parent passes a changed post prop (e.g., on list refresh).
   useEffect(() => {
     setIsLiked(post.isLiked);
     setLikesCount(post.likesCount);
   }, [post.isLiked, post.likesCount]);
 
-  // urql mutation hook for toggling likes.
   const [likeResult, executeLike] = useMutation(TOGGLE_LIKE);
 
   const handleLike = () => {
-    // 1. Optimistically update the UI.
     const newLikedStatus = !isLiked;
     const newLikesCount = newLikedStatus ? likesCount + 1 : likesCount - 1;
     setIsLiked(newLikedStatus);
     setLikesCount(newLikesCount);
 
-    // 2. Execute the mutation in the background.
     executeLike({ postId: post.id }).then((result) => {
-      // 3. If the mutation fails, revert the optimistic update.
       if (result.error) {
         console.error("Failed to toggle like:", result.error);
-        setIsLiked(!newLikedStatus); // Revert liked status
-        setLikesCount(likesCount); // Revert likes count
-        // In a real app, you would show a toast message to the user here.
+        setIsLiked(!newLikedStatus);
+        setLikesCount(likesCount);
       }
-      // On success, the backend is now in sync with our optimistic state. No further action is needed
-      // unless the mutation returns new data that we need to sync.
     });
   };
 
@@ -142,79 +97,110 @@ export default function PostCard({ post }: PostCardProps) {
     post.author.profileImageUrl ||
     `https://i.pravatar.cc/150?u=${post.author.id}`;
   const postTypeStyle = getPostTypeStyle(post.type);
-  const likeColor = isLiked ? "#EF4444" : "#6B7280"; // Red if liked, gray otherwise
+  const likeColor = isLiked ? "#EF4444" : "#6B7280"; // Red-500 if liked, gray-500 otherwise
 
   return (
-    <CardContainer>
+    <View className="bg-card p-4 border-b border-border">
       {/* Header */}
-      <Header>
-        <UserInfo>
-          <Avatar source={{ uri: avatarUrl }} />
-          <View>
-            <Nickname>{post.author.nickname}</Nickname>
-            <Text className="ml-3 text-xs text-gray-500 dark:text-gray-400">
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center">
+          <Image
+            source={{ uri: avatarUrl }}
+            className="w-12 h-12 rounded-full"
+          />
+          <View className="ml-3">
+            <Text className="font-bold text-lg text-foreground">
+              {post.author.nickname}
+            </Text>
+            <Text className="text-xs text-muted-foreground">
               {new Date(post.createdAt).toLocaleDateString()}
             </Text>
           </View>
-        </UserInfo>
+        </View>
         <TouchableOpacity>
           <MoreHorizontal size={24} color="#6B7280" />
         </TouchableOpacity>
-      </Header>
+      </View>
 
       {/* Content */}
-      <PostContent>{post.content}</PostContent>
+      <Text className="my-3 text-base text-foreground">{post.content}</Text>
 
       {/* Media */}
       {firstMedia?.type === "image" && (
         <View className="relative">
-          <MediaImage source={{ uri: firstMedia.url }} />
+          <Image
+            source={{ uri: firstMedia.url }}
+            className="w-full h-56 rounded-lg bg-secondary"
+          />
           <View
             className={`absolute top-2 right-2 ${postTypeStyle.badge} px-2 py-1 rounded-full`}
           >
-            <PostTypeText>{postTypeStyle.text}</PostTypeText>
+            <Text className="text-white text-xs font-bold">
+              {postTypeStyle.text}
+            </Text>
           </View>
         </View>
       )}
 
       {/* Stats */}
-      <StatsContainer>
+      <View className="flex-row items-center mt-3">
         <Heart size={16} color="#6B7280" />
-        <StatText className="ml-1">{likesCount} Likes</StatText>
+        <Text className="ml-1 text-sm text-muted-foreground mr-4">
+          {likesCount} Likes
+        </Text>
         <MessageCircle size={16} color="#6B7280" />
-        <StatText className="ml-1">{post.commentsCount} Comments</StatText>
+        <Text className="ml-1 text-sm text-muted-foreground mr-4">
+          {post.commentsCount} Comments
+        </Text>
         <Eye size={16} color="#6B7280" />
-        <StatText className="ml-1">{post.viewCount} Views</StatText>
-      </StatsContainer>
+        <Text className="ml-1 text-sm text-muted-foreground">
+          {post.viewCount} Views
+        </Text>
+      </View>
 
       {/* Action Bar */}
-      <ActionBar>
-        <ActionButton onPress={handleLike} disabled={likeResult.fetching}>
+      <View className="flex-row justify-around items-center mt-3 pt-3 border-t border-border">
+        <TouchableOpacity
+          onPress={handleLike}
+          disabled={likeResult.fetching}
+          className="flex-row items-center"
+        >
           <Heart
             size={22}
             color={likeColor}
-            fill={isLiked ? likeColor : "none"}
+            fill={isLiked ? likeColor : "transparent"}
           />
-          <ActionText style={{ color: likeColor }}>Like</ActionText>
-        </ActionButton>
-        <ActionButton>
+          <Text
+            style={{ color: likeColor }}
+            className="ml-2 text-sm font-medium"
+          >
+            Like
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity className="flex-row items-center">
           <MessageCircle size={22} color="#6B7280" />
-          <ActionText>Comment</ActionText>
-        </ActionButton>
-        <ActionButton>
+          <Text className="ml-2 text-sm font-medium text-muted-foreground">
+            Comment
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity className="flex-row items-center">
           <Repeat size={22} color="#6B7280" />
-          <ActionText>Repost</ActionText>
-        </ActionButton>
-      </ActionBar>
+          <Text className="ml-2 text-sm font-medium text-muted-foreground">
+            Repost
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Comment Preview */}
       {post.commentsCount > 0 && (
-        <CommentPreviewContainer>
+        <View className="mt-2">
           <TouchableOpacity>
-            <CommentText>View all {post.commentsCount} comments</CommentText>
+            <Text className="text-sm text-muted-foreground">
+              View all {post.commentsCount} comments
+            </Text>
           </TouchableOpacity>
-        </CommentPreviewContainer>
+        </View>
       )}
-    </CardContainer>
+    </View>
   );
 }

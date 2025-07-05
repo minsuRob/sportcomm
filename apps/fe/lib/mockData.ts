@@ -8,9 +8,9 @@
 // --- Type Definitions ---
 // These types should align with the main application's types (e.g., in PostCard.tsx or a shared types file).
 export enum PostType {
-  ANALYSIS = 'ANALYSIS',
-  CHEERING = 'CHEERING',
-  HIGHLIGHT = 'HIGHLIGHT',
+  ANALYSIS = "ANALYSIS",
+  CHEERING = "CHEERING",
+  HIGHLIGHT = "HIGHLIGHT",
 }
 
 export interface User {
@@ -22,7 +22,7 @@ export interface User {
 export interface Media {
   id: string;
   url: string;
-  type: 'image' | 'video';
+  type: "image" | "video";
 }
 
 export interface Comment {
@@ -41,7 +41,7 @@ export interface Post {
   likesCount: number;
   commentsCount: number;
   isLiked: boolean;
-  isMock?: boolean; // Add isMock flag
+  isMock?: boolean; // Flag to identify mock data
 }
 
 /**
@@ -54,22 +54,27 @@ export const createMockFeedData = (count = 5): Post[] => {
     const postId = `mock_post_${i}`;
     return {
       id: postId,
-      content: `This is a mock post #${i + 1}. Welcome to Sportcomm! This is where you'll see live discussions, highlights, and analysis from fellow sports fans.`,
+      content: `This is a mock post #${
+        i + 1
+      }. Welcome to Sportcomm! This is where you'll see live discussions, highlights, and analysis from fellow sports fans.`,
       author: {
         id: `mock_user_${i % 2}`,
-        nickname: i % 2 === 0 ? 'SportyFan' : 'TeamGinger',
+        nickname: i % 2 === 0 ? "SportyFan" : "TeamGinger",
         profileImageUrl: `https://i.pravatar.cc/150?u=mock_user_${i % 2}`,
       },
       media: [
         {
           id: `mock_media_${postId}`,
           url: `https://picsum.photos/seed/${postId}/400/300`,
-          type: 'image',
+          type: "image",
         },
       ],
-      comments: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, (_, c) => ({
-        id: `mock_comment_${postId}_${c}`,
-      })),
+      comments: Array.from(
+        { length: Math.floor(Math.random() * 5) + 1 },
+        (_, c) => ({
+          id: `mock_comment_${postId}_${c}`,
+        }),
+      ),
       createdAt: new Date(Date.now() - i * 1000 * 60 * 60 * 3).toISOString(),
       type: [PostType.HIGHLIGHT, PostType.ANALYSIS, PostType.CHEERING][i % 3],
       viewCount: Math.floor(Math.random() * 1200) + 50,

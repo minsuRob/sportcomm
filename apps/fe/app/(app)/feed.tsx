@@ -1,35 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ActivityIndicator, View, Button, Text } from "react-native";
-import { styled } from "nativewind/styled";
 import { useQuery } from "urql";
 
-import { GET_POSTS } from "../../lib/graphql";
-import { createMockFeedData } from "../../lib/mockData";
-import FeedList from "../../components/FeedList";
-
-// --- Type Definitions ---
-// These should ideally be in a shared types directory or generated from the GraphQL schema.
-enum PostType {
-  ANALYSIS = "ANALYSIS",
-  CHEERING = "CHEERING",
-  HIGHLIGHT = "HIGHLIGHT",
-}
-
-interface User {
-  id: string;
-  nickname: string;
-  profileImageUrl?: string;
-}
-
-interface Media {
-  id: string;
-  url: string;
-  type: "image" | "video";
-}
-
-interface Comment {
-  id: string;
-}
+import { GET_POSTS } from "@/lib/graphql";
+import {
+  createMockFeedData,
+  Post as PostTypeData,
+  PostType,
+} from "@/lib/mockData";
+import FeedList from "@/components/FeedList";
 
 // This is the shape of the data coming from the GraphQL query
 interface GqlPost {
@@ -38,26 +17,23 @@ interface GqlPost {
   createdAt: string;
   type: PostType;
   viewCount: number;
-  author: User;
-  media: Media[];
-  comments: Comment[];
+  author: {
+    id: string;
+    nickname: string;
+    profileImageUrl?: string;
+  };
+  media: {
+    id: string;
+    url: string;
+    type: "image" | "video";
+  }[];
+  comments: {
+    id: string;
+  }[];
 }
 
-// This is the shape of the data the FeedList and PostCard components expect
-export interface Post extends GqlPost {
-  isLiked: boolean;
-  likesCount: number;
-  commentsCount: number;
-  isMock?: boolean;
-}
-
-// --- Styled Components ---
-const CenterContainer = styled(
-  View,
-  "flex-1 justify-center items-center bg-gray-50 dark:bg-black",
-);
-const ErrorText = styled(Text, "text-red-500 text-lg mb-4 text-center px-4");
-const FooterSpinner = styled(View, "p-4");
+// Re-export the Post type from mockData to be used within this screen and other screens.
+export type Post = PostTypeData;
 
 const PAGE_SIZE = 10;
 
@@ -66,7 +42,6 @@ export default function FeedScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // --- urql Query Hook ---
-  // This hook manages the network request, caching, and state (fetching, error).
   const [result, executeQuery] = useQuery<{ posts: GqlPost[] }>({
     query: GET_POSTS,
     variables: { skip: 0, take: PAGE_SIZE },
@@ -75,12 +50,9 @@ export default function FeedScreen() {
   const { data, fetching, error } = result;
 
   // --- Data Handling Effect ---
-  // This effect runs when new data arrives from the `useQuery` hook.
-  // It transforms the raw GraphQL data into the shape our UI components expect
-  // and merges it into our local state for infinite scroll.
   useEffect(() => {
+    // Case 1: Handle a successful API response.
     if (data?.posts) {
-      // Case 1: The API returned actual posts.
       if (data.posts.length > 0) {
         const transformedPosts: Post[] = data.posts.map((p) => ({
           ...p,
@@ -91,13 +63,11 @@ export default function FeedScreen() {
         }));
 
         setPosts((currentPosts) => {
-          // If refreshing, or if we were previously showing mock data, replace the list.
           const wasShowingMocks =
             currentPosts.length > 0 && currentPosts[0].isMock;
           if (isRefreshing || wasShowingMocks) {
             return transformedPosts;
           }
-          // Otherwise, merge new posts for infinite scroll.
           const postMap = new Map(currentPosts.map((p) => [p.id, p]));
           transformedPosts.forEach((p) => postMap.set(p.id, p));
           const mergedPosts = Array.from(postMap.values());
@@ -106,64 +76,64 @@ export default function FeedScreen() {
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
-      }
-      // Case 2: API returned no posts, and the screen is currently empty (initial load).
-      else if (posts.length === 0) {
+      } else if (posts.length === 0) {
+        // Case 2: API returned no posts on initial load.
         console.log(
           "Feed is empty. Populating with mock data for demonstration.",
         );
-        // Populate with mock data.
         setPosts(createMockFeedData(5));
       }
-      // Case 3: API returned no posts, but we already have posts (end of infinite scroll).
-      // In this case, we do nothing.
+    } else if (error && posts.length === 0) {
+      // Case 3: Error on initial load, show mock data instead of an error message.
+      console.log(
+        "Error fetching feed. Populating with mock data for demonstration.",
+        error.message,
+      );
+      setPosts(createMockFeedData(5));
+    }
 
+    // After processing data or error, if we were refreshing, stop the indicator.
+    if (isRefreshing) {
       setIsRefreshing(false);
     }
-  }, [data, isRefreshing]);
+  }, [data, error, isRefreshing, posts.length]);
 
   // --- Event Handlers ---
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    // Re-fetch the first page, bypassing the cache for fresh data.
     executeQuery({ requestPolicy: "network-only" });
   }, [executeQuery]);
 
   const handleLoadMore = useCallback(() => {
     const hasMoreData = data?.posts?.length === PAGE_SIZE;
-    // Prevent fetching if already in progress or if the last fetch brought back less than a full page
     if (fetching || !hasMoreData) {
       return;
     }
-    // Fetch the next page by updating the 'skip' variable
     executeQuery({
       variables: { skip: posts.length, take: PAGE_SIZE },
     });
   }, [fetching, executeQuery, posts.length, data?.posts]);
 
   // --- Render Logic ---
-  // Initial loading state (only show if the screen is completely empty)
   if (fetching && posts.length === 0 && !isRefreshing) {
     return (
-      <CenterContainer>
+      <View className="flex-1 justify-center items-center bg-background">
         <ActivityIndicator size="large" />
-      </CenterContainer>
+      </View>
     );
   }
 
-  // Error state (only show if the screen is completely empty)
   if (error && posts.length === 0) {
     return (
-      <CenterContainer>
-        <ErrorText>
+      <View className="flex-1 justify-center items-center bg-background p-4">
+        <Text className="text-destructive text-lg text-center mb-4">
           An error occurred while fetching the feed: {error.message}
-        </ErrorText>
+        </Text>
         <Button title="Retry" onPress={handleRefresh} />
-      </CenterContainer>
+      </View>
     );
   }
 
-  // Main feed list
   return (
     <FeedList
       posts={posts}
@@ -171,12 +141,11 @@ export default function FeedScreen() {
       onRefresh={handleRefresh}
       onEndReached={handleLoadMore}
       ListFooterComponent={() => {
-        // Show a loading spinner at the bottom during infinite scroll fetches
         if (!fetching || posts.length === 0 || isRefreshing) return null;
         return (
-          <FooterSpinner>
+          <View className="p-4">
             <ActivityIndicator size="small" />
-          </FooterSpinner>
+          </View>
         );
       }}
     />

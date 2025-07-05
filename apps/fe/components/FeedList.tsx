@@ -1,6 +1,6 @@
-import React from 'react';
-import { FlatList, View, Text } from 'react-native';
-import PostCard, { Post } from './PostCard'; // Import PostCard and the Post type from it
+import React from "react";
+import { FlatList, View, Text } from "react-native";
+import PostCard, { Post } from "./PostCard"; // Import PostCard and the Post type from it
 
 interface FeedListProps {
   posts: Post[];
@@ -10,6 +10,11 @@ interface FeedListProps {
   onEndReached?: () => void;
 }
 
+/**
+ * A reusable component to render a list of posts in a FlatList.
+ * It uses the PostCard component to render each individual post and follows
+ * the NativeWind v4 `className` pattern for styling.
+ */
 export default function FeedList({
   posts,
   onRefresh,
@@ -26,11 +31,13 @@ export default function FeedList({
       data={posts}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
-      ItemSeparatorComponent={() => <View className="h-2 bg-gray-100 dark:bg-black" />}
+      ItemSeparatorComponent={() => <View className="h-2 bg-secondary" />}
       ListEmptyComponent={
-        <View className="flex-1 justify-center items-center mt-12">
-          <Text className="text-lg text-gray-500">No posts available.</Text>
-          <Text className="text-sm text-gray-400 mt-2">Pull down to refresh.</Text>
+        <View className="flex-1 justify-center items-center mt-12 p-4">
+          <Text className="text-lg text-foreground">No posts available.</Text>
+          <Text className="text-sm text-muted-foreground mt-2">
+            Pull down to refresh.
+          </Text>
         </View>
       }
       onRefresh={onRefresh}
@@ -38,7 +45,7 @@ export default function FeedList({
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
       ListFooterComponent={ListFooterComponent}
-      className="bg-gray-100 dark:bg-black"
+      className="bg-background"
     />
   );
 }

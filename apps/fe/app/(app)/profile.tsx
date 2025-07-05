@@ -1,7 +1,6 @@
 import React from "react";
 import {
   View,
-  StyleSheet,
   ScrollView,
   Text,
   ActivityIndicator,
@@ -9,10 +8,10 @@ import {
 } from "react-native";
 import { useQuery } from "urql";
 
-import ProfileHeader from "../../components/ProfileHeader";
-import FeedList from "../../components/FeedList";
-import { GET_POSTS } from "../../lib/graphql";
-import { Post } from "./feed";
+import ProfileHeader from "@/components/ProfileHeader";
+import FeedList from "@/components/FeedList";
+import { GET_POSTS } from "@/lib/graphql";
+import { Post } from "./feed"; // This relative path is fine
 
 // In a real app, this data would be fetched from a user-specific API endpoint.
 const mockUser = {
@@ -37,7 +36,7 @@ export default function ProfileScreen() {
 
   if (fetching && !data) {
     return (
-      <View style={styles.center}>
+      <View className="flex-1 justify-center items-center bg-background">
         <ActivityIndicator size="large" />
       </View>
     );
@@ -45,8 +44,8 @@ export default function ProfileScreen() {
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>
+      <View className="flex-1 justify-center items-center bg-background p-4">
+        <Text className="text-destructive text-lg text-center mb-4">
           Failed to load profile: {error.message}
         </Text>
         <Button title="Retry" onPress={handleRefresh} />
@@ -64,40 +63,14 @@ export default function ProfileScreen() {
     })) || [];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView className="flex-1 bg-background">
       <ProfileHeader user={mockUser} />
-      <View style={styles.divider} />
-      <Text style={styles.postsHeader}>My Posts</Text>
+      <View className="h-px bg-border my-4" />
+      <Text className="text-lg font-bold px-4 mb-2 text-foreground">
+        My Posts
+      </Text>
+      {/* The FeedList component is reused to display the user's posts. */}
       <FeedList posts={userPosts} />
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorText: {
-    color: "red",
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#e5e7eb",
-    marginVertical: 16,
-  },
-  postsHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-});

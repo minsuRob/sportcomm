@@ -11,9 +11,17 @@ import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as React from "react";
 import { Appearance, Platform } from "react-native";
+import { createClient, Provider, cacheExchange, fetchExchange } from "urql";
 import { setAndroidNavigationBar } from "../lib/android-navigation-bar";
 import { NAV_THEME } from "../lib/constants";
 import { useColorScheme } from "../lib/useColorScheme";
+
+// Create a urql client pointing to the NestJS backend.
+// This is the single source of truth for all GraphQL operations.
+const client = createClient({
+  url: "http://localhost:3000/graphql",
+  exchanges: [cacheExchange, fetchExchange],
+});
 
 const LIGHT_THEME: Theme = {
   ...DefaultTheme,
@@ -39,12 +47,15 @@ export default function RootLayout() {
   usePlatformSpecificSetup();
   const { isDarkColorScheme } = useColorScheme();
 
+  // The urql Provider wraps everything, making the client available to all screens.
   return (
-    <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-      <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-      <Slot />
-      <PortalHost />
-    </ThemeProvider>
+    <Provider value={client}>
+      <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+        <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
+        <Slot />
+        <PortalHost />
+      </ThemeProvider>
+    </Provider>
   );
 }
 

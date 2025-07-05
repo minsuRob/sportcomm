@@ -1,9 +1,7 @@
 import React from "react";
 import { View, Text, Image } from "react-native";
-import { styled } from "nativewind/styled";
 
-// Define a user type for the props.
-// This can be expanded as needed.
+// Define a user type for the props, which will be passed down from the screen.
 interface UserProfile {
   nickname: string;
   bio: string;
@@ -14,28 +12,28 @@ interface ProfileHeaderProps {
   user: UserProfile;
 }
 
-// Styled Components using NativeWind for consistency
-const Container = styled(View, "items-center p-4 bg-white dark:bg-gray-800");
-const Avatar = styled(Image, "w-24 h-24 rounded-full mb-4");
-const Nickname = styled(
-  Text,
-  "text-2xl font-bold text-gray-900 dark:text-white",
-);
-const Bio = styled(
-  Text,
-  "text-base text-gray-600 dark:text-gray-400 mt-2 text-center",
-);
-
+/**
+ * A component to display the main user profile information at the top of the profile screen.
+ * It uses the className prop for styling, following the NativeWind v4 pattern, and
+ * utilizes semantic colors defined in the Tailwind configuration for theme consistency.
+ */
 export default function ProfileHeader({ user }: ProfileHeaderProps) {
-  // Use a fallback avatar if no profile image is provided
+  // Provide a fallback avatar image if the user doesn't have one.
   const avatarUrl =
     user.profileImageUrl || `https://i.pravatar.cc/150?u=${user.nickname}`;
 
   return (
-    <Container>
-      <Avatar source={{ uri: avatarUrl }} />
-      <Nickname>{user.nickname}</Nickname>
-      <Bio>{user.bio}</Bio>
-    </Container>
+    <View className="items-center p-4 bg-card">
+      <Image
+        source={{ uri: avatarUrl }}
+        className="w-24 h-24 rounded-full mb-4 border-2 border-border"
+      />
+      <Text className="text-2xl font-bold text-foreground">
+        {user.nickname}
+      </Text>
+      <Text className="text-base text-muted-foreground mt-2 text-center">
+        {user.bio}
+      </Text>
+    </View>
   );
 }

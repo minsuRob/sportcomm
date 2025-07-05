@@ -71,8 +71,12 @@ export const CREATE_POST = `
  */
 export const TOGGLE_LIKE = `
   mutation ToggleLike($postId: String!) {
+    # The backend resolver for this is not yet implemented.
+    # When implemented, it should toggle the like status and ideally return the post.
+    # For now, we assume it exists and might return a simple confirmation.
     toggleLike(postId: $postId) {
       id
+      # likesCount # ideal return value
     }
   }
 `;

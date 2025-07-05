@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Image } from "react-native";
-import { styled } from "nativewind";
+import { styled } from "nativewind/styled";
 
 // Define a user type for the props.
 // This can be expanded as needed.

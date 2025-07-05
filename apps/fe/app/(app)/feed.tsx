@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ActivityIndicator, View, Button, Text } from "react-native";
-import { styled } from "nativewind";
+import { styled } from "nativewind/styled";
 import { useQuery } from "urql";
 
 import { GET_POSTS } from "../../lib/graphql";

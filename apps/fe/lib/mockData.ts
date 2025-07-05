@@ -1,4 +1,4 @@
-// sportcomm/apps/fe/ai/src/api/mockData.ts
+// sportcomm/apps/fe/lib/mockData.ts
 
 /**
  * This file provides functions to generate mock data for UI development and testing.
@@ -41,6 +41,7 @@ export interface Post {
   likesCount: number;
   commentsCount: number;
   isLiked: boolean;
+  isMock?: boolean; // Add isMock flag
 }
 
 /**
@@ -75,6 +76,7 @@ export const createMockFeedData = (count = 5): Post[] => {
       likesCount: Math.floor(Math.random() * 250) + 10,
       commentsCount: Math.floor(Math.random() * 5) + 1,
       isLiked: Math.random() > 0.6,
+      isMock: true,
     };
   });
   return mockPosts;

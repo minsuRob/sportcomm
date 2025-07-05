@@ -1,13 +1,13 @@
-// This file contains the GraphQL queries and mutations for interacting with the backend API.
-// Using a central file for these definitions helps maintain consistency.
+// sportcomm/apps/fe/lib/graphql.ts
+
+/**
+ * This file contains the GraphQL queries and mutations for interacting with the backend API.
+ * Using a central file for these definitions helps maintain consistency.
+ */
 
 /**
  * Fetches a paginated list of posts for the main feed.
  * It retrieves all necessary fields to render a post card.
- *
- * Note: For performance, this query fetches only comment IDs to get a count.
- * A full comment list would be fetched on a post detail screen.
- * Counts for likes would ideally be a computed field on the backend.
  */
 export const GET_POSTS = `
   query GetPosts($take: Int, $skip: Int) {

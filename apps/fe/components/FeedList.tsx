@@ -1,47 +1,6 @@
 import React from 'react';
 import { FlatList, View, Text } from 'react-native';
-import PostCard from './PostCard';
-
-// --- Type Definitions (matching backend entities) ---
-// This should ideally be in a shared types directory.
-
-enum PostType {
-  ANALYSIS = 'ANALYSIS',
-  CHEERING = 'CHEERING',
-  HIGHLIGHT = 'HIGHLIGHT',
-}
-
-interface User {
-  id: string;
-  nickname: string;
-  profileImageUrl?: string;
-}
-
-interface Media {
-  id: string;
-  url: string;
-  type: 'image' | 'video';
-}
-
-interface Comment {
-  id: string;
-  content: string;
-  author: User;
-}
-
-// This interface now matches the one expected by the new PostCard
-interface Post {
-  id:string;
-  content: string;
-  author: User;
-  media: Media[];
-  comments: Comment[];
-  createdAt: string;
-  type: PostType;
-  viewCount: number;
-  likesCount: number;
-  commentsCount: number;
-}
+import PostCard, { Post } from './PostCard'; // Import PostCard and the Post type from it
 
 interface FeedListProps {
   posts: Post[];

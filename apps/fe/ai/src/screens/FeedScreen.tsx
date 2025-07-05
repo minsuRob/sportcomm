@@ -1,83 +1,95 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
-import { getFeedPosts } from "../api/post"; // Assuming API function exists
-import FeedList from "../components/FeedList";
+import React, { useEffect } from 'react';
+import { ActivityIndicator, View, Button, Text } from 'react-native';
+import { styled } from 'nativewind';
 
-// Define a basic type for a post object for better type safety.
-// This should match the type definition in FeedList.tsx
-interface Post {
-  id: string | number;
-  [key: string]: any;
-}
+import { useFeedStore } from '../../../lib/feedStore';
+import FeedList from '../components/FeedList';
+
+// Styled Components
+const CenterContainer = styled(View, 'flex-1 justify-center items-center bg-gray-50 dark:bg-black');
+const ErrorText = styled(Text, 'text-red-500 text-lg mb-4');
+const FooterSpinner = styled(View, 'p-4');
 
 export default function FeedScreen() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  // Select state and actions from the Zustand store
+  const {
+    posts,
+    loading,
+    refreshing,
+    loadingMore,
+    error,
+    hasMore,
+    fetchPosts,
+  } = useFeedStore((state) => ({
+    posts: state.posts,
+    loading: state.loading,
+    refreshing: state.refreshing,
+    loadingMore: state.loadingMore,
+    error: state.error,
+    hasMore: state.hasMore,
+    fetchPosts: state.fetchPosts,
+  }));
 
-  const fetchPosts = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await getFeedPosts();
-      setPosts(data);
-    } catch (e) {
-      setError("Failed to fetch feed. Please try again.");
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
+  // Initial data load and cleanup
   useEffect(() => {
-    setLoading(true);
-    fetchPosts();
-  }, [fetchPosts]);
+    // Fetch initial posts only if the list is empty.
+    if (posts.length === 0) {
+      fetchPosts(true); // `true` for initial load as a refresh.
+    }
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchPosts();
-  }, [fetchPosts]);
+    // When the screen is unmounted, you could optionally reset the store.
+    // This would mean the feed is always fresh when the user navigates here.
+    // return () => {
+    //   useFeedStore.getState().reset();
+    // };
+  }, []); // The empty dependency array ensures this runs only once on mount.
 
-  if (loading) {
+  const handleRefresh = () => {
+    fetchPosts(true); // `true` indicates a pull-to-refresh action.
+  };
+
+  const handleLoadMore = () => {
+    // We call fetchPosts only if there is more data and we are not already loading.
+    if (hasMore && !loadingMore) {
+      fetchPosts(false); // `false` indicates loading more, not a refresh.
+    }
+  };
+
+  // Render initial loading state
+  if (loading && posts.length === 0) {
     return (
-      <View style={styles.center}>
+      <CenterContainer>
         <ActivityIndicator size="large" />
-      </View>
+      </CenterContainer>
     );
   }
 
-  if (error) {
+  // Render error state if initial load failed
+  if (error && posts.length === 0) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
+      <CenterContainer>
+        <ErrorText>{error}</ErrorText>
+        <Button title="Retry" onPress={handleRefresh} />
+      </CenterContainer>
     );
   }
 
-  // To implement pull-to-refresh, FeedList would need to accept `onRefresh` and `refreshing` props
-  // and pass them to its underlying FlatList's RefreshControl.
-  // For now, this structure is set up to support it.
+  // Render the list of posts
   return (
-    <View style={styles.container}>
-      <FeedList posts={posts} />
-    </View>
+    <FeedList
+      posts={posts}
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+      onEndReached={handleLoadMore}
+      ListFooterComponent={() => {
+        // Show a spinner at the bottom while loading more posts
+        if (!loadingMore) return null;
+        return (
+          <FooterSpinner>
+            <ActivityIndicator size="small" />
+          </FooterSpinner>
+        );
+      }}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorText: {
-    color: "red",
-    fontSize: 16,
-  },
-});

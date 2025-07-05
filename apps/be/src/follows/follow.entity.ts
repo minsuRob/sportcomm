@@ -1,3 +1,4 @@
+import { ObjectType, Field, ID } from '@nestjs/graphql';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -9,12 +10,15 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 
+@ObjectType()
 @Entity('follows')
 @Unique(['followerId', 'followingId'])
 export class Follow {
+  @Field(() => ID)
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Field()
   @Column({ name: 'follower_id' })
   followerId: string;
 
@@ -23,8 +27,10 @@ export class Follow {
     nullable: false,
   })
   @JoinColumn({ name: 'follower_id' })
+  @Field(() => User)
   follower: User;
 
+  @Field()
   @Column({ name: 'following_id' })
   followingId: string;
 
@@ -33,8 +39,10 @@ export class Follow {
     nullable: false,
   })
   @JoinColumn({ name: 'following_id' })
+  @Field(() => User)
   following: User;
 
+  @Field()
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

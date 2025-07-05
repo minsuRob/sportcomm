@@ -4,6 +4,7 @@ import { styled } from 'nativewind';
 import { useQuery } from 'urql';
 
 import { GET_POSTS } from '../api/graphql';
+import { createMockFeedData } from '../api/mockData';
 import FeedList from '../components/FeedList';
 
 // --- Type Definitions ---
@@ -48,6 +49,7 @@ export interface Post extends GqlPost {
   isLiked: boolean;
   likesCount: number;
   commentsCount: number;
+  isMock?: boolean;
 }
 
 
@@ -77,28 +79,37 @@ export default function FeedScreen() {
   // and merges it into our local state for infinite scroll.
   useEffect(() => {
     if (data?.posts) {
-      // Transform GQL data to local UI state shape
-      const transformedPosts: Post[] = data.posts.map(p => ({
-        ...p,
-        isLiked: false, // Default value, to be managed by a 'like' mutation
-        likesCount: Math.floor(Math.random() * 200), // Placeholder until backend provides it
-        commentsCount: p.comments.length,
-      }));
+      // Case 1: The API returned actual posts.
+      if (data.posts.length > 0) {
+        const transformedPosts: Post[] = data.posts.map(p => ({
+          ...p,
+          isLiked: false, // Default value, will be managed by a 'like' mutation
+          likesCount: Math.floor(Math.random() * 200), // Placeholder until backend provides this
+          commentsCount: p.comments.length,
+          isMock: false,
+        }));
 
-      // If we are refreshing, replace the entire list.
-      // Otherwise, append the new posts for infinite scroll.
-      setPosts(currentPosts => {
-        if (isRefreshing) {
-          return transformedPosts;
-        }
-        // Create a map to efficiently merge new posts and avoid duplicates
-        const postMap = new Map(currentPosts.map(p => [p.id, p]));
-        transformedPosts.forEach(p => postMap.set(p.id, p));
-
-        const mergedPosts = Array.from(postMap.values());
-        // Sort posts by date to maintain order
-        return mergedPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      });
+        setPosts(currentPosts => {
+          // If refreshing, or if we were previously showing mock data, replace the list.
+          const wasShowingMocks = currentPosts.length > 0 && currentPosts[0].isMock;
+          if (isRefreshing || wasShowingMocks) {
+            return transformedPosts;
+          }
+          // Otherwise, merge new posts for infinite scroll.
+          const postMap = new Map(currentPosts.map(p => [p.id, p]));
+          transformedPosts.forEach(p => postMap.set(p.id, p));
+          const mergedPosts = Array.from(postMap.values());
+          return mergedPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
+      }
+      // Case 2: API returned no posts, and the screen is currently empty (initial load).
+      else if (posts.length === 0) {
+        console.log("Feed is empty. Populating with mock data for demonstration.");
+        // Populate with mock data.
+        setPosts(createMockFeedData(5));
+      }
+      // Case 3: API returned no posts, but we already have posts (end of infinite scroll).
+      // In this case, we do nothing.
 
       setIsRefreshing(false);
     }

@@ -1,17 +1,18 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { createClient, Provider } from "urql";
+import { createClient, Provider, cacheExchange, fetchExchange } from "urql";
 import { Home, PlusSquare, User as ProfileIcon } from "lucide-react-native";
 
 // Create a urql client pointing to your NestJS backend.
-// This should be done once at the top level of your app.
+// In recent urql versions, the `exchanges` property is required.
 const client = createClient({
   url: "http://localhost:3000/graphql",
+  exchanges: [cacheExchange, fetchExchange], // Add default exchanges
 });
 
 /**
  * This is the main layout for the (app) group, which includes all authenticated screens.
- * It sets up the bottom tab navigator and wraps all screens in the urql Provider.
+ * It sets up the bottom tab navigator.
  */
 function AppTabLayout() {
   return (

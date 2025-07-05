@@ -1,10 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { styled } from 'nativewind';
 import { Heart, MessageCircle, Repeat, MoreHorizontal, Eye } from 'lucide-react-native';
-import { useFeedStore, Post, PostType } from '../../../lib/feedStore';
+import { useMutation } from 'urql';
+import { TOGGLE_LIKE } from '../api/graphql';
 
-// --- Styled Components using NativeWind ---
+// --- Type Definitions ---
+// In a larger app, these would live in a shared types file or be generated from the GraphQL schema.
+export enum PostType {
+  ANALYSIS = 'ANALYSIS',
+  CHEERING = 'CHEERING',
+  HIGHLIGHT = 'HIGHLIGHT',
+}
+
+export interface User {
+  id: string;
+  nickname: string;
+  profileImageUrl?: string;
+}
+
+export interface Media {
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+}
+
+// The feed query only fetches comment IDs for performance.
+export interface Comment {
+  id:string;
+}
+
+// This is the data shape the PostCard component expects as a prop.
+// It's derived from the GraphQL query result in FeedScreen.
+export interface Post {
+  id: string;
+  content: string;
+  author: User;
+  media: Media[];
+  comments: Comment[];
+  createdAt: string;
+  type: PostType;
+  viewCount: number;
+  likesCount: number;
+  commentsCount: number;
+  isLiked: boolean;
+}
+
+interface PostCardProps {
+  post: Post;
+}
+
+// --- Styled Components ---
 const CardContainer = styled(View, 'bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700');
 const Header = styled(View, 'flex-row items-center justify-between');
 const UserInfo = styled(View, 'flex-row items-center');
@@ -17,16 +63,11 @@ const ActionButton = styled(TouchableOpacity, 'flex-row items-center');
 const ActionText = styled(Text, 'ml-2 text-sm text-gray-600 dark:text-gray-400');
 const StatsContainer = styled(View, 'flex-row items-center mt-2');
 const StatText = styled(Text, 'text-sm text-gray-500 dark:text-gray-400 mr-4');
-const CommentPreviewContainer = styled(View, 'mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg');
-const CommentAuthor = styled(Text, 'font-semibold text-sm text-gray-800 dark:text-gray-200');
-const CommentText = styled(Text, 'text-sm text-gray-600 dark:text-gray-300');
+const CommentPreviewContainer = styled(View, 'mt-2');
+const CommentText = styled(Text, 'text-sm text-gray-500 dark:text-gray-400');
 const PostTypeText = styled(Text, 'text-white text-xs font-bold');
 
-
-interface PostCardProps {
-  post: Post;
-}
-
+// --- Helper Function ---
 const getPostTypeStyle = (type: PostType) => {
     switch (type) {
         case PostType.ANALYSIS:
@@ -39,20 +80,46 @@ const getPostTypeStyle = (type: PostType) => {
     }
 }
 
+// --- The Component ---
 export default function PostCard({ post }: PostCardProps) {
-  // Get the likePost action from the Zustand store
-  const likePost = useFeedStore((state) => state.likePost);
+  // Local state for optimistic UI updates on "like" actions.
+  const [isLiked, setIsLiked] = useState(post.isLiked);
+  const [likesCount, setLikesCount] = useState(post.likesCount);
 
-  const firstMedia = post.media?.[0];
-  const firstComment = post.comments?.[0];
-  const avatarUrl = post.author.profileImageUrl || `https://i.pravatar.cc/150?u=${post.author.id}`;
-  const postTypeStyle = getPostTypeStyle(post.type);
+  // Effect to re-sync local state if the parent passes a changed post prop (e.g., on list refresh).
+  useEffect(() => {
+    setIsLiked(post.isLiked);
+    setLikesCount(post.likesCount);
+  }, [post.isLiked, post.likesCount]);
+
+  // urql mutation hook for toggling likes.
+  const [likeResult, executeLike] = useMutation(TOGGLE_LIKE);
 
   const handleLike = () => {
-    likePost(post.id);
+    // 1. Optimistically update the UI.
+    const newLikedStatus = !isLiked;
+    const newLikesCount = newLikedStatus ? likesCount + 1 : likesCount - 1;
+    setIsLiked(newLikedStatus);
+    setLikesCount(newLikesCount);
+
+    // 2. Execute the mutation in the background.
+    executeLike({ postId: post.id }).then(result => {
+      // 3. If the mutation fails, revert the optimistic update.
+      if (result.error) {
+        console.error("Failed to toggle like:", result.error);
+        setIsLiked(!newLikedStatus); // Revert liked status
+        setLikesCount(likesCount);   // Revert likes count
+        // In a real app, you would show a toast message to the user here.
+      }
+      // On success, the backend is now in sync with our optimistic state. No further action is needed
+      // unless the mutation returns new data that we need to sync.
+    });
   };
 
-  const likeColor = post.isLiked ? '#EF4444' : '#6B7280'; // Red if liked, gray otherwise
+  const firstMedia = post.media?.[0];
+  const avatarUrl = post.author.profileImageUrl || `https://i.pravatar.cc/150?u=${post.author.id}`;
+  const postTypeStyle = getPostTypeStyle(post.type);
+  const likeColor = isLiked ? '#EF4444' : '#6B7280'; // Red if liked, gray otherwise
 
   return (
     <CardContainer>
@@ -88,7 +155,7 @@ export default function PostCard({ post }: PostCardProps) {
       {/* Stats */}
        <StatsContainer>
          <Heart size={16} color="#6B7280" />
-         <StatText className="ml-1">{post.likesCount} Likes</StatText>
+         <StatText className="ml-1">{likesCount} Likes</StatText>
          <MessageCircle size={16} color="#6B7280" />
          <StatText className="ml-1">{post.commentsCount} Comments</StatText>
          <Eye size={16} color="#6B7280" />
@@ -97,8 +164,8 @@ export default function PostCard({ post }: PostCardProps) {
 
       {/* Action Bar */}
       <ActionBar>
-        <ActionButton onPress={handleLike}>
-          <Heart size={22} color={likeColor} fill={post.isLiked ? likeColor : 'none'} />
+        <ActionButton onPress={handleLike} disabled={likeResult.fetching}>
+          <Heart size={22} color={likeColor} fill={isLiked ? likeColor : 'none'} />
           <ActionText style={{ color: likeColor }}>Like</ActionText>
         </ActionButton>
         <ActionButton>
@@ -112,14 +179,11 @@ export default function PostCard({ post }: PostCardProps) {
       </ActionBar>
 
       {/* Comment Preview */}
-      {firstComment && (
+      {post.commentsCount > 0 && (
         <CommentPreviewContainer>
-          <View className="flex-row items-center">
-            <Text>
-                <CommentAuthor>{firstComment.author.nickname}: </CommentAuthor>
-                <CommentText>{firstComment.content}</CommentText>
-            </Text>
-          </View>
+            <TouchableOpacity>
+                <CommentText>View all {post.commentsCount} comments</CommentText>
+            </TouchableOpacity>
         </CommentPreviewContainer>
       )}
     </CardContainer>

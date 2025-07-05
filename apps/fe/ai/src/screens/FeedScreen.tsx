@@ -1,62 +1,132 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ActivityIndicator, View, Button, Text } from 'react-native';
 import { styled } from 'nativewind';
+import { useQuery } from 'urql';
 
-import { useFeedStore } from '../../../lib/feedStore';
+import { GET_POSTS } from '../api/graphql';
 import FeedList from '../components/FeedList';
 
-// Styled Components
+// --- Type Definitions ---
+// These should ideally be in a shared types directory or generated from the GraphQL schema.
+// Redefined here as we are moving away from the Zustand store file.
+enum PostType {
+  ANALYSIS = 'ANALYSIS',
+  CHEERING = 'CHEERING',
+  HIGHLIGHT = 'HIGHLIGHT',
+}
+
+interface User {
+  id: string;
+  nickname: string;
+  profileImageUrl?: string;
+}
+
+interface Media {
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+}
+
+interface Comment {
+  id: string;
+}
+
+// This is the shape of the data coming from the GraphQL query
+interface GqlPost {
+  id: string;
+  content: string;
+  createdAt: string;
+  type: PostType;
+  viewCount: number;
+  author: User;
+  media: Media[];
+  comments: Comment[];
+}
+
+// This is the shape of the data the FeedList and PostCard components expect
+export interface Post extends GqlPost {
+  isLiked: boolean;
+  likesCount: number;
+  commentsCount: number;
+}
+
+
+// --- Styled Components ---
 const CenterContainer = styled(View, 'flex-1 justify-center items-center bg-gray-50 dark:bg-black');
-const ErrorText = styled(Text, 'text-red-500 text-lg mb-4');
+const ErrorText = styled(Text, 'text-red-500 text-lg mb-4 text-center px-4');
 const FooterSpinner = styled(View, 'p-4');
 
+const PAGE_SIZE = 10;
+
 export default function FeedScreen() {
-  // Select state and actions from the Zustand store
-  const {
-    posts,
-    loading,
-    refreshing,
-    loadingMore,
-    error,
-    hasMore,
-    fetchPosts,
-  } = useFeedStore((state) => ({
-    posts: state.posts,
-    loading: state.loading,
-    refreshing: state.refreshing,
-    loadingMore: state.loadingMore,
-    error: state.error,
-    hasMore: state.hasMore,
-    fetchPosts: state.fetchPosts,
-  }));
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Initial data load and cleanup
+  // --- urql Query Hook ---
+  // This hook manages the network request, caching, and state (fetching, error).
+  const [result, executeQuery] = useQuery<{ posts: GqlPost[] }>({
+    query: GET_POSTS,
+    variables: { skip: 0, take: PAGE_SIZE },
+  });
+
+  const { data, fetching, error } = result;
+
+  // --- Data Handling Effect ---
+  // This effect runs when new data arrives from the `useQuery` hook.
+  // It transforms the raw GraphQL data into the shape our UI components expect
+  // and merges it into our local state for infinite scroll.
   useEffect(() => {
-    // Fetch initial posts only if the list is empty.
-    if (posts.length === 0) {
-      fetchPosts(true); // `true` for initial load as a refresh.
+    if (data?.posts) {
+      // Transform GQL data to local UI state shape
+      const transformedPosts: Post[] = data.posts.map(p => ({
+        ...p,
+        isLiked: false, // Default value, to be managed by a 'like' mutation
+        likesCount: Math.floor(Math.random() * 200), // Placeholder until backend provides it
+        commentsCount: p.comments.length,
+      }));
+
+      // If we are refreshing, replace the entire list.
+      // Otherwise, append the new posts for infinite scroll.
+      setPosts(currentPosts => {
+        if (isRefreshing) {
+          return transformedPosts;
+        }
+        // Create a map to efficiently merge new posts and avoid duplicates
+        const postMap = new Map(currentPosts.map(p => [p.id, p]));
+        transformedPosts.forEach(p => postMap.set(p.id, p));
+
+        const mergedPosts = Array.from(postMap.values());
+        // Sort posts by date to maintain order
+        return mergedPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      });
+
+      setIsRefreshing(false);
     }
+  }, [data, isRefreshing]);
 
-    // When the screen is unmounted, you could optionally reset the store.
-    // This would mean the feed is always fresh when the user navigates here.
-    // return () => {
-    //   useFeedStore.getState().reset();
-    // };
-  }, []); // The empty dependency array ensures this runs only once on mount.
+  // --- Event Handlers ---
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    // Re-fetch the first page, bypassing the cache for fresh data.
+    executeQuery({ requestPolicy: 'network-only' });
+  }, [executeQuery]);
 
-  const handleRefresh = () => {
-    fetchPosts(true); // `true` indicates a pull-to-refresh action.
-  };
-
-  const handleLoadMore = () => {
-    // We call fetchPosts only if there is more data and we are not already loading.
-    if (hasMore && !loadingMore) {
-      fetchPosts(false); // `false` indicates loading more, not a refresh.
+  const handleLoadMore = useCallback(() => {
+    const hasMoreData = data?.posts?.length === PAGE_SIZE;
+    // Prevent fetching if already in progress or if the last fetch brought back less than a full page
+    if (fetching || !hasMoreData) {
+      return;
     }
-  };
+    // Fetch the next page by updating the 'skip' variable
+    executeQuery({
+      variables: { skip: posts.length, take: PAGE_SIZE },
+    });
+  }, [fetching, executeQuery, posts.length, data?.posts]);
 
-  // Render initial loading state
-  if (loading && posts.length === 0) {
+
+  // --- Render Logic ---
+  // Initial loading state (only show if the screen is completely empty)
+  if (fetching && posts.length === 0 && !isRefreshing) {
     return (
       <CenterContainer>
         <ActivityIndicator size="large" />
@@ -64,26 +134,26 @@ export default function FeedScreen() {
     );
   }
 
-  // Render error state if initial load failed
+  // Error state (only show if the screen is completely empty)
   if (error && posts.length === 0) {
     return (
       <CenterContainer>
-        <ErrorText>{error}</ErrorText>
+        <ErrorText>An error occurred while fetching the feed: {error.message}</ErrorText>
         <Button title="Retry" onPress={handleRefresh} />
       </CenterContainer>
     );
   }
 
-  // Render the list of posts
+  // Main feed list
   return (
     <FeedList
       posts={posts}
-      refreshing={refreshing}
+      refreshing={isRefreshing}
       onRefresh={handleRefresh}
       onEndReached={handleLoadMore}
       ListFooterComponent={() => {
-        // Show a spinner at the bottom while loading more posts
-        if (!loadingMore) return null;
+        // Show a loading spinner at the bottom during infinite scroll fetches
+        if (!fetching || posts.length === 0 || isRefreshing) return null;
         return (
           <FooterSpinner>
             <ActivityIndicator size="small" />

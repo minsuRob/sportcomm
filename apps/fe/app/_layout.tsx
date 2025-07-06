@@ -44,8 +44,21 @@ const usePlatformSpecificSetup = Platform.select({
 });
 
 export default function RootLayout() {
+  const { isDarkColorScheme, setColorScheme } = useColorScheme();
+
+  React.useEffect(() => {
+    // Set the initial color scheme from the OS setting.
+    setColorScheme(Appearance.getColorScheme() ?? "light");
+
+    // Listen for OS theme changes.
+    const subscription = Appearance.addChangeListener((preferences) => {
+      setColorScheme(preferences.colorScheme ?? "light");
+    });
+
+    return () => subscription.remove();
+  }, [setColorScheme]);
+
   usePlatformSpecificSetup();
-  const { isDarkColorScheme } = useColorScheme();
 
   // The urql Provider wraps everything, making the client available to all screens.
   return (
@@ -65,16 +78,25 @@ const useIsomorphicLayoutEffect =
     : React.useLayoutEffect;
 
 function useSetWebBackgroundClassName() {
+  const { isDarkColorScheme } = useColorScheme();
+
   useIsomorphicLayoutEffect(() => {
     // Adds the background color to the html element to prevent white background on overscroll.
     document.documentElement.classList.add("bg-background");
-  }, []);
+    // On web, we need to manually add/remove the 'dark' class on the html element
+    if (isDarkColorScheme) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDarkColorScheme]);
 }
 
 function useSetAndroidNavigationBar() {
-  React.useLayoutEffect(() => {
-    setAndroidNavigationBar(Appearance.getColorScheme() ?? "light");
-  }, []);
+  const { colorScheme } = useColorScheme();
+  React.useEffect(() => {
+    setAndroidNavigationBar(colorScheme);
+  }, [colorScheme]);
 }
 
 function noop() {}

@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { useMutation } from "urql";
-import {
-  Heart,
-  MessageCircle,
-  Repeat,
-  MoreHorizontal,
-  Eye,
-} from "lucide-react-native";
 import { TOGGLE_LIKE } from "@/lib/graphql";
+import { Eye } from "@/lib/icons/Eye";
+import { Heart } from "@/lib/icons/Heart";
+import { MessageCircle } from "@/lib/icons/MessageCircle";
+import { MoreHorizontal } from "@/lib/icons/MoreHorizontal";
+import { Repeat } from "@/lib/icons/Repeat";
 
 // --- Type Definitions ---
 export enum PostType {
@@ -97,7 +95,6 @@ export default function PostCard({ post }: PostCardProps) {
     post.author.profileImageUrl ||
     `https://i.pravatar.cc/150?u=${post.author.id}`;
   const postTypeStyle = getPostTypeStyle(post.type);
-  const likeColor = isLiked ? "#EF4444" : "#6B7280"; // Red-500 if liked, gray-500 otherwise
 
   return (
     <View className="bg-card p-4 border-b border-border">
@@ -118,7 +115,7 @@ export default function PostCard({ post }: PostCardProps) {
           </View>
         </View>
         <TouchableOpacity>
-          <MoreHorizontal size={24} color="#6B7280" />
+          <MoreHorizontal className="text-muted-foreground" size={24} />
         </TouchableOpacity>
       </View>
 
@@ -144,15 +141,15 @@ export default function PostCard({ post }: PostCardProps) {
 
       {/* Stats */}
       <View className="flex-row items-center mt-3">
-        <Heart size={16} color="#6B7280" />
+        <Heart className="text-muted-foreground" size={16} />
         <Text className="ml-1 text-sm text-muted-foreground mr-4">
           {likesCount} Likes
         </Text>
-        <MessageCircle size={16} color="#6B7280" />
+        <MessageCircle className="text-muted-foreground" size={16} />
         <Text className="ml-1 text-sm text-muted-foreground mr-4">
           {post.commentsCount} Comments
         </Text>
-        <Eye size={16} color="#6B7280" />
+        <Eye className="text-muted-foreground" size={16} />
         <Text className="ml-1 text-sm text-muted-foreground">
           {post.viewCount} Views
         </Text>
@@ -167,24 +164,25 @@ export default function PostCard({ post }: PostCardProps) {
         >
           <Heart
             size={22}
-            color={likeColor}
-            fill={isLiked ? likeColor : "transparent"}
+            className={isLiked ? "text-destructive" : "text-muted-foreground"}
+            fill={isLiked ? "hsl(var(--destructive))" : "transparent"}
           />
           <Text
-            style={{ color: likeColor }}
-            className="ml-2 text-sm font-medium"
+            className={`ml-2 text-sm font-medium ${
+              isLiked ? "text-destructive" : "text-muted-foreground"
+            }`}
           >
             Like
           </Text>
         </TouchableOpacity>
         <TouchableOpacity className="flex-row items-center">
-          <MessageCircle size={22} color="#6B7280" />
+          <MessageCircle size={22} className="text-muted-foreground" />
           <Text className="ml-2 text-sm font-medium text-muted-foreground">
             Comment
           </Text>
         </TouchableOpacity>
         <TouchableOpacity className="flex-row items-center">
-          <Repeat size={22} color="#6B7280" />
+          <Repeat size={22} className="text-muted-foreground" />
           <Text className="ml-2 text-sm font-medium text-muted-foreground">
             Repost
           </Text>

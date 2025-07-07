@@ -1,4 +1,4 @@
-import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Int, registerEnumType } from '@nestjs/graphql';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -21,6 +21,11 @@ export enum PostType {
   CHEERING = 'CHEERING',
   HIGHLIGHT = 'HIGHLIGHT',
 }
+
+registerEnumType(PostType, {
+  name: 'PostType',
+  description: 'The type of the post, indicating its category.',
+});
 
 @ObjectType()
 @Entity('posts')

@@ -4,20 +4,27 @@ import { Post } from './post.entity';
 import { PostsResolver } from './posts.resolver';
 import { PostsService } from './posts.service';
 import { PostVersion } from './post-version.entity';
-import { UsersModule } from '../users/users.module';
+import { User } from '../users/user.entity';
+import { Comment } from '../comments/comment.entity';
+import { Media } from '../media/media.entity';
+import { Follow } from '../follows/follow.entity';
+import { ChatMessage } from '../chat-message.entity';
+import { ChatRoom } from '../chat-room.entity';
 
 @Module({
   imports: [
-    // Import UsersModule to make the User entity and repository available within this module.
-    UsersModule,
-    // Register the entities that are directly managed by this module's services.
-    // This makes the repositories for Post and PostVersion available for injection.
-    TypeOrmModule.forFeature([Post, PostVersion]),
+    TypeOrmModule.forFeature([
+      Post,
+      PostVersion,
+      User,
+      Comment,
+      Media,
+      Follow,
+      ChatMessage,
+      ChatRoom,
+    ]),
   ],
-  // The resolver is the entry point for GraphQL requests.
-  // The service contains the business logic.
   providers: [PostsResolver, PostsService],
-  // Exporting the service allows other modules to use it if needed.
   exports: [PostsService],
 })
 export class PostsModule {}

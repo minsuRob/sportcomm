@@ -28,7 +28,7 @@ export class ChatMessage {
   @Column({ name: 'author_id' })
   authorId: string;
 
-  @Field(() => User)
+  @Field(() => forwardRef(() => User))
   @ManyToOne(() => User, {
     onDelete: 'CASCADE',
     nullable: false,

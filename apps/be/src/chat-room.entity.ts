@@ -33,7 +33,7 @@ export class ChatRoom {
   @Index()
   matchId: string;
 
-  @Field(() => [ChatMessage], {
+  @Field(() => [forwardRef(() => ChatMessage)], {
     nullable: 'itemsAndList',
     description: 'The messages sent in this chat room.',
   })

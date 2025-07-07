@@ -6,6 +6,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PostsModule } from './posts/posts.module';
+import { UsersModule } from './users/users.module';
+import { config } from 'dotenv';
+
+config();
 
 @Module({
   imports: [
@@ -15,7 +19,6 @@ import { PostsModule } from './posts/posts.module';
       sortSchema: true,
       playground: true,
     }),
-    PostsModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST || 'localhost',
@@ -25,7 +28,10 @@ import { PostsModule } from './posts/posts.module';
       database: process.env.DB_NAME || 'sportcomm',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: false,
+      logging: true,
     }),
+    PostsModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

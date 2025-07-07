@@ -9,6 +9,7 @@ import {
   Column,
 } from 'typeorm';
 import { User } from '../users/user.entity';
+import { forwardRef } from '@nestjs/common';
 
 @ObjectType()
 @Entity('follows')
@@ -27,7 +28,7 @@ export class Follow {
     nullable: false,
   })
   @JoinColumn({ name: 'follower_id' })
-  @Field(() => User)
+  @Field(() => forwardRef(() => User))
   follower: User;
 
   @Field()
@@ -39,7 +40,7 @@ export class Follow {
     nullable: false,
   })
   @JoinColumn({ name: 'following_id' })
-  @Field(() => User)
+  @Field(() => forwardRef(() => User))
   following: User;
 
   @Field()

@@ -36,7 +36,7 @@ export class PostVersion {
   @Column({ name: 'author_id', nullable: true })
   authorId: string;
 
-  @Field(() => User, { nullable: true })
+  @Field(() => forwardRef(() => User), { nullable: true })
   @ManyToOne(() => User, {
     onDelete: 'SET NULL',
     nullable: true,

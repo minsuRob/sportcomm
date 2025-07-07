@@ -10,11 +10,11 @@ import {
   OneToMany,
   DeleteDateColumn,
 } from 'typeorm';
+import { forwardRef } from '@nestjs/common';
 import { User } from '../users/user.entity';
 import { Comment } from '../comments/comment.entity';
 import { PostVersion } from './post-version.entity';
 import { Media } from '../media/media.entity';
-import { forwardRef } from '@nestjs/common';
 
 export enum PostType {
   ANALYSIS = 'ANALYSIS',
@@ -45,12 +45,12 @@ export class Post {
   @Column({ name: 'author_id' })
   authorId: string;
 
+  @Field(() => forwardRef(() => User))
   @ManyToOne(() => User, (user) => user.posts, {
     onDelete: 'CASCADE',
     nullable: false,
   })
   @JoinColumn({ name: 'author_id' })
-  @Field(() => forwardRef(() => User))
   author: User;
 
   @Field()
@@ -69,15 +69,15 @@ export class Post {
   @Column({ name: 'view_count', default: 0 })
   viewCount: number;
 
-  @Field(() => [Comment], { nullable: true })
+  @Field(() => [forwardRef(() => Comment)], { nullable: true })
   @OneToMany(() => Comment, (comment) => comment.post)
   comments: Comment[];
 
-  @Field(() => [PostVersion], { nullable: true })
+  @Field(() => [forwardRef(() => PostVersion)], { nullable: true })
   @OneToMany(() => PostVersion, (version) => version.post)
   versions: PostVersion[];
 
-  @Field(() => [Media], { nullable: true })
+  @Field(() => [forwardRef(() => Media)], { nullable: true })
   @OneToMany(() => Media, (media) => media.post)
   media: Media[];
 }

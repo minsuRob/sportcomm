@@ -8,6 +8,7 @@ import {
   OneToMany,
   DeleteDateColumn,
 } from 'typeorm';
+import { forwardRef } from '@nestjs/common';
 import { Post } from '../posts/post.entity';
 import { Comment } from '../comments/comment.entity';
 import { Follow } from '../follows/follow.entity';
@@ -76,19 +77,19 @@ export class User {
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
   deletedAt: Date;
 
-  @Field(() => [Post], { nullable: true })
+  @Field(() => [forwardRef(() => Post)], { nullable: true })
   @OneToMany(() => Post, (post) => post.author)
   posts: Post[];
 
-  @Field(() => [Comment], { nullable: true })
+  @Field(() => [forwardRef(() => Comment)], { nullable: true })
   @OneToMany(() => Comment, (comment) => comment.author)
   comments: Comment[];
 
-  @Field(() => [Follow], { nullable: true })
+  @Field(() => [forwardRef(() => Follow)], { nullable: true })
   @OneToMany(() => Follow, (follow) => follow.following)
   followers: Follow[];
 
-  @Field(() => [Follow], { nullable: true })
+  @Field(() => [forwardRef(() => Follow)], { nullable: true })
   @OneToMany(() => Follow, (follow) => follow.follower)
   following: Follow[];
 }

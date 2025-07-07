@@ -1,4 +1,5 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { forwardRef } from '@nestjs/common';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -28,8 +29,11 @@ export class Comment {
   @Column({ name: 'author_id' })
   authorId: string;
 
-  @Field(() => User)
-  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: false })
+  @Field(() => forwardRef(() => User))
+  @ManyToOne(() => User, (user) => user.comments, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
   @JoinColumn({ name: 'author_id' })
   author: User;
 
@@ -37,7 +41,7 @@ export class Comment {
   @Column({ name: 'post_id' })
   postId: string;
 
-  @Field(() => Post)
+  @Field(() => forwardRef(() => Post))
   @ManyToOne(() => Post, (post) => post.comments, {
     onDelete: 'CASCADE',
     nullable: false,
@@ -49,7 +53,7 @@ export class Comment {
   @Column({ name: 'parent_comment_id', type: 'uuid', nullable: true })
   parentCommentId: string | null;
 
-  @Field(() => Comment, { nullable: true })
+  @Field(() => forwardRef(() => Comment), { nullable: true })
   @ManyToOne(() => Comment, (comment) => comment.childComments, {
     onDelete: 'CASCADE',
     nullable: true,
@@ -57,7 +61,7 @@ export class Comment {
   @JoinColumn({ name: 'parent_comment_id' })
   parentComment: Comment | null;
 
-  @Field(() => [Comment], { nullable: true })
+  @Field(() => [forwardRef(() => Comment)], { nullable: true })
   @OneToMany(() => Comment, (comment) => comment.parentComment)
   childComments: Comment[];
 

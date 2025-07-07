@@ -19,7 +19,10 @@ export class PostsService {
    * @param author - The user creating the post.
    * @returns The newly created post.
    */
-  async create(createPostInput: CreatePostInput, authorId: string): Promise<Post> {
+  async create(
+    createPostInput: CreatePostInput,
+    authorId: string,
+  ): Promise<Post> {
     const newPost = this.postsRepository.create({
       ...createPostInput,
       authorId,
@@ -70,10 +73,7 @@ export class PostsService {
     // `preload` creates a new entity based on the object passed into it.
     // It first looks for an entity with the given ID in the database, and if it finds one,
     // it replaces all its values with the new ones from the plain object.
-    const post = await this.postsRepository.preload({
-      id,
-      ...updatePostInput,
-    });
+    const post = await this.postsRepository.preload(updatePostInput);
 
     if (!post) {
       throw new NotFoundException(`Post with ID "${id}" not found.`);

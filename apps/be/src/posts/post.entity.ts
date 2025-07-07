@@ -14,6 +14,7 @@ import { User } from '../users/user.entity';
 import { Comment } from '../comments/comment.entity';
 import { PostVersion } from './post-version.entity';
 import { Media } from '../media/media.entity';
+import { forwardRef } from '@nestjs/common';
 
 export enum PostType {
   ANALYSIS = 'ANALYSIS',
@@ -49,7 +50,7 @@ export class Post {
     nullable: false,
   })
   @JoinColumn({ name: 'author_id' })
-  @Field(() => User)
+  @Field(() => forwardRef(() => User))
   author: User;
 
   @Field()

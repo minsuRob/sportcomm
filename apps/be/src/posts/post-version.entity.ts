@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Post } from './post.entity';
 import { User } from '../users/user.entity';
+import { forwardRef } from '@nestjs/common';
 
 @ObjectType()
 @Entity('post_versions')
@@ -23,7 +24,7 @@ export class PostVersion {
   @Column({ name: 'post_id' })
   postId: string;
 
-  @Field(() => Post)
+  @Field(() => forwardRef(() => Post))
   @ManyToOne(() => Post, (post) => post.versions, {
     onDelete: 'CASCADE',
     nullable: false,

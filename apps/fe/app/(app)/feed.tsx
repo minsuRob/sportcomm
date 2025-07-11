@@ -53,50 +53,33 @@ export default function FeedScreen() {
   useEffect(() => {
     // Case 1: Handle a successful API response.
     if (data?.posts) {
-      if (data.posts.length > 0) {
-        const transformedPosts: Post[] = data.posts.map((p) => ({
-          ...p,
-          isLiked: false, // Default value, will be managed by a 'like' mutation
-          likesCount: Math.floor(Math.random() * 200), // Placeholder until backend provides this
-          commentsCount: p.comments.length,
-          isMock: false,
-        }));
+      const transformedPosts: Post[] = (data.posts as any[]).map((p) => ({
+        ...p,
+        isLiked: false, // Default value, can be updated with a 'like' mutation
+        likesCount: p.likeCount ?? 0,
+        commentsCount: p.commentCount ?? 0,
+        isMock: false,
+      }));
 
-        setPosts((currentPosts) => {
-          const wasShowingMocks =
-            currentPosts.length > 0 && currentPosts[0].isMock;
-          if (isRefreshing || wasShowingMocks) {
-            return transformedPosts;
-          }
-          const postMap = new Map(currentPosts.map((p) => [p.id, p]));
-          transformedPosts.forEach((p) => postMap.set(p.id, p));
-          const mergedPosts = Array.from(postMap.values());
-          return mergedPosts.sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
-        });
-      } else if (posts.length === 0) {
-        // Case 2: API returned no posts on initial load.
-        console.log(
-          "Feed is empty. Populating with mock data for demonstration.",
+      setPosts((currentPosts) => {
+        if (isRefreshing) {
+          return transformedPosts;
+        }
+        const postMap = new Map(currentPosts.map((p) => [p.id, p]));
+        transformedPosts.forEach((p) => postMap.set(p.id, p));
+        const mergedPosts = Array.from(postMap.values());
+        return mergedPosts.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
-        setPosts(createMockFeedData(5));
-      }
-    } else if (error && posts.length === 0) {
-      // Case 3: Error on initial load, show mock data instead of an error message.
-      console.log(
-        "Error fetching feed. Populating with mock data for demonstration.",
-        error.message,
-      );
-      setPosts(createMockFeedData(5));
+      });
     }
 
     // After processing data or error, if we were refreshing, stop the indicator.
     if (isRefreshing) {
       setIsRefreshing(false);
     }
-  }, [data, error, isRefreshing, posts.length]);
+  }, [data, error, isRefreshing]);
 
   // --- Event Handlers ---
   const handleRefresh = useCallback(() => {

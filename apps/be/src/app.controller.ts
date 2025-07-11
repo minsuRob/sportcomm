@@ -70,4 +70,14 @@ export class AppController {
   } {
     return this.appService.getApiDocs();
   }
+
+  /**
+   * 데이터베이스 시딩 엔드포인트 (개발 환경 전용)
+   *
+   * @returns 시딩 결과 메시지
+   */
+  @Get('seed')
+  async seedDatabase(): Promise<string> {
+    return await this.appService.seedDatabase();
+  }
 }

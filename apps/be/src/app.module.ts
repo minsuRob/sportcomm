@@ -6,7 +6,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { entities } from './entities';
+import { entities, Post, User } from './entities';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostsModule } from './modules/posts/posts.module';
 
@@ -150,6 +150,8 @@ import { PostsModule } from './modules/posts/posts.module';
         };
       },
     }),
+
+    TypeOrmModule.forFeature([User, Post]),
 
     // 기능 모듈들
     AuthModule,

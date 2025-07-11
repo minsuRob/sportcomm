@@ -17,6 +17,8 @@ export const GET_POSTS = `
       createdAt
       type
       viewCount
+      likeCount
+      commentCount
       author {
         id
         nickname

@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcryptjs';
+import { User } from './entities/user.entity';
+import { Post, PostType } from './entities/post.entity';
 import { checkDatabaseHealth } from './database/datasource';
 
 /**
@@ -10,7 +15,13 @@ import { checkDatabaseHealth } from './database/datasource';
  */
 @Injectable()
 export class AppService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
+  ) {}
 
   /**
    * 기본 응답 메시지
@@ -206,5 +217,95 @@ export class AppService {
       uptime: uptimeSeconds,
       uptimeFormatted,
     };
+  }
+
+  /**
+   * 개발용 데이터베이스 시딩
+   * 테스트 사용자 2명과 게시물 3개를 생성합니다.
+   *
+   * @returns 성공 메시지
+   */
+  async seedDatabase(): Promise<string> {
+    try {
+      // 1. 테스트 사용자 생성
+      const usersData = [
+        {
+          email: 'user1@test.com',
+          nickname: '스포츠팬1',
+          password: 'password123',
+        },
+        {
+          email: 'user2@test.com',
+          nickname: '해설가2',
+          password: 'password123',
+        },
+      ];
+
+      const createdUsers: User[] = [];
+      for (const userData of usersData) {
+        let user = await this.userRepository.findOne({
+          where: { email: userData.email },
+        });
+        if (!user) {
+          const hashedPassword = await bcrypt.hash(userData.password, 12);
+          user = this.userRepository.create({
+            ...userData,
+            password: hashedPassword,
+            isEmailVerified: true,
+          });
+          await this.userRepository.save(user);
+        }
+        createdUsers.push(user);
+      }
+
+      // 2. 테스트 게시물 생성
+      const postsData = [
+        {
+          title: '오늘 경기 정말 대박이었네요!',
+          content:
+            '마지막 10초를 남기고 역전 골이라니... 믿을 수가 없습니다. 손에 땀을 쥐게 하는 경기였습니다.',
+          type: PostType.CHEERING,
+          author: createdUsers[0],
+          likeCount: 25,
+          commentCount: 3,
+        },
+        {
+          title: '이번 시즌 우승팀 예측',
+          content:
+            '데이터를 기반으로 분석해 본 결과, A팀의 우승 확률이 가장 높습니다. 자세한 내용은 본문을 참고하세요.',
+          type: PostType.ANALYSIS,
+          author: createdUsers[1],
+          likeCount: 150,
+          commentCount: 42,
+        },
+        {
+          title: '역대급 명장면 하이라이트',
+          content:
+            '이 선수의 슈퍼 세이브는 정말 길이 남을 명장면입니다. 다들 어떻게 보셨나요? 다시 봐도 감동적이네요.',
+          type: PostType.HIGHLIGHT,
+          author: createdUsers[0],
+          likeCount: 37,
+          commentCount: 12,
+        },
+      ];
+
+      for (const postData of postsData) {
+        const postExists = await this.postRepository.findOne({
+          where: { title: postData.title },
+        });
+        if (!postExists) {
+          const post = this.postRepository.create({
+            ...postData,
+            authorId: postData.author.id,
+          });
+          await this.postRepository.save(post);
+        }
+      }
+
+      return '✅ 데이터베이스 시딩이 성공적으로 완료되었습니다: 사용자 2명, 게시물 3개 생성';
+    } catch (error) {
+      console.error('❌ 데이터베이스 시딩 중 오류 발생:', error);
+      throw new Error('데이터베이스 시딩에 실패했습니다.');
+    }
   }
 }

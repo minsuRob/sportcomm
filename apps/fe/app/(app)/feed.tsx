@@ -1,22 +1,23 @@
+// sportcomm/apps/fe/app/(app)/feed.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { ActivityIndicator, View, Button, Text } from "react-native";
 import { useQuery } from "urql";
 
 import { GET_POSTS } from "@/lib/graphql";
-import {
-  createMockFeedData,
-  Post as PostTypeData,
-  PostType,
-} from "@/lib/mockData";
 import FeedList from "@/components/FeedList";
+import { Post, PostType } from "@/components/PostCard"; // Use the Post type from the canonical component
 
-// This is the shape of the data coming from the GraphQL query
+// --- Type Definitions ---
+
+// This is the shape of a single post object coming from the GraphQL query
 interface GqlPost {
   id: string;
   content: string;
   createdAt: string;
   type: PostType;
   viewCount: number;
+  likeCount: number;
+  commentCount: number;
   author: {
     id: string;
     nickname: string;
@@ -32,8 +33,14 @@ interface GqlPost {
   }[];
 }
 
-// Re-export the Post type from mockData to be used within this screen and other screens.
-export type Post = PostTypeData;
+// The shape of the entire response for the posts query, including pagination
+interface PostsQueryResponse {
+  posts: {
+    posts: GqlPost[];
+    hasNext: boolean;
+    page: number;
+  };
+}
 
 const PAGE_SIZE = 10;
 
@@ -42,62 +49,75 @@ export default function FeedScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // --- urql Query Hook ---
-  const [result, executeQuery] = useQuery<{ posts: GqlPost[] }>({
+  // The variables are now passed inside an 'input' object to match the backend resolver.
+  const [result, executeQuery] = useQuery<PostsQueryResponse>({
     query: GET_POSTS,
-    variables: { skip: 0, take: PAGE_SIZE },
+    variables: { input: { page: 1, limit: PAGE_SIZE } },
   });
 
   const { data, fetching, error } = result;
 
   // --- Data Handling Effect ---
   useEffect(() => {
-    // Case 1: Handle a successful API response.
-    if (data?.posts) {
-      const transformedPosts: Post[] = (data.posts as any[]).map((p) => ({
+    // Only process data if the request was successful and returned posts
+    if (data?.posts?.posts) {
+      // Transform the GQL data into the frontend Post type
+      // The property names like `likeCount` and `commentCount` now match directly.
+      const newPosts: Post[] = data.posts.posts.map((p) => ({
         ...p,
-        isLiked: false, // Default value, can be updated with a 'like' mutation
-        likesCount: p.likeCount ?? 0,
-        commentsCount: p.commentCount ?? 0,
+        isLiked: false, // Default value, should be managed by a 'like' mutation
         isMock: false,
       }));
 
-      setPosts((currentPosts) => {
-        if (isRefreshing) {
-          return transformedPosts;
-        }
-        const postMap = new Map(currentPosts.map((p) => [p.id, p]));
-        transformedPosts.forEach((p) => postMap.set(p.id, p));
-        const mergedPosts = Array.from(postMap.values());
-        return mergedPosts.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
-      });
+      // If it's a refresh (page 1), replace the list. Otherwise, append new unique posts.
+      if (data.posts.page === 1) {
+        setPosts(newPosts);
+      } else {
+        setPosts((currentPosts) => {
+          const postMap = new Map(currentPosts.map((p) => [p.id, p]));
+          newPosts.forEach((p) => postMap.set(p.id, p));
+          const mergedPosts = Array.from(postMap.values());
+          // Re-sort to maintain chronological order
+          return mergedPosts.sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
+        });
+      }
     }
 
-    // After processing data or error, if we were refreshing, stop the indicator.
+    // Stop the refreshing indicator once data is processed
     if (isRefreshing) {
       setIsRefreshing(false);
     }
-  }, [data, error, isRefreshing]);
+  }, [data, isRefreshing]);
 
   // --- Event Handlers ---
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    executeQuery({ requestPolicy: "network-only" });
+    // Refetch from the first page
+    executeQuery({
+      requestPolicy: "network-only",
+      variables: { input: { page: 1, limit: PAGE_SIZE } },
+    });
   }, [executeQuery]);
 
   const handleLoadMore = useCallback(() => {
-    const hasMoreData = data?.posts?.length === PAGE_SIZE;
-    if (fetching || !hasMoreData) {
+    const hasNextPage = data?.posts?.hasNext ?? false;
+    // Prevent multiple fetches while one is already in progress
+    if (fetching || !hasNextPage) {
       return;
     }
+    // Calculate the next page from the last successful response
+    const nextPage = (data?.posts?.page ?? 0) + 1;
     executeQuery({
-      variables: { skip: posts.length, take: PAGE_SIZE },
+      variables: { input: { page: nextPage, limit: PAGE_SIZE } },
     });
-  }, [fetching, executeQuery, posts.length, data?.posts]);
+  }, [fetching, executeQuery, data]);
 
   // --- Render Logic ---
+
+  // Show a loading spinner only on the initial load
   if (fetching && posts.length === 0 && !isRefreshing) {
     return (
       <View className="flex-1 justify-center items-center bg-background">
@@ -106,6 +126,7 @@ export default function FeedScreen() {
     );
   }
 
+  // Show an error message if the initial fetch fails
   if (error && posts.length === 0) {
     return (
       <View className="flex-1 justify-center items-center bg-background p-4">
@@ -117,20 +138,23 @@ export default function FeedScreen() {
     );
   }
 
+  // Loading indicator for pagination
+  const ListFooter = () => {
+    if (!fetching || isRefreshing) return null;
+    return (
+      <View className="p-4">
+        <ActivityIndicator size="small" />
+      </View>
+    );
+  };
+
   return (
     <FeedList
       posts={posts}
       refreshing={isRefreshing}
       onRefresh={handleRefresh}
       onEndReached={handleLoadMore}
-      ListFooterComponent={() => {
-        if (!fetching || posts.length === 0 || isRefreshing) return null;
-        return (
-          <View className="p-4">
-            <ActivityIndicator size="small" />
-          </View>
-        );
-      }}
+      ListFooterComponent={ListFooter}
     />
   );
 }

@@ -7,31 +7,40 @@
 
 /**
  * Fetches a paginated list of posts for the main feed.
- * It retrieves all necessary fields to render a post card.
+ * It retrieves all necessary fields to render a post card, along with pagination metadata.
+ * The query now uses an 'input' object to pass arguments, matching the backend resolver.
  */
 export const GET_POSTS = `
-  query GetPosts($take: Int, $skip: Int) {
-    posts(take: $take, skip: $skip) {
-      id
-      content
-      createdAt
-      type
-      viewCount
-      likeCount
-      commentCount
-      author {
+  query GetPosts($input: FindPostsInput) {
+    posts(input: $input) {
+      posts {
         id
-        nickname
-        profileImageUrl
-      }
-      media {
-        id
-        url
+        content
+        createdAt
         type
+        viewCount
+        likeCount
+        commentCount
+        author {
+          id
+          nickname
+          profileImageUrl
+        }
+        media {
+          id
+          url
+          type
+        }
+        comments {
+          id
+        }
       }
-      comments {
-        id
-      }
+      total
+      page
+      limit
+      totalPages
+      hasPrevious
+      hasNext
     }
   }
 `;

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post, PostType } from '../../entities/post.entity';
@@ -103,7 +107,10 @@ export class PostsService {
    * @param createPostInput - 게시물 생성 정보
    * @returns 생성된 게시물
    */
-  async create(authorId: string, createPostInput: CreatePostInput): Promise<Post> {
+  async create(
+    authorId: string,
+    createPostInput: CreatePostInput,
+  ): Promise<Post> {
     const { title, content, type, isPublic = true } = createPostInput;
 
     // 게시물 생성
@@ -155,7 +162,7 @@ export class PostsService {
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
-      .leftJoinAndSelect('post.mediaFiles', 'mediaFiles')
+      .leftJoinAndSelect('post.media', 'media')
       .where('post.deletedAt IS NULL');
 
     // 필터 적용
@@ -174,7 +181,7 @@ export class PostsService {
     if (search) {
       queryBuilder.andWhere(
         '(post.title ILIKE :search OR post.content ILIKE :search)',
-        { search: `%${search}%` }
+        { search: `%${search}%` },
       );
     }
 
@@ -188,10 +195,7 @@ export class PostsService {
     const total = await queryBuilder.getCount();
 
     // 페이지네이션 적용 및 데이터 조회
-    const posts = await queryBuilder
-      .skip(skip)
-      .take(limit)
-      .getMany();
+    const posts = await queryBuilder.skip(skip).take(limit).getMany();
 
     // 페이지네이션 정보 계산
     const totalPages = Math.ceil(total / limit);
@@ -220,13 +224,7 @@ export class PostsService {
   async findById(id: string, incrementView: boolean = false): Promise<Post> {
     const post = await this.postRepository.findOne({
       where: { id },
-      relations: [
-        'author',
-        'comments',
-        'comments.author',
-        'mediaFiles',
-        'versions',
-      ],
+      relations: ['author', 'comments', 'comments.author', 'media', 'versions'],
     });
 
     if (!post) {
@@ -268,7 +266,8 @@ export class PostsService {
     const previousTitle = existingPost.title;
 
     // 수정 정보 적용
-    const { title, content, type, isPublic, isPinned, editReason } = updatePostInput;
+    const { title, content, type, isPublic, isPinned, editReason } =
+      updatePostInput;
 
     if (title !== undefined) existingPost.title = title;
     if (content !== undefined) existingPost.content = content;
@@ -507,7 +506,9 @@ export class PostsService {
    * @param postId - 게시물 ID
    * @returns 최신 버전 정보
    */
-  private async getLatestPostVersion(postId: string): Promise<PostVersion | null> {
+  private async getLatestPostVersion(
+    postId: string,
+  ): Promise<PostVersion | null> {
     return await this.postVersionRepository.findOne({
       where: { postId },
       order: { version: 'DESC' },

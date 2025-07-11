@@ -273,7 +273,7 @@ export class Media extends BaseEntity {
    * 다대일 관계: 여러 미디어 파일이 한 게시물에 첨부됩니다.
    */
   @Field(() => Post, { description: '미디어 파일이 첨부된 게시물' })
-  @ManyToOne(() => Post, (post) => post.mediaFiles, {
+  @ManyToOne(() => Post, (post) => post.media, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'postId' })

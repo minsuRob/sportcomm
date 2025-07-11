@@ -31,6 +31,8 @@ export interface Comment {
   id: string;
 }
 
+// This is the canonical Post type used throughout the frontend.
+// It matches the backend GraphQL schema.
 export interface Post {
   id: string;
   content: string;
@@ -40,8 +42,8 @@ export interface Post {
   createdAt: string;
   type: PostType;
   viewCount: number;
-  likesCount: number;
-  commentsCount: number;
+  likeCount: number; // Changed from likesCount
+  commentCount: number; // Changed from commentsCount
   isLiked: boolean;
   isMock?: boolean;
 }
@@ -65,27 +67,33 @@ const getPostTypeStyle = (type: PostType) => {
 
 // --- The Component ---
 export default function PostCard({ post }: PostCardProps) {
+  // Use state to manage client-side interactions like "liking" a post.
   const [isLiked, setIsLiked] = useState(post.isLiked);
-  const [likesCount, setLikesCount] = useState(post.likesCount);
+  const [likeCount, setLikeCount] = useState(post.likeCount);
 
+  // Sync state with props if the post object changes (e.g., after a refresh).
   useEffect(() => {
     setIsLiked(post.isLiked);
-    setLikesCount(post.likesCount);
-  }, [post.isLiked, post.likesCount]);
+    setLikeCount(post.likeCount);
+  }, [post.isLiked, post.likeCount]);
 
+  // URQL mutation hook for toggling a like.
   const [likeResult, executeLike] = useMutation(TOGGLE_LIKE);
 
   const handleLike = () => {
+    // Optimistically update the UI for a better user experience.
     const newLikedStatus = !isLiked;
-    const newLikesCount = newLikedStatus ? likesCount + 1 : likesCount - 1;
+    const newLikeCount = newLikedStatus ? likeCount + 1 : likeCount - 1;
     setIsLiked(newLikedStatus);
-    setLikesCount(newLikesCount);
+    setLikeCount(newLikeCount);
 
+    // Execute the mutation.
     executeLike({ postId: post.id }).then((result) => {
+      // If the mutation fails, revert the optimistic update.
       if (result.error) {
         console.error("Failed to toggle like:", result.error);
         setIsLiked(!newLikedStatus);
-        setLikesCount(likesCount);
+        setLikeCount(likeCount); // Revert to the original count
       }
     });
   };
@@ -143,11 +151,11 @@ export default function PostCard({ post }: PostCardProps) {
       <View className="flex-row items-center mt-3">
         <Heart className="text-muted-foreground" size={16} />
         <Text className="ml-1 text-sm text-muted-foreground mr-4">
-          {likesCount} Likes
+          {likeCount} Likes
         </Text>
         <MessageCircle className="text-muted-foreground" size={16} />
         <Text className="ml-1 text-sm text-muted-foreground mr-4">
-          {post.commentsCount} Comments
+          {post.commentCount} Comments
         </Text>
         <Eye className="text-muted-foreground" size={16} />
         <Text className="ml-1 text-sm text-muted-foreground">
@@ -190,11 +198,11 @@ export default function PostCard({ post }: PostCardProps) {
       </View>
 
       {/* Comment Preview */}
-      {post.commentsCount > 0 && (
+      {post.commentCount > 0 && (
         <View className="mt-2">
           <TouchableOpacity>
             <Text className="text-sm text-muted-foreground">
-              View all {post.commentsCount} comments
+              View all {post.commentCount} comments
             </Text>
           </TouchableOpacity>
         </View>

@@ -1,4 +1,11 @@
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
 import { IsString, IsEnum, MaxLength, MinLength } from 'class-validator';
 import { BaseEntity } from './base.entity';
@@ -191,7 +198,7 @@ export class Post extends BaseEntity {
    * 게시물에 달린 댓글들
    * 일대다 관계: 한 게시물에는 여러 댓글이 달릴 수 있습니다.
    */
-  @Field(() => [Comment], { description: '게시물 댓글 목록' })
+  @Field(() => [Comment], { nullable: true, description: '게시물 댓글 목록' })
   @OneToMany(() => Comment, (comment) => comment.post)
   comments: Comment[];
 
@@ -199,15 +206,21 @@ export class Post extends BaseEntity {
    * 게시물에 첨부된 미디어 파일들
    * 일대다 관계: 한 게시물에는 여러 미디어 파일이 첨부될 수 있습니다.
    */
-  @Field(() => [Media], { description: '첨부된 미디어 파일 목록' })
+  @Field(() => [Media], {
+    nullable: true,
+    description: '첨부된 미디어 파일 목록',
+  })
   @OneToMany(() => Media, (media) => media.post)
-  mediaFiles: Media[];
+  media: Media[];
 
   /**
    * 게시물 버전 관리
    * 일대다 관계: 한 게시물은 여러 버전을 가질 수 있습니다.
    */
-  @Field(() => [PostVersion], { description: '게시물 버전 이력' })
+  @Field(() => [PostVersion], {
+    nullable: true,
+    description: '게시물 버전 이력',
+  })
   @OneToMany(() => PostVersion, (postVersion) => postVersion.post)
   versions: PostVersion[];
 

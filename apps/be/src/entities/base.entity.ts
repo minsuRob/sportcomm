@@ -1,9 +1,10 @@
 import {
-  PrimaryGeneratedColumn,
   CreateDateColumn,
-  UpdateDateColumn,
   DeleteDateColumn,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 
 /**
  * 모든 엔티티의 기본 필드를 정의하는 베이스 엔티티 클래스
@@ -13,11 +14,13 @@ import {
  * - 생성/수정/삭제 시간 자동 관리
  * - Soft Delete 지원
  */
+@ObjectType({ isAbstract: true })
 export abstract class BaseEntity {
   /**
    * 엔티티의 고유 식별자 (UUID)
    * 자동 생성되며 변경할 수 없습니다.
    */
+  @Field(() => ID, { description: '고유 식별자' })
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -25,6 +28,7 @@ export abstract class BaseEntity {
    * 엔티티 생성 시간
    * 레코드가 처음 생성될 때 자동으로 설정됩니다.
    */
+  @Field({ description: '생성 일시' })
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
@@ -36,6 +40,7 @@ export abstract class BaseEntity {
    * 엔티티 최종 수정 시간
    * 레코드가 업데이트될 때마다 자동으로 갱신됩니다.
    */
+  @Field({ description: '수정 일시' })
   @UpdateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',

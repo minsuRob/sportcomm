@@ -5,6 +5,15 @@
  * TypeORM 설정 및 모듈에서 쉽게 import할 수 있도록 합니다.
  */
 
+import { User } from './user.entity';
+import { Post } from './post.entity';
+import { PostVersion } from './post-version.entity';
+import { Comment } from './comment.entity';
+import { Follow } from './follow.entity';
+import { Media } from './media.entity';
+import { ChatRoom } from './chat-room.entity';
+import { ChatMessage } from './chat-message.entity';
+
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
 

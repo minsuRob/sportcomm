@@ -167,6 +167,9 @@ export class AuthService {
     }
 
     // 비밀번호 확인
+    if (!user.password) {
+      throw new UnauthorizedException('이메일 또는 비밀번호가 잘못되었습니다.');
+    }
     const isPasswordValid = await this.validatePassword(
       password,
       user.password,
@@ -285,6 +288,9 @@ export class AuthService {
     }
 
     // 현재 비밀번호 확인
+    if (!user.password) {
+      throw new UnauthorizedException('사용자 정보를 찾을 수 없습니다.');
+    }
     const isCurrentPasswordValid = await this.validatePassword(
       currentPassword,
       user.password,

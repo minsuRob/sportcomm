@@ -60,7 +60,7 @@ registerEnumType(ChatRoomType, {
 @ObjectType()
 @Entity('chat_rooms')
 @Index(['type'])
-@Index(['isActive'])
+@Index(['isRoomActive'])
 @Index(['createdAt'])
 @Index(['name'])
 export class ChatRoom extends BaseEntity {

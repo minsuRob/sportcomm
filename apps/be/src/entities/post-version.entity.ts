@@ -247,7 +247,8 @@ export class PostVersion extends BaseEntity {
    * @returns 시간 차이 (분 단위)
    */
   getTimeDifferenceFromPrevious(previousVersion: PostVersion): number {
-    const diffMs = this.createdAt.getTime() - previousVersion.createdAt.getTime();
+    const diffMs =
+      this.createdAt.getTime() - previousVersion.createdAt.getTime();
     return Math.floor(diffMs / (1000 * 60));
   }
 
@@ -269,7 +270,7 @@ export class PostVersion extends BaseEntity {
    * @returns 복원 가능한 경우 true, 아닌 경우 false
    */
   isRestorable(): boolean {
-    return this.isActive && !this.isOriginalVersion();
+    return this.isEntityActive && !this.isOriginalVersion();
   }
 
   /**

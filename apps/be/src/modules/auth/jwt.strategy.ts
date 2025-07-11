@@ -80,7 +80,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           'email',
           'nickname',
           'role',
-          'isActive',
+          'isUserActive',
           'isEmailVerified',
           'profileImageUrl',
           'createdAt',

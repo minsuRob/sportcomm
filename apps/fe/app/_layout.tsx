@@ -15,11 +15,13 @@ import { createClient, Provider, cacheExchange, fetchExchange } from "urql";
 import { setAndroidNavigationBar } from "../lib/android-navigation-bar";
 import { NAV_THEME } from "../lib/constants";
 import { useColorScheme } from "../lib/useColorScheme";
+import { GRAPHQL_URL } from "@env";
 
 // Create a urql client pointing to the NestJS backend.
 // This is the single source of truth for all GraphQL operations.
+
 const client = createClient({
-  url: "http://localhost:3000/graphql",
+  url: GRAPHQL_URL || "http://localhost:4000/graphql",
   exchanges: [cacheExchange, fetchExchange],
 });
 

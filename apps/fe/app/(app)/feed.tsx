@@ -1,10 +1,18 @@
 // sportcomm/apps/fe/app/(app)/feed.tsx
 import React, { useState, useEffect, useCallback } from "react";
-import { ActivityIndicator, View, Button, Text } from "react-native";
+import {
+  ActivityIndicator,
+  View,
+  Button,
+  Text,
+  Modal,
+  TouchableOpacity,
+} from "react-native";
 import { useQuery } from "urql";
 
 import { GET_POSTS } from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
+import AuthForm from "@/components/AuthForm";
 import { Post, PostType } from "@/components/PostCard"; // Use the Post type from the canonical component
 
 // --- Type Definitions ---
@@ -47,6 +55,7 @@ const PAGE_SIZE = 10;
 export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [authModalVisible, setAuthModalVisible] = useState(false);
 
   // --- urql Query Hook ---
   // The variables are now passed inside an 'input' object to match the backend resolver.
@@ -80,7 +89,7 @@ export default function FeedScreen() {
           // Re-sort to maintain chronological order
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         });
       }
@@ -149,12 +158,42 @@ export default function FeedScreen() {
   };
 
   return (
-    <FeedList
-      posts={posts}
-      refreshing={isRefreshing}
-      onRefresh={handleRefresh}
-      onEndReached={handleLoadMore}
-      ListFooterComponent={ListFooter}
-    />
+    <View className="flex-1 bg-background">
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={authModalVisible}
+        onRequestClose={() => {
+          setAuthModalVisible(!authModalVisible);
+        }}
+      >
+        <View className="flex-1 justify-center items-center bg-background/80">
+          <View className="w-full max-w-md p-4">
+            <AuthForm />
+          </View>
+          <TouchableOpacity
+            onPress={() => setAuthModalVisible(false)}
+            className="absolute top-10 right-5 bg-card rounded-full p-2"
+          >
+            <Text className="text-foreground font-bold text-lg">X</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <View className="flex-row items-center justify-between p-4 border-b border-border bg-card">
+        <Text className="text-xl font-bold text-foreground">Feed</Text>
+        <TouchableOpacity onPress={() => setAuthModalVisible(true)}>
+          <Text className="text-primary font-semibold">Sign Up / Login</Text>
+        </TouchableOpacity>
+      </View>
+
+      <FeedList
+        posts={posts}
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
+        onEndReached={handleLoadMore}
+        ListFooterComponent={ListFooter}
+      />
+    </View>
   );
 }

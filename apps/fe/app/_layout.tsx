@@ -16,13 +16,12 @@ import { setAndroidNavigationBar } from "../lib/android-navigation-bar";
 import { NAV_THEME } from "../lib/constants";
 import { useColorScheme } from "../lib/useColorScheme";
 import { GRAPHQL_URL } from "@env";
+import Toast from "react-native-toast-message";
 
 // Create a urql client pointing to the NestJS backend.
 // This is the single source of truth for all GraphQL operations.
 
 const client = createClient({
-  url: GRAPHQL_URL || "http://localhost:3000/graphql",
-  // url: "https://max-emirates-allied-textbooks.trycloudflare.com/graphql",
   exchanges: [cacheExchange, fetchExchange],
 });
 
@@ -72,6 +71,7 @@ export default function RootLayout() {
         <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
         <Slot />
         <PortalHost />
+        <Toast />
       </ThemeProvider>
     </Provider>
   );

@@ -91,3 +91,38 @@ export const TOGGLE_LIKE = `
     }
   }
 `;
+
+/**
+ * Logs in a user.
+ * Returns an access token and user information upon successful authentication.
+ */
+export const LOGIN_MUTATION = `
+  mutation Login($input: LoginInput!) {
+    login(input: $input) {
+      accessToken
+      user {
+        id
+        nickname
+        email
+      }
+    }
+  }
+`;
+
+/**
+ * Registers a new user.
+ * Requires email, nickname, and password.
+ * Returns an access token and user information upon successful registration.
+ */
+export const REGISTER_MUTATION = `
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) {
+      accessToken
+      user {
+        id
+        nickname
+        email
+      }
+    }
+  }
+`;

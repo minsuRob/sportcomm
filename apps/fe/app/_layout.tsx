@@ -21,6 +21,7 @@ import { GRAPHQL_URL } from "@env";
 // This is the single source of truth for all GraphQL operations.
 
 const client = createClient({
+  url: GRAPHQL_URL || "http://localhost:3000/graphql",
   exchanges: [cacheExchange, fetchExchange],
 });
 

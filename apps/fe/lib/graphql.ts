@@ -99,7 +99,7 @@ export const TOGGLE_LIKE = `
 export const LOGIN_MUTATION = `
   mutation Login($input: LoginInput!) {
     login(input: $input) {
-      accessToken
+      token: accessToken
       user {
         id
         nickname
@@ -117,7 +117,7 @@ export const LOGIN_MUTATION = `
 export const REGISTER_MUTATION = `
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
-      accessToken
+      token: accessToken
       user {
         id
         nickname

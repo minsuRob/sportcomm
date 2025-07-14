@@ -11,6 +11,13 @@ export interface User {
 
 export const saveSession = async (token: string, user: User): Promise<void> => {
   try {
+    if (!token || !user) {
+      console.error("Failed to save session: token or user is missing.", {
+        token,
+        user,
+      });
+      return;
+    }
     await AsyncStorage.setItem(TOKEN_KEY, token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
   } catch (error) {

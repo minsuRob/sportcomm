@@ -21,9 +21,12 @@ import { GRAPHQL_URL } from "@env";
 // This is the single source of truth for all GraphQL operations.
 
 const client = createClient({
-  url: GRAPHQL_URL || "http://localhost:4000/graphql",
+  url: GRAPHQL_URL || "http://localhost:3000/graphql",
+  // url: "https://max-emirates-allied-textbooks.trycloudflare.com/graphql",
   exchanges: [cacheExchange, fetchExchange],
 });
+
+console.log(GRAPHQL_URL);
 
 const LIGHT_THEME: Theme = {
   ...DefaultTheme,

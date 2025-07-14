@@ -5,7 +5,6 @@ import { Button } from "./ui/button";
 import { Eye, EyeOff } from "lucide-react-native";
 import Toast from "react-native-toast-message";
 import { LOGIN_MUTATION, REGISTER_MUTATION } from "../lib/graphql";
-import { router } from "expo-router";
 
 const SocialLogins = () => (
   <>
@@ -32,7 +31,17 @@ const SocialLogins = () => (
   </>
 );
 
-export default function AuthForm() {
+// Define the user type based on what the login/register mutations return
+interface User {
+  nickname: string;
+  // Potentially other fields like id, email etc.
+}
+
+export default function AuthForm({
+  onLoginSuccess,
+}: {
+  onLoginSuccess: (user: User) => void;
+}) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
@@ -46,11 +55,7 @@ export default function AuthForm() {
     const result = await login({ input: { email, password } });
     if (result.data?.login) {
       // TODO: Store the token securely
-      Alert.alert(
-        "로그인 성공",
-        `환영합니다, ${result.data.login.user.nickname}님!`
-      );
-      router.replace("/feed");
+      onLoginSuccess(result.data.login.user);
     } else if (result.error) {
       const originalError = result.error.graphQLErrors[0]?.extensions
         ?.originalError as { message?: string[] | string };
@@ -70,11 +75,7 @@ export default function AuthForm() {
     const result = await register({ input: { email, nickname, password } });
     if (result.data?.register) {
       // TODO: Store the token securely
-      Alert.alert(
-        "회원가입 성공",
-        `환영합니다, ${result.data.register.user.nickname}님!`
-      );
-      router.replace("/feed");
+      onLoginSuccess(result.data.register.user);
     } else if (result.error) {
       const originalError = result.error.graphQLErrors[0]?.extensions
         ?.originalError as { message?: string[] | string };

@@ -56,6 +56,9 @@ export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ nickname: string } | null>(
+    null
+  );
 
   // --- urql Query Hook ---
   // The variables are now passed inside an 'input' object to match the backend resolver.
@@ -124,6 +127,12 @@ export default function FeedScreen() {
     });
   }, [fetching, executeQuery, data]);
 
+  const handleLoginSuccess = (user: { nickname: string }) => {
+    setCurrentUser(user);
+    setAuthModalVisible(false);
+    // Optionally, show a welcome message
+  };
+
   // --- Render Logic ---
 
   // Show a loading spinner only on the initial load
@@ -169,7 +178,7 @@ export default function FeedScreen() {
       >
         <View className="flex-1 justify-center items-center bg-background/80">
           <View className="w-full max-w-md p-4">
-            <AuthForm />
+            <AuthForm onLoginSuccess={handleLoginSuccess} />
           </View>
           <TouchableOpacity
             onPress={() => setAuthModalVisible(false)}
@@ -182,9 +191,15 @@ export default function FeedScreen() {
 
       <View className="flex-row items-center justify-between p-4 border-b border-border bg-card">
         <Text className="text-xl font-bold text-foreground">Feed</Text>
-        <TouchableOpacity onPress={() => setAuthModalVisible(true)}>
-          <Text className="text-primary font-semibold">Sign Up / Login</Text>
-        </TouchableOpacity>
+        {currentUser ? (
+          <Text className="text-foreground font-semibold">
+            {currentUser.nickname}
+          </Text>
+        ) : (
+          <TouchableOpacity onPress={() => setAuthModalVisible(true)}>
+            <Text className="text-primary font-semibold">Sign Up / Login</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <FeedList

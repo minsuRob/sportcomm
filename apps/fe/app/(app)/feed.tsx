@@ -14,6 +14,7 @@ import { GET_POSTS } from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
 import AuthForm from "@/components/AuthForm";
 import { Post, PostType } from "@/components/PostCard"; // Use the Post type from the canonical component
+import { User, getSession, clearSession } from "@/lib/auth";
 
 // --- Type Definitions ---
 
@@ -56,9 +57,7 @@ export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authModalVisible, setAuthModalVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ nickname: string } | null>(
-    null
-  );
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // --- urql Query Hook ---
   // The variables are now passed inside an 'input' object to match the backend resolver.
@@ -68,6 +67,17 @@ export default function FeedScreen() {
   });
 
   const { data, fetching, error } = result;
+
+  // --- Auth Effect ---
+  useEffect(() => {
+    const checkSession = async () => {
+      const { user } = await getSession();
+      if (user) {
+        setCurrentUser(user);
+      }
+    };
+    checkSession();
+  }, []);
 
   // --- Data Handling Effect ---
   useEffect(() => {
@@ -127,10 +137,16 @@ export default function FeedScreen() {
     });
   }, [fetching, executeQuery, data]);
 
-  const handleLoginSuccess = (user: { nickname: string }) => {
+  const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setAuthModalVisible(false);
     // Optionally, show a welcome message
+  };
+
+  const handleLogout = async () => {
+    await clearSession();
+    setCurrentUser(null);
+    // Optionally, show a confirmation message
   };
 
   // --- Render Logic ---
@@ -192,9 +208,12 @@ export default function FeedScreen() {
       <View className="flex-row items-center justify-between p-4 border-b border-border bg-card">
         <Text className="text-xl font-bold text-foreground">Feed</Text>
         {currentUser ? (
-          <Text className="text-foreground font-semibold">
-            {currentUser.nickname}
-          </Text>
+          <View className="flex-row items-center">
+            <Text className="text-foreground font-semibold mr-4">
+              {currentUser.nickname}
+            </Text>
+            <Button title="Logout" onPress={handleLogout} />
+          </View>
         ) : (
           <TouchableOpacity onPress={() => setAuthModalVisible(true)}>
             <Text className="text-primary font-semibold">Sign Up / Login</Text>

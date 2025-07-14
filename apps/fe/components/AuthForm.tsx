@@ -4,6 +4,7 @@ import { useMutation } from "urql";
 import { Button } from "./ui/button";
 import { Eye, EyeOff } from "lucide-react-native";
 import Toast from "react-native-toast-message";
+import { saveSession, User } from "../lib/auth";
 import { LOGIN_MUTATION, REGISTER_MUTATION } from "../lib/graphql";
 
 const SocialLogins = () => (
@@ -31,12 +32,6 @@ const SocialLogins = () => (
   </>
 );
 
-// Define the user type based on what the login/register mutations return
-interface User {
-  nickname: string;
-  // Potentially other fields like id, email etc.
-}
-
 export default function AuthForm({
   onLoginSuccess,
 }: {
@@ -54,8 +49,9 @@ export default function AuthForm({
   const handleLogin = async () => {
     const result = await login({ input: { email, password } });
     if (result.data?.login) {
-      // TODO: Store the token securely
-      onLoginSuccess(result.data.login.user);
+      const { token, user } = result.data.login;
+      await saveSession(token, user);
+      onLoginSuccess(user);
     } else if (result.error) {
       const originalError = result.error.graphQLErrors[0]?.extensions
         ?.originalError as { message?: string[] | string };
@@ -74,8 +70,9 @@ export default function AuthForm({
   const handleRegister = async () => {
     const result = await register({ input: { email, nickname, password } });
     if (result.data?.register) {
-      // TODO: Store the token securely
-      onLoginSuccess(result.data.register.user);
+      const { token, user } = result.data.register;
+      await saveSession(token, user);
+      onLoginSuccess(user);
     } else if (result.error) {
       const originalError = result.error.graphQLErrors[0]?.extensions
         ?.originalError as { message?: string[] | string };

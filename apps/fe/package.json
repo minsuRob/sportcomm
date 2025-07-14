@@ -15,9 +15,11 @@
     "web": "expo start -c --web"
   },
   "dependencies": {
+    "@expo-google-fonts/space-grotesk": "^0.4.0",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-tooltip": "^1.2.7",
-    "@react-navigation/native": "^7.0.0",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-navigation/native": "^7.1.14",
     "@rn-primitives/avatar": "~1.2.0",
     "@rn-primitives/portal": "~1.3.0",
     "@rn-primitives/progress": "~1.2.0",
@@ -26,6 +28,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "expo": "^53.0.9",
+    "expo-font": "^13.3.2",
     "expo-linking": "~7.1.5",
     "expo-navigation-bar": "~4.2.4",
     "expo-router": "~5.1.0",
@@ -42,13 +45,12 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "^4.10.0",
     "react-native-svg": "15.11.2",
-    "react-native-web": "~0.20.0",
     "react-native-toast-message": "^2.2.0",
+    "react-native-web": "~0.20.0",
     "tailwind-merge": "^2.2.1",
     "tailwindcss": "3.3.5",
     "tailwindcss-animate": "^1.0.7",
-    "urql": "^4.2.2",
-    "@react-native-async-storage/async-storage": "2.1.2"
+    "urql": "^4.2.2"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",

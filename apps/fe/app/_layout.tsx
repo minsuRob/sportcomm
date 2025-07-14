@@ -1,106 +1,71 @@
 import "../global.css";
 
-import {
-  DarkTheme,
-  DefaultTheme,
-  Theme,
-  ThemeProvider,
-} from "@react-navigation/native";
+import { ThemeProvider as NavigationThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as React from "react";
-import { Appearance, Platform } from "react-native";
+import { Platform } from "react-native";
 import { createClient, Provider, cacheExchange, fetchExchange } from "urql";
 import { setAndroidNavigationBar } from "../lib/android-navigation-bar";
-import { NAV_THEME } from "../lib/constants";
-import { useColorScheme } from "../lib/useColorScheme";
 import { GRAPHQL_URL } from "@env";
+
+import {
+  ThemeProvider as AppThemeProvider,
+  useAppTheme,
+} from "@/lib/theme/context";
+import { customFontsToLoad } from "@/lib/theme/typography";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 
 // Create a urql client pointing to the NestJS backend.
 // This is the single source of truth for all GraphQL operations.
 
 const client = createClient({
-  url: GRAPHQL_URL || "http://localhost:3000/graphql",
+  url: "https://alternatively-hollow-redeem-nathan.trycloudflare.com/graphql",
   exchanges: [cacheExchange, fetchExchange],
 });
 
 console.log(GRAPHQL_URL);
-
-const LIGHT_THEME: Theme = {
-  ...DefaultTheme,
-  colors: NAV_THEME.light,
-};
-const DARK_THEME: Theme = {
-  ...DarkTheme,
-  colors: NAV_THEME.dark,
-};
 
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from "expo-router";
 
-const usePlatformSpecificSetup = Platform.select({
-  web: useSetWebBackgroundClassName,
-  android: useSetAndroidNavigationBar,
-  default: noop,
-});
+function RootLayoutNav() {
+  const { navigationTheme, themeContext } = useAppTheme();
+
+  return (
+    <NavigationThemeProvider value={navigationTheme}>
+      <StatusBar style={themeContext === "dark" ? "light" : "dark"} />
+      <Slot />
+      <PortalHost />
+    </NavigationThemeProvider>
+  );
+}
 
 export default function RootLayout() {
-  const { isDarkColorScheme, setColorScheme } = useColorScheme();
+  const [fontsLoaded] = useFonts(customFontsToLoad);
 
   React.useEffect(() => {
-    // Set the initial color scheme from the OS setting.
-    setColorScheme(Appearance.getColorScheme() ?? "light");
+    if (fontsLoaded) {
+      // 폰트가 로드되면 스플래시 화면을 숨깁니다.
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
 
-    // Listen for OS theme changes.
-    const subscription = Appearance.addChangeListener((preferences) => {
-      setColorScheme(preferences.colorScheme ?? "light");
-    });
-
-    return () => subscription.remove();
-  }, [setColorScheme]);
-
-  usePlatformSpecificSetup();
+  // 폰트가 로드되지 않았다면 아무것도 렌더링하지 않습니다.
+  if (!fontsLoaded) {
+    return null;
+  }
 
   // The urql Provider wraps everything, making the client available to all screens.
   return (
     <Provider value={client}>
-      <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-        <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-        <Slot />
-        <PortalHost />
-      </ThemeProvider>
+      <AppThemeProvider>
+        <RootLayoutNav />
+      </AppThemeProvider>
     </Provider>
   );
 }
-
-const useIsomorphicLayoutEffect =
-  Platform.OS === "web" && typeof window === "undefined"
-    ? React.useEffect
-    : React.useLayoutEffect;
-
-function useSetWebBackgroundClassName() {
-  const { isDarkColorScheme } = useColorScheme();
-
-  useIsomorphicLayoutEffect(() => {
-    // Adds the background color to the html element to prevent white background on overscroll.
-    document.documentElement.classList.add("bg-background");
-    // On web, we need to manually add/remove the 'dark' class on the html element
-    if (isDarkColorScheme) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [isDarkColorScheme]);
-}
-
-function useSetAndroidNavigationBar() {
-  const { colorScheme } = useColorScheme();
-  React.useEffect(() => {
-    setAndroidNavigationBar(colorScheme);
-  }, [colorScheme]);
-}
-
-function noop() {}

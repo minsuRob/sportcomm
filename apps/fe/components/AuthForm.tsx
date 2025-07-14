@@ -105,6 +105,7 @@ export default function AuthForm() {
 
   return (
     <View className="flex-1 justify-center p-8 bg-background">
+      <Toast />
       <Text className="text-3xl font-bold text-center text-foreground mb-8">
         {isLogin ? "다시 오신 걸 환영합니다" : "계정 만들기"}
       </Text>

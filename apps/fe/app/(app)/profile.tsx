@@ -1,101 +1,230 @@
-import React, { useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
-  ScrollView,
   Text,
-  ActivityIndicator,
-  Button,
-  RefreshControl,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  ViewStyle,
+  TextStyle,
+  ImageStyle,
 } from "react-native";
-import { useQuery } from "urql";
+import { Settings, Edit3 } from "lucide-react-native";
+import { useAppTheme } from "@/lib/theme/context";
+import type { ThemedStyle } from "@/lib/theme/types";
+import { User, getSession } from "@/lib/auth";
 
-import ProfileHeader from "@/components/ProfileHeader";
-import FeedList from "@/components/FeedList";
-import { GET_POSTS } from "@/lib/graphql";
-import { Post } from "@/components/PostCard"; // Corrected import path for Post type
-
-// This data would typically be fetched from a user-specific API endpoint.
-// For example, a `GET_USER_PROFILE` query.
-const mockUser = {
-  nickname: "Robert",
-  bio: "Sports enthusiast. Fan of the home team. Catch me at the next game!",
-  profileImageUrl: "https://i.pravatar.cc/150?u=robert",
-};
-
-// The shape of the GraphQL response for the posts query.
-interface PostsQueryResponse {
-  posts: {
-    posts: Post[];
-  };
-}
-
+/**
+ * 프로필 화면 컴포넌트
+ * 사용자의 프로필 정보와 작성한 게시물을 표시합니다
+ */
 export default function ProfileScreen() {
-  // In a real app, this `authorId` would come from the authenticated user's state.
-  const authorId = "a_hardcoded_user_id_for_now"; // Placeholder
+  const { themed, theme } = useAppTheme();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const [result, executeQuery] = useQuery<PostsQueryResponse>({
-    query: GET_POSTS,
-    // The variables now use the correct 'input' structure.
-    // We filter by a placeholder authorId to simulate fetching user-specific posts.
-    variables: {
-      input: {
-        limit: 10,
-        page: 1,
-        // In a real implementation, you would pass the actual user's ID here.
-        // authorId: "..."
-      },
-    },
-  });
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      const { user } = await getSession();
+      if (user) setCurrentUser(user);
+    };
+    loadUserProfile();
+  }, []);
 
-  const { data, fetching, error } = result;
+  const handleEditProfile = () => {
+    // TODO: 프로필 편집 로직 구현
+    console.log("프로필 편집");
+  };
 
-  const handleRefresh = useCallback(() => {
-    executeQuery({ requestPolicy: "network-only" });
-  }, [executeQuery]);
+  const handleSettings = () => {
+    // TODO: 설정 화면 이동 로직 구현
+    console.log("설정");
+  };
 
-  // Initial loading state
-  if (fetching && !data) {
+  if (!currentUser) {
     return (
-      <View className="flex-1 justify-center items-center bg-background">
-        <ActivityIndicator size="large" />
+      <View style={themed($container)}>
+        <View style={themed($loadingContainer)}>
+          <Text style={themed($loadingText)}>프로필을 불러오는 중...</Text>
+        </View>
       </View>
     );
   }
 
-  // Error state
-  if (error) {
-    return (
-      <View className="flex-1 justify-center items-center bg-background p-4">
-        <Text className="text-destructive text-lg text-center mb-4">
-          Failed to load profile posts: {error.message}
-        </Text>
-        <Button title="Retry" onPress={handleRefresh} />
-      </View>
-    );
-  }
-
-  // The actual user posts from the API response.
-  // The data now directly matches the `Post` type, so less transformation is needed.
-  const userPosts: Post[] = data?.posts?.posts || [];
+  const avatarUrl =
+    currentUser.profileImageUrl ||
+    `https://i.pravatar.cc/150?u=${currentUser.id}`;
 
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      refreshControl={
-        <RefreshControl refreshing={fetching} onRefresh={handleRefresh} />
-      }
-    >
-      <ProfileHeader user={mockUser} />
+    <ScrollView style={themed($container)}>
+      {/* 헤더 */}
+      <View style={themed($header)}>
+        <Text style={themed($headerTitle)}>프로필</Text>
+        <TouchableOpacity onPress={handleSettings}>
+          <Settings color={theme.colors.text} size={24} />
+        </TouchableOpacity>
+      </View>
 
-      <View className="h-px bg-border my-4" />
+      {/* 프로필 정보 */}
+      <View style={themed($profileSection)}>
+        <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
+        <Text style={themed($username)}>{currentUser.nickname}</Text>
+        <Text style={themed($userEmail)}>{currentUser.email}</Text>
 
-      <Text className="text-lg font-bold px-4 mb-2 text-foreground">
-        My Posts
-      </Text>
+        {/* 프로필 편집 버튼 */}
+        <TouchableOpacity
+          style={themed($editButton)}
+          onPress={handleEditProfile}
+        >
+          <Edit3 color={theme.colors.tint} size={16} />
+          <Text style={themed($editButtonText)}>프로필 편집</Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* The FeedList component is reused to display the user's posts. */}
-      {/* Note: This now passes the actual posts fetched from the API. */}
-      <FeedList posts={userPosts} />
+      {/* 통계 정보 */}
+      <View style={themed($statsSection)}>
+        <View style={themed($statItem)}>
+          <Text style={themed($statNumber)}>0</Text>
+          <Text style={themed($statLabel)}>게시물</Text>
+        </View>
+        <View style={themed($statItem)}>
+          <Text style={themed($statNumber)}>0</Text>
+          <Text style={themed($statLabel)}>팔로워</Text>
+        </View>
+        <View style={themed($statItem)}>
+          <Text style={themed($statNumber)}>0</Text>
+          <Text style={themed($statLabel)}>팔로잉</Text>
+        </View>
+      </View>
+
+      {/* 내 게시물 섹션 */}
+      <View style={themed($postsSection)}>
+        <Text style={themed($sectionTitle)}>내 게시물</Text>
+        <View style={themed($emptyState)}>
+          <Text style={themed($emptyStateText)}>
+            아직 작성한 게시물이 없습니다
+          </Text>
+        </View>
+      </View>
     </ScrollView>
   );
 }
+
+// --- 스타일 정의 ---
+const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+});
+
+const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.lg,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 24,
+  fontWeight: "bold",
+  color: colors.text,
+});
+
+const $profileSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  padding: spacing.xl,
+});
+
+const $profileImage: ThemedStyle<ImageStyle> = () => ({
+  width: 100,
+  height: 100,
+  borderRadius: 50,
+});
+
+const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 24,
+  fontWeight: "bold",
+  color: colors.text,
+  marginTop: spacing.md,
+});
+
+const $userEmail: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+  marginTop: spacing.xs,
+});
+
+const $editButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: spacing.lg,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderWidth: 1,
+  borderColor: colors.tint,
+  borderRadius: 8,
+});
+
+const $editButtonText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginLeft: spacing.xs,
+  color: colors.tint,
+  fontWeight: "600",
+});
+
+const $statsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-around",
+  paddingVertical: spacing.lg,
+  borderTopWidth: 1,
+  borderBottomWidth: 1,
+  borderColor: colors.border,
+});
+
+const $statItem: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "center",
+});
+
+const $statNumber: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 20,
+  fontWeight: "bold",
+  color: colors.text,
+});
+
+const $statLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  marginTop: spacing.xxxs,
+});
+
+const $postsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.md,
+});
+
+const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 18,
+  fontWeight: "bold",
+  color: colors.text,
+  marginBottom: spacing.md,
+});
+
+const $emptyState: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  paddingVertical: spacing.xl,
+});
+
+const $emptyStateText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+});

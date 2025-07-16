@@ -1,114 +1,131 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Info } from "lucide-react-native";
-import React from "react";
-import { Text, View } from "react-native";
-import Animated, {
-  FadeInUp,
-  FadeOutDown,
-  LayoutAnimationConfig,
-} from "react-native-reanimated";
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ViewStyle,
+  TextStyle,
+} from "react-native";
+import { Search as SearchIcon } from "lucide-react-native";
+import { useAppTheme } from "@/lib/theme/context";
+import type { ThemedStyle } from "@/lib/theme/types";
 
-const GITHUB_AVATAR_URI =
-  "https://i.pinimg.com/originals/ef/a2/8d/efa28d18a04e7fa40ed49eeb0ab660db.jpg";
+/**
+ * 검색 화면 컴포넌트
+ * 사용자가 게시물이나 사용자를 검색할 수 있는 기능을 제공합니다
+ */
+export default function SearchScreen() {
+  const { themed, theme } = useAppTheme();
+  const [searchQuery, setSearchQuery] = useState("");
 
-export default function Screen() {
-  const [progress, setProgress] = React.useState(78);
+  const handleSearch = () => {
+    // TODO: 검색 로직 구현
+    console.log("검색어:", searchQuery);
+  };
 
-  function updateProgressValue() {
-    setProgress(Math.floor(Math.random() * 100));
-  }
   return (
-    <View className="flex-1 justify-center items-center gap-5 p-6 bg-secondary/30">
-      <Card className="w-full max-w-sm p-6 rounded-2xl">
-        <CardHeader className="items-center">
-          <Avatar alt="Rick Sanchez's Avatar" className="w-24 h-24">
-            <AvatarImage source={{ uri: GITHUB_AVATAR_URI }} />
-            <AvatarFallback>
-              <Text>RS</Text>
-            </AvatarFallback>
-          </Avatar>
-          <View className="p-3" />
-          <CardTitle className="pb-2 text-center">Rick Sanchez</CardTitle>
-          <View className="flex-row">
-            <CardDescription className="text-base font-semibold">
-              Scientist
-            </CardDescription>
-            <Tooltip delayDuration={150}>
-              <TooltipTrigger className="px-2 pb-0.5 active:opacity-50">
-                <Info
-                  size={14}
-                  strokeWidth={2.5}
-                  className="w-4 h-4 text-foreground/70"
-                />
-              </TooltipTrigger>
-              <TooltipContent className="py-2 px-4 shadow">
-                <Text className="native:text-lg">Freelance</Text>
-              </TooltipContent>
-            </Tooltip>
-          </View>
-        </CardHeader>
-        <CardContent>
-          <View className="flex-row justify-around gap-3">
-            <View className="items-center">
-              <Text className="text-sm text-muted-foreground">Dimension</Text>
-              <Text className="text-xl font-semibold">C-137</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-sm text-muted-foreground">Age</Text>
-              <Text className="text-xl font-semibold">70</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-sm text-muted-foreground">Species</Text>
-              <Text className="text-xl font-semibold">Human</Text>
-            </View>
-          </View>
-        </CardContent>
-        <CardFooter className="flex-col gap-3 pb-0">
-          <View className="flex-row items-center overflow-hidden">
-            <Text className="text-sm text-muted-foreground">Productivity:</Text>
-            <LayoutAnimationConfig skipEntering>
-              <Animated.View
-                key={progress}
-                entering={FadeInUp}
-                exiting={FadeOutDown}
-                className="w-11 items-center"
-              >
-                <Text className="text-sm font-bold text-sky-600">
-                  {progress}%
-                </Text>
-              </Animated.View>
-            </LayoutAnimationConfig>
-          </View>
-          <Progress
-            value={progress}
-            className="h-2"
-            indicatorClassName="bg-sky-600"
+    <View style={themed($container)}>
+      {/* 검색 헤더 */}
+      <View style={themed($header)}>
+        <Text style={themed($headerTitle)}>검색</Text>
+      </View>
+
+      {/* 검색 입력 영역 */}
+      <View style={themed($searchContainer)}>
+        <View style={themed($searchInputContainer)}>
+          <SearchIcon color={theme.colors.textDim} size={20} />
+          <TextInput
+            style={themed($searchInput)}
+            placeholder="게시물이나 사용자를 검색하세요"
+            placeholderTextColor={theme.colors.textDim}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
           />
-          <View />
-          <Button
-            variant="outline"
-            className="shadow shadow-foreground/5"
-            onPress={updateProgressValue}
-          >
-            <Text>Update</Text>
-          </Button>
-        </CardFooter>
-      </Card>
+        </View>
+        <TouchableOpacity style={themed($searchButton)} onPress={handleSearch}>
+          <Text style={themed($searchButtonText)}>검색</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 검색 결과 영역 */}
+      <View style={themed($resultsContainer)}>
+        <Text style={themed($placeholderText)}>
+          검색어를 입력하여 게시물이나 사용자를 찾아보세요
+        </Text>
+      </View>
     </View>
   );
 }
+
+// --- 스타일 정의 ---
+const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+});
+
+const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.lg,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 24,
+  fontWeight: "bold",
+  color: colors.text,
+});
+
+const $searchContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.md,
+  flexDirection: "row",
+  alignItems: "center",
+});
+
+const $searchInputContainer: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  flex: 1,
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.separator,
+  borderRadius: 8,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  marginRight: spacing.sm,
+});
+
+const $searchInput: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  flex: 1,
+  marginLeft: spacing.sm,
+  fontSize: 16,
+  color: colors.text,
+});
+
+const $searchButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 8,
+});
+
+const $searchButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontWeight: "600",
+});
+
+const $resultsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  padding: spacing.md,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $placeholderText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+  textAlign: "center",
+});

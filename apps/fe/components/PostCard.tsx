@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  ViewStyle,
+  TextStyle,
+  ImageStyle,
+} from "react-native";
 import { useMutation } from "urql";
 import { TOGGLE_LIKE } from "@/lib/graphql";
+import { useAppTheme } from "@/lib/theme/context";
+import type { ThemedStyle } from "@/lib/theme/types";
 import { Eye } from "@/lib/icons/Eye";
 import { Heart } from "@/lib/icons/Heart";
 import { MessageCircle } from "@/lib/icons/MessageCircle";
@@ -56,17 +66,19 @@ interface PostCardProps {
 const getPostTypeStyle = (type: PostType) => {
   switch (type) {
     case PostType.ANALYSIS:
-      return { badge: "bg-indigo-500", text: "Analysis" };
+      return { color: "#6366f1", text: "Analysis" };
     case PostType.HIGHLIGHT:
-      return { badge: "bg-amber-500", text: "Highlight" };
+      return { color: "#f59e0b", text: "Highlight" };
     case PostType.CHEERING:
     default:
-      return { badge: "bg-green-500", text: "Cheering" };
+      return { color: "#10b981", text: "Cheering" };
   }
 };
 
 // --- The Component ---
 export default function PostCard({ post }: PostCardProps) {
+  const { themed, theme } = useAppTheme();
+
   // Use state to manage client-side interactions like "liking" a post.
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
@@ -105,103 +117,84 @@ export default function PostCard({ post }: PostCardProps) {
   const postTypeStyle = getPostTypeStyle(post.type);
 
   return (
-    <View className="bg-card p-4 border-b border-border">
+    <View style={themed($container)}>
       {/* Header */}
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center">
-          <Image
-            source={{ uri: avatarUrl }}
-            className="w-12 h-12 rounded-full"
-          />
-          <View className="ml-3">
-            <Text className="font-bold text-lg text-foreground">
-              {post.author.nickname}
-            </Text>
-            <Text className="text-xs text-muted-foreground">
+      <View style={themed($header)}>
+        <View style={themed($headerLeft)}>
+          <Image source={{ uri: avatarUrl }} style={themed($avatar)} />
+          <View style={themed($userInfo)}>
+            <Text style={themed($username)}>{post.author.nickname}</Text>
+            <Text style={themed($timestamp)}>
               {new Date(post.createdAt).toLocaleDateString()}
             </Text>
           </View>
         </View>
         <TouchableOpacity>
-          <MoreHorizontal className="text-muted-foreground" size={24} />
+          <MoreHorizontal color={theme.colors.textDim} size={24} />
         </TouchableOpacity>
       </View>
 
       {/* Content */}
-      <Text className="my-3 text-base text-foreground">{post.content}</Text>
+      <Text style={themed($content)}>{post.content}</Text>
 
       {/* Media */}
       {firstMedia?.type === "image" && (
-        <View className="relative">
-          <Image
-            source={{ uri: firstMedia.url }}
-            className="w-full h-56 rounded-lg bg-secondary"
-          />
+        <View style={themed($mediaContainer)}>
+          <Image source={{ uri: firstMedia.url }} style={themed($mediaImage)} />
           <View
-            className={`absolute top-2 right-2 ${postTypeStyle.badge} px-2 py-1 rounded-full`}
+            style={[themed($badge), { backgroundColor: postTypeStyle.color }]}
           >
-            <Text className="text-white text-xs font-bold">
-              {postTypeStyle.text}
-            </Text>
+            <Text style={themed($badgeText)}>{postTypeStyle.text}</Text>
           </View>
         </View>
       )}
 
       {/* Stats */}
-      <View className="flex-row items-center mt-3">
-        <Heart className="text-muted-foreground" size={16} />
-        <Text className="ml-1 text-sm text-muted-foreground mr-4">
-          {likeCount} Likes
-        </Text>
-        <MessageCircle className="text-muted-foreground" size={16} />
-        <Text className="ml-1 text-sm text-muted-foreground mr-4">
-          {post.commentCount} Comments
-        </Text>
-        <Eye className="text-muted-foreground" size={16} />
-        <Text className="ml-1 text-sm text-muted-foreground">
-          {post.viewCount} Views
-        </Text>
+      <View style={themed($stats)}>
+        <Heart color={theme.colors.textDim} size={16} />
+        <Text style={themed($statText)}>{likeCount} Likes</Text>
+        <MessageCircle color={theme.colors.textDim} size={16} />
+        <Text style={themed($statText)}>{post.commentCount} Comments</Text>
+        <Eye color={theme.colors.textDim} size={16} />
+        <Text style={themed($statText)}>{post.viewCount} Views</Text>
       </View>
 
       {/* Action Bar */}
-      <View className="flex-row justify-around items-center mt-3 pt-3 border-t border-border">
+      <View style={themed($actionBar)}>
         <TouchableOpacity
           onPress={handleLike}
           disabled={likeResult.fetching}
-          className="flex-row items-center"
+          style={themed($actionButton)}
         >
           <Heart
             size={22}
-            className={isLiked ? "text-destructive" : "text-muted-foreground"}
-            fill={isLiked ? "hsl(var(--destructive))" : "transparent"}
+            color={isLiked ? theme.colors.error : theme.colors.textDim}
+            fill={isLiked ? theme.colors.error : "transparent"}
           />
           <Text
-            className={`ml-2 text-sm font-medium ${
-              isLiked ? "text-destructive" : "text-muted-foreground"
-            }`}
+            style={[
+              themed($actionText),
+              { color: isLiked ? theme.colors.error : theme.colors.textDim },
+            ]}
           >
             Like
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity className="flex-row items-center">
-          <MessageCircle size={22} className="text-muted-foreground" />
-          <Text className="ml-2 text-sm font-medium text-muted-foreground">
-            Comment
-          </Text>
+        <TouchableOpacity style={themed($actionButton)}>
+          <MessageCircle size={22} color={theme.colors.textDim} />
+          <Text style={themed($actionText)}>Comment</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="flex-row items-center">
-          <Repeat size={22} className="text-muted-foreground" />
-          <Text className="ml-2 text-sm font-medium text-muted-foreground">
-            Repost
-          </Text>
+        <TouchableOpacity style={themed($actionButton)}>
+          <Repeat size={22} color={theme.colors.textDim} />
+          <Text style={themed($actionText)}>Repost</Text>
         </TouchableOpacity>
       </View>
 
       {/* Comment Preview */}
       {post.commentCount > 0 && (
-        <View className="mt-2">
+        <View style={themed($commentPreview)}>
           <TouchableOpacity>
-            <Text className="text-sm text-muted-foreground">
+            <Text style={themed($commentPreviewText)}>
               View all {post.commentCount} comments
             </Text>
           </TouchableOpacity>
@@ -210,3 +203,119 @@ export default function PostCard({ post }: PostCardProps) {
     </View>
   );
 }
+
+// --- Styles ---
+const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.background,
+  padding: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $header: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+});
+
+const $headerLeft: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+});
+
+const $avatar: ThemedStyle<ImageStyle> = () => ({
+  width: 48,
+  height: 48,
+  borderRadius: 24,
+});
+
+const $userInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginLeft: spacing.sm,
+});
+
+const $username: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontWeight: "bold",
+  fontSize: 18,
+  color: colors.text,
+});
+
+const $timestamp: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+});
+
+const $content: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginVertical: spacing.sm,
+  fontSize: 16,
+  color: colors.text,
+});
+
+const $mediaContainer: ThemedStyle<ViewStyle> = () => ({
+  position: "relative",
+});
+
+const $mediaImage: ThemedStyle<ImageStyle> = ({ colors }) => ({
+  width: "100%",
+  height: 224,
+  borderRadius: 8,
+  backgroundColor: colors.separator,
+});
+
+const $badge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  top: spacing.xs,
+  right: spacing.xs,
+  paddingHorizontal: spacing.xs,
+  paddingVertical: spacing.xxxs,
+  borderRadius: 16,
+});
+
+const $badgeText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 12,
+  fontWeight: "bold",
+});
+
+const $stats: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: spacing.sm,
+});
+
+const $statText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginLeft: spacing.xxxs,
+  fontSize: 14,
+  color: colors.textDim,
+  marginRight: spacing.md,
+});
+
+const $actionBar: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-around",
+  alignItems: "center",
+  marginTop: spacing.sm,
+  paddingTop: spacing.sm,
+  borderTopWidth: 1,
+  borderTopColor: colors.border,
+});
+
+const $actionButton: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+});
+
+const $actionText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginLeft: spacing.xs,
+  fontSize: 14,
+  fontWeight: "500",
+  color: colors.textDim,
+});
+
+const $commentPreview: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.xs,
+});
+
+const $commentPreviewText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+});

@@ -1,6 +1,8 @@
 import React from "react";
-import { FlatList, View, Text } from "react-native";
+import { FlatList, View, Text, ViewStyle, TextStyle } from "react-native";
 import PostCard, { Post } from "./PostCard"; // Import PostCard and the Post type from it
+import { useAppTheme } from "@/lib/theme/context";
+import type { ThemedStyle } from "@/lib/theme/types";
 
 interface FeedListProps {
   posts: Post[];
@@ -22,30 +24,65 @@ export default function FeedList({
   ListFooterComponent,
   onEndReached,
 }: FeedListProps) {
+  const { themed } = useAppTheme();
+
   const renderItem = ({ item }: { item: Post }) => <PostCard post={item} />;
 
   const keyExtractor = (item: Post) => item.id;
+
+  const ItemSeparator = () => <View style={themed($separator)} />;
+
+  const EmptyComponent = () => (
+    <View style={themed($emptyContainer)}>
+      <Text style={themed($emptyTitle)}>No posts available.</Text>
+      <Text style={themed($emptySubtitle)}>Pull down to refresh.</Text>
+    </View>
+  );
 
   return (
     <FlatList
       data={posts}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
-      ItemSeparatorComponent={() => <View className="h-2 bg-secondary" />}
-      ListEmptyComponent={
-        <View className="flex-1 justify-center items-center mt-12 p-4">
-          <Text className="text-lg text-foreground">No posts available.</Text>
-          <Text className="text-sm text-muted-foreground mt-2">
-            Pull down to refresh.
-          </Text>
-        </View>
-      }
+      ItemSeparatorComponent={ItemSeparator}
+      ListEmptyComponent={EmptyComponent}
       onRefresh={onRefresh}
       refreshing={refreshing}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
       ListFooterComponent={ListFooterComponent}
-      className="bg-background"
+      style={themed($container)}
     />
   );
 }
+
+// --- Styles ---
+const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.background,
+});
+
+const $separator: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  height: spacing.xs,
+  backgroundColor: colors.separator,
+});
+
+const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  marginTop: spacing.xxxl,
+  padding: spacing.md,
+});
+
+const $emptyTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  color: colors.text,
+  textAlign: "center",
+});
+
+const $emptySubtitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  textAlign: "center",
+  marginTop: spacing.xs,
+});

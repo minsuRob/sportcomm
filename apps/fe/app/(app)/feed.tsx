@@ -1,4 +1,3 @@
-// sportcomm/apps/fe/app/(app)/feed.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
@@ -7,18 +6,20 @@ import {
   Text,
   Modal,
   TouchableOpacity,
+  ViewStyle,
+  TextStyle,
 } from "react-native";
 import { useQuery } from "urql";
 
 import { GET_POSTS } from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
 import AuthForm from "@/components/AuthForm";
-import { Post, PostType } from "@/components/PostCard"; // Use the Post type from the canonical component
+import { Post, PostType } from "@/components/PostCard";
 import { User, getSession, clearSession } from "@/lib/auth";
+import { useAppTheme } from "@/lib/theme/context";
+import type { ThemedStyle } from "@/lib/theme/types";
 
 // --- Type Definitions ---
-
-// This is the shape of a single post object coming from the GraphQL query
 interface GqlPost {
   id: string;
   content: string;
@@ -32,17 +33,10 @@ interface GqlPost {
     nickname: string;
     profileImageUrl?: string;
   };
-  media: {
-    id: string;
-    url: string;
-    type: "image" | "video";
-  }[];
-  comments: {
-    id: string;
-  }[];
+  media: Array<{ id: string; url: string; type: "image" | "video" }>;
+  comments: Array<{ id: string }>;
 }
 
-// The shape of the entire response for the posts query, including pagination
 interface PostsQueryResponse {
   posts: {
     posts: GqlPost[];
@@ -54,13 +48,12 @@ interface PostsQueryResponse {
 const PAGE_SIZE = 10;
 
 export default function FeedScreen() {
+  const { themed, theme } = useAppTheme();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // --- urql Query Hook ---
-  // The variables are now passed inside an 'input' object to match the backend resolver.
   const [result, executeQuery] = useQuery<PostsQueryResponse>({
     query: GET_POSTS,
     variables: { input: { page: 1, limit: PAGE_SIZE } },
@@ -68,30 +61,22 @@ export default function FeedScreen() {
 
   const { data, fetching, error } = result;
 
-  // --- Auth Effect ---
   useEffect(() => {
     const checkSession = async () => {
       const { user } = await getSession();
-      if (user) {
-        setCurrentUser(user);
-      }
+      if (user) setCurrentUser(user);
     };
     checkSession();
   }, []);
 
-  // --- Data Handling Effect ---
   useEffect(() => {
-    // Only process data if the request was successful and returned posts
     if (data?.posts?.posts) {
-      // Transform the GQL data into the frontend Post type
-      // The property names like `likeCount` and `commentCount` now match directly.
       const newPosts: Post[] = data.posts.posts.map((p) => ({
         ...p,
-        isLiked: false, // Default value, should be managed by a 'like' mutation
+        isLiked: false,
         isMock: false,
       }));
 
-      // If it's a refresh (page 1), replace the list. Otherwise, append new unique posts.
       if (data.posts.page === 1) {
         setPosts(newPosts);
       } else {
@@ -99,7 +84,6 @@ export default function FeedScreen() {
           const postMap = new Map(currentPosts.map((p) => [p.id, p]));
           newPosts.forEach((p) => postMap.set(p.id, p));
           const mergedPosts = Array.from(postMap.values());
-          // Re-sort to maintain chronological order
           return mergedPosts.sort(
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -107,17 +91,11 @@ export default function FeedScreen() {
         });
       }
     }
-
-    // Stop the refreshing indicator once data is processed
-    if (isRefreshing) {
-      setIsRefreshing(false);
-    }
+    if (isRefreshing) setIsRefreshing(false);
   }, [data, isRefreshing]);
 
-  // --- Event Handlers ---
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    // Refetch from the first page
     executeQuery({
       requestPolicy: "network-only",
       variables: { input: { page: 1, limit: PAGE_SIZE } },
@@ -125,12 +103,7 @@ export default function FeedScreen() {
   }, [executeQuery]);
 
   const handleLoadMore = useCallback(() => {
-    const hasNextPage = data?.posts?.hasNext ?? false;
-    // Prevent multiple fetches while one is already in progress
-    if (fetching || !hasNextPage) {
-      return;
-    }
-    // Calculate the next page from the last successful response
+    if (fetching || !data?.posts?.hasNext) return;
     const nextPage = (data?.posts?.page ?? 0) + 1;
     executeQuery({
       variables: { input: { page: nextPage, limit: PAGE_SIZE } },
@@ -140,83 +113,80 @@ export default function FeedScreen() {
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setAuthModalVisible(false);
-    // Optionally, show a welcome message
   };
 
   const handleLogout = async () => {
     await clearSession();
     setCurrentUser(null);
-    // Optionally, show a confirmation message
   };
 
-  // --- Render Logic ---
-
-  // Show a loading spinner only on the initial load
   if (fetching && posts.length === 0 && !isRefreshing) {
     return (
-      <View className="flex-1 justify-center items-center bg-background">
-        <ActivityIndicator size="large" />
+      <View style={themed($centeredContainer)}>
+        <ActivityIndicator size="large" color={theme.colors.text} />
       </View>
     );
   }
 
-  // Show an error message if the initial fetch fails
   if (error && posts.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center bg-background p-4">
-        <Text className="text-destructive text-lg text-center mb-4">
+      <View style={themed($centeredContainer)}>
+        <Text style={themed($errorText)}>
           An error occurred while fetching the feed: {error.message}
         </Text>
-        <Button title="Retry" onPress={handleRefresh} />
+        <Button
+          title="Retry"
+          onPress={handleRefresh}
+          color={theme.colors.tint}
+        />
       </View>
     );
   }
 
-  // Loading indicator for pagination
   const ListFooter = () => {
     if (!fetching || isRefreshing) return null;
     return (
-      <View className="p-4">
-        <ActivityIndicator size="small" />
+      <View style={themed($listFooter)}>
+        <ActivityIndicator size="small" color={theme.colors.text} />
       </View>
     );
   };
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={themed($container)}>
       <Modal
         animationType="slide"
         transparent={true}
         visible={authModalVisible}
-        onRequestClose={() => {
-          setAuthModalVisible(!authModalVisible);
-        }}
+        onRequestClose={() => setAuthModalVisible(!authModalVisible)}
       >
-        <View className="flex-1 justify-center items-center bg-background/80">
-          <View className="w-full max-w-md p-4">
+        <View style={themed($modalOverlay)}>
+          <View style={themed($modalContent)}>
             <AuthForm onLoginSuccess={handleLoginSuccess} />
           </View>
           <TouchableOpacity
             onPress={() => setAuthModalVisible(false)}
-            className="absolute top-10 right-5 bg-card rounded-full p-2"
+            style={themed($closeButton)}
           >
-            <Text className="text-foreground font-bold text-lg">X</Text>
+            <Text style={themed($closeButtonText)}>X</Text>
           </TouchableOpacity>
         </View>
       </Modal>
 
-      <View className="flex-row items-center justify-between p-4 border-b border-border bg-card">
-        <Text className="text-xl font-bold text-foreground">Feed</Text>
+      <View style={themed($header)}>
+        <Text style={themed($headerTitle)}>Feed</Text>
         {currentUser ? (
-          <View className="flex-row items-center">
-            <Text className="text-foreground font-semibold mr-4">
-              {currentUser.nickname}
-            </Text>
-            <Button title="Logout" onPress={handleLogout} />
+          <View style={themed($userContainer)}>
+            <Text style={themed($userNickname)}>{currentUser.nickname}</Text>
+            <Button
+              title="Logout"
+              onPress={handleLogout}
+              color={theme.colors.tint}
+            />
           </View>
         ) : (
           <TouchableOpacity onPress={() => setAuthModalVisible(true)}>
-            <Text className="text-primary font-semibold">Sign Up / Login</Text>
+            <Text style={themed($loginText)}>Sign Up / Login</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -231,3 +201,89 @@ export default function FeedScreen() {
     </View>
   );
 }
+
+// --- Styles ---
+
+const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+});
+
+const $centeredContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: colors.background,
+  padding: 16,
+});
+
+const $errorText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.error,
+  fontSize: 18,
+  textAlign: "center",
+  marginBottom: 16,
+});
+
+const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  backgroundColor: colors.background,
+});
+
+const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 20,
+  fontWeight: "bold",
+  color: colors.text,
+});
+
+const $userNickname: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.text,
+  fontWeight: "600",
+  marginRight: spacing.md,
+});
+
+const $loginText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+  fontWeight: "600",
+});
+
+const $modalOverlay: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "rgba(0, 0, 0, 0.8)",
+});
+
+const $modalContent: ThemedStyle<ViewStyle> = () => ({
+  width: "100%",
+  maxWidth: 500,
+  padding: 16,
+});
+
+const $closeButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: "absolute",
+  top: 40,
+  right: 20,
+  backgroundColor: colors.background,
+  borderRadius: 9999,
+  padding: 8,
+});
+
+const $closeButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontWeight: "bold",
+  fontSize: 18,
+});
+
+const $userContainer: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+});
+
+const $listFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.md,
+});

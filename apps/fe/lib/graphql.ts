@@ -126,3 +126,64 @@ export const REGISTER_MUTATION = `
     }
   }
 `;
+
+/**
+ * 게시물 상세 정보를 조회합니다.
+ * 게시물의 모든 정보와 댓글 목록을 포함합니다.
+ */
+export const GET_POST_DETAIL = `
+  query GetPostDetail($id: String!) {
+    post(id: $id) {
+      id
+      content
+      createdAt
+      type
+      viewCount
+      likeCount
+      commentCount
+      shareCount
+      isPinned
+      isPublic
+      author {
+        id
+        nickname
+        profileImageUrl
+        role
+      }
+      media {
+        id
+        url
+        type
+      }
+      comments {
+        id
+        content
+        createdAt
+        author {
+          id
+          nickname
+          profileImageUrl
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * 댓글을 생성합니다.
+ * 게시물 ID와 댓글 내용을 받아 새로운 댓글을 생성합니다.
+ */
+export const CREATE_COMMENT = `
+  mutation CreateComment($input: CreateCommentInput!) {
+    createComment(input: $input) {
+      id
+      content
+      createdAt
+      author {
+        id
+        nickname
+        profileImageUrl
+      }
+    }
+  }
+`;

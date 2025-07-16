@@ -9,6 +9,7 @@ import {
   ImageStyle,
 } from "react-native";
 import { useMutation } from "urql";
+import { useRouter } from "expo-router";
 import { TOGGLE_LIKE } from "@/lib/graphql";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -78,6 +79,7 @@ const getPostTypeStyle = (type: PostType) => {
 // --- The Component ---
 export default function PostCard({ post }: PostCardProps) {
   const { themed, theme } = useAppTheme();
+  const router = useRouter();
 
   // Use state to manage client-side interactions like "liking" a post.
   const [isLiked, setIsLiked] = useState(post.isLiked);
@@ -91,6 +93,13 @@ export default function PostCard({ post }: PostCardProps) {
 
   // URQL mutation hook for toggling a like.
   const [likeResult, executeLike] = useMutation(TOGGLE_LIKE);
+
+  /**
+   * 게시물 상세 페이지로 이동하는 함수
+   */
+  const handlePostPress = () => {
+    router.push(`/(app)/post/${post.id}` as any);
+  };
 
   const handleLike = () => {
     // Optimistically update the UI for a better user experience.
@@ -120,7 +129,11 @@ export default function PostCard({ post }: PostCardProps) {
     <View style={themed($container)}>
       {/* Header */}
       <View style={themed($header)}>
-        <View style={themed($headerLeft)}>
+        <TouchableOpacity
+          style={themed($headerLeft)}
+          onPress={handlePostPress}
+          activeOpacity={0.7}
+        >
           <Image source={{ uri: avatarUrl }} style={themed($avatar)} />
           <View style={themed($userInfo)}>
             <Text style={themed($username)}>{post.author.nickname}</Text>
@@ -128,25 +141,31 @@ export default function PostCard({ post }: PostCardProps) {
               {new Date(post.createdAt).toLocaleDateString()}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity>
           <MoreHorizontal color={theme.colors.textDim} size={24} />
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
-      <Text style={themed($content)}>{post.content}</Text>
+      {/* Content - 클릭 가능 */}
+      <TouchableOpacity onPress={handlePostPress} activeOpacity={0.7}>
+        <Text style={themed($content)}>{post.content}</Text>
+      </TouchableOpacity>
 
-      {/* Media */}
+      {/* Media - 클릭 가능 */}
       {firstMedia?.type === "image" && (
-        <View style={themed($mediaContainer)}>
+        <TouchableOpacity
+          style={themed($mediaContainer)}
+          onPress={handlePostPress}
+          activeOpacity={0.9}
+        >
           <Image source={{ uri: firstMedia.url }} style={themed($mediaImage)} />
           <View
             style={[themed($badge), { backgroundColor: postTypeStyle.color }]}
           >
             <Text style={themed($badgeText)}>{postTypeStyle.text}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* Stats */}

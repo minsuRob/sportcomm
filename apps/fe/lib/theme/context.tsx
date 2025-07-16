@@ -34,6 +34,7 @@ export type ThemeContextType = {
   theme: Theme;
   themeContext: ImmutableThemeContextModeT;
   themed: ThemedFnT;
+  toggleTheme: () => void;
 };
 
 export const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -143,12 +144,18 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
     [theme]
   );
 
+  const toggleTheme = useCallback(() => {
+    const newTheme = themeContext === "light" ? "dark" : "light";
+    setThemeContextOverride(newTheme);
+  }, [themeContext]);
+
   const value = {
     navigationTheme,
     theme,
     themeContext,
     setThemeContextOverride,
     themed,
+    toggleTheme,
   };
 
   return (

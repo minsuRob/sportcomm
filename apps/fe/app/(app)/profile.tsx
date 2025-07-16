@@ -13,6 +13,7 @@ import { Settings, Edit3 } from "lucide-react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
+import { useRouter } from "expo-router";
 
 /**
  * 프로필 화면 컴포넌트
@@ -21,6 +22,7 @@ import { User, getSession } from "@/lib/auth";
 export default function ProfileScreen() {
   const { themed, theme } = useAppTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -36,8 +38,7 @@ export default function ProfileScreen() {
   };
 
   const handleSettings = () => {
-    // TODO: 설정 화면 이동 로직 구현
-    console.log("설정");
+    router.push("/(app)/settings");
   };
 
   if (!currentUser) {
@@ -68,7 +69,6 @@ export default function ProfileScreen() {
       <View style={themed($profileSection)}>
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
         <Text style={themed($username)}>{currentUser.nickname}</Text>
-        <Text style={themed($userEmail)}>{currentUser.email}</Text>
 
         {/* 프로필 편집 버튼 */}
         <TouchableOpacity
@@ -149,11 +149,6 @@ const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginTop: spacing.md,
 });
 
-const $userEmail: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 16,
-  color: colors.textDim,
-  marginTop: spacing.xs,
-});
 
 const $editButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",

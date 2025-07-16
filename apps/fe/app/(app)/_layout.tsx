@@ -16,36 +16,12 @@ const client = createClient({
  */
 function AppTabLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: "#1F2937", // A nice dark color for active tabs
-        tabBarInactiveTintColor: "#9CA3AF", // Muted gray for inactive tabs
-        headerShown: false, // Hide the default header as screens can manage their own
-      }}
-    >
+    <Tabs>
       <Tabs.Screen
         name="feed"
         options={{
           title: "Feed",
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="create"
-        options={{
-          title: "Create",
-          tabBarIcon: ({ color, size }) => (
-            <PlusSquare color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <ProfileIcon color={color} size={size} />
-          ),
         }}
       />
     </Tabs>

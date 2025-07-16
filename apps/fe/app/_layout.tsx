@@ -22,7 +22,7 @@ import * as SplashScreen from "expo-splash-screen";
 // This is the single source of truth for all GraphQL operations.
 
 const client = createClient({
-  url: "https://alternatively-hollow-redeem-nathan.trycloudflare.com/graphql",
+  url: GRAPHQL_URL,
   exchanges: [cacheExchange, fetchExchange],
 });
 

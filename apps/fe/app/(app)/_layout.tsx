@@ -8,10 +8,11 @@ import { useResponsive } from "@/lib/hooks/useResponsive";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import SidebarNavigation from "@/components/SidebarNavigation";
+import { GRAPHQL_URL } from "@env";
 
 // urql 클라이언트 생성 - NestJS 백엔드와 연결
 const client = createClient({
-  url: "http://localhost:3000/graphql",
+  url: GRAPHQL_URL,
   exchanges: [cacheExchange, fetchExchange],
 });
 

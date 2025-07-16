@@ -11,10 +11,9 @@ import { IsString, MaxLength, MinLength } from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { Post } from './post.entity';
-import { CommentVersion } from './comment-version.entity';
- 
- /**
-  * 댓글 엔티티
+
+/**
+ * 댓글 엔티티
  *
  * 게시물에 대한 댓글과 대댓글을 관리합니다.
  * 계층적 구조를 지원하여 댓글에 대한 답글을 무제한으로 달 수 있습니다.
@@ -177,18 +176,10 @@ export class Comment extends BaseEntity {
   @Field(() => [Comment], { description: '답글 목록' })
   @OneToMany(() => Comment, (comment) => comment.parentComment)
   childComments: Comment[];
- 
+
+  // === 헬퍼 메서드 ===
+
   /**
-   * 댓글 버전 목록
-   * 일대다 관계: 한 댓글에는 여러 버전이 있을 수 있습니다.
-   */
-  @Field(() => [CommentVersion], { description: '댓글 버전 목록' })
-  @OneToMany(() => CommentVersion, (version) => version.comment)
-  versions: CommentVersion[];
- 
-   // === 헬퍼 메서드 ===
- 
-   /**
    * 최상위 댓글인지 확인하는 메서드
    * @returns 최상위 댓글인 경우 true, 답글인 경우 false
    */

@@ -9,7 +9,6 @@ import { AppService } from './app.service';
 import { entities, Post, User } from './entities';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostsModule } from './modules/posts/posts.module';
-import { CommentsModule } from './modules/comments/comments.module';
 
 /**
  * 메인 애플리케이션 모듈
@@ -157,7 +156,6 @@ import { CommentsModule } from './modules/comments/comments.module';
     // 기능 모듈들
     AuthModule,
     PostsModule,
-    CommentsModule,
   ],
 
   // 컨트롤러 및 서비스

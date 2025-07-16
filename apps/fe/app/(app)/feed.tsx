@@ -19,6 +19,8 @@ import { User, getSession, clearSession } from "@/lib/auth";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import CreatePostModal from "@/components/CreatePostModal";
+import { Plus } from "lucide-react-native";
 
 // --- Type Definitions ---
 interface GqlPost {
@@ -54,6 +56,7 @@ export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [result, executeQuery] = useQuery<PostsQueryResponse>({
@@ -122,6 +125,11 @@ export default function FeedScreen() {
     setCurrentUser(null);
   };
 
+  const handlePostCreated = () => {
+    // 새 게시물이 작성되면 피드를 새로고침
+    handleRefresh();
+  };
+
   if (fetching && posts.length === 0 && !isRefreshing) {
     return (
       <View style={themed($centeredContainer)}>
@@ -186,6 +194,15 @@ export default function FeedScreen() {
         </Text>
         {currentUser ? (
           <View style={themed($userContainer)}>
+            <TouchableOpacity
+              style={themed($createPostButton)}
+              onPress={() => setCreatePostModalVisible(true)}
+            >
+              <Plus color="white" size={20} />
+              <Text style={themed($createPostButtonText)}>
+                {t(TRANSLATION_KEYS.FEED_CREATE_POST)}
+              </Text>
+            </TouchableOpacity>
             <Text style={themed($userNickname)}>{currentUser.nickname}</Text>
             <Button
               title={t(TRANSLATION_KEYS.AUTH_LOGOUT)}
@@ -208,6 +225,14 @@ export default function FeedScreen() {
         onRefresh={handleRefresh}
         onEndReached={handleLoadMore}
         ListFooterComponent={ListFooter}
+      />
+
+      {/* 글 작성 모달 */}
+      <CreatePostModal
+        visible={createPostModalVisible}
+        onClose={() => setCreatePostModalVisible(false)}
+        currentUser={currentUser}
+        onPostCreated={handlePostCreated}
       />
     </View>
   );
@@ -303,4 +328,21 @@ const $userContainer: ThemedStyle<ViewStyle> = () => ({
 
 const $listFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.md,
+});
+
+const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 20,
+  marginRight: spacing.md,
+});
+
+const $createPostButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  color: "white",
+  fontSize: 14,
+  fontWeight: "600",
+  marginLeft: spacing.xs,
 });

@@ -23,7 +23,7 @@ export const useTranslation = () => {
      */
     const loadLanguageSetting = async () => {
       const storedLanguage = (await storage.loadString(
-        APP_LANGUAGE_KEY,
+        APP_LANGUAGE_KEY
       )) as SupportedLanguage | null;
       // 저장된 언어가 있으면 적용하고, 없으면 기본 언어(ko)를 사용합니다.
       await i18n.changeLanguage(storedLanguage || "ko");
@@ -96,6 +96,14 @@ export const TRANSLATION_KEYS = {
   FEED_NO_POSTS: "feed.noPostsAvailable",
   FEED_PULL_REFRESH: "feed.pullToRefresh",
   FEED_ERROR_FETCHING: "feed.errorFetching",
+  FEED_CREATE_POST: "feed.createPost",
+
+  // 글 작성
+  CREATE_POST_TITLE: "createPost.title",
+  CREATE_POST_PLACEHOLDER: "createPost.contentPlaceholder",
+  CREATE_POST_SELECT_TYPE: "createPost.selectType",
+  CREATE_POST_PUBLISH: "createPost.publish",
+  CREATE_POST_PUBLISHING: "createPost.publishing",
 
   // 게시물
   POST_TITLE: "post.title",

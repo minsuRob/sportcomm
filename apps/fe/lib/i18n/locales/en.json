@@ -37,7 +37,8 @@
     "noPostsAvailable": "No posts available.",
     "pullToRefresh": "Pull down to refresh.",
     "errorFetching": "An error occurred while fetching the feed: {{message}}",
-    "loadingPosts": "Loading posts..."
+    "loadingPosts": "Loading posts...",
+    "createPost": "Create Post"
   },
   "post": {
     "title": "Post",
@@ -58,6 +59,17 @@
     "loadingPost": "Loading post...",
     "postNotFound": "Unable to load post.",
     "goBack": "Go Back"
+  },
+  "createPost": {
+    "title": "Create New Post",
+    "contentPlaceholder": "What's on your mind?",
+    "selectType": "Select post type",
+    "publish": "Publish",
+    "publishing": "Publishing...",
+    "success": "Post created successfully!",
+    "error": "Failed to create post",
+    "contentRequired": "Please enter some content",
+    "typeRequired": "Please select a post type"
   },
   "comments": {
     "title": "{{count}} Comments",

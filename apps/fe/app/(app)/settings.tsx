@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  Alert,
 } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -17,6 +18,7 @@ import {
   Globe,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 /**
  * 설정 화면 컴포넌트
@@ -25,6 +27,7 @@ import { useRouter } from "expo-router";
 export default function SettingsScreen() {
   const { themed, theme, toggleTheme } = useAppTheme();
   const router = useRouter();
+  const { switchLanguage, currentLanguage } = useTranslation();
 
   /**
    * 로그아웃 처리 함수
@@ -46,8 +49,25 @@ export default function SettingsScreen() {
    * 언어 변경 처리 함수
    */
   const handleLanguage = (): void => {
-    // TODO: 언어 변경 로직 구현
-    console.log("언어 변경");
+    Alert.alert(
+      "언어 변경",
+      "사용할 언어를 선택해주세요.",
+      [
+        {
+          text: "한국어",
+          onPress: () => switchLanguage("ko"),
+        },
+        {
+          text: "English",
+          onPress: () => switchLanguage("en"),
+        },
+        {
+          text: "취소",
+          style: "cancel",
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -90,7 +110,9 @@ export default function SettingsScreen() {
         <TouchableOpacity style={themed($menuItem)} onPress={handleLanguage}>
           <Globe color={theme.colors.text} size={24} />
           <Text style={themed($menuItemText)}>언어</Text>
-          <ChevronRight color={theme.colors.textDim} size={20} />
+          <Text style={themed($menuItemValue)}>
+            {currentLanguage === "ko" ? "한국어" : "English"}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -25,6 +25,10 @@ import {
 } from "lucide-react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import {
+  useTranslation,
+  TRANSLATION_KEYS,
+} from "@/lib/i18n/useTranslation";
 import { GET_POST_DETAIL, TOGGLE_LIKE } from "@/lib/graphql";
 import { PostType } from "@/components/PostCard";
 import { User, getSession } from "@/lib/auth";
@@ -72,15 +76,21 @@ interface PostDetailResponse {
 }
 
 // --- 헬퍼 함수 ---
-const getPostTypeStyle = (type: PostType) => {
+const getPostTypeStyle = (
+  type: PostType,
+  t: (key: string) => string,
+) => {
   switch (type) {
     case PostType.ANALYSIS:
-      return { color: "#6366f1", text: "분석" };
+      return { color: "#6366f1", text: t(TRANSLATION_KEYS.POST_TYPE_ANALYSIS) };
     case PostType.HIGHLIGHT:
-      return { color: "#f59e0b", text: "하이라이트" };
+      return {
+        color: "#f59e0b",
+        text: t(TRANSLATION_KEYS.POST_TYPE_HIGHLIGHT),
+      };
     case PostType.CHEERING:
     default:
-      return { color: "#10b981", text: "응원" };
+      return { color: "#10b981", text: t(TRANSLATION_KEYS.POST_TYPE_CHEERING) };
   }
 };
 
@@ -90,6 +100,7 @@ const getPostTypeStyle = (type: PostType) => {
  */
 export default function PostDetailScreen() {
   const { themed, theme } = useAppTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const { postId } = useLocalSearchParams<{ postId: string }>();
 
@@ -180,7 +191,7 @@ export default function PostDetailScreen() {
     return (
       <View style={themed($loadingContainer)}>
         <ActivityIndicator size="large" color={theme.colors.tint} />
-        <Text style={themed($loadingText)}>게시물을 불러오는 중...</Text>
+        <Text style={themed($loadingText)}>{t(TRANSLATION_KEYS.POST_LOADING)}</Text>
       </View>
     );
   }
@@ -189,16 +200,16 @@ export default function PostDetailScreen() {
   if (error || !data?.post) {
     return (
       <View style={themed($errorContainer)}>
-        <Text style={themed($errorText)}>게시물을 불러올 수 없습니다.</Text>
+        <Text style={themed($errorText)}>{t(TRANSLATION_KEYS.POST_NOT_FOUND)}</Text>
         <TouchableOpacity style={themed($retryButton)} onPress={handleGoBack}>
-          <Text style={themed($retryButtonText)}>돌아가기</Text>
+          <Text style={themed($retryButtonText)}>{t(TRANSLATION_KEYS.POST_GO_BACK)}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   const post = data.post;
-  const postTypeStyle = getPostTypeStyle(post.type);
+  const postTypeStyle = getPostTypeStyle(post.type, t);
   const avatarUrl =
     post.author.profileImageUrl ||
     `https://i.pravatar.cc/150?u=${post.author.id}`;
@@ -213,7 +224,7 @@ export default function PostDetailScreen() {
         <TouchableOpacity onPress={handleGoBack} style={themed($backButton)}>
           <ArrowLeft color={theme.colors.text} size={24} />
         </TouchableOpacity>
-        <Text style={themed($headerTitle)}>게시물</Text>
+        <Text style={themed($headerTitle)}>{t(TRANSLATION_KEYS.POST_TITLE)}</Text>
         <TouchableOpacity>
           <MoreHorizontal color={theme.colors.textDim} size={24} />
         </TouchableOpacity>
@@ -269,9 +280,17 @@ export default function PostDetailScreen() {
 
         {/* 통계 정보 */}
         <View style={themed($statsSection)}>
-          <Text style={themed($statText)}>{likeCount}개의 좋아요</Text>
-          <Text style={themed($statText)}>{post.commentCount}개의 댓글</Text>
-          <Text style={themed($statText)}>{post.viewCount}회 조회</Text>
+          <Text style={themed($statText)}>
+            {t(TRANSLATION_KEYS.POST_LIKE_COUNT, { count: likeCount })}
+          </Text>
+          <Text style={themed($statText)}>
+            {t(TRANSLATION_KEYS.POST_COMMENT_COUNT, {
+              count: post.commentCount,
+            })}
+          </Text>
+          <Text style={themed($statText)}>
+            {t(TRANSLATION_KEYS.POST_VIEW_COUNT, { count: post.viewCount })}
+          </Text>
         </View>
 
         {/* 액션 버튼 */}
@@ -288,18 +307,18 @@ export default function PostDetailScreen() {
                 { color: isLiked ? theme.colors.error : theme.colors.textDim },
               ]}
             >
-              좋아요
+              {t(TRANSLATION_KEYS.POST_LIKE)}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={themed($actionButton)}>
             <MessageCircle size={24} color={theme.colors.textDim} />
-            <Text style={themed($actionText)}>댓글</Text>
+            <Text style={themed($actionText)}>{t(TRANSLATION_KEYS.POST_COMMENT)}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={themed($actionButton)} onPress={handleShare}>
             <Share size={24} color={theme.colors.textDim} />
-            <Text style={themed($actionText)}>공유</Text>
+            <Text style={themed($actionText)}>{t(TRANSLATION_KEYS.POST_SHARE)}</Text>
           </TouchableOpacity>
         </View>
 

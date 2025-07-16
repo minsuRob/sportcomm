@@ -11,6 +11,10 @@ import {
 import { useMutation } from "urql";
 import { useRouter } from "expo-router";
 import { TOGGLE_LIKE } from "@/lib/graphql";
+import {
+  useTranslation,
+  TRANSLATION_KEYS,
+} from "@/lib/i18n/useTranslation";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { Eye } from "@/lib/icons/Eye";
@@ -64,15 +68,15 @@ interface PostCardProps {
 }
 
 // --- Helper Function ---
-const getPostTypeStyle = (type: PostType) => {
+const getPostTypeStyle = (type: PostType, t: (key: string) => string) => {
   switch (type) {
     case PostType.ANALYSIS:
-      return { color: "#6366f1", text: "Analysis" };
+      return { color: "#6366f1", text: t(TRANSLATION_KEYS.POST_TYPE_ANALYSIS) };
     case PostType.HIGHLIGHT:
-      return { color: "#f59e0b", text: "Highlight" };
+      return { color: "#f59e0b", text: t(TRANSLATION_KEYS.POST_TYPE_HIGHLIGHT) };
     case PostType.CHEERING:
     default:
-      return { color: "#10b981", text: "Cheering" };
+      return { color: "#10b981", text: t(TRANSLATION_KEYS.POST_TYPE_CHEERING) };
   }
 };
 
@@ -80,6 +84,7 @@ const getPostTypeStyle = (type: PostType) => {
 export default function PostCard({ post }: PostCardProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
+  const { t } = useTranslation();
 
   // Use state to manage client-side interactions like "liking" a post.
   const [isLiked, setIsLiked] = useState(post.isLiked);
@@ -123,7 +128,7 @@ export default function PostCard({ post }: PostCardProps) {
   const avatarUrl =
     post.author.profileImageUrl ||
     `https://i.pravatar.cc/150?u=${post.author.id}`;
-  const postTypeStyle = getPostTypeStyle(post.type);
+  const postTypeStyle = getPostTypeStyle(post.type, t);
 
   return (
     <View style={themed($container)}>
@@ -171,11 +176,17 @@ export default function PostCard({ post }: PostCardProps) {
       {/* Stats */}
       <View style={themed($stats)}>
         <Heart color={theme.colors.textDim} size={16} />
-        <Text style={themed($statText)}>{likeCount} Likes</Text>
+        <Text style={themed($statText)}>
+          {t(TRANSLATION_KEYS.POST_LIKE_COUNT, { count: likeCount })}
+        </Text>
         <MessageCircle color={theme.colors.textDim} size={16} />
-        <Text style={themed($statText)}>{post.commentCount} Comments</Text>
+        <Text style={themed($statText)}>
+          {t(TRANSLATION_KEYS.POST_COMMENT_COUNT, { count: post.commentCount })}
+        </Text>
         <Eye color={theme.colors.textDim} size={16} />
-        <Text style={themed($statText)}>{post.viewCount} Views</Text>
+        <Text style={themed($statText)}>
+          {t(TRANSLATION_KEYS.POST_VIEW_COUNT, { count: post.viewCount })}
+        </Text>
       </View>
 
       {/* Action Bar */}
@@ -196,16 +207,16 @@ export default function PostCard({ post }: PostCardProps) {
               { color: isLiked ? theme.colors.error : theme.colors.textDim },
             ]}
           >
-            Like
+            {t(TRANSLATION_KEYS.POST_LIKE)}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={themed($actionButton)}>
           <MessageCircle size={22} color={theme.colors.textDim} />
-          <Text style={themed($actionText)}>Comment</Text>
+          <Text style={themed($actionText)}>{t(TRANSLATION_KEYS.POST_COMMENT)}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={themed($actionButton)}>
           <Repeat size={22} color={theme.colors.textDim} />
-          <Text style={themed($actionText)}>Repost</Text>
+          <Text style={themed($actionText)}>{t(TRANSLATION_KEYS.POST_REPOST)}</Text>
         </TouchableOpacity>
       </View>
 
@@ -214,7 +225,9 @@ export default function PostCard({ post }: PostCardProps) {
         <View style={themed($commentPreview)}>
           <TouchableOpacity>
             <Text style={themed($commentPreviewText)}>
-              View all {post.commentCount} comments
+              {t(TRANSLATION_KEYS.POST_VIEW_ALL_COMMENTS, {
+                count: post.commentCount,
+              })}
             </Text>
           </TouchableOpacity>
         </View>

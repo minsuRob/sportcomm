@@ -12,7 +12,7 @@ import { GRAPHQL_URL } from "@env";
 
 // urql 클라이언트 생성 - NestJS 백엔드와 연결
 const client = createClient({
-  url: GRAPHQL_URL,
+  url: "https://infants-fe-characters-lately.trycloudflare.com/graphql",
   exchanges: [cacheExchange, fetchExchange],
 });
 

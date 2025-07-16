@@ -1,0 +1,102 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "close": "Close",
+    "send": "Send",
+    "search": "Search",
+    "refresh": "Refresh"
+  },
+  "navigation": {
+    "feed": "Feed",
+    "search": "Search",
+    "profile": "Profile"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "signup": "Sign Up",
+    "signupLogin": "Sign Up / Login",
+    "email": "Email",
+    "password": "Password",
+    "nickname": "Nickname",
+    "loginSuccess": "Login successful",
+    "loginFailed": "Login failed",
+    "signupSuccess": "Sign up successful",
+    "signupFailed": "Sign up failed"
+  },
+  "feed": {
+    "title": "Feed",
+    "noPostsAvailable": "No posts available.",
+    "pullToRefresh": "Pull down to refresh.",
+    "errorFetching": "An error occurred while fetching the feed: {{message}}",
+    "loadingPosts": "Loading posts..."
+  },
+  "post": {
+    "title": "Post",
+    "viewCount": "{{count}} Views",
+    "likeCount": "{{count}} Likes",
+    "commentCount": "{{count}} Comments",
+    "shareCount": "{{count}} Shares",
+    "like": "Like",
+    "comment": "Comment",
+    "share": "Share",
+    "repost": "Repost",
+    "viewAllComments": "View all {{count}} comments",
+    "postTypes": {
+      "analysis": "Analysis",
+      "highlight": "Highlight",
+      "cheering": "Cheering"
+    },
+    "loadingPost": "Loading post...",
+    "postNotFound": "Unable to load post.",
+    "goBack": "Go Back"
+  },
+  "comments": {
+    "title": "{{count}} Comments",
+    "placeholder": "Write a comment...",
+    "noComments": "No comments yet. Be the first to comment!",
+    "loginRequired": "Please log in to write a comment.",
+    "submitFailed": "Failed to submit comment.",
+    "submitSuccess": "Comment posted successfully."
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "settings": "Settings",
+    "posts": "Posts",
+    "followers": "Followers",
+    "following": "Following",
+    "myPosts": "My Posts",
+    "noPosts": "No posts yet",
+    "loadingProfile": "Loading profile..."
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search posts or users",
+    "searchButton": "Search",
+    "noResults": "No search results",
+    "searchPrompt": "Enter a search term to find posts or users"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "about": "About"
+  },
+  "errors": {
+    "networkError": "Please check your network connection",
+    "serverError": "Server error occurred",
+    "unknownError": "An unknown error occurred",
+    "validationError": "Please check your input"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "common": {
+    "loading": "불러오는 중...",
+    "error": "오류가 발생했습니다",
+    "retry": "다시 시도",
+    "cancel": "취소",
+    "confirm": "확인",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "편집",
+    "back": "뒤로가기",
+    "close": "닫기",
+    "send": "전송",
+    "search": "검색",
+    "refresh": "새로고침"
+  },
+  "navigation": {
+    "feed": "피드",
+    "search": "검색",
+    "profile": "프로필"
+  },
+  "auth": {
+    "login": "로그인",
+    "logout": "로그아웃",
+    "signup": "회원가입",
+    "signupLogin": "회원가입 / 로그인",
+    "email": "이메일",
+    "password": "비밀번호",
+    "nickname": "닉네임",
+    "loginSuccess": "로그인 성공",
+    "loginFailed": "로그인 실패",
+    "signupSuccess": "회원가입 성공",
+    "signupFailed": "회원가입 실패"
+  },
+  "feed": {
+    "title": "피드",
+    "noPostsAvailable": "게시물이 없습니다.",
+    "pullToRefresh": "아래로 당겨서 새로고침하세요.",
+    "errorFetching": "피드를 불러오는 중 오류가 발생했습니다: {{message}}",
+    "loadingPosts": "게시물을 불러오는 중..."
+  },
+  "post": {
+    "title": "게시물",
+    "viewCount": "{{count}}회 조회",
+    "likeCount": "{{count}}개의 좋아요",
+    "commentCount": "{{count}}개의 댓글",
+    "shareCount": "{{count}}번 공유",
+    "like": "좋아요",
+    "comment": "댓글",
+    "share": "공유",
+    "repost": "리포스트",
+    "viewAllComments": "댓글 {{count}}개 모두 보기",
+    "postTypes": {
+      "analysis": "분석",
+      "highlight": "하이라이트",
+      "cheering": "응원"
+    },
+    "loadingPost": "게시물을 불러오는 중...",
+    "postNotFound": "게시물을 불러올 수 없습니다.",
+    "goBack": "돌아가기"
+  },
+  "comments": {
+    "title": "댓글 {{count}}개",
+    "placeholder": "댓글을 입력하세요...",
+    "noComments": "아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!",
+    "loginRequired": "댓글을 작성하려면 로그인이 필요합니다.",
+    "submitFailed": "댓글 작성에 실패했습니다.",
+    "submitSuccess": "댓글이 작성되었습니다."
+  },
+  "profile": {
+    "title": "프로필",
+    "editProfile": "프로필 편집",
+    "settings": "설정",
+    "posts": "게시물",
+    "followers": "팔로워",
+    "following": "팔로잉",
+    "myPosts": "내 게시물",
+    "noPosts": "아직 작성한 게시물이 없습니다",
+    "loadingProfile": "프로필을 불러오는 중..."
+  },
+  "search": {
+    "title": "검색",
+    "placeholder": "게시물이나 사용자를 검색하세요",
+    "searchButton": "검색",
+    "noResults": "검색 결과가 없습니다",
+    "searchPrompt": "검색어를 입력하여 게시물이나 사용자를 찾아보세요"
+  },
+  "settings": {
+    "title": "설정",
+    "language": "언어",
+    "theme": "테마",
+    "notifications": "알림",
+    "privacy": "개인정보",
+    "about": "앱 정보"
+  },
+  "errors": {
+    "networkError": "네트워크 연결을 확인해주세요",
+    "serverError": "서버 오류가 발생했습니다",
+    "unknownError": "알 수 없는 오류가 발생했습니다",
+    "validationError": "입력 정보를 확인해주세요"
+  }
+}

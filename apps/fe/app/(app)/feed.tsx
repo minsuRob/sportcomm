@@ -18,6 +18,7 @@ import { Post, PostType } from "@/components/PostCard";
 import { User, getSession, clearSession } from "@/lib/auth";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 
 // --- Type Definitions ---
 interface GqlPost {
@@ -49,6 +50,7 @@ const PAGE_SIZE = 10;
 
 export default function FeedScreen() {
   const { themed, theme } = useAppTheme();
+  const { t } = useTranslation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authModalVisible, setAuthModalVisible] = useState(false);
@@ -124,6 +126,9 @@ export default function FeedScreen() {
     return (
       <View style={themed($centeredContainer)}>
         <ActivityIndicator size="large" color={theme.colors.text} />
+        <Text style={themed($loadingText)}>
+          {t(TRANSLATION_KEYS.FEED_LOADING_POSTS)}
+        </Text>
       </View>
     );
   }
@@ -132,10 +137,10 @@ export default function FeedScreen() {
     return (
       <View style={themed($centeredContainer)}>
         <Text style={themed($errorText)}>
-          An error occurred while fetching the feed: {error.message}
+          {t(TRANSLATION_KEYS.FEED_ERROR_FETCHING, { message: error.message })}
         </Text>
         <Button
-          title="Retry"
+          title={t(TRANSLATION_KEYS.COMMON_RETRY)}
           onPress={handleRefresh}
           color={theme.colors.tint}
         />
@@ -168,25 +173,31 @@ export default function FeedScreen() {
             onPress={() => setAuthModalVisible(false)}
             style={themed($closeButton)}
           >
-            <Text style={themed($closeButtonText)}>X</Text>
+            <Text style={themed($closeButtonText)}>
+              {t(TRANSLATION_KEYS.COMMON_CLOSE)}
+            </Text>
           </TouchableOpacity>
         </View>
       </Modal>
 
       <View style={themed($header)}>
-        <Text style={themed($headerTitle)}>Feed</Text>
+        <Text style={themed($headerTitle)}>
+          {t(TRANSLATION_KEYS.FEED_TITLE)}
+        </Text>
         {currentUser ? (
           <View style={themed($userContainer)}>
             <Text style={themed($userNickname)}>{currentUser.nickname}</Text>
             <Button
-              title="Logout"
+              title={t(TRANSLATION_KEYS.AUTH_LOGOUT)}
               onPress={handleLogout}
               color={theme.colors.tint}
             />
           </View>
         ) : (
           <TouchableOpacity onPress={() => setAuthModalVisible(true)}>
-            <Text style={themed($loginText)}>Sign Up / Login</Text>
+            <Text style={themed($loginText)}>
+              {t(TRANSLATION_KEYS.AUTH_SIGNUP_LOGIN)}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -222,6 +233,12 @@ const $errorText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   textAlign: "center",
   marginBottom: 16,
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.md,
+  color: colors.text,
+  fontSize: 16,
 });
 
 const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

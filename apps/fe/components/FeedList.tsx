@@ -3,6 +3,7 @@ import { FlatList, View, Text, ViewStyle, TextStyle } from "react-native";
 import PostCard, { Post } from "./PostCard"; // Import PostCard and the Post type from it
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 
 interface FeedListProps {
   posts: Post[];
@@ -25,6 +26,7 @@ export default function FeedList({
   onEndReached,
 }: FeedListProps) {
   const { themed } = useAppTheme();
+  const { t } = useTranslation();
 
   const renderItem = ({ item }: { item: Post }) => <PostCard post={item} />;
 
@@ -34,8 +36,12 @@ export default function FeedList({
 
   const EmptyComponent = () => (
     <View style={themed($emptyContainer)}>
-      <Text style={themed($emptyTitle)}>No posts available.</Text>
-      <Text style={themed($emptySubtitle)}>Pull down to refresh.</Text>
+      <Text style={themed($emptyTitle)}>
+        {t(TRANSLATION_KEYS.FEED_NO_POSTS)}
+      </Text>
+      <Text style={themed($emptySubtitle)}>
+        {t(TRANSLATION_KEYS.FEED_PULL_REFRESH)}
+      </Text>
     </View>
   );
 

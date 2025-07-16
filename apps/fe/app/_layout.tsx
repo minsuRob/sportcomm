@@ -17,6 +17,7 @@ import {
 import { customFontsToLoad } from "@/lib/theme/typography";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
+import { initializeI18n } from "@/lib/i18n";
 
 // Create a urql client pointing to the NestJS backend.
 // This is the single source of truth for all GraphQL operations.
@@ -47,16 +48,32 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts(customFontsToLoad);
+  const [i18nInitialized, setI18nInitialized] = React.useState(false);
 
   React.useEffect(() => {
-    if (fontsLoaded) {
-      // 폰트가 로드되면 스플래시 화면을 숨깁니다.
+    // i18n 초기화
+    const initI18n = async () => {
+      try {
+        await initializeI18n();
+        setI18nInitialized(true);
+      } catch (error) {
+        console.error("i18n 초기화 실패:", error);
+        setI18nInitialized(true); // 실패해도 앱은 실행되도록
+      }
+    };
+
+    initI18n();
+  }, []);
+
+  React.useEffect(() => {
+    if (fontsLoaded && i18nInitialized) {
+      // 폰트와 i18n이 모두 로드되면 스플래시 화면을 숨깁니다.
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, i18nInitialized]);
 
-  // 폰트가 로드되지 않았다면 아무것도 렌더링하지 않습니다.
-  if (!fontsLoaded) {
+  // 폰트나 i18n이 로드되지 않았다면 아무것도 렌더링하지 않습니다.
+  if (!fontsLoaded || !i18nInitialized) {
     return null;
   }
 

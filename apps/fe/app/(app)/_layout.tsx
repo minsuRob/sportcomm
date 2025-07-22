@@ -88,11 +88,7 @@ function ResponsiveLayout() {
  * urql Provider로 감싸서 GraphQL 클라이언트를 제공합니다
  */
 export default function Layout() {
-  return (
-    <Provider value={client}>
-      <ResponsiveLayout />
-    </Provider>
-  );
+  return <ResponsiveLayout />;
 }
 
 // --- 스타일 정의 ---

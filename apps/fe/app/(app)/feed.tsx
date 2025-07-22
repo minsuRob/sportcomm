@@ -10,6 +10,7 @@ import {
   TextStyle,
 } from "react-native";
 import { useQuery } from "urql";
+import { useRouter } from "expo-router";
 
 import { GET_POSTS } from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
@@ -19,7 +20,7 @@ import { User, getSession, clearSession } from "@/lib/auth";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
-import CreatePostModal from "@/components/CreatePostModal";
+// CreatePostModal 제거 - 이제 별도 페이지로 이동
 import { Plus } from "lucide-react-native";
 
 // --- Type Definitions ---
@@ -56,7 +57,7 @@ export default function FeedScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authModalVisible, setAuthModalVisible] = useState(false);
-  const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [result, executeQuery] = useQuery<PostsQueryResponse>({
@@ -125,10 +126,20 @@ export default function FeedScreen() {
     setCurrentUser(null);
   };
 
-  const handlePostCreated = () => {
-    // 새 게시물이 작성되면 피드를 새로고침
-    handleRefresh();
-  };
+  // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
+  useEffect(() => {
+    const handleFocus = () => {
+      // 페이지로 돌아왔을 때 피드 새로고침
+      handleRefresh();
+    };
+
+    // 페이지 포커스 이벤트 리스너 (필요시 추가)
+    // navigation.addListener('focus', handleFocus);
+
+    return () => {
+      // cleanup
+    };
+  }, [handleRefresh]);
 
   if (fetching && posts.length === 0 && !isRefreshing) {
     return (
@@ -196,7 +207,7 @@ export default function FeedScreen() {
           <View style={themed($userContainer)}>
             <TouchableOpacity
               style={themed($createPostButton)}
-              onPress={() => setCreatePostModalVisible(true)}
+              onPress={() => router.push("/create-post")}
             >
               <Plus color="white" size={20} />
               <Text style={themed($createPostButtonText)}>
@@ -225,14 +236,6 @@ export default function FeedScreen() {
         onRefresh={handleRefresh}
         onEndReached={handleLoadMore}
         ListFooterComponent={ListFooter}
-      />
-
-      {/* 글 작성 모달 */}
-      <CreatePostModal
-        visible={createPostModalVisible}
-        onClose={() => setCreatePostModalVisible(false)}
-        currentUser={currentUser}
-        onPostCreated={handlePostCreated}
       />
     </View>
   );

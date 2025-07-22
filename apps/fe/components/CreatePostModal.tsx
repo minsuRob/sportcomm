@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { X, Send, Image, Camera, Mic, Hash } from "lucide-react-native";
 import { useMutation } from "urql";
+import { showToast } from "@/components/CustomToast";
+import Toast from "react-native-toast-message";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -129,23 +131,82 @@ export default function CreatePostModal({
    * 게시물 작성 핸들러
    */
   const handleSubmit = async () => {
+    // 즉시 토스트 테스트
+    console.log("🚀 게시물 작성 시작 - 토스트 테스트");
+
+    // Alert와 Toast 둘 다 테스트
+    Alert.alert("테스트", "Alert는 작동합니다");
+
+    // 기본 Toast 테스트
+    Toast.show({
+      type: "info",
+      text1: "기본 Toast 테스트",
+      text2: "react-native-toast-message가 작동하는지 확인",
+      visibilityTime: 3000,
+    });
+
+    // CustomToast 테스트
+    showToast({
+      type: "info",
+      title: "CustomToast 테스트",
+      message: "커스텀 토스트가 작동하는지 확인",
+      duration: 5000,
+    });
+
+    // 추가 토스트 테스트
+    setTimeout(() => {
+      Toast.show({
+        type: "error",
+        text1: "지연된 기본 Toast",
+        text2: "1초 후에 나타나는 기본 토스트",
+        visibilityTime: 3000,
+      });
+
+      showToast({
+        type: "error",
+        title: "지연된 CustomToast",
+        message: "1초 후에 나타나는 커스텀 토스트",
+        duration: 5000,
+      });
+    }, 1000);
+
     if (!currentUser) {
-      Alert.alert("오류", "로그인이 필요합니다.");
+      showToast({
+        type: "error",
+        title: "로그인 필요",
+        message: "로그인이 필요합니다.",
+        duration: 3000,
+      });
       return;
     }
 
     if (!title.trim()) {
-      Alert.alert("오류", "제목을 입력해주세요.");
+      showToast({
+        type: "error",
+        title: "제목 필요",
+        message: "제목을 입력해주세요.",
+        duration: 3000,
+      });
       return;
     }
 
     if (!content.trim()) {
-      Alert.alert("오류", t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER));
+      showToast({
+        type: "error",
+        title: "내용 필요",
+        message: t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER),
+        duration: 3000,
+      });
       return;
     }
 
     if (!selectedType) {
-      Alert.alert("오류", t(TRANSLATION_KEYS.CREATE_POST_SELECT_TYPE));
+      showToast({
+        type: "error",
+        title: "타입 선택 필요",
+        message: t(TRANSLATION_KEYS.CREATE_POST_SELECT_TYPE),
+        duration: 3000,
+      });
       return;
     }
 
@@ -162,7 +223,104 @@ export default function CreatePostModal({
 
       if (result.error) {
         console.error("게시물 작성 실패:", result.error);
-        Alert.alert("오류", "게시물 작성에 실패했습니다.");
+        console.log("전체 에러 객체:", JSON.stringify(result.error, null, 2));
+        console.log("에러 타입:", typeof result.error);
+        console.log("graphQLErrors 존재:", !!result.error.graphQLErrors);
+        console.log("networkError 존재:", !!result.error.networkError);
+
+        // 강제로 토스트 테스트
+        console.log("토스트 테스트 시작");
+        showToast({
+          type: "error",
+          title: "테스트 토스트",
+          message: "이 메시지가 보이면 토스트가 작동합니다",
+          duration: 3000,
+        });
+        console.log("토스트 테스트 완료");
+
+        // 에러 처리 함수
+        const handleError = (error: any) => {
+          // 1. GraphQL 에러 확인
+          if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+            const graphQLError = error.graphQLErrors[0];
+            console.log("GraphQL 에러:", graphQLError);
+
+            // originalError가 있는 경우
+            if (graphQLError.extensions?.originalError) {
+              const {
+                message,
+                error: errorType,
+                statusCode,
+              } = graphQLError.extensions.originalError;
+              return {
+                title: "게시물 작성 실패",
+                message: `${message} [${statusCode}: ${errorType}]`,
+              };
+            }
+
+            // GraphQL 메시지만 있는 경우
+            return {
+              title: "게시물 작성 실패",
+              message: graphQLError.message || "GraphQL 에러가 발생했습니다.",
+            };
+          }
+
+          // 2. 네트워크 에러 확인
+          if (error.networkError) {
+            console.log("네트워크 에러:", error.networkError);
+
+            // HTTP 상태 코드가 있는 경우
+            if (error.networkError.statusCode) {
+              const statusCode = error.networkError.statusCode;
+              const statusText =
+                error.networkError.statusText || "Unknown Error";
+
+              if (statusCode === 401) {
+                return {
+                  title: "인증 실패",
+                  message: `로그인이 필요합니다 [${statusCode}: ${statusText}]`,
+                };
+              } else if (statusCode === 403) {
+                return {
+                  title: "권한 없음",
+                  message: `접근 권한이 없습니다 [${statusCode}: ${statusText}]`,
+                };
+              } else if (statusCode >= 500) {
+                return {
+                  title: "서버 오류",
+                  message: `서버에 문제가 발생했습니다 [${statusCode}: ${statusText}]`,
+                };
+              } else {
+                return {
+                  title: "네트워크 오류",
+                  message: `요청 처리 중 오류가 발생했습니다 [${statusCode}: ${statusText}]`,
+                };
+              }
+            }
+
+            // 네트워크 연결 문제
+            return {
+              title: "연결 오류",
+              message: "네트워크 연결을 확인해주세요",
+            };
+          }
+
+          // 3. 기타 에러
+          return {
+            title: "알 수 없는 오류",
+            message: error.message || "게시물 작성 중 오류가 발생했습니다",
+          };
+        };
+
+        const errorInfo = handleError(result.error);
+
+        showToast({
+          type: "error",
+          title: errorInfo.title,
+          message: errorInfo.message,
+          duration: 5000,
+        });
+
         return;
       }
 
@@ -173,7 +331,12 @@ export default function CreatePostModal({
       onPostCreated?.();
     } catch (error) {
       console.error("게시물 작성 오류:", error);
-      Alert.alert("오류", "게시물 작성 중 오류가 발생했습니다.");
+      showToast({
+        type: "error",
+        title: "게시물 작성 오류",
+        message: "게시물 작성 중 예상치 못한 오류가 발생했습니다.",
+        duration: 4000,
+      });
     } finally {
       setIsSubmitting(false);
     }

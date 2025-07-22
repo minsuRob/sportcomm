@@ -5,10 +5,12 @@ import { PortalHost } from "@rn-primitives/portal";
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as React from "react";
-import { Platform } from "react-native";
-import { createClient, Provider, cacheExchange, fetchExchange } from "urql";
+import { Platform, View, Text } from "react-native";
+import { Provider } from "urql";
 import { setAndroidNavigationBar } from "../lib/android-navigation-bar";
-import { GRAPHQL_URL } from "@env";
+import { client } from "@/lib/urql-client";
+import Toast from "react-native-toast-message";
+import CustomToast from "@/components/CustomToast";
 
 import {
   ThemeProvider as AppThemeProvider,
@@ -19,15 +21,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { initializeI18n } from "@/lib/i18n";
 
-// Create a urql client pointing to the NestJS backend.
-// This is the single source of truth for all GraphQL operations.
-
-const client = createClient({
-  url: GRAPHQL_URL,
-  exchanges: [cacheExchange, fetchExchange],
-});
-
-console.log(GRAPHQL_URL);
+// urql 클라이언트는 별도 파일에서 가져옵니다
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -82,6 +76,8 @@ export default function RootLayout() {
     <Provider value={client}>
       <AppThemeProvider>
         <RootLayoutNav />
+        <CustomToast />
+        <Toast />
       </AppThemeProvider>
     </Provider>
   );

@@ -50,6 +50,7 @@ export default function CreatePostModal({
   const { t } = useTranslation();
 
   // 상태 관리
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,7 +87,7 @@ export default function CreatePostModal({
     if (isSubmitting) return;
 
     // 내용이 있으면 확인 후 닫기
-    if (content.trim() || selectedType) {
+    if (title.trim() || content.trim() || selectedType) {
       Alert.alert(
         "작성 취소",
         "작성 중인 내용이 있습니다. 정말 취소하시겠습니까?",
@@ -111,6 +112,7 @@ export default function CreatePostModal({
    * 폼 초기화
    */
   const resetForm = () => {
+    setTitle("");
     setContent("");
     setSelectedType(null);
     setIsSubmitting(false);
@@ -132,6 +134,11 @@ export default function CreatePostModal({
       return;
     }
 
+    if (!title.trim()) {
+      Alert.alert("오류", "제목을 입력해주세요.");
+      return;
+    }
+
     if (!content.trim()) {
       Alert.alert("오류", t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER));
       return;
@@ -146,7 +153,8 @@ export default function CreatePostModal({
 
     try {
       const result = await executeCreatePost({
-        createPostInput: {
+        input: {
+          title: title.trim(),
           content: content.trim(),
           type: selectedType,
         },
@@ -200,12 +208,19 @@ export default function CreatePostModal({
           </Text>
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={!content.trim() || !selectedType || isSubmitting}
+            disabled={
+              !title.trim() || !content.trim() || !selectedType || isSubmitting
+            }
             style={[
               themed($publishButton),
               {
                 opacity:
-                  !content.trim() || !selectedType || isSubmitting ? 0.5 : 1,
+                  !title.trim() ||
+                  !content.trim() ||
+                  !selectedType ||
+                  isSubmitting
+                    ? 0.5
+                    : 1,
               },
             ]}
           >
@@ -272,6 +287,19 @@ export default function CreatePostModal({
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+
+          {/* 제목 입력 영역 */}
+          <View style={themed($titleSection)}>
+            <TextInput
+              style={themed($titleInput)}
+              placeholder="제목을 입력하세요"
+              placeholderTextColor={theme.colors.textDim}
+              value={title}
+              onChangeText={setTitle}
+              maxLength={200}
+              editable={!isSubmitting}
+            />
           </View>
 
           {/* 텍스트 입력 영역 */}
@@ -451,4 +479,18 @@ const $mediaSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $mediaButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.sm,
   opacity: 0.5, // 비활성화 상태
+});
+
+const $titleSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+});
+
+const $titleInput: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 20,
+  fontWeight: "600",
+  color: colors.text,
+  paddingVertical: spacing.sm,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
 });

@@ -55,8 +55,8 @@ import { PostsModule } from './modules/posts/posts.module';
           // 개발 환경에서만 스키마 동기화 활성화
           synchronize: isDevelopment,
 
-          // 로깅 설정
-          logging: isDevelopment ? ['error'] : ['error'],
+          // 로깅 설정 (운영 환경이 아닐 때 모든 쿼리 로깅)
+          logging: !isProduction,
 
           // 연결 풀 설정
           extra: {
@@ -147,6 +147,47 @@ import { PostsModule } from './modules/posts/posts.module';
           subscriptions: {
             'graphql-ws': true,
           },
+
+          // 개발 환경에서 GraphQL 요청/응답 로깅 플러그인 추가
+          plugins: [
+            {
+              async requestDidStart(requestContext) {
+                // IntrospectionQuery는 로깅에서 제외
+                if (
+                  requestContext.request.operationName === 'IntrospectionQuery'
+                ) {
+                  return;
+                }
+
+                if (isDevelopment) {
+                  console.log('\n--- GraphQL Request ---');
+                  console.log(requestContext.request.query);
+                  if (
+                    requestContext.request.variables &&
+                    Object.keys(requestContext.request.variables).length > 0
+                  ) {
+                    console.log(
+                      'Variables:',
+                      JSON.stringify(requestContext.request.variables, null, 2),
+                    );
+                  }
+                  console.log('-----------------------\n');
+                }
+
+                return {
+                  async willSendResponse(responseContext) {
+                    if (isDevelopment) {
+                      console.log('\n--- GraphQL Response ---');
+                      console.log(
+                        JSON.stringify(responseContext.response.body, null, 2),
+                      );
+                      console.log('------------------------\n');
+                    }
+                  },
+                };
+              },
+            },
+          ],
         };
       },
     }),

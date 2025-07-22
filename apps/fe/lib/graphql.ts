@@ -51,8 +51,8 @@ export const GET_POSTS = `
  * Returns the newly created post with the same fields as the feed query.
  */
 export const CREATE_POST = `
-  mutation CreatePost($createPostInput: CreatePostInput!) {
-    createPost(createPostInput: $createPostInput) {
+  mutation CreatePost($input: CreatePostInput!) {
+    createPost(input: $input) {
       id
       content
       createdAt

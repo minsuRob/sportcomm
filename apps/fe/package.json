@@ -25,6 +25,7 @@
     "@rn-primitives/progress": "~1.2.0",
     "@rn-primitives/slot": "~1.2.0",
     "@rn-primitives/tooltip": "~1.2.0",
+    "@urql/exchange-auth": "^2.2.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "expo": "^53.0.9",

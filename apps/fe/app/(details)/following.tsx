@@ -16,7 +16,7 @@ import { useQuery, useMutation } from "urql";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
-import { GET_FOLLOWING, FOLLOW_USER, UNFOLLOW_USER } from "@/lib/graphql";
+import { GET_FOLLOWING, TOGGLE_FOLLOW } from "@/lib/graphql";
 
 // 팔로잉 사용자 타입
 interface FollowingUser {
@@ -28,14 +28,15 @@ interface FollowingUser {
   followingCount: number;
 }
 
+// 팔로잉 관계 타입 (백엔드 스키마 기반)
+interface FollowRelation {
+  following: FollowingUser;
+}
+
 // 팔로잉 리스트 응답 타입
 interface FollowingResponse {
-  following: {
-    users: FollowingUser[];
-    total: number;
-    page: number;
-    limit: number;
-    hasNext: boolean;
+  getUserById: {
+    following: FollowRelation[];
   };
 }
 
@@ -48,36 +49,26 @@ export default function FollowingScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
 
   const [following, setFollowing] = useState<FollowingUser[]>([]);
-  const [page, setPage] = useState(1);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // 팔로잉 목록 조회
   const [followingResult, refetchFollowing] = useQuery<FollowingResponse>({
     query: GET_FOLLOWING,
-    variables: {
-      userId: userId,
-      input: { page, limit: 20 },
-    },
+    variables: { userId: userId },
     pause: !userId,
+    requestPolicy: "network-only",
   });
 
-  // 팔로우/언팔로우 뮤테이션
-  const [, executeFollow] = useMutation(FOLLOW_USER);
-  const [, executeUnfollow] = useMutation(UNFOLLOW_USER);
+  // 팔로우 토글 뮤테이션
+  const [, executeToggleFollow] = useMutation(TOGGLE_FOLLOW);
 
   useEffect(() => {
-    if (followingResult.data?.following.users) {
-      if (page === 1) {
-        setFollowing(followingResult.data.following.users);
-      } else {
-        setFollowing((prev) => [
-          ...prev,
-          ...followingResult.data.following.users,
-        ]);
-      }
-      setIsLoadingMore(false);
+    if (followingResult.data?.getUserById.following) {
+      const followingUsers = followingResult.data.getUserById.following.map(
+        (relation) => relation.following,
+      );
+      setFollowing(followingUsers);
     }
-  }, [followingResult.data, page]);
+  }, [followingResult.data]);
 
   const handleBack = () => {
     router.back();
@@ -85,14 +76,12 @@ export default function FollowingScreen() {
 
   const handleFollowToggle = async (
     targetUserId: string,
-    isCurrentlyFollowing: boolean
+    isCurrentlyFollowing: boolean,
   ) => {
     try {
-      const result = isCurrentlyFollowing
-        ? await executeUnfollow({ userId: targetUserId })
-        : await executeFollow({ userId: targetUserId });
+      const { error } = await executeToggleFollow({ userId: targetUserId });
 
-      if (result.error) {
+      if (error) {
         showToast({
           type: "error",
           title: "오류",
@@ -115,8 +104,8 @@ export default function FollowingScreen() {
                   ? user.followerCount - 1
                   : user.followerCount + 1,
               }
-            : user
-        )
+            : user,
+        ),
       );
 
       showToast({
@@ -132,17 +121,6 @@ export default function FollowingScreen() {
         message: "요청 처리 중 오류가 발생했습니다.",
         duration: 3000,
       });
-    }
-  };
-
-  const handleLoadMore = () => {
-    if (
-      followingResult.data?.following.hasNext &&
-      !isLoadingMore &&
-      !followingResult.fetching
-    ) {
-      setIsLoadingMore(true);
-      setPage((prev) => prev + 1);
     }
   };
 
@@ -194,16 +172,7 @@ export default function FollowingScreen() {
     );
   };
 
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={themed($loadingFooter)}>
-        <ActivityIndicator size="small" color={theme.colors.tint} />
-      </View>
-    );
-  };
-
-  if (followingResult.fetching && page === 1) {
+  if (followingResult.fetching && !following.length) {
     return (
       <View style={themed($container)}>
         <View style={themed($header)}>
@@ -228,9 +197,7 @@ export default function FollowingScreen() {
         <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
           <ArrowLeft color={theme.colors.text} size={24} />
         </TouchableOpacity>
-        <Text style={themed($headerTitle)}>
-          팔로잉 {followingResult.data?.following.total || 0}
-        </Text>
+        <Text style={themed($headerTitle)}>팔로잉 {following.length || 0}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -239,9 +206,6 @@ export default function FollowingScreen() {
         data={following}
         renderItem={renderFollowingItem}
         keyExtractor={(item) => item.id}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={themed($listContainer)}
       />

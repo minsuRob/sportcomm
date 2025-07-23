@@ -203,20 +203,18 @@ export const TOGGLE_FOLLOW = `
  * 사용자의 팔로워 목록을 조회합니다.
  */
 export const GET_FOLLOWERS = `
-  query GetFollowers($userId: String!, $input: PaginationInput) {
-    followers(userId: $userId, input: $input) {
-      users {
-        id
-        nickname
-        profileImageUrl
-        isFollowing
-        followerCount
-        followingCount
+  query GetFollowers($userId: String!) {
+    getUserById(userId: $userId) {
+      followers {
+        follower {
+          id
+          nickname
+          profileImageUrl
+          isFollowing
+          followerCount
+          followingCount
+        }
       }
-      total
-      page
-      limit
-      hasNext
     }
   }
 `;
@@ -225,20 +223,18 @@ export const GET_FOLLOWERS = `
  * 사용자의 팔로잉 목록을 조회합니다.
  */
 export const GET_FOLLOWING = `
-  query GetFollowing($userId: String!, $input: PaginationInput) {
-    following(userId: $userId, input: $input) {
-      users {
-        id
-        nickname
-        profileImageUrl
-        isFollowing
-        followerCount
-        followingCount
+  query GetFollowing($userId: String!) {
+    getUserById(userId: $userId) {
+      following {
+        following {
+          id
+          nickname
+          profileImageUrl
+          isFollowing
+          followerCount
+          followingCount
+        }
       }
-      total
-      page
-      limit
-      hasNext
     }
   }
 `;

@@ -16,7 +16,7 @@ import { useQuery, useMutation } from "urql";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
-import { GET_FOLLOWERS, FOLLOW_USER, UNFOLLOW_USER } from "@/lib/graphql";
+import { GET_FOLLOWERS, TOGGLE_FOLLOW } from "@/lib/graphql";
 
 // 팔로워 사용자 타입
 interface FollowerUser {
@@ -28,14 +28,15 @@ interface FollowerUser {
   followingCount: number;
 }
 
+// 팔로워 관계 타입 (백엔드 스키마 기반)
+interface FollowRelation {
+  follower: FollowerUser;
+}
+
 // 팔로워 리스트 응답 타입
 interface FollowersResponse {
-  followers: {
-    users: FollowerUser[];
-    total: number;
-    page: number;
-    limit: number;
-    hasNext: boolean;
+  getUserById: {
+    followers: FollowRelation[];
   };
 }
 
@@ -48,36 +49,26 @@ export default function FollowersScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
 
   const [followers, setFollowers] = useState<FollowerUser[]>([]);
-  const [page, setPage] = useState(1);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // 팔로워 목록 조회
   const [followersResult, refetchFollowers] = useQuery<FollowersResponse>({
     query: GET_FOLLOWERS,
-    variables: {
-      userId: userId,
-      input: { page, limit: 20 },
-    },
+    variables: { userId: userId },
     pause: !userId,
+    requestPolicy: "network-only",
   });
 
-  // 팔로우/언팔로우 뮤테이션
-  const [, executeFollow] = useMutation(FOLLOW_USER);
-  const [, executeUnfollow] = useMutation(UNFOLLOW_USER);
+  // 팔로우 토글 뮤테이션
+  const [, executeToggleFollow] = useMutation(TOGGLE_FOLLOW);
 
   useEffect(() => {
-    if (followersResult.data?.followers.users) {
-      if (page === 1) {
-        setFollowers(followersResult.data.followers.users);
-      } else {
-        setFollowers((prev) => [
-          ...prev,
-          ...followersResult.data.followers.users,
-        ]);
-      }
-      setIsLoadingMore(false);
+    if (followersResult.data?.getUserById.followers) {
+      const followerUsers = followersResult.data.getUserById.followers.map(
+        (relation) => relation.follower,
+      );
+      setFollowers(followerUsers);
     }
-  }, [followersResult.data, page]);
+  }, [followersResult.data]);
 
   const handleBack = () => {
     router.back();
@@ -85,7 +76,7 @@ export default function FollowersScreen() {
 
   const handleFollowToggle = async (
     targetUserId: string,
-    isCurrentlyFollowing: boolean
+    isCurrentlyFollowing: boolean,
   ) => {
     try {
       const result = isCurrentlyFollowing
@@ -115,8 +106,8 @@ export default function FollowersScreen() {
                   ? user.followerCount - 1
                   : user.followerCount + 1,
               }
-            : user
-        )
+            : user,
+        ),
       );
 
       showToast({
@@ -132,17 +123,6 @@ export default function FollowersScreen() {
         message: "요청 처리 중 오류가 발생했습니다.",
         duration: 3000,
       });
-    }
-  };
-
-  const handleLoadMore = () => {
-    if (
-      followersResult.data?.followers.hasNext &&
-      !isLoadingMore &&
-      !followersResult.fetching
-    ) {
-      setIsLoadingMore(true);
-      setPage((prev) => prev + 1);
     }
   };
 
@@ -194,16 +174,7 @@ export default function FollowersScreen() {
     );
   };
 
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={themed($loadingFooter)}>
-        <ActivityIndicator size="small" color={theme.colors.tint} />
-      </View>
-    );
-  };
-
-  if (followersResult.fetching && page === 1) {
+  if (followersResult.fetching && !followers.length) {
     return (
       <View style={themed($container)}>
         <View style={themed($header)}>
@@ -228,9 +199,7 @@ export default function FollowersScreen() {
         <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
           <ArrowLeft color={theme.colors.text} size={24} />
         </TouchableOpacity>
-        <Text style={themed($headerTitle)}>
-          팔로워 {followersResult.data?.followers.total || 0}
-        </Text>
+        <Text style={themed($headerTitle)}>팔로워 {followers.length || 0}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -239,9 +208,6 @@ export default function FollowersScreen() {
         data={followers}
         renderItem={renderFollowerItem}
         keyExtractor={(item) => item.id}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={themed($listContainer)}
       />

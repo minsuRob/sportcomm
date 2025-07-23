@@ -245,10 +245,11 @@ export const GET_FOLLOWING = `
 
 /**
  * 사용자 프로필 정보를 조회합니다.
+ * 백엔드에서는 ResolveField를 통해 followerCount, followingCount, postCount, isFollowing을 계산합니다.
  */
 export const GET_USER_PROFILE = `
   query GetUserProfile($userId: String!) {
-    user(id: $userId) {
+    getUserById(userId: $userId) {
       id
       nickname
       email

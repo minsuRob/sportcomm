@@ -39,10 +39,11 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   // 사용자 프로필 데이터 조회
-  const [profileResult] = useQuery<{ user: UserProfile }>({
+  const [profileResult, executeQuery] = useQuery<{ getUserById: UserProfile }>({
     query: GET_USER_PROFILE,
     variables: { userId: currentUser?.id },
     pause: !currentUser?.id, // currentUser가 없으면 쿼리 중단
+    requestPolicy: "network-only", // 캐시를 사용하지 않고 항상 네트워크 요청
   });
 
   useEffect(() => {
@@ -52,6 +53,13 @@ export default function ProfileScreen() {
     };
     loadUserProfile();
   }, []);
+
+  // 사용자 정보가 변경되면 쿼리 다시 실행
+  useEffect(() => {
+    if (currentUser?.id) {
+      executeQuery({ requestPolicy: "network-only" });
+    }
+  }, [currentUser?.id, executeQuery]);
 
   const handleEditProfile = () => {
     // TODO: 프로필 편집 로직 구현
@@ -85,7 +93,7 @@ export default function ProfileScreen() {
   }
 
   // 프로필 데이터 (GraphQL 결과 또는 기본값)
-  const profileData = profileResult.data?.user || {
+  const profileData = profileResult.data?.getUserById || {
     id: currentUser.id,
     nickname: currentUser.nickname,
     email: currentUser.email || "",

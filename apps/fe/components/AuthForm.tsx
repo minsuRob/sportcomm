@@ -1,16 +1,8 @@
 import React, { useRef, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  Platform,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useMutation } from "urql";
 import { Button } from "./ui/button";
-import { Eye, EyeOff } from "lucide-react-native";
-import Toast from "react-native-toast-message";
+import { Eye, EyeOff, AlertCircle } from "lucide-react-native";
 import { saveSession, User } from "../lib/auth";
 import { LOGIN_MUTATION, REGISTER_MUTATION } from "../lib/graphql";
 
@@ -50,19 +42,34 @@ export default function AuthForm({
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
+  // 에러 상태 관리
+  const [emailError, setEmailError] = useState("");
+  const [nicknameError, setNicknameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [generalError, setGeneralError] = useState("");
+
   const nicknameInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
 
   const [loginResult, login] = useMutation(LOGIN_MUTATION);
   const [registerResult, register] = useMutation(REGISTER_MUTATION);
 
+  // 에러 상태 초기화
+  const clearErrors = () => {
+    setEmailError("");
+    setNicknameError("");
+    setPasswordError("");
+    setGeneralError("");
+  };
+
   const processAuthAction = async (action: "login" | "register") => {
+    clearErrors(); // 기존 에러 초기화
+
     const isLoginAction = action === "login";
     const mutation = isLoginAction ? login : register;
     const variables = isLoginAction
       ? { input: { email, password } }
       : { input: { email, nickname, password } };
-    const errorTitle = isLoginAction ? "로그인 실패" : "회원가입 실패";
 
     const result = await mutation(variables);
     const data = result.data?.[action];
@@ -75,13 +82,34 @@ export default function AuthForm({
       const originalError = result.error.graphQLErrors[0]?.extensions
         ?.originalError as { message?: string[] | string };
       const messages = originalError?.message;
-      const errorMessage =
-        Array.isArray(messages) ? messages.join("\n") : result.error.message;
-      Toast.show({
-        type: "error",
-        text1: errorTitle,
-        text2: errorMessage,
-      });
+      const errorMessage = Array.isArray(messages)
+        ? messages.join(", ")
+        : result.error.message;
+
+      // 에러 메시지에 따라 적절한 필드에 에러 설정
+      if (
+        errorMessage.toLowerCase().includes("email") ||
+        errorMessage.toLowerCase().includes("이메일")
+      ) {
+        setEmailError(errorMessage);
+      } else if (
+        errorMessage.toLowerCase().includes("password") ||
+        errorMessage.toLowerCase().includes("비밀번호")
+      ) {
+        setPasswordError(errorMessage);
+      } else if (
+        errorMessage.toLowerCase().includes("nickname") ||
+        errorMessage.toLowerCase().includes("닉네임")
+      ) {
+        setNicknameError(errorMessage);
+      } else {
+        // 일반적인 에러 (잘못된 이메일 또는 비밀번호 등)
+        if (isLoginAction) {
+          setPasswordError("잘못된 이메일 주소 또는 비밀번호");
+        } else {
+          setGeneralError(errorMessage);
+        }
+      }
     }
   };
 
@@ -89,11 +117,24 @@ export default function AuthForm({
   const handleRegister = () => processAuthAction("register");
 
   const handleContinue = () => {
+    clearErrors(); // 기존 에러 초기화
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("유효하지 않은 이메일", "올바른 이메일 주소를 입력하세요.");
+      setEmailError("올바른 이메일 주소를 입력하세요.");
       return;
     }
+
+    if (!password.trim()) {
+      setPasswordError("비밀번호를 입력해주세요.");
+      return;
+    }
+
+    if (!isLogin && !nickname.trim()) {
+      setNicknameError("닉네임을 입력해주세요.");
+      return;
+    }
+
     if (isLogin) {
       handleLogin();
     } else {
@@ -103,68 +144,115 @@ export default function AuthForm({
 
   return (
     <View className="flex-1 justify-center p-8 bg-background">
-      <Toast />
       <Text className="text-3xl font-bold text-center text-foreground mb-8">
         {isLogin ? "다시 오신 걸 환영합니다" : "계정 만들기"}
       </Text>
 
-      <TextInput
-        className="h-12 px-4 bg-input border border-border rounded-md text-foreground text-base mb-4"
-        placeholder="이메일 주소"
-        placeholderTextColor="hsl(var(--muted-foreground))"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        blurOnSubmit={false}
-        returnKeyType="next"
-        onSubmitEditing={() => {
-          if (isLogin) {
-            passwordInputRef.current?.focus();
-          } else {
-            nicknameInputRef.current?.focus();
-          }
-        }}
-      />
-
-      {!isLogin && (
+      {/* 이메일 입력 필드 */}
+      <View className="mb-4">
         <TextInput
-          ref={nicknameInputRef}
-          className="h-12 px-4 bg-input border border-border rounded-md text-foreground text-base mb-4"
-          placeholder="닉네임"
+          className={`h-12 px-4 bg-input border rounded-md text-foreground text-base ${
+            emailError ? "border-red-500" : "border-border"
+          }`}
+          placeholder="이메일 주소"
           placeholderTextColor="hsl(var(--muted-foreground))"
-          value={nickname}
-          onChangeText={setNickname}
+          value={email}
+          onChangeText={(text) => {
+            setEmail(text);
+            if (emailError) setEmailError(""); // 입력 시 에러 초기화
+          }}
+          keyboardType="email-address"
           autoCapitalize="none"
-          blurOnSubmit={false}
           returnKeyType="next"
-          onSubmitEditing={() => passwordInputRef.current?.focus()}
+          onSubmitEditing={() => {
+            if (isLogin) {
+              passwordInputRef.current?.focus();
+            } else {
+              nicknameInputRef.current?.focus();
+            }
+          }}
         />
+        {emailError ? (
+          <View className="flex-row items-center mt-2">
+            <AlertCircle color="#ef4444" size={16} />
+            <Text className="text-red-500 text-sm ml-2">{emailError}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* 닉네임 입력 필드 (회원가입 시에만) */}
+      {!isLogin && (
+        <View className="mb-4">
+          <TextInput
+            ref={nicknameInputRef}
+            className={`h-12 px-4 bg-input border rounded-md text-foreground text-base ${
+              nicknameError ? "border-red-500" : "border-border"
+            }`}
+            placeholder="닉네임"
+            placeholderTextColor="hsl(var(--muted-foreground))"
+            value={nickname}
+            onChangeText={(text) => {
+              setNickname(text);
+              if (nicknameError) setNicknameError(""); // 입력 시 에러 초기화
+            }}
+            autoCapitalize="none"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordInputRef.current?.focus()}
+          />
+          {nicknameError ? (
+            <View className="flex-row items-center mt-2">
+              <AlertCircle color="#ef4444" size={16} />
+              <Text className="text-red-500 text-sm ml-2">{nicknameError}</Text>
+            </View>
+          ) : null}
+        </View>
       )}
 
-      <View className="relative mb-4">
-        <TextInput
-          ref={passwordInputRef}
-          className="h-12 px-4 pr-12 bg-input border border-primary rounded-md text-foreground text-base"
-          placeholder="비밀번호"
-          placeholderTextColor="hsl(var(--muted-foreground))"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!isPasswordVisible}
-          returnKeyType="done"
-          onSubmitEditing={handleContinue}
-        />
-        <TouchableOpacity
-          onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-          className="absolute right-4 top-3.5"
-        >
-          {isPasswordVisible ? (
-            <EyeOff color="hsl(var(--muted-foreground))" size={20} />
-          ) : (
-            <Eye color="hsl(var(--muted-foreground))" size={20} />
-          )}
-        </TouchableOpacity>
+      {/* 비밀번호 입력 필드 */}
+      <View className="mb-4">
+        <View className="relative">
+          <TextInput
+            ref={passwordInputRef}
+            className={`h-12 px-4 pr-12 bg-input border rounded-md text-foreground text-base ${
+              passwordError ? "border-red-500" : "border-border"
+            }`}
+            placeholder="비밀번호"
+            placeholderTextColor="hsl(var(--muted-foreground))"
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (passwordError) setPasswordError(""); // 입력 시 에러 초기화
+            }}
+            secureTextEntry={!isPasswordVisible}
+            returnKeyType="done"
+            onSubmitEditing={handleContinue}
+          />
+          <TouchableOpacity
+            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+            className="absolute right-4 top-3.5"
+          >
+            {isPasswordVisible ? (
+              <EyeOff color="hsl(var(--muted-foreground))" size={20} />
+            ) : (
+              <Eye color="hsl(var(--muted-foreground))" size={20} />
+            )}
+          </TouchableOpacity>
+        </View>
+        {passwordError ? (
+          <View className="flex-row items-center mt-2">
+            <AlertCircle color="#ef4444" size={16} />
+            <Text className="text-red-500 text-sm ml-2">{passwordError}</Text>
+          </View>
+        ) : null}
       </View>
+
+      {/* 일반 에러 메시지 */}
+      {generalError ? (
+        <View className="flex-row items-center mb-4">
+          <AlertCircle color="#ef4444" size={16} />
+          <Text className="text-red-500 text-sm ml-2">{generalError}</Text>
+        </View>
+      ) : null}
 
       {isLogin && (
         <TouchableOpacity className="mb-6 self-start">

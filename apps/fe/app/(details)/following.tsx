@@ -16,7 +16,26 @@ import { useQuery, useMutation } from "urql";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
-import { GET_FOLLOWING, TOGGLE_FOLLOW } from "@/lib/graphql";
+import { TOGGLE_FOLLOW } from "@/lib/graphql";
+import { gql } from "urql";
+
+// GraphQL Query
+const GET_FOLLOWING = gql`
+  query GetFollowing($userId: String!) {
+    getUserById(userId: $userId) {
+      following {
+        following {
+          id
+          nickname
+          profileImageUrl
+          isFollowing
+          followerCount
+          followingCount
+        }
+      }
+    }
+  }
+`;
 
 // 팔로잉 사용자 타입
 interface FollowingUser {
@@ -28,7 +47,7 @@ interface FollowingUser {
   followingCount: number;
 }
 
-// 팔로잉 관계 타입 (백엔드 스키마 기반)
+// 팔로우 관계 타입
 interface FollowRelation {
   following: FollowingUser;
 }
@@ -63,10 +82,15 @@ export default function FollowingScreen() {
 
   useEffect(() => {
     if (followingResult.data?.getUserById.following) {
-      const followingUsers = followingResult.data.getUserById.following.map(
-        (relation) => relation.following,
-      );
-      setFollowing(followingUsers);
+      try {
+        const followingUsers = followingResult.data.getUserById.following.map(
+          (relation) => relation.following,
+        );
+        setFollowing(followingUsers || []);
+      } catch (error) {
+        console.error("팔로잉 데이터 처리 중 오류 발생:", error);
+        setFollowing([]);
+      }
     }
   }, [followingResult.data]);
 
@@ -172,6 +196,7 @@ export default function FollowingScreen() {
     );
   };
 
+  // 로딩 중이거나 에러 발생 시 표시할 화면
   if (followingResult.fetching && !following.length) {
     return (
       <View style={themed($container)}>
@@ -185,6 +210,36 @@ export default function FollowingScreen() {
         <View style={themed($loadingContainer)}>
           <ActivityIndicator size="large" color={theme.colors.tint} />
           <Text style={themed($loadingText)}>팔로잉 목록을 불러오는 중...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // 에러 발생 시 표시할 화면
+  if (followingResult.error) {
+    return (
+      <View style={themed($container)}>
+        <View style={themed($header)}>
+          <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
+            <ArrowLeft color={theme.colors.text} size={24} />
+          </TouchableOpacity>
+          <Text style={themed($headerTitle)}>팔로잉</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={themed($loadingContainer)}>
+          <Text style={themed($loadingText)}>
+            팔로잉 목록을 불러오는 중 오류가 발생했습니다.
+          </Text>
+          <TouchableOpacity
+            onPress={() => refetchFollowing({ requestPolicy: "network-only" })}
+            style={themed($followButton)}
+          >
+            <Text
+              style={[themed($followButtonText), { color: theme.colors.tint }]}
+            >
+              다시 시도
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -208,6 +263,17 @@ export default function FollowingScreen() {
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={themed($listContainer)}
+        ListEmptyComponent={
+          !followingResult.fetching ? (
+            <View style={themed($loadingContainer)}>
+              <Text style={themed($loadingText)}>
+                팔로잉하는 사용자가 없습니다.
+              </Text>
+            </View>
+          ) : null
+        }
+        refreshing={followingResult.fetching}
+        onRefresh={() => refetchFollowing({ requestPolicy: "network-only" })}
       />
     </View>
   );

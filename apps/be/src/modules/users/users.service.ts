@@ -46,6 +46,36 @@ export class UsersService {
   }
 
   /**
+   * 특정 사용자가 팔로우하는 관계를 조회합니다.
+   * @param userId 사용자 ID
+   * @returns 팔로잉 관계 배열
+   */
+  async getFollowing(userId: string): Promise<Follow[]> {
+    console.log(`[Service] 사용자 ${userId}의 팔로잉 조회 중`);
+    const following = await this.followsRepository.find({
+      where: { followerId: userId },
+      relations: ['following'],
+    });
+    console.log(`[Service] 사용자 ${userId}의 팔로잉 조회 결과:`, following);
+    return following || [];
+  }
+
+  /**
+   * 특정 사용자의 팔로워 관계를 조회합니다.
+   * @param userId 사용자 ID
+   * @returns 팔로워 관계 배열
+   */
+  async getFollowers(userId: string): Promise<Follow[]> {
+    console.log(`[Service] 사용자 ${userId}의 팔로워 조회 중`);
+    const followers = await this.followsRepository.find({
+      where: { followingId: userId },
+      relations: ['follower'],
+    });
+    console.log(`[Service] 사용자 ${userId}의 팔로워 조회 결과:`, followers);
+    return followers || [];
+  }
+
+  /**
    * 특정 사용자의 팔로워 수를 조회합니다.
    * @param userId 사용자 ID
    * @returns 팔로워 수

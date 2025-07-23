@@ -7,6 +7,7 @@ import {
   Query,
   Parent,
 } from '@nestjs/graphql';
+import { Follow } from '../../entities/follow.entity';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import {
   CurrentUser,
@@ -18,6 +19,32 @@ import { User } from '../../entities/user.entity';
 @Resolver(() => User)
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
+
+  /**
+   * 사용자의 팔로잉 목록을 반환하는 리졸버
+   * @param user 현재 처리 중인 User 객체
+   * @returns 팔로잉 목록 배열 (항상 배열 반환, null 아님)
+   */
+  @ResolveField(() => [Follow], { nullable: false })
+  async following(@Parent() user: User): Promise<Follow[]> {
+    console.log(`[Resolver] 사용자 ${user.id}의 팔로잉 조회 요청`);
+    const following = await this.usersService.getFollowing(user.id);
+    console.log(`[Resolver] 사용자 ${user.id}의 팔로잉 조회 결과:`, following);
+    return following || [];
+  }
+
+  /**
+   * 사용자의 팔로워 목록을 반환하는 리졸버
+   * @param user 현재 처리 중인 User 객체
+   * @returns 팔로워 목록 배열 (항상 배열 반환, null 아님)
+   */
+  @ResolveField(() => [Follow], { nullable: false })
+  async followers(@Parent() user: User): Promise<Follow[]> {
+    console.log(`[Resolver] 사용자 ${user.id}의 팔로워 조회 요청`);
+    const followers = await this.usersService.getFollowers(user.id);
+    console.log(`[Resolver] 사용자 ${user.id}의 팔로워 조회 결과:`, followers);
+    return followers || [];
+  }
 
   /**
    * 사용자 ID로 사용자 정보를 조회하는 쿼리

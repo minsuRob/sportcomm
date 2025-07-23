@@ -16,7 +16,26 @@ import { useQuery, useMutation } from "urql";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
-import { GET_FOLLOWERS, TOGGLE_FOLLOW } from "@/lib/graphql";
+import { TOGGLE_FOLLOW } from "@/lib/graphql";
+import { gql } from "urql";
+
+// GraphQL Query
+const GET_FOLLOWERS = gql`
+  query GetFollowers($userId: String!) {
+    getUserById(userId: $userId) {
+      followers {
+        follower {
+          id
+          nickname
+          profileImageUrl
+          isFollowing
+          followerCount
+          followingCount
+        }
+      }
+    }
+  }
+`;
 
 // 팔로워 사용자 타입
 interface FollowerUser {
@@ -28,7 +47,7 @@ interface FollowerUser {
   followingCount: number;
 }
 
-// 팔로워 관계 타입 (백엔드 스키마 기반)
+// 팔로워 관계 타입
 interface FollowRelation {
   follower: FollowerUser;
 }
@@ -63,10 +82,15 @@ export default function FollowersScreen() {
 
   useEffect(() => {
     if (followersResult.data?.getUserById.followers) {
-      const followerUsers = followersResult.data.getUserById.followers.map(
-        (relation) => relation.follower,
-      );
-      setFollowers(followerUsers);
+      try {
+        const followerUsers = followersResult.data.getUserById.followers.map(
+          (relation) => relation.follower,
+        );
+        setFollowers(followerUsers || []);
+      } catch (error) {
+        console.error("팔로워 데이터 처리 중 오류 발생:", error);
+        setFollowers([]);
+      }
     }
   }, [followersResult.data]);
 
@@ -79,9 +103,7 @@ export default function FollowersScreen() {
     isCurrentlyFollowing: boolean,
   ) => {
     try {
-      const result = isCurrentlyFollowing
-        ? await executeUnfollow({ userId: targetUserId })
-        : await executeFollow({ userId: targetUserId });
+      const result = await executeToggleFollow({ userId: targetUserId });
 
       if (result.error) {
         showToast({
@@ -192,6 +214,36 @@ export default function FollowersScreen() {
     );
   }
 
+  // 에러 발생 시 표시할 화면
+  if (followersResult.error) {
+    return (
+      <View style={themed($container)}>
+        <View style={themed($header)}>
+          <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
+            <ArrowLeft color={theme.colors.text} size={24} />
+          </TouchableOpacity>
+          <Text style={themed($headerTitle)}>팔로워</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={themed($loadingContainer)}>
+          <Text style={themed($loadingText)}>
+            팔로워 목록을 불러오는 중 오류가 발생했습니다.
+          </Text>
+          <TouchableOpacity
+            onPress={() => refetchFollowers({ requestPolicy: "network-only" })}
+            style={themed($followButton)}
+          >
+            <Text
+              style={[themed($followButtonText), { color: theme.colors.tint }]}
+            >
+              다시 시도
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={themed($container)}>
       {/* 헤더 */}
@@ -210,6 +262,15 @@ export default function FollowersScreen() {
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={themed($listContainer)}
+        ListEmptyComponent={
+          !followersResult.fetching ? (
+            <View style={themed($loadingContainer)}>
+              <Text style={themed($loadingText)}>팔로워가 없습니다.</Text>
+            </View>
+          ) : null
+        }
+        refreshing={followersResult.fetching}
+        onRefresh={() => refetchFollowers({ requestPolicy: "network-only" })}
       />
     </View>
   );

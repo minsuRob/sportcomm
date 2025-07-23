@@ -261,3 +261,43 @@ export const GET_USER_PROFILE = `
     }
   }
 `;
+
+/**
+ * 특정 사용자의 게시물 목록을 조회합니다.
+ * GET_POSTS와 동일한 구조를 가지지만, 프로필 화면에서 사용자의 게시물을 가져오는 데 특화되어 있습니다.
+ * 'authorId'를 포함한 FindPostsInput으로 필터링합니다.
+ */
+export const GET_USER_POSTS = `
+  query GetUserPosts($input: FindPostsInput) {
+    posts(input: $input) {
+      posts {
+        id
+        content
+        createdAt
+        type
+        viewCount
+        likeCount
+        commentCount
+        author {
+          id
+          nickname
+          profileImageUrl
+        }
+        media {
+          id
+          url
+          type
+        }
+        comments {
+          id
+        }
+      }
+      total
+      page
+      limit
+      totalPages
+      hasPrevious
+      hasNext
+    }
+  }
+`;

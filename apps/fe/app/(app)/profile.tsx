@@ -8,6 +8,7 @@ import {
   ViewStyle,
   TextStyle,
   ImageStyle,
+  ActivityIndicator,
 } from "react-native";
 import { Settings, Edit3, Users, UserPlus } from "lucide-react-native";
 import { useQuery } from "urql";
@@ -15,7 +16,9 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
 import { useRouter } from "expo-router";
-import { GET_USER_PROFILE } from "@/lib/graphql";
+import { GET_USER_PROFILE, GET_USER_POSTS } from "@/lib/graphql";
+import FeedList from "@/components/FeedList";
+import type { Post } from "@/components/PostCard";
 
 // 사용자 프로필 데이터 타입
 interface UserProfile {
@@ -36,6 +39,7 @@ interface UserProfile {
 export default function ProfileScreen() {
   const { themed, theme } = useAppTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
   const router = useRouter();
 
   // 사용자 프로필 데이터 조회
@@ -46,6 +50,16 @@ export default function ProfileScreen() {
     requestPolicy: "network-only", // 캐시를 사용하지 않고 항상 네트워크 요청
   });
 
+  // 사용자의 게시물 목록 조회
+  const [postsResult, executePostsQuery] = useQuery<{
+    posts: { posts: Post[] };
+  }>({
+    query: GET_USER_POSTS,
+    variables: { input: { authorId: currentUser?.id } },
+    pause: !currentUser?.id,
+    requestPolicy: "network-only",
+  });
+
   useEffect(() => {
     const loadUserProfile = async () => {
       const { user } = await getSession();
@@ -54,12 +68,20 @@ export default function ProfileScreen() {
     loadUserProfile();
   }, []);
 
-  // 사용자 정보가 변경되면 쿼리 다시 실행
+  // 사용자 정보가 변경되면 프로필 및 게시물 쿼리 다시 실행
   useEffect(() => {
     if (currentUser?.id) {
       executeQuery({ requestPolicy: "network-only" });
+      executePostsQuery({ requestPolicy: "network-only" });
     }
-  }, [currentUser?.id, executeQuery]);
+  }, [currentUser?.id, executeQuery, executePostsQuery]);
+
+  // 게시물 데이터가 변경되면 상태 업데이트
+  useEffect(() => {
+    if (postsResult.data?.posts?.posts) {
+      setUserPosts(postsResult.data.posts.posts);
+    }
+  }, [postsResult.data]);
 
   const handleEditProfile = () => {
     // TODO: 프로필 편집 로직 구현
@@ -158,11 +180,22 @@ export default function ProfileScreen() {
       {/* 내 게시물 섹션 */}
       <View style={themed($postsSection)}>
         <Text style={themed($sectionTitle)}>내 게시물</Text>
-        <View style={themed($emptyState)}>
-          <Text style={themed($emptyStateText)}>
-            아직 작성한 게시물이 없습니다
-          </Text>
-        </View>
+        {postsResult.fetching ? (
+          <View style={themed($loadingContainer)}>
+            <ActivityIndicator size="large" color={theme.colors.tint} />
+          </View>
+        ) : (
+          <FeedList
+            posts={userPosts}
+            ListEmptyComponent={
+              <View style={themed($emptyState)}>
+                <Text style={themed($emptyStateText)}>
+                  아직 작성한 게시물이 없습니다
+                </Text>
+              </View>
+            }
+          />
+        )}
       </View>
     </ScrollView>
   );

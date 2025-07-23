@@ -9,11 +9,25 @@ import {
   TextStyle,
   ImageStyle,
 } from "react-native";
-import { Settings, Edit3 } from "lucide-react-native";
+import { Settings, Edit3, Users, UserPlus } from "lucide-react-native";
+import { useQuery } from "urql";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
 import { useRouter } from "expo-router";
+import { GET_USER_PROFILE } from "@/lib/graphql";
+
+// 사용자 프로필 데이터 타입
+interface UserProfile {
+  id: string;
+  nickname: string;
+  email: string;
+  profileImageUrl?: string;
+  isFollowing: boolean;
+  followerCount: number;
+  followingCount: number;
+  postCount: number;
+}
 
 /**
  * 프로필 화면 컴포넌트
@@ -23,6 +37,13 @@ export default function ProfileScreen() {
   const { themed, theme } = useAppTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const router = useRouter();
+
+  // 사용자 프로필 데이터 조회
+  const [profileResult] = useQuery<{ user: UserProfile }>({
+    query: GET_USER_PROFILE,
+    variables: { userId: currentUser?.id },
+    pause: !currentUser?.id, // currentUser가 없으면 쿼리 중단
+  });
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -41,6 +62,18 @@ export default function ProfileScreen() {
     router.push("/(app)/settings");
   };
 
+  const handleFollowersPress = () => {
+    if (currentUser?.id) {
+      router.push(`/(app)/followers?userId=${currentUser.id}`);
+    }
+  };
+
+  const handleFollowingPress = () => {
+    if (currentUser?.id) {
+      router.push(`/(app)/following?userId=${currentUser.id}`);
+    }
+  };
+
   if (!currentUser) {
     return (
       <View style={themed($container)}>
@@ -51,9 +84,21 @@ export default function ProfileScreen() {
     );
   }
 
+  // 프로필 데이터 (GraphQL 결과 또는 기본값)
+  const profileData = profileResult.data?.user || {
+    id: currentUser.id,
+    nickname: currentUser.nickname,
+    email: currentUser.email || "",
+    profileImageUrl: currentUser.profileImageUrl,
+    isFollowing: false,
+    followerCount: 0,
+    followingCount: 0,
+    postCount: 0,
+  };
+
   const avatarUrl =
-    currentUser.profileImageUrl ||
-    `https://i.pravatar.cc/150?u=${currentUser.id}`;
+    profileData.profileImageUrl ||
+    `https://i.pravatar.cc/150?u=${profileData.id}`;
 
   return (
     <ScrollView style={themed($container)}>
@@ -68,7 +113,7 @@ export default function ProfileScreen() {
       {/* 프로필 정보 */}
       <View style={themed($profileSection)}>
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
-        <Text style={themed($username)}>{currentUser.nickname}</Text>
+        <Text style={themed($username)}>{profileData.nickname}</Text>
 
         {/* 프로필 편집 버튼 */}
         <TouchableOpacity
@@ -83,17 +128,23 @@ export default function ProfileScreen() {
       {/* 통계 정보 */}
       <View style={themed($statsSection)}>
         <View style={themed($statItem)}>
-          <Text style={themed($statNumber)}>0</Text>
+          <Text style={themed($statNumber)}>{profileData.postCount}</Text>
           <Text style={themed($statLabel)}>게시물</Text>
         </View>
-        <View style={themed($statItem)}>
-          <Text style={themed($statNumber)}>0</Text>
+        <TouchableOpacity
+          style={themed($statItem)}
+          onPress={handleFollowersPress}
+        >
+          <Text style={themed($statNumber)}>{profileData.followerCount}</Text>
           <Text style={themed($statLabel)}>팔로워</Text>
-        </View>
-        <View style={themed($statItem)}>
-          <Text style={themed($statNumber)}>0</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={themed($statItem)}
+          onPress={handleFollowingPress}
+        >
+          <Text style={themed($statNumber)}>{profileData.followingCount}</Text>
           <Text style={themed($statLabel)}>팔로잉</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* 내 게시물 섹션 */}
@@ -148,7 +199,6 @@ const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.text,
   marginTop: spacing.md,
 });
-
 
 const $editButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",

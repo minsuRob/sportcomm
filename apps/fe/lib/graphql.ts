@@ -187,3 +187,93 @@ export const CREATE_COMMENT = `
     }
   }
 `;
+
+/**
+ * 사용자를 팔로우합니다.
+ */
+export const FOLLOW_USER = `
+  mutation FollowUser($userId: String!) {
+    followUser(userId: $userId) {
+      id
+      isFollowing
+      followerCount
+      followingCount
+    }
+  }
+`;
+
+/**
+ * 사용자를 언팔로우합니다.
+ */
+export const UNFOLLOW_USER = `
+  mutation UnfollowUser($userId: String!) {
+    unfollowUser(userId: $userId) {
+      id
+      isFollowing
+      followerCount
+      followingCount
+    }
+  }
+`;
+
+/**
+ * 사용자의 팔로워 목록을 조회합니다.
+ */
+export const GET_FOLLOWERS = `
+  query GetFollowers($userId: String!, $input: PaginationInput) {
+    followers(userId: $userId, input: $input) {
+      users {
+        id
+        nickname
+        profileImageUrl
+        isFollowing
+        followerCount
+        followingCount
+      }
+      total
+      page
+      limit
+      hasNext
+    }
+  }
+`;
+
+/**
+ * 사용자의 팔로잉 목록을 조회합니다.
+ */
+export const GET_FOLLOWING = `
+  query GetFollowing($userId: String!, $input: PaginationInput) {
+    following(userId: $userId, input: $input) {
+      users {
+        id
+        nickname
+        profileImageUrl
+        isFollowing
+        followerCount
+        followingCount
+      }
+      total
+      page
+      limit
+      hasNext
+    }
+  }
+`;
+
+/**
+ * 사용자 프로필 정보를 조회합니다.
+ */
+export const GET_USER_PROFILE = `
+  query GetUserProfile($userId: String!) {
+    user(id: $userId) {
+      id
+      nickname
+      email
+      profileImageUrl
+      isFollowing
+      followerCount
+      followingCount
+      postCount
+    }
+  }
+`;

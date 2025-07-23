@@ -64,7 +64,9 @@
     "followSuccess": "Followed successfully.",
     "unfollowSuccess": "Unfollowed successfully.",
     "followError": "An error occurred while processing follow request.",
-    "likeError": "An error occurred while liking the post."
+    "likeError": "An error occurred while liking the post.",
+    "liking": "Liking...",
+    "unliking": "Unliking..."
   },
   "createPost": {
     "title": "Create New Post",

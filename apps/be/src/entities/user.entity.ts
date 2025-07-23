@@ -12,6 +12,7 @@ import { Post } from './post.entity';
 import { Comment } from './comment.entity';
 import { Follow } from './follow.entity';
 import { ChatMessage } from './chat-message.entity';
+import { PostLike } from './post-like.entity';
 
 /**
  * 사용자 역할 열거형
@@ -207,6 +208,14 @@ export class User extends BaseEntity {
   @Field(() => [ChatMessage], { description: '보낸 채팅 메시지 목록' })
   @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.author)
   chatMessages: ChatMessage[];
+
+  /**
+   * 사용자가 좋아요를 누른 게시물 관계
+   * 일대다 관계: 한 사용자는 여러 게시물에 좋아요를 누를 수 있습니다.
+   */
+  @Field(() => [PostLike], { description: '좋아요를 누른 게시물 목록' })
+  @OneToMany(() => PostLike, (postLike) => postLike.user)
+  likes: PostLike[];
 
   // === 헬퍼 메서드 ===
 

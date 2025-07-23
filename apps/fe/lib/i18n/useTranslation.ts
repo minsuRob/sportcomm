@@ -127,6 +127,8 @@ export const TRANSLATION_KEYS = {
   POST_UNFOLLOW_SUCCESS: "post.unfollowSuccess",
   POST_FOLLOW_ERROR: "post.followError",
   POST_LIKE_ERROR: "post.likeError",
+  POST_LIKING: "post.liking",
+  POST_UNLIKING: "post.unliking",
 
   // 댓글
   COMMENTS_TITLE: "comments.title",

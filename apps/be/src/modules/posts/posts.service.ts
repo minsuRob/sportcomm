@@ -4,9 +4,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Post, PostType } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
+import { PostLike } from '../../entities/post-like.entity';
 import { User } from '../../entities/user.entity';
 
 /**
@@ -98,6 +99,9 @@ export class PostsService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(PostVersion)
     private readonly postVersionRepository: Repository<PostVersion>,
+    @InjectRepository(PostLike)
+    private readonly postLikeRepository: Repository<PostLike>,
+    private dataSource: DataSource,
   ) {}
 
   /**
@@ -221,10 +225,21 @@ export class PostsService {
    * @returns 게시물 정보
    * @throws NotFoundException - 게시물을 찾을 수 없음
    */
-  async findById(id: string, incrementView: boolean = false): Promise<Post> {
+  async findById(
+    id: string,
+    incrementView: boolean = false,
+    userId?: string,
+  ): Promise<Post> {
     const post = await this.postRepository.findOne({
       where: { id },
-      relations: ['author', 'comments', 'comments.author', 'media', 'versions'],
+      relations: [
+        'author',
+        'comments',
+        'comments.author',
+        'media',
+        'versions',
+        'likes',
+      ],
     });
 
     if (!post) {
@@ -238,6 +253,27 @@ export class PostsService {
     }
 
     return post;
+  }
+
+  /**
+   * 사용자의 게시물 좋아요 상태 확인
+   *
+   * @param postId - 게시물 ID
+   * @param userId - 사용자 ID
+   * @returns 좋아요 상태 (true: 좋아요함, false: 좋아요하지 않음)
+   */
+  async isPostLikedByUser(postId: string, userId: string): Promise<boolean> {
+    if (!userId) return false;
+
+    const postLike = await this.postLikeRepository.findOne({
+      where: {
+        postId,
+        userId,
+        isLikeActive: true,
+      },
+    });
+
+    return !!postLike;
   }
 
   /**
@@ -328,6 +364,77 @@ export class PostsService {
   /**
    * 게시물 좋아요 수 증가
    *
+   * @param id - 게시물 ID
+   */
+  /**
+   * 게시물 좋아요 처리
+   *
+   * @param postId - 게시물 ID
+   * @param userId - 사용자 ID
+   * @returns 좋아요 상태 (true: 좋아요 설정, false: 좋아요 취소)
+   * @throws NotFoundException - 게시물을 찾을 수 없음
+   */
+  async toggleLike(postId: string, userId: string): Promise<boolean> {
+    // 게시물이 존재하는지 확인
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) {
+      throw new NotFoundException('게시물을 찾을 수 없습니다.');
+    }
+
+    // 트랜잭션 시작
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 기존 좋아요 기록 확인
+      let postLike = await this.postLikeRepository.findOne({
+        where: { userId, postId },
+      });
+
+      let result: boolean;
+
+      if (!postLike) {
+        // 좋아요 기록이 없으면 새로 생성 (좋아요)
+        postLike = this.postLikeRepository.create({
+          userId,
+          postId,
+          isLikeActive: true,
+        });
+
+        await this.postLikeRepository.save(postLike);
+        await this.postRepository.increment({ id: postId }, 'likeCount', 1);
+        result = true;
+      } else if (!postLike.isLikeActive) {
+        // 비활성 상태였으면 활성화 (다시 좋아요)
+        postLike.isLikeActive = true;
+        await this.postLikeRepository.save(postLike);
+        await this.postRepository.increment({ id: postId }, 'likeCount', 1);
+        result = true;
+      } else {
+        // 이미 활성 상태면 비활성화 (좋아요 취소)
+        postLike.isLikeActive = false;
+        await this.postLikeRepository.save(postLike);
+        await this.postRepository.decrement({ id: postId }, 'likeCount', 1);
+        result = false;
+      }
+
+      // 트랜잭션 커밋
+      await queryRunner.commitTransaction();
+      return result;
+    } catch (error) {
+      // 오류 발생 시 롤백
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // 쿼리러너 해제
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * 게시물 좋아요 수 증가
+   * @deprecated 대신 toggleLike 사용
    * @param id - 게시물 ID
    */
   async incrementLikeCount(id: string): Promise<void> {

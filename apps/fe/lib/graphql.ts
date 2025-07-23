@@ -78,7 +78,11 @@ export const CREATE_POST = `
 /**
  * 게시물 좋아요 토글 기능
  * 백엔드에서 제공하는 likePost 뮤테이션을 사용하여 게시물의 좋아요 상태를 토글합니다.
- * 해당 뮤테이션은 좋아요 토글 성공 여부를 Boolean 값으로 반환합니다.
+ * 이미 좋아요가 되어 있으면 취소하고, 되어있지 않으면 좋아요를 설정합니다.
+ *
+ * 반환값:
+ * - true: 좋아요 설정됨 (like)
+ * - false: 좋아요 취소됨 (unlike)
  */
 export const TOGGLE_LIKE = `
   mutation ToggleLike($postId: String!) {

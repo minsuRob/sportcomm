@@ -1,12 +1,28 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { ObjectType, Field, InputType } from '@nestjs/graphql';
-import { IsString, IsEnum, IsOptional, IsBoolean, MinLength, MaxLength, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+  MinLength,
+  MaxLength,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { PostsService, FindPostsOptions } from './posts.service';
 import { Post, PostType } from '../../entities/post.entity';
 import { User } from '../../entities/user.entity';
-import { GqlAuthGuard, OptionalGqlAuthGuard } from '../../common/guards/gql-auth.guard';
-import { CurrentUser, OptionalCurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  GqlAuthGuard,
+  OptionalGqlAuthGuard,
+} from '../../common/guards/gql-auth.guard';
+import {
+  CurrentUser,
+  OptionalCurrentUser,
+} from '../../common/decorators/current-user.decorator';
 
 /**
  * 게시물 생성 입력 타입
@@ -32,7 +48,7 @@ export class CreatePostInput {
   @Field(() => Boolean, {
     nullable: true,
     description: '공개 여부 (기본값: true)',
-    defaultValue: true
+    defaultValue: true,
   })
   @IsOptional()
   @IsBoolean({ message: '공개 여부는 불린 값이어야 합니다.' })
@@ -92,7 +108,7 @@ export class FindPostsInput {
   @Field(() => Int, {
     nullable: true,
     description: '페이지 번호 (기본값: 1)',
-    defaultValue: 1
+    defaultValue: 1,
   })
   @IsOptional()
   @IsInt({ message: '페이지 번호는 정수여야 합니다.' })
@@ -102,7 +118,7 @@ export class FindPostsInput {
   @Field(() => Int, {
     nullable: true,
     description: '페이지 크기 (기본값: 10)',
-    defaultValue: 10
+    defaultValue: 10,
   })
   @IsOptional()
   @IsInt({ message: '페이지 크기는 정수여야 합니다.' })
@@ -123,7 +139,7 @@ export class FindPostsInput {
   @Field(() => Boolean, {
     nullable: true,
     description: '공개 게시물만 조회 (기본값: false)',
-    defaultValue: false
+    defaultValue: false,
   })
   @IsOptional()
   @IsBoolean({ message: '공개 게시물 필터는 불린 값이어야 합니다.' })
@@ -132,7 +148,7 @@ export class FindPostsInput {
   @Field(() => String, {
     nullable: true,
     description: '정렬 기준 (기본값: createdAt)',
-    defaultValue: 'createdAt'
+    defaultValue: 'createdAt',
   })
   @IsOptional()
   @IsString({ message: '정렬 기준은 문자열이어야 합니다.' })
@@ -141,7 +157,7 @@ export class FindPostsInput {
   @Field(() => String, {
     nullable: true,
     description: '정렬 순서 (기본값: DESC)',
-    defaultValue: 'DESC'
+    defaultValue: 'DESC',
   })
   @IsOptional()
   @IsString({ message: '정렬 순서는 문자열이어야 합니다.' })
@@ -273,7 +289,19 @@ export class PostsResolver {
   ): Promise<Post> {
     // 로그인한 사용자만 조회수 증가
     const incrementView = !!user;
-    return await this.postsService.findById(id, incrementView);
+    const post = await this.postsService.findById(id, incrementView);
+
+    // 현재 사용자의 좋아요 상태 설정
+    if (user) {
+      post.isLiked = await this.postsService.isPostLikedByUser(
+        post.id,
+        user.id,
+      );
+    } else {
+      post.isLiked = false;
+    }
+
+    return post;
   }
 
   /**
@@ -329,11 +357,15 @@ export class PostsResolver {
   }
 
   /**
-   * 게시물 좋아요
+   * 게시물 좋아요 토글
+   *
+   * 사용자가 게시물에 좋아요를 누르거나 취소하는 기능입니다.
+   * 동일 사용자가 같은 게시물에 중복으로 좋아요를 누르는 것을 방지하기 위해
+   * 사용자 ID와 게시물 ID에 유니크 제약조건을 적용한 PostLike 엔티티를 사용합니다.
    *
    * @param user - 현재 인증된 사용자
    * @param id - 게시물 ID
-   * @returns 성공 여부
+   * @returns 좋아요 상태 (true: 좋아요 활성화, false: 좋아요 비활성화)
    */
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean, { description: '게시물 좋아요' })
@@ -341,9 +373,7 @@ export class PostsResolver {
     @CurrentUser() user: User,
     @Args('id') id: string,
   ): Promise<boolean> {
-    // 실제 구현에서는 사용자별 좋아요 중복 방지 로직이 필요합니다.
-    await this.postsService.incrementLikeCount(id);
-    return true;
+    return await this.postsService.toggleLike(id, user.id);
   }
 
   /**
@@ -449,9 +479,22 @@ export class PostsResolver {
    */
   @Query(() => [Post], { description: '인기 게시물 조회' })
   async popularPosts(
-    @Args('limit', { type: () => Int, defaultValue: 10 }) limit: number,
+    @OptionalCurrentUser() user: User,
+    @Args('limit', { defaultValue: 10 }) limit: number,
   ): Promise<Post[]> {
-    return await this.postsService.findPopularPosts(limit);
+    const posts = await this.postsService.findPopularPosts(limit);
+
+    // 현재 사용자의 좋아요 상태 설정
+    if (user) {
+      for (const post of posts) {
+        post.isLiked = await this.postsService.isPostLikedByUser(
+          post.id,
+          user.id,
+        );
+      }
+    }
+
+    return posts;
   }
 
   /**
@@ -462,9 +505,22 @@ export class PostsResolver {
    */
   @Query(() => [Post], { description: '최근 게시물 조회' })
   async recentPosts(
-    @Args('limit', { type: () => Int, defaultValue: 10 }) limit: number,
+    @OptionalCurrentUser() user: User,
+    @Args('limit', { defaultValue: 10 }) limit: number,
   ): Promise<Post[]> {
-    return await this.postsService.findRecentPosts(limit);
+    const posts = await this.postsService.findRecentPosts(limit);
+
+    // 현재 사용자의 좋아요 상태 설정
+    if (user) {
+      for (const post of posts) {
+        post.isLiked = await this.postsService.isPostLikedByUser(
+          post.id,
+          user.id,
+        );
+      }
+    }
+
+    return posts;
   }
 
   /**
@@ -500,7 +556,9 @@ export class PostsResolver {
    * @returns 게시물 통계 정보
    */
   @UseGuards(GqlAuthGuard)
-  @Query(() => PostStatsResponse, { description: '게시물 통계 조회 (관리자 전용)' })
+  @Query(() => PostStatsResponse, {
+    description: '게시물 통계 조회 (관리자 전용)',
+  })
   async postStats(@CurrentUser() user: User): Promise<PostStatsResponse> {
     // 관리자 권한 확인
     if (!user.isAdmin()) {

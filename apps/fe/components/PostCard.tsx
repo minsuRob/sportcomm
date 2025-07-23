@@ -95,6 +95,8 @@ export default function PostCard({ post }: PostCardProps) {
   const [isFollowing, setIsFollowing] = useState(
     post.author.isFollowing || false,
   );
+  const [isLikeProcessing, setIsLikeProcessing] = useState(false);
+  const [isLikeError, setIsLikeError] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Sync state with props if the post object changes (e.g., after a refresh).
@@ -126,10 +128,17 @@ export default function PostCard({ post }: PostCardProps) {
 
   /**
    * 게시물 좋아요 상태를 토글하는 함수입니다.
-   * 사용자 경험 향상을 위해 먼저 UI를 낙관적으로 업데이트하고,
-   * 서버에 뮤테이션을 실행한 후 실패 시 UI를 원래 상태로 되돌립니다.
+   * 중복 처리를 방지하고, 사용자 경험 향상을 위해 UI를 낙관적으로 업데이트합니다.
+   * 서버 응답에 따라 최종 상태를 결정합니다.
+   *
+   * @returns {void}
    */
   const handleLike = () => {
+    // 이미 처리 중인 경우 중복 요청 방지
+    if (isLikeProcessing) {
+      return;
+    }
+
     // 현재 로그인된 사용자가 없으면, 로그인하라는 토스트 메시지를 표시합니다.
     if (!currentUserId) {
       showToast({
@@ -141,38 +150,58 @@ export default function PostCard({ post }: PostCardProps) {
       return;
     }
 
-    // Optimistically update the UI for a better user experience.
+    // 처리 중 상태로 변경하여 중복 클릭 방지
+    setIsLikeProcessing(true);
+    setIsLikeError(false);
+
+    // 현재 상태 저장 (에러 시 복원용)
+    const originalLikedStatus = isLiked;
+    const originalLikeCount = likeCount;
+
+    // UI를 낙관적으로 업데이트
     const newLikedStatus = !isLiked;
     const newLikeCount = newLikedStatus ? likeCount + 1 : likeCount - 1;
     setIsLiked(newLikedStatus);
     setLikeCount(newLikeCount);
 
-    // Execute the mutation.
-    executeLike({ postId: post.id }).then((result) => {
-      // 뮤테이션 에러 처리
-      if (result.error) {
-        console.error("Failed to toggle like:", result.error);
-        setIsLiked(!newLikedStatus);
-        setLikeCount(likeCount); // Revert to the original count
-        showToast({
-          type: "error",
-          title: t(TRANSLATION_KEYS.POST_LIKE_ERROR),
-          message:
-            result.error.message || "좋아요 처리 중 오류가 발생했습니다.",
-          duration: 3000,
-        });
-        return;
-      }
+    // 뮤테이션 실행
+    executeLike({ postId: post.id })
+      .then((result) => {
+        // 뮤테이션 에러 처리
+        if (result.error) {
+          console.error("좋아요 처리 실패:", result.error);
+          // 원래 상태로 복원
+          setIsLiked(originalLikedStatus);
+          setLikeCount(originalLikeCount);
+          setIsLikeError(true);
+          showToast({
+            type: "error",
+            title: t(TRANSLATION_KEYS.POST_LIKE_ERROR),
+            message:
+              result.error.message || "좋아요 처리 중 오류가 발생했습니다.",
+            duration: 3000,
+          });
+          return;
+        }
 
-      // 뮤테이션 결과 처리 (Boolean 반환값)
-      const likeSuccessful = result.data?.likePost;
+        // 뮤테이션 결과 처리 (Boolean 반환값)
+        // true = 좋아요 설정됨, false = 좋아요 취소됨
+        const likeSuccessful = result.data?.likePost;
 
-      // 서버 응답과 클라이언트 상태가 일치하지 않을 경우 상태 동기화
-      if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
-        setIsLiked(likeSuccessful);
-        setLikeCount(likeSuccessful ? likeCount + 1 : likeCount - 1);
-      }
-    });
+        // 서버 응답과 클라이언트 상태가 일치하지 않을 경우 상태 동기화
+        if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
+          setIsLiked(likeSuccessful);
+          setLikeCount(
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
+          );
+        }
+      })
+      .finally(() => {
+        // 처리 완료 후 상태 업데이트
+        setTimeout(() => {
+          setIsLikeProcessing(false);
+        }, 300); // 로딩 상태 최소 표시 시간 (0.3초)
+      });
   };
 
   /**
@@ -346,22 +375,50 @@ export default function PostCard({ post }: PostCardProps) {
       <View style={themed($actionBar)}>
         <TouchableOpacity
           onPress={handleLike}
-          disabled={likeResult.fetching}
-          style={themed($actionButton)}
+          disabled={isLikeProcessing || likeResult.fetching}
+          style={[themed($actionButton), isLikeError && { opacity: 0.7 }]}
         >
-          <Heart
-            size={22}
-            color={isLiked ? theme.colors.error : theme.colors.textDim}
-            fill={isLiked ? theme.colors.error : "transparent"}
-          />
-          <Text
-            style={[
-              themed($actionText),
-              { color: isLiked ? theme.colors.error : theme.colors.textDim },
-            ]}
-          >
-            {t(TRANSLATION_KEYS.POST_LIKE)}
-          </Text>
+          {isLikeProcessing ? (
+            <>
+              <View style={themed($loadingIndicator)}>
+                <Heart
+                  size={22}
+                  color={isLiked ? theme.colors.error : theme.colors.textDim}
+                  fill={isLiked ? theme.colors.error : "transparent"}
+                />
+              </View>
+              <Text
+                style={[
+                  themed($actionText),
+                  {
+                    color: isLiked ? theme.colors.error : theme.colors.textDim,
+                  },
+                ]}
+              >
+                {isLiked
+                  ? t(TRANSLATION_KEYS.POST_UNLIKING)
+                  : t(TRANSLATION_KEYS.POST_LIKING)}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Heart
+                size={22}
+                color={isLiked ? theme.colors.error : theme.colors.textDim}
+                fill={isLiked ? theme.colors.error : "transparent"}
+              />
+              <Text
+                style={[
+                  themed($actionText),
+                  {
+                    color: isLiked ? theme.colors.error : theme.colors.textDim,
+                  },
+                ]}
+              >
+                {t(TRANSLATION_KEYS.POST_LIKE)}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
         <TouchableOpacity style={themed($actionButton)}>
           <MessageCircle size={22} color={theme.colors.textDim} />
@@ -491,6 +548,12 @@ const $actionBar: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $actionButton: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
   alignItems: "center",
+  minWidth: 70, // 최소 너비 설정으로 버튼 크기 안정화
+});
+
+const $loadingIndicator: ThemedStyle<ViewStyle> = () => ({
+  opacity: 0.7,
+  transform: [{ scale: 1.1 }],
 });
 
 const $actionText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({

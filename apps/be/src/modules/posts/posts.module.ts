@@ -4,6 +4,7 @@ import { PostsService } from './posts.service';
 import { PostsResolver } from './posts.resolver';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
+import { PostLike } from '../../entities/post-like.entity';
 
 /**
  * 게시물 모듈
@@ -20,19 +21,14 @@ import { PostVersion } from '../../entities/post-version.entity';
 @Module({
   imports: [
     // 게시물 관련 엔티티를 위한 TypeORM 모듈
-    TypeOrmModule.forFeature([Post, PostVersion]),
+    TypeOrmModule.forFeature([Post, PostVersion, PostLike]),
   ],
 
   // 서비스 및 리졸버 제공
-  providers: [
-    PostsService,
-    PostsResolver,
-  ],
+  providers: [PostsService, PostsResolver],
 
   // 다른 모듈에서 사용할 수 있도록 내보내기
-  exports: [
-    PostsService,
-  ],
+  exports: [PostsService],
 })
 export class PostsModule {
   constructor() {

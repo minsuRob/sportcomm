@@ -13,6 +13,7 @@ import { Follow } from './follow.entity';
 import { Media } from './media.entity';
 import { ChatRoom } from './chat-room.entity';
 import { ChatMessage } from './chat-message.entity';
+import { PostLike } from './post-like.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -23,6 +24,7 @@ export { User, UserRole } from './user.entity';
 // 게시물 관련 엔티티
 export { Post, PostType } from './post.entity';
 export { PostVersion } from './post-version.entity';
+export { PostLike } from './post-like.entity';
 
 // 댓글 관련 엔티티
 export { Comment } from './comment.entity';
@@ -50,6 +52,7 @@ export const entities = [
   Media,
   ChatRoom,
   ChatMessage,
+  PostLike,
 ];
 
 /**
@@ -60,6 +63,7 @@ export const tableNames = {
   users: 'users',
   posts: 'posts',
   postVersions: 'post_versions',
+  postLikes: 'post_likes',
   comments: 'comments',
   follows: 'follows',
   media: 'media',
@@ -79,10 +83,13 @@ export const entityRelations = {
   },
   Post: {
     manyToOne: ['author'],
-    oneToMany: ['comments', 'mediaFiles', 'versions'],
+    oneToMany: ['comments', 'mediaFiles', 'versions', 'likes'],
   },
   PostVersion: {
     manyToOne: ['post'],
+  },
+  PostLike: {
+    manyToOne: ['user', 'post'],
   },
   Comment: {
     manyToOne: ['author', 'post', 'parentComment'],
@@ -111,6 +118,7 @@ export const entityIndexes = {
   users: ['email', 'nickname'],
   posts: ['authorId', 'type', 'createdAt'],
   postVersions: ['postId', 'version', 'createdAt'],
+  postLikes: ['userId', 'postId', 'isLikeActive'],
   comments: ['authorId', 'postId', 'parentCommentId', 'createdAt'],
   follows: ['followerId', 'followingId', 'createdAt'],
   media: ['postId', 'type', 'status', 'createdAt'],

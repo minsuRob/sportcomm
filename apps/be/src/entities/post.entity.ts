@@ -5,6 +5,7 @@ import {
   OneToMany,
   JoinColumn,
   Index,
+  RelationId,
 } from 'typeorm';
 import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
 import { IsString, IsEnum, MaxLength, MinLength } from 'class-validator';
@@ -13,6 +14,7 @@ import { User } from './user.entity';
 import { Comment } from './comment.entity';
 import { Media } from './media.entity';
 import { PostVersion } from './post-version.entity';
+import { PostLike } from './post-like.entity';
 
 /**
  * 게시물 유형 열거형
@@ -224,6 +226,17 @@ export class Post extends BaseEntity {
   @OneToMany(() => PostVersion, (postVersion) => postVersion.post)
   versions: PostVersion[];
 
+  /**
+   * 게시물에 대한 좋아요 목록
+   * 일대다 관계: 한 게시물은 여러 사용자로부터 좋아요를 받을 수 있습니다.
+   */
+  @Field(() => [PostLike], {
+    nullable: true,
+    description: '게시물에 대한 좋아요 목록',
+  })
+  @OneToMany(() => PostLike, (postLike) => postLike.post)
+  likes: PostLike[];
+
   // === 헬퍼 메서드 ===
 
   /**
@@ -307,4 +320,28 @@ export class Post extends BaseEntity {
     }
     return this.content.substring(0, maxLength) + '...';
   }
+
+  /**
+   * 사용자가 게시물에 좋아요를 눌렀는지 확인하는 메서드
+   * @param userId 확인할 사용자의 ID
+   * @param likes 게시물의 좋아요 목록 (성능 최적화용)
+   * @returns 좋아요를 눌렀다면 true, 아니면 false
+   */
+  isLikedByUser(userId: string, likes?: PostLike[]): boolean {
+    if (!userId) return false;
+
+    const likesToCheck = likes || this.likes;
+    if (!likesToCheck) return false;
+
+    return likesToCheck.some(
+      (like) => like.userId === userId && like.isLikeActive,
+    );
+  }
+
+  /**
+   * 현재 사용자가 이 게시물에 좋아요를 눌렀는지 여부
+   * GraphQL 리졸버에서 계산된 필드로 사용됩니다.
+   */
+  @Field(() => Boolean, { description: '현재 사용자가 좋아요를 눌렀는지 여부' })
+  isLiked?: boolean;
 }

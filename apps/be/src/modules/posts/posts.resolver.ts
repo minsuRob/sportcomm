@@ -373,7 +373,7 @@ export class PostsResolver {
     @CurrentUser() user: User,
     @Args('id') id: string,
   ): Promise<boolean> {
-    return await this.postsService.toggleLike(id, user.id);
+    return await this.postsService.likePost(id, user.id);
   }
 
   /**

@@ -333,9 +333,7 @@ export class Post extends BaseEntity {
     const likesToCheck = likes || this.likes;
     if (!likesToCheck) return false;
 
-    return likesToCheck.some(
-      (like) => like.userId === userId && like.isLikeActive,
-    );
+    return likesToCheck.some((like) => like.userId === userId);
   }
 
   /**

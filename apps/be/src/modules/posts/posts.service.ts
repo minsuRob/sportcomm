@@ -269,7 +269,6 @@ export class PostsService {
       where: {
         postId,
         userId,
-        isLikeActive: true,
       },
     });
 
@@ -381,54 +380,35 @@ export class PostsService {
       throw new NotFoundException('게시물을 찾을 수 없습니다.');
     }
 
-    // 트랜잭션 시작
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     try {
-      // 기존 좋아요 기록 확인
-      let postLike = await this.postLikeRepository.findOne({
+      // 기존 좋아요 여부 확인
+      const existingLike = await this.postLikeRepository.findOne({
         where: { userId, postId },
       });
 
-      let result: boolean;
-
-      if (!postLike) {
+      if (!existingLike) {
         // 좋아요 기록이 없으면 새로 생성 (좋아요)
-        postLike = this.postLikeRepository.create({
+        const newLike = this.postLikeRepository.create({
           userId,
           postId,
-          isLikeActive: true,
         });
 
-        await this.postLikeRepository.save(postLike);
+        await this.postLikeRepository.save(newLike);
         await this.postRepository.increment({ id: postId }, 'likeCount', 1);
-        result = true;
-      } else if (!postLike.isLikeActive) {
-        // 비활성 상태였으면 활성화 (다시 좋아요)
-        postLike.isLikeActive = true;
-        await this.postLikeRepository.save(postLike);
-        await this.postRepository.increment({ id: postId }, 'likeCount', 1);
-        result = true;
+        return true;
       } else {
-        // 이미 활성 상태면 비활성화 (좋아요 취소)
-        postLike.isLikeActive = false;
-        await this.postLikeRepository.save(postLike);
+        // 이미 좋아요가 있으면 삭제 (좋아요 취소)
+        await this.postLikeRepository.delete({ userId, postId });
         await this.postRepository.decrement({ id: postId }, 'likeCount', 1);
-        result = false;
+        return false;
       }
-
-      // 트랜잭션 커밋
-      await queryRunner.commitTransaction();
-      return result;
     } catch (error) {
-      // 오류 발생 시 롤백
-      await queryRunner.rollbackTransaction();
+      // 유니크 제약조건 위반 오류는 이미 처리되었으므로 다른 오류만 던집니다
+      if (error.code === '23505') {
+        // 이미 좋아요가 있는 경우 - 일반적으로 여기 도달하지 않음
+        return true;
+      }
       throw error;
-    } finally {
-      // 쿼리러너 해제
-      await queryRunner.release();
     }
   }
 
@@ -439,6 +419,45 @@ export class PostsService {
    */
   async incrementLikeCount(id: string): Promise<void> {
     await this.postRepository.increment({ id }, 'likeCount', 1);
+  }
+
+  /**
+   * 게시물 좋아요 처리 (간단 버전)
+   * UNIQUE 제약조건을 활용하여 좀 더 간결하게 구현한 버전
+   *
+   * @param postId - 게시물 ID
+   * @param userId - 사용자 ID
+   * @returns 좋아요 상태 (true: 좋아요 생성됨, false: 좋아요 삭제됨)
+   */
+  async likePost(postId: string, userId: string): Promise<boolean> {
+    // 게시물 존재 여부 확인
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) {
+      throw new NotFoundException('게시물을 찾을 수 없습니다.');
+    }
+
+    try {
+      // 좋아요 기록 생성 시도
+      // UNIQUE 제약조건 덕분에 중복 좋아요는 자동으로 방지됩니다
+      const like = this.postLikeRepository.create({
+        userId,
+        postId,
+      });
+      await this.postLikeRepository.save(like);
+
+      // 좋아요 수 증가
+      await this.postRepository.increment({ id: postId }, 'likeCount', 1);
+      return true;
+    } catch (error) {
+      // 이미 좋아요가 있는 경우 (Unique constraint violation)
+      if (error.code === '23505') {
+        // 좋아요 취소 처리 (삭제)
+        await this.postLikeRepository.delete({ userId, postId });
+        await this.postRepository.decrement({ id: postId }, 'likeCount', 1);
+        return false;
+      }
+      throw error;
+    }
   }
 
   /**

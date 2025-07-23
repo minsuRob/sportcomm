@@ -623,5 +623,3 @@ const $followButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 12,
   fontWeight: "600",
 });
-
-// CommentSection 컴포넌트에서 처리하므로 댓글 관련 스타일 제거

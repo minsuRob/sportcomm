@@ -67,18 +67,18 @@ export default function ProfileScreen() {
   };
 
   const handleSettings = () => {
-    router.push("/(app)/settings");
+    router.push("/(modals)/settings");
   };
 
   const handleFollowersPress = () => {
     if (currentUser?.id) {
-      router.push(`/(app)/followers?userId=${currentUser.id}`);
+      router.push(`/(details)/followers?userId=${currentUser.id}`);
     }
   };
 
   const handleFollowingPress = () => {
     if (currentUser?.id) {
-      router.push(`/(app)/following?userId=${currentUser.id}`);
+      router.push(`/(details)/following?userId=${currentUser.id}`);
     }
   };
 

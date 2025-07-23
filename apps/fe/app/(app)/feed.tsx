@@ -207,7 +207,7 @@ export default function FeedScreen() {
           <View style={themed($userContainer)}>
             <TouchableOpacity
               style={themed($createPostButton)}
-              onPress={() => router.push("/create-post")}
+              onPress={() => router.push("/(modals)/create-post")}
             >
               <Plus color="white" size={20} />
               <Text style={themed($createPostButtonText)}>

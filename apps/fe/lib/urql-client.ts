@@ -45,34 +45,19 @@ export const client = createClient({
           );
         },
 
-        async getAuth() {
+        async getAuth(): Promise<{ token: string } | null> {
+          // getSession을 호출하여 인증 토큰을 가져옵니다.
           const { token } = await getSession();
 
-          if (token) {
-            // JWT 토큰 구조 확인
-            try {
-              const parts = token.split(".");
-              if (parts.length === 3) {
-                const payload = JSON.parse(atob(parts[1]));
-
-                // 토큰이 만료되었으면 null 반환
-                if (payload.exp * 1000 < Date.now()) {
-                  await clearSession();
-                  authState = null;
-                  return null;
-                }
-              }
-            } catch (e) {
-              authState = null;
-              return null;
-            }
-
-            authState = { token };
-            return { token };
+          // 토큰이 존재하지 않으면 인증되지 않은 것으로 간주합니다.
+          if (!token) {
+            authState = null;
+            return null;
           }
 
-          authState = null;
-          return null;
+          // 가져온 토큰으로 authState를 설정하고 반환합니다.
+          authState = { token };
+          return { token };
         },
 
         async refreshAuth() {

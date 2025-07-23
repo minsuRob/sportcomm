@@ -33,8 +33,8 @@ async function bootstrap() {
         transform: true,
         // 자세한 에러 메시지 제공
         disableErrorMessages: false,
-        // 중첩된 객체 검증
-        validateCustomDecorators: true,
+        // 커스텀 데코레이터 검증 비활성화 (CurrentUser 등)
+        validateCustomDecorators: false,
         // 에러 메시지 상세 정보 포함
         dismissDefaultMessages: false,
         // 첫 번째 에러에서 중단하지 않고 모든 에러 수집

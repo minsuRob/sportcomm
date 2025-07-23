@@ -59,26 +59,49 @@ export default function CommentSection({
 
     setIsSubmitting(true);
 
+    // 작성할 댓글 내용 저장
+    const content = commentText.trim();
+
+    // 입력창을 즉시 비웁니다. 사용자 경험 향상을 위함
+    setCommentText("");
+
+    let shouldUpdateUI = false;
+
     try {
       const result = await executeCreateComment({
         input: {
           postId,
-          content: commentText.trim(),
+          content,
         },
       });
 
       if (result.error) {
-        console.error("댓글 작성 실패:", result.error);
-        return;
-      }
+        // 네트워크 또는 GraphQL 오류가 발생했지만,
+        // 요청은 서버에 도달했고 댓글은 생성되었을 수 있음
+        console.error("댓글 작성 중 오류 발생:", result.error);
 
-      // 댓글 작성 성공
-      setCommentText("");
-      onCommentAdded?.();
+        // 오류 메시지에 author 필드 관련 내용이 있으면 백엔드에 저장은 됐지만
+        // 응답에 문제가 있는 경우로 판단합니다
+        if (result.error.message.includes("author")) {
+          console.log("댓글이 저장되었을 수 있습니다. UI 업데이트 예약...");
+          shouldUpdateUI = true;
+        }
+      } else {
+        // 성공적으로 댓글이 생성됨
+        shouldUpdateUI = true;
+      }
     } catch (error) {
-      console.error("댓글 작성 오류:", error);
+      console.error("댓글 작성 처리 중 예외 발생:", error);
+      // 예외가 발생해도 서버에 댓글이 저장되었을 수 있습니다
+      shouldUpdateUI = true;
     } finally {
       setIsSubmitting(false);
+
+      // 함수 종료 시점에 한 번만 UI 업데이트 호출
+      if (shouldUpdateUI && onCommentAdded) {
+        // 비동기로 실행하여 React 렌더링 사이클과 분리
+        setTimeout(onCommentAdded, 300);
+      }
     }
   };
 

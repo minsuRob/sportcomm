@@ -10,6 +10,7 @@ import { entities, Post, User } from './entities';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { UsersModule } from './modules/users/users.module';
+import { CommentsModule } from './modules/comments/comments.module';
 
 /**
  * 메인 애플리케이션 모듈
@@ -199,6 +200,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     PostsModule,
     UsersModule,
+    CommentsModule,
   ],
 
   // 컨트롤러 및 서비스
@@ -274,6 +276,7 @@ export class AppModule {
     console.log('\n🎯 활성화된 기능:');
     console.log('   - ✅ 사용자 인증 및 권한 관리');
     console.log('   - ✅ 게시물 관리 시스템');
+    console.log('   - ✅ 댓글 관리 시스템');
     console.log('   - ✅ GraphQL API');
     console.log('   - ✅ 파일 업로드 지원');
     console.log('   - ✅ 실시간 구독 지원');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -109,13 +109,21 @@ export default function PostDetailScreen() {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [refreshComments, setRefreshComments] = useState(0);
+
+  // GraphQL 쿼리 옵션을 useMemo로 생성하여 불필요한 재렌더링 방지
+  const queryOptions = React.useMemo(
+    () => ({
+      query: GET_POST_DETAIL,
+      variables: { id: postId },
+      // 기본값으로 cache-first를 사용하고, 필요시에만 네트워크 요청으로 전환
+      requestPolicy: "cache-first",
+    }),
+    [postId],
+  );
 
   // GraphQL 쿼리 및 뮤테이션
-  const [{ data, fetching, error }] = useQuery<PostDetailResponse>({
-    query: GET_POST_DETAIL,
-    variables: { id: postId },
-  });
+  const [{ data, fetching, error }, refetchPost] =
+    useQuery<PostDetailResponse>(queryOptions);
 
   const [, executeToggleLike] = useMutation(TOGGLE_LIKE);
   const [, executeFollow] = useMutation(FOLLOW_USER);
@@ -177,9 +185,10 @@ export default function PostDetailScreen() {
   /**
    * 댓글 추가 후 새로고침 핸들러
    */
-  const handleCommentAdded = () => {
-    setRefreshComments((prev) => prev + 1);
-  };
+  const handleCommentAdded = useCallback(() => {
+    // 댓글이 추가되면 게시물 데이터를 새로고침합니다
+    refetchPost({ requestPolicy: "network-only" });
+  }, [refetchPost]);
 
   /**
    * 팔로우 토글 핸들러

@@ -3,11 +3,13 @@ import { authExchange } from "@urql/exchange-auth";
 import Constants from "expo-constants";
 import { getSession, clearSession } from "@/lib/auth";
 
+import { GRAPHQL_URL } from "@env";
+
 // 환경 변수에서 GraphQL URL 가져오기 (여러 방법 시도)
-const GRAPHQL_URL =
-  process.env.EXPO_PUBLIC_GRAPHQL_URL ||
-  Constants.expoConfig?.extra?.GRAPHQL_URL ||
-  "https://bibliographic-blues-ci-clinton.trycloudflare.com/graphql";
+// const GRAPHQL_URL =
+//   process.env.EXPO_PUBLIC_GRAPHQL_URL ||
+//   Constants.expoConfig?.extra?.GRAPHQL_URL ||
+//   "https://bibliographic-blues-ci-clinton.trycloudflare.com/graphql";
 
 // GraphQL URL 설정 완료
 
@@ -16,7 +18,7 @@ const GRAPHQL_URL =
  * 인증 토큰을 자동으로 헤더에 포함합니다
  */
 export const client = createClient({
-  url: GRAPHQL_URL || "http://localhost:3000/graphql",
+  url: GRAPHQL_URL,
   exchanges: [
     cacheExchange,
     authExchange(async (utils) => {

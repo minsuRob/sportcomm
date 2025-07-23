@@ -2,19 +2,11 @@ import React from "react";
 import { View, ViewStyle } from "react-native";
 import { Tabs } from "expo-router";
 import { Slot } from "expo-router";
-import { createClient, Provider, cacheExchange, fetchExchange } from "urql";
 import { FontAwesome } from "@expo/vector-icons";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import SidebarNavigation from "@/components/SidebarNavigation";
-import { GRAPHQL_URL } from "@env";
-
-// urql 클라이언트 생성 - NestJS 백엔드와 연결
-const client = createClient({
-  url: "https://infants-fe-characters-lately.trycloudflare.com/graphql",
-  exchanges: [cacheExchange, fetchExchange],
-});
 
 /**
  * 모바일용 탭 레이아웃 컴포넌트

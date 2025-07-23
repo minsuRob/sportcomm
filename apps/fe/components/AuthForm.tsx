@@ -1,5 +1,12 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import React, { useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Platform,
+} from "react-native";
 import { useMutation } from "urql";
 import { Button } from "./ui/button";
 import { Eye, EyeOff } from "lucide-react-native";
@@ -42,6 +49,9 @@ export default function AuthForm({
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  const nicknameInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
 
   const [loginResult, login] = useMutation(LOGIN_MUTATION);
   const [registerResult, register] = useMutation(REGISTER_MUTATION);
@@ -116,27 +126,43 @@ export default function AuthForm({
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
+        blurOnSubmit={false}
+        returnKeyType="next"
+        onSubmitEditing={() => {
+          if (isLogin) {
+            passwordInputRef.current?.focus();
+          } else {
+            nicknameInputRef.current?.focus();
+          }
+        }}
       />
 
       {!isLogin && (
         <TextInput
+          ref={nicknameInputRef}
           className="h-12 px-4 bg-input border border-border rounded-md text-foreground text-base mb-4"
           placeholder="닉네임"
           placeholderTextColor="hsl(var(--muted-foreground))"
           value={nickname}
           onChangeText={setNickname}
           autoCapitalize="none"
+          blurOnSubmit={false}
+          returnKeyType="next"
+          onSubmitEditing={() => passwordInputRef.current?.focus()}
         />
       )}
 
       <View className="relative mb-4">
         <TextInput
+          ref={passwordInputRef}
           className="h-12 px-4 pr-12 bg-input border border-primary rounded-md text-foreground text-base"
           placeholder="비밀번호"
           placeholderTextColor="hsl(var(--muted-foreground))"
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!isPasswordVisible}
+          returnKeyType="done"
+          onSubmitEditing={handleContinue}
         />
         <TouchableOpacity
           onPress={() => setIsPasswordVisible(!isPasswordVisible)}

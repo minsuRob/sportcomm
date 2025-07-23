@@ -123,7 +123,11 @@ export default function PostCard({ post }: PostCardProps) {
    * 게시물 상세 페이지로 이동하는 함수
    */
   const handlePostPress = () => {
-    router.push(`/(app)/post/${post.id}` as any);
+    // 경로를 명시적으로 지정하여 (app) 같은 그룹 폴더가 URL에 포함되지 않도록 함
+    router.push({
+      pathname: "/post/[postId]",
+      params: { postId: post.id },
+    });
   };
 
   /**

@@ -56,47 +56,37 @@ export default function AuthForm({
   const [loginResult, login] = useMutation(LOGIN_MUTATION);
   const [registerResult, register] = useMutation(REGISTER_MUTATION);
 
-  const handleLogin = async () => {
-    const result = await login({ input: { email, password } });
-    if (result.data?.login) {
-      const { token, user } = result.data.login;
+  const processAuthAction = async (action: "login" | "register") => {
+    const isLoginAction = action === "login";
+    const mutation = isLoginAction ? login : register;
+    const variables = isLoginAction
+      ? { input: { email, password } }
+      : { input: { email, nickname, password } };
+    const errorTitle = isLoginAction ? "로그인 실패" : "회원가입 실패";
+
+    const result = await mutation(variables);
+    const data = result.data?.[action];
+
+    if (data) {
+      const { token, user } = data;
       await saveSession(token, user);
       onLoginSuccess(user);
     } else if (result.error) {
       const originalError = result.error.graphQLErrors[0]?.extensions
         ?.originalError as { message?: string[] | string };
       const messages = originalError?.message;
-      const errorMessage = Array.isArray(messages)
-        ? messages.join("\n")
-        : result.error.message;
+      const errorMessage =
+        Array.isArray(messages) ? messages.join("\n") : result.error.message;
       Toast.show({
         type: "error",
-        text1: "로그인 실패",
+        text1: errorTitle,
         text2: errorMessage,
       });
     }
   };
 
-  const handleRegister = async () => {
-    const result = await register({ input: { email, nickname, password } });
-    if (result.data?.register) {
-      const { token, user } = result.data.register;
-      await saveSession(token, user);
-      onLoginSuccess(user);
-    } else if (result.error) {
-      const originalError = result.error.graphQLErrors[0]?.extensions
-        ?.originalError as { message?: string[] | string };
-      const messages = originalError?.message;
-      const errorMessage = Array.isArray(messages)
-        ? messages.join("\n")
-        : result.error.message;
-      Toast.show({
-        type: "error",
-        text1: "회원가입 실패",
-        text2: errorMessage,
-      });
-    }
-  };
+  const handleLogin = () => processAuthAction("login");
+  const handleRegister = () => processAuthAction("register");
 
   const handleContinue = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

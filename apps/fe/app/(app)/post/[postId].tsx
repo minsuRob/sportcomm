@@ -25,11 +25,14 @@ import {
 } from "lucide-react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import {
-  useTranslation,
-  TRANSLATION_KEYS,
-} from "@/lib/i18n/useTranslation";
-import { GET_POST_DETAIL, TOGGLE_LIKE } from "@/lib/graphql";
+  GET_POST_DETAIL,
+  TOGGLE_LIKE,
+  FOLLOW_USER,
+  UNFOLLOW_USER,
+} from "@/lib/graphql";
+import { showToast } from "@/components/CustomToast";
 import { PostType } from "@/components/PostCard";
 import { User, getSession } from "@/lib/auth";
 import CommentSection from "@/components/CommentSection";
@@ -76,10 +79,7 @@ interface PostDetailResponse {
 }
 
 // --- 헬퍼 함수 ---
-const getPostTypeStyle = (
-  type: PostType,
-  t: (key: string) => string,
-) => {
+const getPostTypeStyle = (type: PostType, t: (key: string) => string) => {
   switch (type) {
     case PostType.ANALYSIS:
       return { color: "#6366f1", text: t(TRANSLATION_KEYS.POST_TYPE_ANALYSIS) };
@@ -108,6 +108,7 @@ export default function PostDetailScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [refreshComments, setRefreshComments] = useState(0);
 
   // GraphQL 쿼리 및 뮤테이션
@@ -117,7 +118,8 @@ export default function PostDetailScreen() {
   });
 
   const [, executeToggleLike] = useMutation(TOGGLE_LIKE);
-  // CREATE_COMMENT는 CommentSection에서 처리하므로 제거
+  const [, executeFollow] = useMutation(FOLLOW_USER);
+  const [, executeUnfollow] = useMutation(UNFOLLOW_USER);
 
   // 사용자 세션 확인
   useEffect(() => {
@@ -133,6 +135,7 @@ export default function PostDetailScreen() {
     if (data?.post) {
       setIsLiked(false); // TODO: 실제 좋아요 상태 확인
       setLikeCount(data.post.likeCount);
+      setIsFollowing(false); // TODO: 실제 팔로우 상태 확인
     }
   }, [data]);
 
@@ -179,6 +182,62 @@ export default function PostDetailScreen() {
   };
 
   /**
+   * 팔로우 토글 핸들러
+   */
+  const handleFollowToggle = async () => {
+    if (!currentUser) {
+      showToast({
+        type: "error",
+        title: "로그인 필요",
+        message: "팔로우하려면 로그인이 필요합니다.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!data?.post || currentUser.id === data.post.author.id) {
+      return; // 자기 자신은 팔로우할 수 없음
+    }
+
+    const newFollowingStatus = !isFollowing;
+    setIsFollowing(newFollowingStatus);
+
+    try {
+      const result = newFollowingStatus
+        ? await executeFollow({ userId: data.post.author.id })
+        : await executeUnfollow({ userId: data.post.author.id });
+
+      if (result.error) {
+        setIsFollowing(!newFollowingStatus);
+        showToast({
+          type: "error",
+          title: t(TRANSLATION_KEYS.POST_FOLLOW_ERROR),
+          message: result.error.message,
+          duration: 3000,
+        });
+        return;
+      }
+
+      showToast({
+        type: "success",
+        title: "성공",
+        message: newFollowingStatus
+          ? t(TRANSLATION_KEYS.POST_FOLLOW_SUCCESS)
+          : t(TRANSLATION_KEYS.POST_UNFOLLOW_SUCCESS),
+        duration: 2000,
+      });
+    } catch (error) {
+      setIsFollowing(!newFollowingStatus);
+      showToast({
+        type: "error",
+        title: t(TRANSLATION_KEYS.POST_FOLLOW_ERROR),
+        message: "요청 처리 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    }
+  };
+
+  /**
    * 공유 핸들러
    */
   const handleShare = () => {
@@ -191,7 +250,9 @@ export default function PostDetailScreen() {
     return (
       <View style={themed($loadingContainer)}>
         <ActivityIndicator size="large" color={theme.colors.tint} />
-        <Text style={themed($loadingText)}>{t(TRANSLATION_KEYS.POST_LOADING)}</Text>
+        <Text style={themed($loadingText)}>
+          {t(TRANSLATION_KEYS.POST_LOADING)}
+        </Text>
       </View>
     );
   }
@@ -200,9 +261,13 @@ export default function PostDetailScreen() {
   if (error || !data?.post) {
     return (
       <View style={themed($errorContainer)}>
-        <Text style={themed($errorText)}>{t(TRANSLATION_KEYS.POST_NOT_FOUND)}</Text>
+        <Text style={themed($errorText)}>
+          {t(TRANSLATION_KEYS.POST_NOT_FOUND)}
+        </Text>
         <TouchableOpacity style={themed($retryButton)} onPress={handleGoBack}>
-          <Text style={themed($retryButtonText)}>{t(TRANSLATION_KEYS.POST_GO_BACK)}</Text>
+          <Text style={themed($retryButtonText)}>
+            {t(TRANSLATION_KEYS.POST_GO_BACK)}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -224,7 +289,9 @@ export default function PostDetailScreen() {
         <TouchableOpacity onPress={handleGoBack} style={themed($backButton)}>
           <ArrowLeft color={theme.colors.text} size={24} />
         </TouchableOpacity>
-        <Text style={themed($headerTitle)}>{t(TRANSLATION_KEYS.POST_TITLE)}</Text>
+        <Text style={themed($headerTitle)}>
+          {t(TRANSLATION_KEYS.POST_TITLE)}
+        </Text>
         <TouchableOpacity>
           <MoreHorizontal color={theme.colors.textDim} size={24} />
         </TouchableOpacity>
@@ -249,13 +316,45 @@ export default function PostDetailScreen() {
               })}
             </Text>
           </View>
-          <View
-            style={[
-              themed($typeBadge),
-              { backgroundColor: postTypeStyle.color },
-            ]}
-          >
-            <Text style={themed($typeBadgeText)}>{postTypeStyle.text}</Text>
+
+          <View style={themed($headerRight)}>
+            {/* 팔로우 버튼 - 자기 자신이 아닐 때만 표시 */}
+            {currentUser && currentUser.id !== post.author.id && (
+              <TouchableOpacity
+                style={[
+                  themed($followButton),
+                  {
+                    backgroundColor: isFollowing
+                      ? "transparent"
+                      : theme.colors.tint,
+                    borderColor: isFollowing
+                      ? theme.colors.border
+                      : theme.colors.tint,
+                  },
+                ]}
+                onPress={handleFollowToggle}
+              >
+                <Text
+                  style={[
+                    themed($followButtonText),
+                    { color: isFollowing ? theme.colors.text : "white" },
+                  ]}
+                >
+                  {isFollowing
+                    ? t(TRANSLATION_KEYS.POST_FOLLOWING)
+                    : t(TRANSLATION_KEYS.POST_FOLLOW)}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <View
+              style={[
+                themed($typeBadge),
+                { backgroundColor: postTypeStyle.color },
+              ]}
+            >
+              <Text style={themed($typeBadgeText)}>{postTypeStyle.text}</Text>
+            </View>
           </View>
         </View>
 
@@ -313,12 +412,16 @@ export default function PostDetailScreen() {
 
           <TouchableOpacity style={themed($actionButton)}>
             <MessageCircle size={24} color={theme.colors.textDim} />
-            <Text style={themed($actionText)}>{t(TRANSLATION_KEYS.POST_COMMENT)}</Text>
+            <Text style={themed($actionText)}>
+              {t(TRANSLATION_KEYS.POST_COMMENT)}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={themed($actionButton)} onPress={handleShare}>
             <Share size={24} color={theme.colors.textDim} />
-            <Text style={themed($actionText)}>{t(TRANSLATION_KEYS.POST_SHARE)}</Text>
+            <Text style={themed($actionText)}>
+              {t(TRANSLATION_KEYS.POST_SHARE)}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -501,6 +604,24 @@ const $actionText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
   fontWeight: "500",
   color: colors.textDim,
+});
+
+const $headerRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $followButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  borderWidth: 1,
+});
+
+const $followButtonText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 12,
+  fontWeight: "600",
 });
 
 // CommentSection 컴포넌트에서 처리하므로 댓글 관련 스타일 제거

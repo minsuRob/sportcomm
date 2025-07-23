@@ -58,7 +58,12 @@
     },
     "loadingPost": "게시물을 불러오는 중...",
     "postNotFound": "게시물을 불러올 수 없습니다.",
-    "goBack": "돌아가기"
+    "goBack": "돌아가기",
+    "follow": "팔로우",
+    "following": "팔로우 됨",
+    "followSuccess": "팔로우했습니다.",
+    "unfollowSuccess": "언팔로우했습니다.",
+    "followError": "팔로우 처리 중 오류가 발생했습니다."
   },
   "createPost": {
     "title": "새로운 스레드",

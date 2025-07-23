@@ -121,6 +121,11 @@ export const TRANSLATION_KEYS = {
   POST_TYPE_ANALYSIS: "post.postTypes.analysis",
   POST_TYPE_HIGHLIGHT: "post.postTypes.highlight",
   POST_TYPE_CHEERING: "post.postTypes.cheering",
+  POST_FOLLOW: "post.follow",
+  POST_FOLLOWING: "post.following",
+  POST_FOLLOW_SUCCESS: "post.followSuccess",
+  POST_UNFOLLOW_SUCCESS: "post.unfollowSuccess",
+  POST_FOLLOW_ERROR: "post.followError",
 
   // 댓글
   COMMENTS_TITLE: "comments.title",

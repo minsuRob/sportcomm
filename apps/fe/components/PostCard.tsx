@@ -10,11 +10,10 @@ import {
 } from "react-native";
 import { useMutation } from "urql";
 import { useRouter } from "expo-router";
-import { TOGGLE_LIKE } from "@/lib/graphql";
-import {
-  useTranslation,
-  TRANSLATION_KEYS,
-} from "@/lib/i18n/useTranslation";
+import { TOGGLE_LIKE, TOGGLE_FOLLOW } from "@/lib/graphql";
+import { showToast } from "@/components/CustomToast";
+import { getSession } from "@/lib/auth";
+import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { Eye } from "@/lib/icons/Eye";
@@ -34,6 +33,7 @@ export interface User {
   id: string;
   nickname: string;
   profileImageUrl?: string;
+  isFollowing?: boolean;
 }
 
 export interface Media {
@@ -73,7 +73,10 @@ const getPostTypeStyle = (type: PostType, t: (key: string) => string) => {
     case PostType.ANALYSIS:
       return { color: "#6366f1", text: t(TRANSLATION_KEYS.POST_TYPE_ANALYSIS) };
     case PostType.HIGHLIGHT:
-      return { color: "#f59e0b", text: t(TRANSLATION_KEYS.POST_TYPE_HIGHLIGHT) };
+      return {
+        color: "#f59e0b",
+        text: t(TRANSLATION_KEYS.POST_TYPE_HIGHLIGHT),
+      };
     case PostType.CHEERING:
     default:
       return { color: "#10b981", text: t(TRANSLATION_KEYS.POST_TYPE_CHEERING) };
@@ -89,15 +92,30 @@ export default function PostCard({ post }: PostCardProps) {
   // Use state to manage client-side interactions like "liking" a post.
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [isFollowing, setIsFollowing] = useState(
+    post.author.isFollowing || false
+  );
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Sync state with props if the post object changes (e.g., after a refresh).
   useEffect(() => {
     setIsLiked(post.isLiked);
     setLikeCount(post.likeCount);
-  }, [post.isLiked, post.likeCount]);
+    setIsFollowing(post.author.isFollowing || false);
+  }, [post.isLiked, post.likeCount, post.author.isFollowing]);
 
-  // URQL mutation hook for toggling a like.
+  // 현재 사용자 확인
+  useEffect(() => {
+    const checkCurrentUser = async () => {
+      const { user } = await getSession();
+      setCurrentUserId(user?.id || null);
+    };
+    checkCurrentUser();
+  }, []);
+
+  // URQL mutation hooks
   const [likeResult, executeLike] = useMutation(TOGGLE_LIKE);
+  const [toggleFollowResult, toggleFollow] = useMutation(TOGGLE_FOLLOW);
 
   /**
    * 게시물 상세 페이지로 이동하는 함수
@@ -124,6 +142,76 @@ export default function PostCard({ post }: PostCardProps) {
     });
   };
 
+  /**
+   * 사용자의 팔로우 상태를 토글하는 함수입니다.
+   * toggleFollow 뮤테이션을 호출하고, 서버로부터 받은 새로운 팔로우 상태로 UI를 업데이트합니다.
+   * 에러 발생 시, UI를 원래 상태로 되돌리고 사용자에게 에러 메시지를 표시합니다.
+   */
+  const handleFollowToggle = async () => {
+    // 현재 로그인된 사용자가 없으면, 로그인하라는 토스트 메시지를 표시합니다.
+    if (!currentUserId) {
+      showToast({
+        type: "error",
+        title: "로그인 필요",
+        message: "팔로우하려면 로그인이 필요합니다.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    // 자기 자신을 팔로우하는 것을 방지합니다.
+    if (currentUserId === post.author.id) {
+      return;
+    }
+
+    // 이전 팔로우 상태를 저장해두어, 에러 발생 시 복구할 수 있도록 합니다.
+    const previousIsFollowing = isFollowing;
+
+    // UI를 즉시 업데이트하여 사용자 경험을 향상시킵니다 (Optimistic Update).
+    setIsFollowing(!previousIsFollowing);
+
+    try {
+      // toggleFollow 뮤테이션을 실행합니다.
+      const result = await toggleFollow({ userId: post.author.id });
+
+      // 뮤테이션 실행 중 에러가 발생했거나, 데이터가 없는 경우
+      if (result.error || !result.data) {
+        // UI를 이전 상태로 되돌립니다.
+        setIsFollowing(previousIsFollowing);
+        showToast({
+          type: "error",
+          title: t(TRANSLATION_KEYS.POST_FOLLOW_ERROR),
+          message: result.error?.message || "An unknown error occurred.",
+          duration: 3000,
+        });
+        return;
+      }
+
+      // 뮤테이션이 성공하면, 서버로부터 받은 새로운 팔로우 상태로 UI를 업데이트합니다.
+      const newIsFollowing = result.data.toggleFollow;
+      setIsFollowing(newIsFollowing);
+
+      // 성공 토스트 메시지를 표시합니다.
+      showToast({
+        type: "success",
+        title: "Success",
+        message: newIsFollowing
+          ? t(TRANSLATION_KEYS.POST_FOLLOW_SUCCESS)
+          : t(TRANSLATION_KEYS.POST_UNFOLLOW_SUCCESS),
+        duration: 2000,
+      });
+    } catch (error) {
+      // 예기치 않은 에러 발생 시, UI를 이전 상태로 되돌리고 에러 메시지를 표시합니다.
+      setIsFollowing(previousIsFollowing);
+      showToast({
+        type: "error",
+        title: t(TRANSLATION_KEYS.POST_FOLLOW_ERROR),
+        message: "An unexpected error occurred while processing your request.",
+        duration: 3000,
+      });
+    }
+  };
+
   const firstMedia = post.media?.[0];
   const avatarUrl =
     post.author.profileImageUrl ||
@@ -147,9 +235,41 @@ export default function PostCard({ post }: PostCardProps) {
             </Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity>
-          <MoreHorizontal color={theme.colors.textDim} size={24} />
-        </TouchableOpacity>
+
+        <View style={themed($headerRight)}>
+          {/* 팔로우 버튼 - 자기 자신이 아닐 때만 표시 */}
+          {currentUserId && currentUserId !== post.author.id && (
+            <TouchableOpacity
+              style={[
+                themed($followButton),
+                {
+                  backgroundColor: isFollowing
+                    ? "transparent"
+                    : theme.colors.tint,
+                  borderColor: isFollowing
+                    ? theme.colors.border
+                    : theme.colors.tint,
+                },
+              ]}
+              onPress={handleFollowToggle}
+            >
+              <Text
+                style={[
+                  themed($followButtonText),
+                  { color: isFollowing ? theme.colors.text : "white" },
+                ]}
+              >
+                {isFollowing
+                  ? t(TRANSLATION_KEYS.POST_FOLLOWING)
+                  : t(TRANSLATION_KEYS.POST_FOLLOW)}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity style={themed($moreButton)}>
+            <MoreHorizontal color={theme.colors.textDim} size={24} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Content - 클릭 가능 */}
@@ -212,11 +332,15 @@ export default function PostCard({ post }: PostCardProps) {
         </TouchableOpacity>
         <TouchableOpacity style={themed($actionButton)}>
           <MessageCircle size={22} color={theme.colors.textDim} />
-          <Text style={themed($actionText)}>{t(TRANSLATION_KEYS.POST_COMMENT)}</Text>
+          <Text style={themed($actionText)}>
+            {t(TRANSLATION_KEYS.POST_COMMENT)}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={themed($actionButton)}>
           <Repeat size={22} color={theme.colors.textDim} />
-          <Text style={themed($actionText)}>{t(TRANSLATION_KEYS.POST_REPOST)}</Text>
+          <Text style={themed($actionText)}>
+            {t(TRANSLATION_KEYS.POST_REPOST)}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -350,4 +474,26 @@ const $commentPreview: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $commentPreviewText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.textDim,
+});
+
+const $headerRight: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+});
+
+const $followButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  borderWidth: 1,
+  marginRight: spacing.sm,
+});
+
+const $followButtonText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 12,
+  fontWeight: "600",
+});
+
+const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
 });

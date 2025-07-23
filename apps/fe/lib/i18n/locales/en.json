@@ -58,7 +58,12 @@
     },
     "loadingPost": "Loading post...",
     "postNotFound": "Unable to load post.",
-    "goBack": "Go Back"
+    "goBack": "Go Back",
+    "follow": "Follow",
+    "following": "Following",
+    "followSuccess": "Followed successfully.",
+    "unfollowSuccess": "Unfollowed successfully.",
+    "followError": "An error occurred while processing follow request."
   },
   "createPost": {
     "title": "Create New Post",

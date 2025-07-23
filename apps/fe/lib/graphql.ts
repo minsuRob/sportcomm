@@ -189,30 +189,13 @@ export const CREATE_COMMENT = `
 `;
 
 /**
- * 사용자를 팔로우합니다.
+ * 사용자의 팔로우 상태를 토글합니다.
+ * userId를 인자로 받아, 해당 유저에 대한 팔로우/언팔로우를 처리합니다.
+ * 뮤테이션의 결과로 새로운 팔로우 상태(boolean)를 반환합니다.
  */
-export const FOLLOW_USER = `
-  mutation FollowUser($userId: String!) {
-    followUser(userId: $userId) {
-      id
-      isFollowing
-      followerCount
-      followingCount
-    }
-  }
-`;
-
-/**
- * 사용자를 언팔로우합니다.
- */
-export const UNFOLLOW_USER = `
-  mutation UnfollowUser($userId: String!) {
-    unfollowUser(userId: $userId) {
-      id
-      isFollowing
-      followerCount
-      followingCount
-    }
+export const TOGGLE_FOLLOW = `
+  mutation ToggleFollow($userId: String!) {
+    toggleFollow(userId: $userId)
   }
 `;
 

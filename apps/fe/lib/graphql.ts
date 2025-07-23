@@ -76,19 +76,13 @@ export const CREATE_POST = `
 `;
 
 /**
- * This is a placeholder for the like/unlike functionality.
- * The backend needs a 'toggleLike(postId: String!): Post' mutation to be implemented.
- * This mutation would ideally return the updated post or at least the new like count.
+ * 게시물 좋아요 토글 기능
+ * 백엔드에서 제공하는 likePost 뮤테이션을 사용하여 게시물의 좋아요 상태를 토글합니다.
+ * 해당 뮤테이션은 좋아요 토글 성공 여부를 Boolean 값으로 반환합니다.
  */
 export const TOGGLE_LIKE = `
   mutation ToggleLike($postId: String!) {
-    # The backend resolver for this is not yet implemented.
-    # When implemented, it should toggle the like status and ideally return the post.
-    # For now, we assume it exists and might return a simple confirmation.
-    toggleLike(postId: $postId) {
-      id
-      # likesCount # ideal return value
-    }
+    likePost(id: $postId)
   }
 `;
 

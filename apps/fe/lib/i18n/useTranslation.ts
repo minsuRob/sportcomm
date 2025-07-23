@@ -23,7 +23,7 @@ export const useTranslation = () => {
      */
     const loadLanguageSetting = async () => {
       const storedLanguage = (await storage.loadString(
-        APP_LANGUAGE_KEY
+        APP_LANGUAGE_KEY,
       )) as SupportedLanguage | null;
       // 저장된 언어가 있으면 적용하고, 없으면 기본 언어(ko)를 사용합니다.
       await i18n.changeLanguage(storedLanguage || "ko");
@@ -126,6 +126,7 @@ export const TRANSLATION_KEYS = {
   POST_FOLLOW_SUCCESS: "post.followSuccess",
   POST_UNFOLLOW_SUCCESS: "post.unfollowSuccess",
   POST_FOLLOW_ERROR: "post.followError",
+  POST_LIKE_ERROR: "post.likeError",
 
   // 댓글
   COMMENTS_TITLE: "comments.title",

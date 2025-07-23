@@ -63,7 +63,8 @@
     "following": "팔로우 됨",
     "followSuccess": "팔로우했습니다.",
     "unfollowSuccess": "언팔로우했습니다.",
-    "followError": "팔로우 처리 중 오류가 발생했습니다."
+    "followError": "팔로우 처리 중 오류가 발생했습니다.",
+    "likeError": "좋아요 처리 중 오류가 발생했습니다."
   },
   "createPost": {
     "title": "새로운 스레드",

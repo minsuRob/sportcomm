@@ -93,7 +93,7 @@ export default function PostCard({ post }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [isFollowing, setIsFollowing] = useState(
-    post.author.isFollowing || false
+    post.author.isFollowing || false,
   );
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -124,7 +124,23 @@ export default function PostCard({ post }: PostCardProps) {
     router.push(`/(app)/post/${post.id}` as any);
   };
 
+  /**
+   * 게시물 좋아요 상태를 토글하는 함수입니다.
+   * 사용자 경험 향상을 위해 먼저 UI를 낙관적으로 업데이트하고,
+   * 서버에 뮤테이션을 실행한 후 실패 시 UI를 원래 상태로 되돌립니다.
+   */
   const handleLike = () => {
+    // 현재 로그인된 사용자가 없으면, 로그인하라는 토스트 메시지를 표시합니다.
+    if (!currentUserId) {
+      showToast({
+        type: "error",
+        title: "로그인 필요",
+        message: "좋아요를 누르려면 로그인이 필요합니다.",
+        duration: 3000,
+      });
+      return;
+    }
+
     // Optimistically update the UI for a better user experience.
     const newLikedStatus = !isLiked;
     const newLikeCount = newLikedStatus ? likeCount + 1 : likeCount - 1;
@@ -133,11 +149,28 @@ export default function PostCard({ post }: PostCardProps) {
 
     // Execute the mutation.
     executeLike({ postId: post.id }).then((result) => {
-      // If the mutation fails, revert the optimistic update.
+      // 뮤테이션 에러 처리
       if (result.error) {
         console.error("Failed to toggle like:", result.error);
         setIsLiked(!newLikedStatus);
         setLikeCount(likeCount); // Revert to the original count
+        showToast({
+          type: "error",
+          title: t(TRANSLATION_KEYS.POST_LIKE_ERROR),
+          message:
+            result.error.message || "좋아요 처리 중 오류가 발생했습니다.",
+          duration: 3000,
+        });
+        return;
+      }
+
+      // 뮤테이션 결과 처리 (Boolean 반환값)
+      const likeSuccessful = result.data?.likePost;
+
+      // 서버 응답과 클라이언트 상태가 일치하지 않을 경우 상태 동기화
+      if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
+        setIsLiked(likeSuccessful);
+        setLikeCount(likeSuccessful ? likeCount + 1 : likeCount - 1);
       }
     });
   };

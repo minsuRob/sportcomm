@@ -7,7 +7,9 @@ import {
   ViewStyle,
   TextStyle,
   Text,
+  TouchableOpacity,
 } from "react-native";
+import { ArrowLeft } from "lucide-react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import ChatMessage, { Message, MessageWithIsMe } from "./ChatMessage";
@@ -25,6 +27,8 @@ interface ChatListProps {
   onLoadMore?: () => void;
   onLongPressMessage?: (message: Message) => void;
   hasMoreMessages?: boolean;
+  onBack?: () => void; // 뒤로가기 버튼 클릭 시 호출될 함수
+  title?: string; // 채팅방 제목
 }
 
 /**
@@ -49,29 +53,27 @@ const formatDate = (date: string): string => {
   const now = dayjs();
   const messageDate = dayjs(date);
 
-  if (now.isSame(messageDate, 'day')) {
-    return '오늘';
-  } else if (now.subtract(1, 'day').isSame(messageDate, 'day')) {
-    return '어제';
+  if (now.isSame(messageDate, "day")) {
+    return "오늘";
+  } else if (now.subtract(1, "day").isSame(messageDate, "day")) {
+    return "어제";
   } else {
-    return messageDate.format('YYYY년 MM월 DD일');
+    return messageDate.format("YYYY년 MM월 DD일");
   }
 };
 
 /**
  * 메시지 리스트에 날짜 구분선 추가하는 함수
  */
-const addDateSeparators = (
-  messages: MessageWithIsMe[]
-): ListItem[] => {
+const addDateSeparators = (messages: MessageWithIsMe[]): ListItem[] => {
   if (messages.length === 0) return [];
 
   const result: ListItem[] = [];
-  let currentDate = '';
+  let currentDate = "";
 
   messages.forEach((message) => {
     // 날짜 변경 확인 (년/월/일)
-    const messageDate = dayjs(message.created_at).format('YYYY-MM-DD');
+    const messageDate = dayjs(message.created_at).format("YYYY-MM-DD");
 
     if (messageDate !== currentDate) {
       currentDate = messageDate;
@@ -101,8 +103,10 @@ export default function ChatList({
   onLoadMore,
   onLongPressMessage,
   hasMoreMessages = false,
+  onBack,
+  title = "채팅",
 }: ChatListProps) {
-  const { themed } = useAppTheme();
+  const { themed, theme } = useAppTheme();
   const flatListRef = useRef<FlatList>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -152,7 +156,7 @@ export default function ChatList({
    */
   const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
     // 날짜 구분선인 경우
-    if ('isDateSeparator' in item) {
+    if ("isDateSeparator" in item) {
       return (
         <View style={themed($dateSeparator)}>
           <Text style={themed($dateSeparatorText)}>{item.date}</Text>
@@ -169,7 +173,7 @@ export default function ChatList({
 
       // 다음 메시지가 있고, 같은 사용자인지 확인
       const nextItem = listData[index + 1];
-      if (nextItem && !('isDateSeparator' in nextItem)) {
+      if (nextItem && !("isDateSeparator" in nextItem)) {
         const nextMessage = nextItem as MessageWithIsMe;
         return nextMessage.user_id !== message.user_id;
       }
@@ -191,6 +195,18 @@ export default function ChatList({
 
   return (
     <View style={themed($container)}>
+      {/* 헤더 */}
+      {onBack && (
+        <View style={themed($header)}>
+          <TouchableOpacity style={themed($backButton)} onPress={onBack}>
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={themed($headerTitle)}>{title}</Text>
+          <View style={{ width: 24 }} />
+        </View>
+      )}
+
+      {/* 채팅 목록 */}
       {isLoading && listData.length === 0 ? (
         <View style={themed($loadingContainer)}>
           <ActivityIndicator size="large" color="#0000ff" />
@@ -201,7 +217,9 @@ export default function ChatList({
           ref={flatListRef}
           data={listData}
           renderItem={renderItem}
-          keyExtractor={(item) => ('isDateSeparator' in item ? item.id : item.id)}
+          keyExtractor={(item) =>
+            "isDateSeparator" in item ? item.id : item.id
+          }
           style={themed($flatList)}
           contentContainerStyle={themed($contentContainer)}
           onScroll={handleOnScroll}
@@ -219,7 +237,9 @@ export default function ChatList({
             hasMoreMessages && isLoading ? (
               <View style={themed($loadMoreContainer)}>
                 <ActivityIndicator size="small" color="#0000ff" />
-                <Text style={themed($loadMoreText)}>이전 메시지 불러오는 중...</Text>
+                <Text style={themed($loadMoreText)}>
+                  이전 메시지 불러오는 중...
+                </Text>
               </View>
             ) : null
           }
@@ -239,6 +259,29 @@ export default function ChatList({
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
+});
+
+const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: spacing?.md || 16,
+  paddingVertical: spacing?.md || 16,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  backgroundColor: colors.background,
+});
+
+const $backButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing?.xs || 8,
+});
+
+const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "600",
+  color: colors.text,
+  flex: 1,
+  textAlign: "center",
 });
 
 const $flatList: ThemedStyle<ViewStyle> = () => ({

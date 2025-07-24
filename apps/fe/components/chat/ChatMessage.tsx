@@ -305,7 +305,7 @@ const $systemMessageText: ThemedStyle<TextStyle> = ({ colors }) => ({
 // --- 특별 메시지 스타일 (노란색) ---
 const $specialMessageContainer: ThemedStyle<ViewStyle> = () => ({
   alignItems: "center",
-  marginVertical: 8,
+  marginVertical: 16, // 일반 메시지(2)와 시스템 메시지(8) 사이의 적절한 값
   paddingHorizontal: 16,
 });
 

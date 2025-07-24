@@ -53,12 +53,23 @@ export default function ChatInput({
 
   /**
    * 메시지 전송 핸들러
+   * 특별 메시지 모드에 따라 다르게 처리
    */
   const handleSend = () => {
     const trimmedMessage = message.trim();
     if (trimmedMessage && !disabled) {
-      onSendMessage(trimmedMessage);
+      // 특별 메시지 모드가 활성화된 경우 💌 이모지 추가
+      const finalMessage = isEmojiActive
+        ? `💌 ${trimmedMessage}`
+        : trimmedMessage;
+      onSendMessage(finalMessage);
       setMessage("");
+
+      // 특별 메시지 전송 후 토글 상태 해제 (선택적)
+      if (isEmojiActive) {
+        setIsEmojiActive(false);
+      }
+
       Keyboard.dismiss();
     }
   };
@@ -73,22 +84,14 @@ export default function ChatInput({
   };
 
   /**
-   * 이모지 버튼 클릭 핸들러
-   * 💌 특별 메시지를 전송하고 시각적 피드백 제공
+   * 이모지 버튼 토글 핸들러
+   * 특별 메시지 모드를 활성화/비활성화
    */
   const handleEmojiToggle = () => {
     if (disabled) return;
 
-    // 💌 특별 메시지 전송 (노란색 스타일로 표시됨)
-    onSendMessage("💌 특별한 메시지입니다!");
-
-    // 시각적 피드백을 위한 잠시 활성화 상태 표시
-    setIsEmojiActive(true);
-
-    // 0.3초 후 비활성화 상태로 복원 (시각적 피드백)
-    setTimeout(() => {
-      setIsEmojiActive(false);
-    }, 300);
+    // 토글 상태 변경
+    setIsEmojiActive(!isEmojiActive);
 
     // 부모 컴포넌트에 상태 변경 알림 (선택적)
     if (onEmoji) {
@@ -157,9 +160,13 @@ export default function ChatInput({
         {/* 메시지 입력 필드 */}
         <TextInput
           ref={inputRef}
-          style={themed($input)}
-          placeholder={placeholder}
-          placeholderTextColor={theme.colors.textDim}
+          style={[themed($input), isEmojiActive ? themed($inputSpecial) : null]}
+          placeholder={
+            isEmojiActive ? "💌 특별한 메시지를 입력하세요..." : placeholder
+          }
+          placeholderTextColor={
+            isEmojiActive ? theme.colors.tint : theme.colors.textDim
+          }
           value={message}
           onChangeText={setMessage}
           multiline
@@ -167,7 +174,6 @@ export default function ChatInput({
           onSubmitEditing={handleSubmitEditing}
           editable={!disabled}
           returnKeyType="send"
-          blurOnSubmit={false}
         />
 
         {/* 이모지 버튼 */}
@@ -232,6 +238,12 @@ const $input: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 15,
   color: colors.text,
   backgroundColor: colors.background,
+});
+
+const $inputSpecial: ThemedStyle<TextStyle> = ({ colors }) => ({
+  borderColor: colors.tint,
+  borderWidth: 2,
+  backgroundColor: colors.tint + "10", // 10% 투명도로 배경색 적용
 });
 
 const $addButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({

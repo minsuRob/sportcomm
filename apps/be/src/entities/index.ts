@@ -39,6 +39,10 @@ export { Media, MediaType, UploadStatus } from './media.entity';
 export { ChatRoom, ChatRoomType } from './chat-room.entity';
 export { ChatMessage, ChatMessageType } from './chat-message.entity';
 
+// 신고 및 차단 관련 엔티티
+export { Report, ReportType, ReportStatus } from './report.entity';
+export { Block } from './block.entity';
+
 /**
  * 모든 엔티티를 배열로 내보내는 상수
  * TypeORM 설정에서 사용됩니다.

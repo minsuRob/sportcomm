@@ -54,17 +54,14 @@ export async function uploadImages(
     }
 
     // 서버에 업로드 요청
-    const uploadResponse = await fetch(
-      `${process.env.EXPO_PUBLIC_API_URL}/media/upload`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // Content-Type은 FormData 사용 시 자동으로 설정됨
-        },
-        body: formData,
-      }
-    );
+    const uploadResponse = await fetch(`http://localhost:3000/media/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Content-Type은 FormData 사용 시 자동으로 설정됨
+      },
+      body: formData,
+    });
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();

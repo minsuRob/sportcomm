@@ -13,6 +13,7 @@ import { UsersModule } from './modules/users/users.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { SearchModule } from './modules/search/search.module';
 import { MediaModule } from './modules/media/media.module';
+import { ModerationModule } from './modules/moderation/moderation.module';
 
 /**
  * 메인 애플리케이션 모듈
@@ -206,6 +207,7 @@ import { MediaModule } from './modules/media/media.module';
     CommentsModule,
     SearchModule,
     MediaModule,
+    ModerationModule,
   ],
 
   // 컨트롤러 및 서비스

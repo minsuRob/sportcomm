@@ -13,6 +13,7 @@ import { Comment } from './comment.entity';
 import { Follow } from './follow.entity';
 import { ChatMessage } from './chat-message.entity';
 import { PostLike } from './post-like.entity';
+import { Block } from './block.entity';
 
 /**
  * 사용자 역할 열거형
@@ -216,6 +217,20 @@ export class User extends BaseEntity {
   @Field(() => [PostLike], { description: '좋아요를 누른 게시물 목록' })
   @OneToMany(() => PostLike, (postLike) => postLike.user)
   likes: PostLike[];
+
+  /**
+   * 사용자가 차단한 사용자들
+   * 일대다 관계: 한 사용자는 여러 사용자를 차단할 수 있습니다.
+   */
+  @OneToMany(() => Block, (block) => block.blocker)
+  blocking: Block[];
+
+  /**
+   * 사용자를 차단한 사용자들
+   * 일대다 관계: 한 사용자는 여러 사용자에게 차단당할 수 있습니다.
+   */
+  @OneToMany(() => Block, (block) => block.blockedUser)
+  blockedBy: Block[];
 
   // === 헬퍼 메서드 ===
 

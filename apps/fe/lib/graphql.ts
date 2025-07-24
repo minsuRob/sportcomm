@@ -296,3 +296,59 @@ export const GET_USER_POSTS = `
     }
   }
 `;
+
+/**
+ * 신고 생성 뮤테이션
+ */
+export const CREATE_REPORT = `
+  mutation CreateReport($input: CreateReportInput!) {
+    createReport(input: $input) {
+      id
+      type
+      reason
+      status
+      createdAt
+    }
+  }
+`;
+
+/**
+ * 사용자 차단 뮤테이션
+ */
+export const BLOCK_USER = `
+  mutation BlockUser($blockedUserId: String!) {
+    blockUser(blockedUserId: $blockedUserId) {
+      id
+      blockerId
+      blockedUserId
+      createdAt
+    }
+  }
+`;
+
+/**
+ * 사용자 차단 해제 뮤테이션
+ */
+export const UNBLOCK_USER = `
+  mutation UnblockUser($blockedUserId: String!) {
+    unblockUser(blockedUserId: $blockedUserId)
+  }
+`;
+
+/**
+ * 차단된 사용자 목록 조회
+ */
+export const GET_BLOCKED_USERS = `
+  query GetBlockedUsers {
+    getBlockedUsers
+  }
+`;
+
+/**
+ * 사용자 차단 여부 확인
+ */
+export const IS_USER_BLOCKED = `
+  query IsUserBlocked($userId: String!) {
+    isUserBlocked(userId: $userId)
+  }
+`;

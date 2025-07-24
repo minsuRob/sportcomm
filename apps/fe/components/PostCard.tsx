@@ -7,10 +7,11 @@ import {
   ViewStyle,
   TextStyle,
   ImageStyle,
+  Alert,
 } from "react-native";
 import { useMutation } from "urql";
 import { useRouter } from "expo-router";
-import { TOGGLE_LIKE, TOGGLE_FOLLOW } from "@/lib/graphql";
+import { TOGGLE_LIKE, TOGGLE_FOLLOW, BLOCK_USER } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { getSession } from "@/lib/auth";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -21,6 +22,7 @@ import { Heart } from "@/lib/icons/Heart";
 import { MessageCircle } from "@/lib/icons/MessageCircle";
 import { MoreHorizontal } from "@/lib/icons/MoreHorizontal";
 import { Repeat } from "@/lib/icons/Repeat";
+import ReportModal from "./ReportModal";
 
 // --- Type Definitions ---
 export enum PostType {
@@ -98,6 +100,7 @@ export default function PostCard({ post }: PostCardProps) {
   const [isLikeProcessing, setIsLikeProcessing] = useState(false);
   const [isLikeError, setIsLikeError] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Sync state with props if the post object changes (e.g., after a refresh).
   useEffect(() => {
@@ -118,6 +121,7 @@ export default function PostCard({ post }: PostCardProps) {
   // URQL mutation hooks
   const [likeResult, executeLike] = useMutation(TOGGLE_LIKE);
   const [toggleFollowResult, toggleFollow] = useMutation(TOGGLE_FOLLOW);
+  const [, executeBlockUser] = useMutation(BLOCK_USER);
 
   /**
    * 게시물 상세 페이지로 이동하는 함수
@@ -278,6 +282,97 @@ export default function PostCard({ post }: PostCardProps) {
     }
   };
 
+  /**
+   * 더보기 메뉴 표시
+   */
+  const handleMorePress = () => {
+    const options = [
+      {
+        text: "신고하기",
+        onPress: () => setShowReportModal(true),
+        style: "destructive" as const,
+      },
+    ];
+
+    // 자기 자신이 아닌 경우에만 차단 옵션 추가
+    if (currentUserId && currentUserId !== post.author.id) {
+      options.unshift({
+        text: `${post.author.nickname}님 차단하기`,
+        onPress: handleBlockUser,
+        style: "destructive" as const,
+      });
+    }
+
+    Alert.alert("게시물 옵션", "원하는 작업을 선택하세요.", [
+      ...options,
+      {
+        text: "취소",
+        style: "cancel",
+      },
+    ]);
+  };
+
+  /**
+   * 사용자 차단
+   */
+  const handleBlockUser = async () => {
+    if (!currentUserId) {
+      showToast({
+        type: "error",
+        title: "로그인 필요",
+        message: "차단하려면 로그인이 필요합니다.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    Alert.alert(
+      "사용자 차단",
+      `${post.author.nickname}님을 차단하시겠습니까?\n차단된 사용자의 게시물은 더 이상 표시되지 않습니다.`,
+      [
+        {
+          text: "취소",
+          style: "cancel",
+        },
+        {
+          text: "차단",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const result = await executeBlockUser({
+                blockedUserId: post.author.id,
+              });
+
+              if (result.error) {
+                throw new Error(result.error.message);
+              }
+
+              showToast({
+                type: "success",
+                title: "차단 완료",
+                message: `${post.author.nickname}님을 차단했습니다.`,
+                duration: 3000,
+              });
+
+              // 피드 새로고침을 위해 부모 컴포넌트에 알림 (필요시 구현)
+            } catch (error) {
+              console.error("차단 실패:", error);
+              showToast({
+                type: "error",
+                title: "차단 실패",
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "차단 처리 중 오류가 발생했습니다.",
+                duration: 4000,
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const firstMedia = post.media?.[0];
   const avatarUrl =
     post.author.profileImageUrl ||
@@ -434,7 +529,10 @@ export default function PostCard({ post }: PostCardProps) {
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={themed($moreButton)}>
+          <TouchableOpacity
+            style={themed($moreButton)}
+            onPress={handleMorePress}
+          >
             <MoreHorizontal color={theme.colors.textDim} size={24} />
           </TouchableOpacity>
         </View>
@@ -552,6 +650,15 @@ export default function PostCard({ post }: PostCardProps) {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* 신고 모달 */}
+      <ReportModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        postId={post.id}
+        reportedUserId={post.author.id}
+        reportedUserName={post.author.nickname}
+      />
     </View>
   );
 }

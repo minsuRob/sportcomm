@@ -12,7 +12,7 @@ import {
 import { useQuery } from "urql";
 import { useRouter } from "expo-router";
 
-import { GET_POSTS } from "@/lib/graphql";
+import { GET_POSTS, GET_BLOCKED_USERS } from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
 import AuthForm from "@/components/AuthForm";
 import { Post, PostType } from "@/components/PostCard";
@@ -59,10 +59,17 @@ export default function FeedScreen() {
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
 
   const [result, executeQuery] = useQuery<PostsQueryResponse>({
     query: GET_POSTS,
     variables: { input: { page: 1, limit: PAGE_SIZE } },
+  });
+
+  // 차단된 사용자 목록 조회
+  const [blockedUsersResult] = useQuery<{ getBlockedUsers: string[] }>({
+    query: GET_BLOCKED_USERS,
+    pause: !currentUser, // 로그인하지 않은 경우 실행하지 않음
   });
 
   const { data, fetching, error } = result;
@@ -75,13 +82,22 @@ export default function FeedScreen() {
     checkSession();
   }, []);
 
+  // 차단된 사용자 목록 업데이트
+  useEffect(() => {
+    if (blockedUsersResult.data?.getBlockedUsers) {
+      setBlockedUserIds(blockedUsersResult.data.getBlockedUsers);
+    }
+  }, [blockedUsersResult.data]);
+
   useEffect(() => {
     if (data?.posts?.posts) {
-      const newPosts: Post[] = data.posts.posts.map((p) => ({
-        ...p,
-        isLiked: false,
-        isMock: false,
-      }));
+      const newPosts: Post[] = data.posts.posts
+        .filter((p) => !blockedUserIds.includes(p.author.id)) // 차단된 사용자 게시물 필터링
+        .map((p) => ({
+          ...p,
+          isLiked: false,
+          isMock: false,
+        }));
 
       if (data.posts.page === 1) {
         setPosts(newPosts);
@@ -98,7 +114,7 @@ export default function FeedScreen() {
       }
     }
     if (isRefreshing) setIsRefreshing(false);
-  }, [data, isRefreshing]);
+  }, [data, isRefreshing, blockedUserIds]);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);

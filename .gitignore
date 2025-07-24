@@ -11,3 +11,4 @@ apps/fe/.cursor
 apps/be/src/schema.gql
 apps/fe/.env
 .vscode
+.turbo

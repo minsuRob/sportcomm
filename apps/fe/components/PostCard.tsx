@@ -93,7 +93,7 @@ export default function PostCard({ post }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [isFollowing, setIsFollowing] = useState(
-    post.author.isFollowing || false,
+    post.author.isFollowing || false
   );
   const [isLikeProcessing, setIsLikeProcessing] = useState(false);
   const [isLikeError, setIsLikeError] = useState(false);
@@ -196,7 +196,7 @@ export default function PostCard({ post }: PostCardProps) {
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(
-            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1
           );
         }
       })
@@ -284,6 +284,107 @@ export default function PostCard({ post }: PostCardProps) {
     `https://i.pravatar.cc/150?u=${post.author.id}`;
   const postTypeStyle = getPostTypeStyle(post.type, t);
 
+  /**
+   * 이미지 개수에 따른 그리드 레이아웃 렌더링
+   */
+  const renderMediaGrid = () => {
+    const imageMedia = post.media.filter((media) => media.type === "image");
+    const imageCount = imageMedia.length;
+
+    if (imageCount === 0) return null;
+
+    if (imageCount === 1) {
+      // 단일 이미지
+      return (
+        <Image
+          source={{ uri: imageMedia[0].url }}
+          style={themed($mediaImage)}
+          resizeMode="cover"
+        />
+      );
+    }
+
+    if (imageCount === 2) {
+      // 2개 이미지 - 좌우 분할
+      return (
+        <View style={themed($mediaGrid)}>
+          <Image
+            source={{ uri: imageMedia[0].url }}
+            style={themed($mediaImageHalf)}
+            resizeMode="cover"
+          />
+          <Image
+            source={{ uri: imageMedia[1].url }}
+            style={themed($mediaImageHalf)}
+            resizeMode="cover"
+          />
+        </View>
+      );
+    }
+
+    if (imageCount === 3) {
+      // 3개 이미지 - 첫 번째는 왼쪽 전체, 나머지는 오른쪽 상하
+      return (
+        <View style={themed($mediaGrid)}>
+          <Image
+            source={{ uri: imageMedia[0].url }}
+            style={themed($mediaImageHalf)}
+            resizeMode="cover"
+          />
+          <View style={themed($mediaRightColumn)}>
+            <Image
+              source={{ uri: imageMedia[1].url }}
+              style={themed($mediaImageQuarter)}
+              resizeMode="cover"
+            />
+            <Image
+              source={{ uri: imageMedia[2].url }}
+              style={themed($mediaImageQuarter)}
+              resizeMode="cover"
+            />
+          </View>
+        </View>
+      );
+    }
+
+    // 4개 이상 이미지 - 2x2 그리드 + 더보기 표시
+    return (
+      <View style={themed($mediaGrid)}>
+        <View style={themed($mediaRow)}>
+          <Image
+            source={{ uri: imageMedia[0].url }}
+            style={themed($mediaImageQuarter)}
+            resizeMode="cover"
+          />
+          <Image
+            source={{ uri: imageMedia[1].url }}
+            style={themed($mediaImageQuarter)}
+            resizeMode="cover"
+          />
+        </View>
+        <View style={themed($mediaRow)}>
+          <Image
+            source={{ uri: imageMedia[2].url }}
+            style={themed($mediaImageQuarter)}
+            resizeMode="cover"
+          />
+          <View style={themed($mediaImageQuarter)}>
+            <Image
+              source={{ uri: imageMedia[3].url }}
+              style={themed($mediaImageQuarter)}
+              resizeMode="cover"
+            />
+            {imageCount > 4 && (
+              <View style={themed($moreImagesOverlay)}>
+                <Text style={themed($moreImagesText)}>+{imageCount - 4}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={themed($container)}>
       {/* Header */}
@@ -343,14 +444,14 @@ export default function PostCard({ post }: PostCardProps) {
         <Text style={themed($content)}>{post.content}</Text>
       </TouchableOpacity>
 
-      {/* Media - 클릭 가능 */}
-      {firstMedia?.type === "image" && (
+      {/* Media - 다중 이미지 지원 */}
+      {post.media.length > 0 && (
         <TouchableOpacity
           style={themed($mediaContainer)}
           onPress={handlePostPress}
           activeOpacity={0.9}
         >
-          <Image source={{ uri: firstMedia.url }} style={themed($mediaImage)} />
+          {renderMediaGrid()}
           <View
             style={[themed($badge), { backgroundColor: postTypeStyle.color }]}
           >
@@ -596,4 +697,53 @@ const $followButtonText: ThemedStyle<TextStyle> = () => ({
 
 const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.xs,
+});
+
+// --- 다중 이미지 스타일 ---
+const $mediaGrid: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  height: 224,
+  gap: 2,
+});
+
+const $mediaImageHalf: ThemedStyle<ImageStyle> = ({ colors }) => ({
+  flex: 1,
+  height: "100%",
+  borderRadius: 8,
+  backgroundColor: colors.separator,
+});
+
+const $mediaRightColumn: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  gap: 2,
+});
+
+const $mediaImageQuarter: ThemedStyle<ImageStyle> = ({ colors }) => ({
+  flex: 1,
+  borderRadius: 8,
+  backgroundColor: colors.separator,
+});
+
+const $mediaRow: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  flexDirection: "row",
+  gap: 2,
+});
+
+const $moreImagesOverlay: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0, 0, 0, 0.6)",
+  justifyContent: "center",
+  alignItems: "center",
+  borderRadius: 8,
+});
+
+const $moreImagesText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 18,
+  fontWeight: "bold",
 });

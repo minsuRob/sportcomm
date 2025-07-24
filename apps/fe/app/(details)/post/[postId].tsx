@@ -118,7 +118,7 @@ export default function PostDetailScreen() {
       // 기본값으로 cache-first를 사용하고, 필요시에만 네트워크 요청으로 전환
       requestPolicy: "cache-first",
     }),
-    [postId],
+    [postId]
   );
 
   // GraphQL 쿼리 및 뮤테이션
@@ -372,17 +372,49 @@ export default function PostDetailScreen() {
           <Text style={themed($contentText)}>{post.content}</Text>
         </View>
 
-        {/* 미디어 */}
+        {/* 미디어 - 개선된 그리드 레이아웃 */}
         {post.media.length > 0 && (
           <View style={themed($mediaSection)}>
-            {post.media.map((media) => (
+            {post.media.length === 1 ? (
+              // 단일 이미지
               <Image
-                key={media.id}
-                source={{ uri: media.url }}
+                source={{ uri: post.media[0].url }}
                 style={themed($mediaImage)}
                 resizeMode="cover"
               />
-            ))}
+            ) : post.media.length === 2 ? (
+              // 2개 이미지 - 좌우 분할
+              <View style={themed($mediaGrid)}>
+                {post.media.map((media) => (
+                  <Image
+                    key={media.id}
+                    source={{ uri: media.url }}
+                    style={themed($mediaImageHalf)}
+                    resizeMode="cover"
+                  />
+                ))}
+              </View>
+            ) : (
+              // 3개 이상 - 스크롤 가능한 그리드
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={themed($mediaScrollView)}
+                contentContainerStyle={themed($mediaScrollContent)}
+              >
+                {post.media.map((media, index) => (
+                  <Image
+                    key={media.id}
+                    source={{ uri: media.url }}
+                    style={[
+                      themed($mediaImageScroll),
+                      index === post.media.length - 1 && { marginRight: 0 },
+                    ]}
+                    resizeMode="cover"
+                  />
+                ))}
+              </ScrollView>
+            )}
           </View>
         )}
 
@@ -631,4 +663,31 @@ const $followButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $followButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 12,
   fontWeight: "600",
+});
+
+// --- 개선된 미디어 스타일 ---
+const $mediaGrid: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  gap: spacing.xs,
+});
+
+const $mediaImageHalf: ThemedStyle<ImageStyle> = () => ({
+  flex: 1,
+  height: 200,
+  borderRadius: 12,
+});
+
+const $mediaScrollView: ThemedStyle<ViewStyle> = () => ({
+  height: 250,
+});
+
+const $mediaScrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingRight: spacing.md,
+});
+
+const $mediaImageScroll: ThemedStyle<ImageStyle> = ({ spacing }) => ({
+  width: 200,
+  height: 250,
+  borderRadius: 12,
+  marginRight: spacing.sm,
 });

@@ -34,6 +34,7 @@ function RootLayoutNav() {
   const { navigationTheme, themeContext } = useAppTheme();
 
   return (
+    ////
     <NavigationThemeProvider value={navigationTheme}>
       <StatusBar style={themeContext === "dark" ? "light" : "dark"} />
       <Slot />

@@ -38,6 +38,9 @@ interface ReportModalProps {
   postId?: string;
   reportedUserId?: string;
   reportedUserName?: string;
+  // 채팅 메시지 신고를 위한 추가 필드
+  messageId?: string;
+  messageContent?: string;
 }
 
 const reportOptions: ReportOption[] = [
@@ -79,6 +82,8 @@ export default function ReportModal({
   postId,
   reportedUserId,
   reportedUserName,
+  messageId,
+  messageContent,
 }: ReportModalProps) {
   const { themed, theme } = useAppTheme();
   const [selectedType, setSelectedType] = useState<ReportType | null>(null);
@@ -116,6 +121,7 @@ export default function ReportModal({
           type: selectedType,
           reason: reason.trim(),
           postId,
+          messageId,
           reportedUserId,
         },
       });
@@ -185,8 +191,19 @@ export default function ReportModal({
               <Text style={themed($targetInfoText)}>
                 {postId
                   ? "게시물을 신고합니다"
-                  : `${reportedUserName}님을 신고합니다`}
+                  : messageId
+                    ? "채팅 메시지를 신고합니다"
+                    : `${reportedUserName}님을 신고합니다`}
               </Text>
+              {messageContent && (
+                <Text style={themed($messagePreview)}>
+                  "
+                  {messageContent.length > 50
+                    ? messageContent.substring(0, 50) + "..."
+                    : messageContent}
+                  "
+                </Text>
+              )}
             </View>
 
             {/* 신고 유형 선택 */}
@@ -338,6 +355,14 @@ const $targetInfoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.text,
   textAlign: "center",
+});
+
+const $messagePreview: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  textAlign: "center",
+  marginTop: spacing.xs,
+  fontStyle: "italic",
 });
 
 const $section: ThemedStyle<ViewStyle> = ({ spacing }) => ({

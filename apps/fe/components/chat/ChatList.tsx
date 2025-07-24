@@ -15,6 +15,11 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import ChatMessage, { Message, MessageWithIsMe } from "./ChatMessage";
 import { User } from "@/lib/auth";
 import dayjs from "dayjs";
+import {
+  useModerationActions,
+  ModerationTarget,
+} from "@/hooks/useModerationActions";
+import ReportModal from "../ReportModal";
 
 /**
  * 채팅 목록 Props 타입 정의
@@ -110,11 +115,32 @@ export default function ChatList({
   const flatListRef = useRef<FlatList>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // 신고/차단 기능
+  const {
+    showReportModal,
+    reportTarget,
+    closeReportModal,
+    showModerationOptions,
+  } = useModerationActions();
+
   // 메시지에 현재 사용자 정보 추가
   const messagesWithIsMe: MessageWithIsMe[] = messages.map((message) => ({
     ...message,
     isMe: currentUser?.id === message.user_id,
   }));
+
+  /**
+   * 메시지 신고/차단 핸들러
+   */
+  const handleModerationAction = (message: Message) => {
+    const target: ModerationTarget = {
+      userId: message.user.id,
+      userName: message.user.nickname,
+      messageId: message.id,
+      messageContent: message.content,
+    };
+    showModerationOptions(target);
+  };
 
   // 날짜 구분선이 있는 최종 데이터
   const listData = addDateSeparators(messagesWithIsMe);
@@ -189,6 +215,7 @@ export default function ChatList({
         showAvatar={showAvatar}
         showDate={showDate}
         onLongPress={onLongPressMessage}
+        onModerationAction={handleModerationAction}
       />
     );
   };
@@ -252,6 +279,16 @@ export default function ChatList({
           }
         />
       )}
+
+      {/* 신고 모달 */}
+      <ReportModal
+        visible={showReportModal}
+        onClose={closeReportModal}
+        messageId={reportTarget?.messageId}
+        messageContent={reportTarget?.messageContent}
+        reportedUserId={reportTarget?.userId}
+        reportedUserName={reportTarget?.userName}
+      />
     </View>
   );
 }

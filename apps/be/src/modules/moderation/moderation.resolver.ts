@@ -42,6 +42,11 @@ export class CreateReportInput implements ServiceCreateReportInput {
   @IsOptional()
   @IsString({ message: '게시물 ID는 문자열이어야 합니다.' })
   postId?: string;
+
+  @Field(() => String, { nullable: true, description: '신고할 메시지 ID' })
+  @IsOptional()
+  @IsString({ message: '메시지 ID는 문자열이어야 합니다.' })
+  messageId?: string;
 }
 
 /**

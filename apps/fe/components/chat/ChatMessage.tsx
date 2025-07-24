@@ -45,6 +45,7 @@ interface ChatMessageProps {
   showDate?: boolean; // 날짜 표시 여부
   onLongPress?: (message: Message) => void; // 길게 누를 때 콜백 (답장/삭제 등)
   highlightColor?: string; // 강조 색상 (필요시)
+  onModerationAction?: (message: Message) => void; // 신고/차단 액션 콜백
 }
 
 /**
@@ -56,6 +57,7 @@ export default function ChatMessage({
   showDate = true,
   onLongPress,
   highlightColor,
+  onModerationAction,
 }: ChatMessageProps) {
   const { themed } = useAppTheme();
 
@@ -91,6 +93,16 @@ export default function ChatMessage({
     );
   }
 
+  // 길게 누르기 핸들러
+  const handleLongPress = () => {
+    if (onLongPress) {
+      onLongPress(message);
+    } else if (onModerationAction && !message.isMe) {
+      // 기본 동작: 다른 사용자의 메시지인 경우 신고/차단 옵션 표시
+      onModerationAction(message);
+    }
+  };
+
   // 일반 메시지
   return (
     <TouchableOpacity
@@ -100,7 +112,7 @@ export default function ChatMessage({
           ? themed($myMessageContainer)
           : themed($otherMessageContainer),
       ]}
-      onLongPress={() => onLongPress?.(message)}
+      onLongPress={handleLongPress}
       activeOpacity={0.9}
     >
       {/* 상대방 메시지 레이아웃 */}

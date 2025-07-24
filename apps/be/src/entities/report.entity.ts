@@ -4,6 +4,8 @@ import { IsString, IsEnum, MaxLength, IsOptional } from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { Post } from './post.entity';
+import { ChatMessage } from './chat-message.entity';
+import { ChatMessage } from './chat-message.entity';
 
 /**
  * 신고 유형 열거형
@@ -142,6 +144,26 @@ export class Report extends BaseEntity {
   })
   postId?: string;
 
+  /**
+   * 신고된 채팅 메시지 ID
+   */
+  @Column({
+    type: 'uuid',
+    nullable: true,
+    comment: '신고된 채팅 메시지 ID',
+  })
+  messageId?: string;
+
+  /**
+   * 신고된 채팅 메시지 ID
+   */
+  @Column({
+    type: 'uuid',
+    nullable: true,
+    comment: '신고된 채팅 메시지 ID',
+  })
+  chatMessageId?: string;
+
   // === 관계 설정 ===
 
   /**
@@ -167,6 +189,17 @@ export class Report extends BaseEntity {
   @ManyToOne(() => Post, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'postId' })
   post?: Post;
+
+  /**
+   * 신고된 채팅 메시지
+   */
+  @Field(() => ChatMessage, {
+    nullable: true,
+    description: '신고된 채팅 메시지',
+  })
+  @ManyToOne(() => ChatMessage, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'messageId' })
+  message?: ChatMessage;
 
   // === 헬퍼 메서드 ===
 
@@ -202,6 +235,20 @@ export class Report extends BaseEntity {
    * 사용자 신고인지 확인
    */
   isUserReport(): boolean {
-    return !!this.reportedUserId && !this.postId;
+    return !!this.reportedUserId && !this.postId && !this.messageId;
+  }
+
+  /**
+   * 메시지 신고인지 확인
+   */
+  isMessageReport(): boolean {
+    return !!this.messageId;
+  }
+
+  /**
+   * 채팅 메시지 신고인지 확인
+   */
+  isChatMessageReport(): boolean {
+    return !!this.chatMessageId;
   }
 }

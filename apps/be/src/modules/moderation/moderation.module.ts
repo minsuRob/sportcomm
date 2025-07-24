@@ -4,6 +4,7 @@ import { Report } from '../../entities/report.entity';
 import { Block } from '../../entities/block.entity';
 import { User } from '../../entities/user.entity';
 import { Post } from '../../entities/post.entity';
+import { ChatMessage } from '../../entities/chat-message.entity';
 import { ModerationService } from './moderation.service';
 import { ModerationResolver } from './moderation.resolver';
 
@@ -12,7 +13,7 @@ import { ModerationResolver } from './moderation.resolver';
  * 신고 및 차단 기능을 제공합니다.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Report, Block, User, Post])],
+  imports: [TypeOrmModule.forFeature([Report, Block, User, Post, ChatMessage])],
   providers: [ModerationService, ModerationResolver],
   exports: [ModerationService],
 })

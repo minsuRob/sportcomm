@@ -20,6 +20,8 @@ import { chatService } from "@/lib/chat/chatService";
 import ChatList from "@/components/chat/ChatList";
 import ChatInput from "@/components/chat/ChatInput";
 import { Message } from "@/components/chat/ChatMessage";
+import { useQuery } from "urql";
+import { GET_BLOCKED_USERS } from "@/lib/graphql";
 
 /**
  * 채팅 상세 화면
@@ -40,6 +42,13 @@ export default function ChatDetailScreen() {
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+
+  // 차단된 사용자 목록 조회
+  const [blockedUsersResult] = useQuery<{ getBlockedUsers: string[] }>({
+    query: GET_BLOCKED_USERS,
+    pause: !currentUser, // 로그인하지 않은 경우 실행하지 않음
+  });
 
   // 실시간 메시지 수신 구독 참조
   const subscribedRef = useRef(false);
@@ -80,6 +89,21 @@ export default function ChatDetailScreen() {
     };
   }, [channelId, router]);
 
+  // 차단된 사용자 목록 업데이트
+  useEffect(() => {
+    if (blockedUsersResult.data?.getBlockedUsers) {
+      const newBlockedUserIds = blockedUsersResult.data.getBlockedUsers;
+      setBlockedUserIds(newBlockedUserIds);
+
+      // 기존 메시지에서 차단된 사용자 메시지 제거
+      setMessages((prevMessages) =>
+        prevMessages.filter(
+          (message) => !newBlockedUserIds.includes(message.user_id)
+        )
+      );
+    }
+  }, [blockedUsersResult.data]);
+
   /**
    * 메시지 로드 함수
    */
@@ -90,7 +114,12 @@ export default function ChatDetailScreen() {
       // 로컬 모드로 동작
       let messageData = await chatService.getMessages(channelId);
 
-      setMessages(messageData);
+      // 차단된 사용자 메시지 필터링
+      const filteredMessages = messageData.filter(
+        (message) => !blockedUserIds.includes(message.user_id)
+      );
+
+      setMessages(filteredMessages);
       setHasMoreMessages(messageData.length >= 50);
     } catch (error) {
       console.error("메시지 로드 오류:", error);
@@ -114,11 +143,16 @@ export default function ChatDetailScreen() {
       let moreMessages = await chatService.getMessages(
         channelId,
         50,
-        oldestMessage.created_at,
+        oldestMessage.created_at
       );
 
-      if (moreMessages.length > 0) {
-        setMessages((prev) => [...moreMessages, ...prev]);
+      // 차단된 사용자 메시지 필터링
+      const filteredMoreMessages = moreMessages.filter(
+        (message) => !blockedUserIds.includes(message.user_id)
+      );
+
+      if (filteredMoreMessages.length > 0) {
+        setMessages((prev) => [...filteredMoreMessages, ...prev]);
       }
 
       setHasMoreMessages(moreMessages.length >= 50);
@@ -144,7 +178,10 @@ export default function ChatDetailScreen() {
     // 내가 보낸 메시지가 아닌 경우에만 추가
     // (내가 보낸 메시지는 sendMessage에서 이미 추가)
     if (message.user_id !== currentUser?.id) {
-      setMessages((prevMessages) => [...prevMessages, message]);
+      // 차단된 사용자의 메시지는 추가하지 않음
+      if (!blockedUserIds.includes(message.user_id)) {
+        setMessages((prevMessages) => [...prevMessages, message]);
+      }
     }
   };
 
@@ -203,7 +240,7 @@ export default function ChatDetailScreen() {
           style: "cancel",
         },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 
@@ -220,7 +257,7 @@ export default function ChatDetailScreen() {
         { text: "위치 공유", onPress: () => console.log("위치 공유") },
         { text: "취소", style: "cancel" },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 

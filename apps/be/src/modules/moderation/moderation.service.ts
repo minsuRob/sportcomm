@@ -9,6 +9,7 @@ import { Report, ReportType, ReportStatus } from '../../entities/report.entity';
 import { Block } from '../../entities/block.entity';
 import { User } from '../../entities/user.entity';
 import { Post } from '../../entities/post.entity';
+import { ChatMessage } from '../../entities/chat-message.entity';
 
 /**
  * 신고 생성 입력 인터페이스
@@ -18,6 +19,7 @@ export interface CreateReportInput {
   reason: string;
   reportedUserId?: string;
   postId?: string;
+  messageId?: string;
 }
 
 /**
@@ -35,6 +37,8 @@ export class ModerationService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+    @InjectRepository(ChatMessage)
+    private readonly chatMessageRepository: Repository<ChatMessage>,
   ) {}
 
   /**
@@ -47,12 +51,12 @@ export class ModerationService {
     reporterId: string,
     input: CreateReportInput,
   ): Promise<Report> {
-    const { type, reason, reportedUserId, postId } = input;
+    const { type, reason, reportedUserId, postId, messageId } = input;
 
     // 신고 대상 검증
-    if (!reportedUserId && !postId) {
+    if (!reportedUserId && !postId && !messageId) {
       throw new BadRequestException(
-        '신고할 사용자 또는 게시물을 지정해야 합니다.',
+        '신고할 사용자, 게시물 또는 메시지를 지정해야 합니다.',
       );
     }
 
@@ -85,12 +89,27 @@ export class ModerationService {
       }
     }
 
+    if (messageId) {
+      const message = await this.chatMessageRepository.findOne({
+        where: { id: messageId },
+        relations: ['author'],
+      });
+      if (!message) {
+        throw new NotFoundException('신고할 메시지를 찾을 수 없습니다.');
+      }
+      // 메시지 신고 시 작성자도 함께 설정
+      if (!reportedUserId) {
+        input.reportedUserId = message.author.id;
+      }
+    }
+
     // 중복 신고 확인
     const existingReport = await this.reportRepository.findOne({
       where: {
         reporterId,
         reportedUserId: input.reportedUserId,
         postId,
+        messageId,
         status: ReportStatus.PENDING,
       },
     });
@@ -106,6 +125,7 @@ export class ModerationService {
       reporterId,
       reportedUserId: input.reportedUserId,
       postId,
+      messageId,
       status: ReportStatus.PENDING,
     });
 

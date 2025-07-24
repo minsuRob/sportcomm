@@ -46,6 +46,8 @@ export interface UpdatePostInput {
   isPinned?: boolean;
   /** 수정 사유 */
   editReason?: string;
+  /** 첨부 미디어 ID 목록 */
+  mediaIds?: string[];
 }
 
 /**
@@ -149,7 +151,7 @@ export class PostsService {
 
     // 미디어 연결 (미디어 ID가 있는 경우)
     if (mediaIds.length > 0) {
-      await this.attachMediaToPost(mediaIds, savedPost.id);
+      await this.mediaService.attachMediaToPost(mediaIds, savedPost.id);
     }
 
     // 첫 번째 버전 생성 (원본 버전)
@@ -319,7 +321,7 @@ export class PostsService {
     const previousTitle = existingPost.title;
 
     // 수정 정보 적용
-    const { title, content, type, isPublic, isPinned, editReason } =
+    const { title, content, type, isPublic, isPinned, editReason, mediaIds } =
       updatePostInput;
 
     if (title !== undefined) existingPost.title = title;
@@ -330,6 +332,11 @@ export class PostsService {
 
     // 게시물 저장
     const updatedPost = await this.postRepository.save(existingPost);
+
+    // 미디어 연결 (미디어 ID가 있는 경우)
+    if (mediaIds && mediaIds.length > 0) {
+      await this.mediaService.attachMediaToPost(mediaIds, id);
+    }
 
     // 내용이 변경된 경우 새 버전 생성
     if (content !== undefined && content !== previousContent) {

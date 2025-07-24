@@ -39,6 +39,7 @@ export default function ChatDetailScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [replyingTo, setReplyingTo] = useState<any>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // 실시간 메시지 수신 구독 참조
   const subscribedRef = useRef(false);
@@ -206,6 +207,34 @@ export default function ChatDetailScreen() {
     );
   };
 
+  /**
+   * '+' 버튼 클릭 핸들러
+   */
+  const handleAddOption = () => {
+    Alert.alert(
+      "옵션 선택",
+      "추가 옵션을 선택하세요",
+      [
+        { text: "사진 보내기", onPress: () => console.log("사진 보내기") },
+        { text: "파일 보내기", onPress: () => console.log("파일 보내기") },
+        { text: "위치 공유", onPress: () => console.log("위치 공유") },
+        { text: "취소", style: "cancel" },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  /**
+   * 이모지 버튼 클릭 핸들러
+   */
+  const handleEmoji = () => {
+    setShowEmojiPicker(!showEmojiPicker);
+    // 여기에 이모지 선택 UI 표시 로직 구현
+    Alert.alert("이모지 선택", "이모지 기능이 곧 추가될 예정입니다.", [
+      { text: "확인" },
+    ]);
+  };
+
   return (
     <View style={themed($container)}>
       {/* 헤더 */}
@@ -249,6 +278,8 @@ export default function ChatDetailScreen() {
           disabled={!currentUser || isLoading}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
+          onAddOption={handleAddOption}
+          onEmoji={handleEmoji}
         />
       </KeyboardAvoidingView>
     </View>

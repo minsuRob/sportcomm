@@ -10,9 +10,9 @@ import {
   Keyboard,
   Text,
 } from "react-native";
+import { Send, Paperclip, X, Plus } from "lucide-react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { Send, Paperclip, X } from "lucide-react-native";
 
 /**
  * 채팅 입력창 Props 타입 정의
@@ -20,6 +20,8 @@ import { Send, Paperclip, X } from "lucide-react-native";
 interface ChatInputProps {
   onSendMessage: (text: string) => void;
   onAttachment?: () => void; // 첨부 파일 기능 (선택적)
+  onAddOption?: () => void; // + 버튼 클릭 시 호출될 함수
+  onEmoji?: () => void; // 이모지 버튼 클릭 시 호출될 함수
   disabled?: boolean;
   placeholder?: string;
   replyingTo?: {
@@ -37,6 +39,8 @@ interface ChatInputProps {
 export default function ChatInput({
   onSendMessage,
   onAttachment,
+  onAddOption,
+  onEmoji,
   disabled = false,
   placeholder = "메시지를 입력하세요...",
   replyingTo = null,
@@ -105,6 +109,20 @@ export default function ChatInput({
       )}
 
       <View style={themed($container)}>
+        {/* + 버튼 */}
+        <TouchableOpacity
+          style={themed($addButton)}
+          onPress={onAddOption}
+          disabled={disabled}
+        >
+          <Plus
+            size={22}
+            color={
+              disabled ? theme.colors.textDim + "80" : theme.colors.textDim
+            }
+          />
+        </TouchableOpacity>
+
         {/* 첨부 파일 버튼 */}
         {onAttachment && (
           <TouchableOpacity
@@ -135,6 +153,17 @@ export default function ChatInput({
           editable={!disabled}
           returnKeyType="default"
         />
+
+        {/* 이모지 버튼 */}
+        {onEmoji && (
+          <TouchableOpacity
+            style={themed($emojiButton)}
+            onPress={onEmoji}
+            disabled={disabled}
+          >
+            <Text style={themed($emojiText)}>💌</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 전송 버튼 */}
         <TouchableOpacity
@@ -185,9 +214,29 @@ const $input: ThemedStyle<TextStyle> = ({ colors }) => ({
   backgroundColor: colors.card || colors.background,
 });
 
+const $addButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing?.xs || 8,
+  marginRight: spacing?.xs || 8,
+});
+
 const $attachButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing?.xs || 8,
   marginRight: spacing?.xs || 8,
+});
+
+const $emojiButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing?.xs || 8,
+  marginRight: spacing?.xs || 8,
+  position: "absolute",
+  right: 48,
+  bottom: spacing?.sm || 12,
+  height: 30,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $emojiText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 20,
 });
 
 const $sendButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

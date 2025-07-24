@@ -38,7 +38,8 @@
     "pullToRefresh": "아래로 당겨서 새로고침하세요.",
     "errorFetching": "피드를 불러오는 중 오류가 발생했습니다: {{message}}",
     "loadingPosts": "게시물을 불러오는 중...",
-    "createPost": "글 작성"
+    "createPost": "글 작성",
+    "chat": "채팅"
   },
   "post": {
     "title": "게시물",

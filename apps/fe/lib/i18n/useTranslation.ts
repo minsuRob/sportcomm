@@ -97,6 +97,7 @@ export const TRANSLATION_KEYS = {
   FEED_PULL_REFRESH: "feed.pullToRefresh",
   FEED_ERROR_FETCHING: "feed.errorFetching",
   FEED_CREATE_POST: "feed.createPost",
+  FEED_CHAT: "feed.chat",
 
   // 글 작성
   CREATE_POST_TITLE: "createPost.title",

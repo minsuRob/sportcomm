@@ -21,7 +21,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 // CreatePostModal 제거 - 이제 별도 페이지로 이동
-import { Plus } from "lucide-react-native";
+import { Plus, MessageSquare } from "lucide-react-native";
 
 // --- Type Definitions ---
 interface GqlPost {
@@ -92,7 +92,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
       }
@@ -212,6 +212,15 @@ export default function FeedScreen() {
               <Plus color="white" size={20} />
               <Text style={themed($createPostButtonText)}>
                 {t(TRANSLATION_KEYS.FEED_CREATE_POST)}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themed($chatButton)}
+              onPress={() => router.push("/(app)/chat")}
+            >
+              <MessageSquare color="white" size={20} />
+              <Text style={themed($chatButtonText)}>
+                {t(TRANSLATION_KEYS.FEED_CHAT)}
               </Text>
             </TouchableOpacity>
             <Text style={themed($userNickname)}>{currentUser.nickname}</Text>
@@ -344,6 +353,23 @@ const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $createPostButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  color: "white",
+  fontSize: 14,
+  fontWeight: "600",
+  marginLeft: spacing.xs,
+});
+
+const $chatButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 20,
+  marginRight: spacing.md,
+});
+
+const $chatButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
   color: "white",
   fontSize: 14,
   fontWeight: "600",

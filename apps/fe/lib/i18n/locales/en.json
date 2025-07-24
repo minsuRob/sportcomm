@@ -38,7 +38,8 @@
     "pullToRefresh": "Pull down to refresh.",
     "errorFetching": "An error occurred while fetching the feed: {{message}}",
     "loadingPosts": "Loading posts...",
-    "createPost": "Create Post"
+    "createPost": "Create Post",
+    "chat": "Chat"
   },
   "post": {
     "title": "Post",

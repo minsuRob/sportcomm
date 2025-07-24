@@ -16,5 +16,12 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@apollo/client": "^3.13.8",
+    "@nestjs/cache-manager": "^3.0.1",
+    "@supabase/supabase-js": "^2.52.1",
+    "cache-manager": "^7.0.1",
+    "graphql": "^16.11.0"
+  }
 }

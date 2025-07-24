@@ -23,7 +23,6 @@ const SEARCH_QUERY = `
         commentCount
         createdAt
         isLiked
-        authorId
         author {
           id
           nickname
@@ -80,7 +79,7 @@ export interface SearchParams {
  * @returns 정렬 방식
  */
 const getSortByFromTab = (
-  tab: SearchTabType,
+  tab: SearchTabType
 ): "POPULAR" | "RECENT" | "RELEVANCE" => {
   switch (tab) {
     case "popular":
@@ -103,7 +102,7 @@ const getSortByFromTab = (
  */
 export const searchApi = async (
   params: SearchParams,
-  tab: SearchTabType,
+  tab: SearchTabType
 ): Promise<{
   items: SearchResultItem[];
   metadata: {
@@ -139,7 +138,10 @@ export const searchApi = async (
             pageSize: searchParams.pageSize,
           },
         },
-        { requestPolicy: "network-only" }, // 항상 최신 데이터 가져오기
+        {
+          requestPolicy: "network-only", // 항상 최신 데이터 가져오기
+          fetchOptions: { cache: "no-store" }, // 캐시 사용 안함
+        }
       )
       .toPromise();
 
@@ -154,6 +156,7 @@ export const searchApi = async (
           type: "post",
           data: {
             ...post,
+            authorId: post.author.id, // author.id를 authorId로 매핑
             // mediaUrl이 없는 경우 임시 이미지 추가 (UI 표시용)
             mediaUrl:
               post.media && post.media.length > 0
@@ -205,7 +208,7 @@ export const getPopularSearchTerms = async (limit = 10): Promise<string[]> => {
       .query(
         POPULAR_SEARCH_TERMS_QUERY,
         { limit },
-        { requestPolicy: "cache-first" }, // 캐싱 활용
+        { requestPolicy: "cache-first" } // 캐싱 활용
       )
       .toPromise();
     return data.popularSearchTerms;

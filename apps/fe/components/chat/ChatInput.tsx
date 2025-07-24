@@ -48,6 +48,7 @@ export default function ChatInput({
 }: ChatInputProps) {
   const { themed, theme } = useAppTheme();
   const [message, setMessage] = useState("");
+  const [isComposing, setIsComposing] = useState(false); // 한글 조합 상태 추적
   const inputRef = useRef<TextInput>(null);
 
   /**
@@ -63,20 +64,44 @@ export default function ChatInput({
   };
 
   /**
-   * 키보드 엔터 처리
+   * 한글 조합 시작 처리
+   */
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+  };
+
+  /**
+   * 한글 조합 종료 처리
+   */
+  const handleCompositionEnd = () => {
+    setIsComposing(false);
+  };
+
+  /**
+   * 키보드 엔터 처리 (한글 조합 상태 고려)
    */
   const handleKeyPress = ({
     nativeEvent,
   }: {
     nativeEvent: { key: string };
   }) => {
-    // 엔터키 눌렀을 때 전송 (쉬프트+엔터는 줄바꿈)
-    if (
-      nativeEvent.key === "Enter" &&
-      !disabled &&
-      !nativeEvent.shiftKey &&
-      message.trim()
-    ) {
+    // 한글 조합 중이거나 쉬프트+엔터인 경우 전송하지 않음
+    if (isComposing || nativeEvent.key !== "Enter" || disabled) {
+      return;
+    }
+
+    // 엔터키 눌렀을 때 전송
+    if (message.trim()) {
+      handleSend();
+    }
+  };
+
+  /**
+   * 전송 버튼 또는 엔터키로 메시지 전송
+   */
+  const handleSubmitEditing = () => {
+    // 한글 조합 중이 아닐 때만 전송
+    if (!isComposing && message.trim() && !disabled) {
       handleSend();
     }
   };

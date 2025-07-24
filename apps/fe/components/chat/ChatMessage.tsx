@@ -2,16 +2,15 @@ import React from "react";
 import {
   View,
   Text,
-  StyleSheet,
   Image,
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  ImageStyle,
 } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import dayjs from "dayjs";
-import { User } from "@/lib/auth";
 
 /**
  * 메시지 타입 정의
@@ -57,7 +56,7 @@ export default function ChatMessage({
   onLongPress,
   highlightColor,
 }: ChatMessageProps) {
-  const { themed, theme } = useAppTheme();
+  const { themed } = useAppTheme();
 
   // 시스템 메시지는 별도 처리
   if (message.is_system) {
@@ -78,7 +77,9 @@ export default function ChatMessage({
     <TouchableOpacity
       style={[
         themed($container),
-        message.isMe ? themed($myMessageContainer) : themed($otherMessageContainer),
+        message.isMe
+          ? themed($myMessageContainer)
+          : themed($otherMessageContainer),
       ]}
       onLongPress={() => onLongPress?.(message)}
       activeOpacity={0.9}
@@ -103,7 +104,9 @@ export default function ChatMessage({
 
       <View
         style={[
-          message.isMe ? themed($myMessageContent) : themed($otherMessageContent),
+          message.isMe
+            ? themed($myMessageContent)
+            : themed($otherMessageContent),
         ]}
       >
         {/* 상대방 메시지인 경우 닉네임 표시 */}
@@ -119,7 +122,9 @@ export default function ChatMessage({
             highlightColor ? { backgroundColor: `${highlightColor}20` } : null,
           ]}
         >
-          <Text style={themed($messageText)}>{message.content}</Text>
+          <Text style={themed(message.isMe ? $myMessageText : $messageText)}>
+            {message.content}
+          </Text>
         </View>
 
         {/* 메시지 시간 */}
@@ -159,14 +164,14 @@ const $avatarContainer: ThemedStyle<ViewStyle> = () => ({
   alignSelf: "flex-end",
 });
 
-const $avatar: ThemedStyle<ViewStyle> = () => ({
+const $avatar: ThemedStyle<ImageStyle> = () => ({
   width: 32,
   height: 32,
   borderRadius: 16,
 });
 
 const $noAvatar: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: colors.primary,
+  backgroundColor: colors.tint,
   justifyContent: "center",
   alignItems: "center",
 });
@@ -192,7 +197,7 @@ const $nickname: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
   fontWeight: "500",
   marginBottom: 4,
-  color: colors.primary,
+  color: colors.tint,
 });
 
 const $messageBox: ThemedStyle<ViewStyle> = () => ({
@@ -203,12 +208,17 @@ const $messageBox: ThemedStyle<ViewStyle> = () => ({
 });
 
 const $myMessageBox: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: colors.primary,
+  backgroundColor: colors.tint,
   borderTopRightRadius: 4,
 });
 
+const $myMessageText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 15,
+  color: colors.background, // 내 메시지는 배경색과 대비되는 색상 사용
+});
+
 const $otherMessageBox: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: colors.card || colors.border + "40",
+  backgroundColor: colors.palette.neutral300,
   borderTopLeftRadius: 4,
 });
 
@@ -240,7 +250,7 @@ const $systemMessageContainer: ThemedStyle<ViewStyle> = () => ({
 const $systemMessageText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
   color: colors.textDim,
-  backgroundColor: colors.border + "40",
+  backgroundColor: colors.palette.neutral300,
   paddingHorizontal: 12,
   paddingVertical: 4,
   borderRadius: 12,

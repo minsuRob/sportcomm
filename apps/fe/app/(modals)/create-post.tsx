@@ -10,10 +10,14 @@ import {
   ViewStyle,
   TextStyle,
   Alert,
+  Image,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Send } from "lucide-react-native";
+import { ArrowLeft, Send, ImageIcon, X } from "lucide-react-native";
 import { useMutation } from "urql";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { showToast } from "@/components/CustomToast";
 import Toast from "react-native-toast-message";
 import { useAppTheme } from "@/lib/theme/context";
@@ -31,6 +35,14 @@ interface PostTypeOption {
   icon: string;
 }
 
+interface SelectedImage {
+  uri: string;
+  width: number;
+  height: number;
+  fileSize?: number;
+  mimeType?: string;
+}
+
 /**
  * 게시물 작성 페이지
  */
@@ -45,6 +57,7 @@ export default function CreatePostScreen() {
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
 
   // GraphQL 뮤테이션
   const [, executeCreatePost] = useMutation(CREATE_POST);
@@ -114,6 +127,117 @@ export default function CreatePostScreen() {
    */
   const handleTypeSelect = (type: PostType) => {
     setSelectedType(selectedType === type ? null : type);
+  };
+
+  /**
+   * 이미지 압축 함수
+   */
+  const compressImage = async (uri: string): Promise<SelectedImage> => {
+    try {
+      const { width: screenWidth } = Dimensions.get("window");
+      const maxWidth = Math.min(1920, screenWidth * 2);
+      const maxHeight = 1080;
+
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [
+          {
+            resize: {
+              width: maxWidth,
+              height: maxHeight,
+            },
+          },
+        ],
+        {
+          compress: 0.8, // 80% 품질
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+
+      return {
+        uri: manipulatedImage.uri,
+        width: manipulatedImage.width,
+        height: manipulatedImage.height,
+        fileSize: manipulatedImage.fileSize,
+        mimeType: "image/jpeg",
+      };
+    } catch (error) {
+      console.error("이미지 압축 실패:", error);
+      throw error;
+    }
+  };
+
+  /**
+   * 이미지 선택 핸들러
+   */
+  const handleImagePicker = async () => {
+    try {
+      // 권한 요청
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "권한 필요",
+          "이미지를 선택하려면 갤러리 접근 권한이 필요합니다.",
+          [{ text: "확인" }]
+        );
+        return;
+      }
+
+      // 이미지 선택
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: 4 - selectedImages.length, // 최대 4개까지
+        quality: 1,
+        allowsEditing: false,
+      });
+
+      if (!result.canceled && result.assets) {
+        const newImages: SelectedImage[] = [];
+
+        for (const asset of result.assets) {
+          try {
+            const compressedImage = await compressImage(asset.uri);
+            newImages.push(compressedImage);
+          } catch (error) {
+            console.error("이미지 처리 실패:", error);
+            showToast({
+              type: "error",
+              title: "이미지 처리 실패",
+              message: "일부 이미지를 처리할 수 없습니다.",
+              duration: 3000,
+            });
+          }
+        }
+
+        setSelectedImages((prev) => [...prev, ...newImages]);
+
+        if (newImages.length > 0) {
+          showToast({
+            type: "success",
+            title: "이미지 추가 완료",
+            message: `${newImages.length}개의 이미지가 추가되었습니다.`,
+            duration: 2000,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("이미지 선택 실패:", error);
+      showToast({
+        type: "error",
+        title: "이미지 선택 실패",
+        message: "이미지를 선택할 수 없습니다.",
+        duration: 3000,
+      });
+    }
+  };
+
+  /**
+   * 이미지 제거 핸들러
+   */
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   /**
@@ -358,6 +482,51 @@ export default function CreatePostScreen() {
               {content.length}/10000
             </Text>
           </View>
+
+          {/* 이미지 업로드 버튼 */}
+          <TouchableOpacity
+            style={themed($imageUploadButton)}
+            onPress={handleImagePicker}
+            disabled={isSubmitting || selectedImages.length >= 4}
+          >
+            <ImageIcon color={theme.colors.tint} size={20} />
+            <Text style={themed($imageUploadText)}>
+              이미지 추가 ({selectedImages.length}/4)
+            </Text>
+          </TouchableOpacity>
+
+          {/* 선택된 이미지 미리보기 */}
+          {selectedImages.length > 0 && (
+            <View style={themed($imagePreviewContainer)}>
+              <Text style={themed($sectionTitle)}>첨부된 이미지</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={themed($imagePreviewScroll)}
+              >
+                {selectedImages.map((image, index) => (
+                  <View key={index} style={themed($imagePreviewItem)}>
+                    <Image
+                      source={{ uri: image.uri }}
+                      style={themed($imagePreview)}
+                      resizeMode="cover"
+                    />
+                    <TouchableOpacity
+                      style={themed($imageRemoveButton)}
+                      onPress={() => handleRemoveImage(index)}
+                    >
+                      <X color="white" size={16} />
+                    </TouchableOpacity>
+                    {image.fileSize && (
+                      <Text style={themed($imageSizeText)}>
+                        {(image.fileSize / 1024 / 1024).toFixed(1)}MB
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -510,4 +679,69 @@ const $characterCount: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $characterCountText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
   color: colors.textDim,
+});
+
+// --- 이미지 관련 스타일 ---
+const $imageUploadButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 2,
+  borderColor: colors.tint,
+  borderStyle: "dashed",
+  borderRadius: 8,
+  paddingVertical: spacing.md,
+  paddingHorizontal: spacing.md,
+  marginTop: spacing.md,
+  backgroundColor: colors.tint + "10",
+});
+
+const $imageUploadText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  fontWeight: "600",
+  color: colors.tint,
+  marginLeft: spacing.sm,
+});
+
+const $imagePreviewContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
+});
+
+const $imagePreviewScroll: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.sm,
+});
+
+const $imagePreviewItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginRight: spacing.sm,
+  position: "relative",
+});
+
+const $imagePreview: ThemedStyle<ViewStyle> = () => ({
+  width: 100,
+  height: 100,
+  borderRadius: 8,
+});
+
+const $imageRemoveButton: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  top: 4,
+  right: 4,
+  backgroundColor: "rgba(0, 0, 0, 0.6)",
+  borderRadius: 12,
+  width: 24,
+  height: 24,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $imageSizeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  position: "absolute",
+  bottom: 2,
+  left: 2,
+  fontSize: 10,
+  color: "white",
+  backgroundColor: "rgba(0, 0, 0, 0.6)",
+  paddingHorizontal: 4,
+  paddingVertical: 2,
+  borderRadius: 4,
 });

@@ -77,13 +77,11 @@ export default function RootLayout() {
   // The urql Provider wraps everything, making the client available to all screens.
   return (
     <Provider value={client}>
-      <ApolloProvider client={apolloClient}>
-        <AppThemeProvider>
-          <RootLayoutNav />
-          <CustomToast />
-          <Toast />
-        </AppThemeProvider>
-      </ApolloProvider>
+      <AppThemeProvider>
+        <RootLayoutNav />
+        <CustomToast />
+        <Toast />
+      </AppThemeProvider>
     </Provider>
   );
 }

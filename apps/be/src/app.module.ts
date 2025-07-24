@@ -12,6 +12,7 @@ import { PostsModule } from './modules/posts/posts.module';
 import { UsersModule } from './modules/users/users.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { SearchModule } from './modules/search/search.module';
+import { MediaModule } from './modules/media/media.module';
 
 /**
  * 메인 애플리케이션 모듈
@@ -204,6 +205,7 @@ import { SearchModule } from './modules/search/search.module';
     UsersModule,
     CommentsModule,
     SearchModule,
+    MediaModule,
   ],
 
   // 컨트롤러 및 서비스

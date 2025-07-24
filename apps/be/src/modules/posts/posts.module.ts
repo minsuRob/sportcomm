@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PostsService } from './posts.service';
+import { MediaModule } from '../media/media.module';
 import { PostsResolver } from './posts.resolver';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
+import { Media } from '../../entities/media.entity';
 
 /**
  * 게시물 모듈
@@ -21,7 +23,9 @@ import { PostLike } from '../../entities/post-like.entity';
 @Module({
   imports: [
     // 게시물 관련 엔티티를 위한 TypeORM 모듈
-    TypeOrmModule.forFeature([Post, PostVersion, PostLike]),
+    TypeOrmModule.forFeature([Post, PostVersion, PostLike, Media]),
+    // 미디어 관련 기능 사용을 위한 MediaModule 가져오기
+    MediaModule,
   ],
 
   // 서비스 및 리졸버 제공

@@ -11,6 +11,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsArray,
 } from 'class-validator';
 import { PostsService, FindPostsOptions } from './posts.service';
 import { Post, PostType } from '../../entities/post.entity';
@@ -53,6 +54,15 @@ export class CreatePostInput {
   @IsOptional()
   @IsBoolean({ message: '공개 여부는 불린 값이어야 합니다.' })
   isPublic?: boolean;
+
+  @Field(() => [String], {
+    nullable: true,
+    description: '첨부할 미디어 ID 배열',
+  })
+  @IsOptional()
+  @IsArray({ message: '미디어 ID는 배열이어야 합니다.' })
+  @IsString({ each: true, message: '미디어 ID는 문자열이어야 합니다.' })
+  mediaIds?: string[];
 }
 
 /**

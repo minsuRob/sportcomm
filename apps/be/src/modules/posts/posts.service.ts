@@ -9,6 +9,8 @@ import { Post, PostType } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
 import { User } from '../../entities/user.entity';
+import { Media } from '../../entities/media.entity';
+import { MediaService } from '../media/media.service';
 
 /**
  * 게시물 생성 입력 인터페이스
@@ -22,6 +24,8 @@ export interface CreatePostInput {
   type: PostType;
   /** 공개 여부 */
   isPublic?: boolean;
+  /** 첨부할 미디어 ID 배열 */
+  mediaIds?: string[];
 }
 
 /**
@@ -101,7 +105,10 @@ export class PostsService {
     private readonly postVersionRepository: Repository<PostVersion>,
     @InjectRepository(PostLike)
     private readonly postLikeRepository: Repository<PostLike>,
+    @InjectRepository(Media)
+    private readonly mediaRepository: Repository<Media>,
     private dataSource: DataSource,
+    private readonly mediaService: MediaService,
   ) {}
 
   /**
@@ -115,7 +122,13 @@ export class PostsService {
     authorId: string,
     createPostInput: CreatePostInput,
   ): Promise<Post> {
-    const { title, content, type, isPublic = true } = createPostInput;
+    const {
+      title,
+      content,
+      type,
+      isPublic = true,
+      mediaIds = [],
+    } = createPostInput;
 
     // 게시물 생성
     const post = this.postRepository.create({
@@ -133,6 +146,11 @@ export class PostsService {
 
     // 게시물 저장
     const savedPost = await this.postRepository.save(post);
+
+    // 미디어 연결 (미디어 ID가 있는 경우)
+    if (mediaIds.length > 0) {
+      await this.attachMediaToPost(mediaIds, savedPost.id);
+    }
 
     // 첫 번째 버전 생성 (원본 버전)
     await this.createPostVersion(savedPost, 1, '게시물 생성');

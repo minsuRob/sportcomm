@@ -3,6 +3,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { initializeDatabase, printDatabaseInfo } from './database/datasource';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 /**
  * 스포츠 커뮤니티 백엔드 애플리케이션 진입점
@@ -15,8 +17,13 @@ async function bootstrap() {
     console.log('🚀 애플리케이션 시작 중...');
 
     // NestJS 애플리케이션 생성
-    const app = await NestFactory.create(AppModule, {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger: ['error', 'warn', 'log'],
+    });
+
+    // 정적 파일 서빙 설정 (업로드된 이미지)
+    app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+      prefix: '/uploads/',
     });
 
     // 설정 서비스 가져오기

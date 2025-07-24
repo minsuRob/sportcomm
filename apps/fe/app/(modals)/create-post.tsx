@@ -26,6 +26,7 @@ import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { CREATE_POST } from "@/lib/graphql";
 import { PostType } from "@/components/PostCard";
 import { User, getSession } from "@/lib/auth";
+import { uploadImages, UploadedMedia } from "@/lib/api/media";
 
 // --- 타입 정의 ---
 interface PostTypeOption {
@@ -58,6 +59,7 @@ export default function CreatePostScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
 
   // GraphQL 뮤테이션
   const [, executeCreatePost] = useMutation(CREATE_POST);
@@ -285,13 +287,34 @@ export default function CreatePostScreen() {
     }
 
     setIsSubmitting(true);
+    let uploadedMediaIds: string[] = [];
 
     try {
+      // 1단계: 이미지 업로드 (있는 경우)
+      if (selectedImages.length > 0) {
+        setUploadProgress("이미지 업로드 중...");
+
+        const imageUris = selectedImages.map((img) => img.uri);
+        const uploadedMedia = await uploadImages(imageUris);
+        uploadedMediaIds = uploadedMedia.map((media) => media.id);
+
+        showToast({
+          type: "success",
+          title: "이미지 업로드 완료",
+          message: `${uploadedMedia.length}개의 이미지가 업로드되었습니다.`,
+          duration: 2000,
+        });
+      }
+
+      // 2단계: 게시물 생성
+      setUploadProgress("게시물 작성 중...");
+
       const result = await executeCreatePost({
         input: {
           title: title.trim(),
           content: content.trim(),
           type: selectedType,
+          mediaIds: uploadedMediaIds.length > 0 ? uploadedMediaIds : undefined,
         },
       });
 
@@ -336,14 +359,27 @@ export default function CreatePostScreen() {
       // 피드로 돌아가기
       router.back();
     } catch (error) {
+      console.error("게시물 작성 오류:", error);
+
+      let errorMessage = "게시물 작성 중 예상치 못한 오류가 발생했습니다.";
+
+      if (error instanceof Error) {
+        if (error.message.includes("업로드")) {
+          errorMessage = `이미지 업로드 실패: ${error.message}`;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       showToast({
         type: "error",
         title: "게시물 작성 오류",
-        message: "게시물 작성 중 예상치 못한 오류가 발생했습니다.",
+        message: errorMessage,
         duration: 4000,
       });
     } finally {
       setIsSubmitting(false);
+      setUploadProgress("");
     }
   };
 
@@ -385,7 +421,7 @@ export default function CreatePostScreen() {
           <Send color="white" size={20} />
           <Text style={themed($publishButtonText)}>
             {isSubmitting
-              ? t(TRANSLATION_KEYS.CREATE_POST_PUBLISHING)
+              ? uploadProgress || t(TRANSLATION_KEYS.CREATE_POST_PUBLISHING)
               : t(TRANSLATION_KEYS.CREATE_POST_PUBLISH)}
           </Text>
         </TouchableOpacity>

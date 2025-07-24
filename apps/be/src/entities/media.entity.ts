@@ -262,9 +262,10 @@ export class Media extends BaseEntity {
    */
   @Column({
     type: 'uuid',
+    nullable: true,
     comment: '게시물 ID',
   })
-  postId: string;
+  postId: string | null;
 
   // === 관계 설정 ===
 

@@ -288,6 +288,7 @@ export default function PostCard({ post }: PostCardProps) {
    * 이미지 개수에 따른 그리드 레이아웃 렌더링
    */
   const renderMediaGrid = () => {
+    console.log(post);
     const imageMedia = post.media.filter((media) => media.type === "image");
     const imageCount = imageMedia.length;
 

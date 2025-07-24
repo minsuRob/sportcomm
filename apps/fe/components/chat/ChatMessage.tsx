@@ -103,61 +103,69 @@ export default function ChatMessage({
       onLongPress={() => onLongPress?.(message)}
       activeOpacity={0.9}
     >
-      {/* 상대방 메시지인 경우 아바타 표시 */}
-      {!message.isMe && showAvatar && (
-        <View style={themed($avatarContainer)}>
-          {message.user.avatar_url ? (
-            <Image
-              source={{ uri: message.user.avatar_url }}
-              style={themed($avatar)}
-            />
-          ) : (
-            <View style={[themed($avatar), themed($noAvatar)]}>
-              <Text style={themed($avatarInitial)}>
-                {message.user.nickname.charAt(0).toUpperCase()}
-              </Text>
+      {/* 상대방 메시지 레이아웃 */}
+      {!message.isMe ? (
+        <View style={themed($otherMessageLayout)}>
+          {/* 왼쪽: 아바타 + 닉네임 (항상 표시) */}
+          <View style={themed($leftSection)}>
+            <View style={themed($avatarContainer)}>
+              {message.user.avatar_url ? (
+                <Image
+                  source={{ uri: message.user.avatar_url }}
+                  style={themed($avatar)}
+                />
+              ) : (
+                <View style={[themed($avatar), themed($noAvatar)]}>
+                  <Text style={themed($avatarInitial)}>
+                    {message.user.nickname.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
             </View>
+            <Text style={themed($nickname)}>{message.user.nickname}</Text>
+          </View>
+
+          {/* 오른쪽: 메시지 + 시간 */}
+          <View style={themed($rightSection)}>
+            <View
+              style={[
+                themed($messageBox),
+                themed($otherMessageBox),
+                highlightColor
+                  ? { backgroundColor: `${highlightColor}20` }
+                  : null,
+              ]}
+            >
+              <Text style={themed($messageText)}>{message.content}</Text>
+            </View>
+            {showDate && (
+              <Text style={themed($otherMessageDate)}>
+                {dayjs(message.created_at).format("HH:mm")}
+              </Text>
+            )}
+          </View>
+        </View>
+      ) : (
+        /* 내 메시지는 기존 방식 유지 */
+        <View style={themed($myMessageContent)}>
+          <View
+            style={[
+              themed($messageBox),
+              themed($myMessageBox),
+              highlightColor
+                ? { backgroundColor: `${highlightColor}20` }
+                : null,
+            ]}
+          >
+            <Text style={themed($myMessageText)}>{message.content}</Text>
+          </View>
+          {showDate && (
+            <Text style={themed($myMessageDate)}>
+              {dayjs(message.created_at).format("HH:mm")}
+            </Text>
           )}
         </View>
       )}
-
-      <View
-        style={[
-          message.isMe
-            ? themed($myMessageContent)
-            : themed($otherMessageContent),
-        ]}
-      >
-        {/* 상대방 메시지인 경우 닉네임 표시 */}
-        {!message.isMe && showAvatar && (
-          <Text style={themed($nickname)}>{message.user.nickname}</Text>
-        )}
-
-        {/* 메시지 내용 */}
-        <View
-          style={[
-            themed($messageBox),
-            message.isMe ? themed($myMessageBox) : themed($otherMessageBox),
-            highlightColor ? { backgroundColor: `${highlightColor}20` } : null,
-          ]}
-        >
-          <Text style={themed(message.isMe ? $myMessageText : $messageText)}>
-            {message.content}
-          </Text>
-        </View>
-
-        {/* 메시지 시간 */}
-        {showDate && (
-          <Text
-            style={[
-              themed($dateText),
-              message.isMe ? themed($myMessageDate) : themed($otherMessageDate),
-            ]}
-          >
-            {dayjs(message.created_at).format("HH:mm")}
-          </Text>
-        )}
-      </View>
     </TouchableOpacity>
   );
 }
@@ -178,15 +186,33 @@ const $otherMessageContainer: ThemedStyle<ViewStyle> = () => ({
   justifyContent: "flex-start",
 });
 
-const $avatarContainer: ThemedStyle<ViewStyle> = () => ({
+// --- 새로운 레이아웃 스타일 ---
+const $otherMessageLayout: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "flex-start",
+  maxWidth: "85%",
+});
+
+const $leftSection: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
   marginRight: 8,
-  alignSelf: "flex-end",
+  minWidth: 80, // 최소 너비 보장
+});
+
+const $rightSection: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  flexDirection: "column",
+});
+
+const $avatarContainer: ThemedStyle<ViewStyle> = () => ({
+  marginRight: 6,
 });
 
 const $avatar: ThemedStyle<ImageStyle> = () => ({
-  width: 32,
-  height: 32,
-  borderRadius: 16,
+  width: 28,
+  height: 28,
+  borderRadius: 14,
 });
 
 const $noAvatar: ThemedStyle<ViewStyle> = ({ colors }) => ({
@@ -197,8 +223,15 @@ const $noAvatar: ThemedStyle<ViewStyle> = ({ colors }) => ({
 
 const $avatarInitial: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.background,
-  fontSize: 16,
+  fontSize: 14,
   fontWeight: "bold",
+});
+
+const $nickname: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 11,
+  fontWeight: "500",
+  color: colors.tint,
+  flexShrink: 1, // 긴 닉네임 처리
 });
 
 const $myMessageContent: ThemedStyle<ViewStyle> = () => ({
@@ -210,13 +243,6 @@ const $myMessageContent: ThemedStyle<ViewStyle> = () => ({
 const $otherMessageContent: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "column",
   maxWidth: "80%",
-});
-
-const $nickname: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
-  fontWeight: "500",
-  marginBottom: 4,
-  color: colors.tint,
 });
 
 const $messageBox: ThemedStyle<ViewStyle> = () => ({
@@ -257,8 +283,9 @@ const $myMessageDate: ThemedStyle<TextStyle> = () => ({
 });
 
 const $otherMessageDate: ThemedStyle<TextStyle> = () => ({
-  alignSelf: "flex-end",
-  marginTop: 4,
+  alignSelf: "flex-start",
+  marginTop: 2,
+  marginLeft: 4,
 });
 
 const $systemMessageContainer: ThemedStyle<ViewStyle> = () => ({

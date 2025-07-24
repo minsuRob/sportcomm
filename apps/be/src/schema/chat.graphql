@@ -1,0 +1,205 @@
+# 채팅 관련 GraphQL 스키마 정의
+
+scalar DateTime
+
+"""
+채팅 채널 정보
+"""
+type ChatChannel {
+  id: ID!
+  name: String!
+  description: String
+  createdAt: DateTime!
+  createdBy: User
+  lastMessage: String
+  lastMessageAt: DateTime
+  isPrivate: Boolean!
+  members: [ChatChannelMember!]!
+  unreadCount: Int! @computed
+}
+
+"""
+채팅 채널 멤버 정보
+"""
+type ChatChannelMember {
+  channelId: ID!
+  userId: ID!
+  user: User!
+  joinedAt: DateTime!
+  isAdmin: Boolean!
+  lastReadAt: DateTime!
+}
+
+"""
+채팅 메시지 정보
+"""
+type ChatMessage {
+  id: ID!
+  channelId: ID!
+  userId: ID!
+  user: User!
+  content: String!
+  createdAt: DateTime!
+  replyTo: ChatMessage
+  isSystem: Boolean!
+  attachments: [ChatAttachment!]
+}
+
+"""
+채팅 첨부 파일 정보
+"""
+type ChatAttachment {
+  id: ID!
+  messageId: ID!
+  fileUrl: String!
+  fileType: String!
+  fileName: String!
+  fileSize: Int!
+  createdAt: DateTime!
+}
+
+"""
+채팅 채널 생성 입력
+"""
+input CreateChatChannelInput {
+  name: String!
+  description: String
+  isPrivate: Boolean
+  memberIds: [ID!]!
+}
+
+"""
+채팅 채널 생성 응답
+"""
+type CreateChatChannelPayload {
+  channel: ChatChannel!
+}
+
+"""
+메시지 전송 입력
+"""
+input SendChatMessageInput {
+  channelId: ID!
+  content: String!
+  replyToId: ID
+}
+
+"""
+메시지 전송 응답
+"""
+type SendChatMessagePayload {
+  message: ChatMessage!
+}
+
+"""
+메시지 목록 조회 필터
+"""
+input GetMessagesFilter {
+  channelId: ID!
+  before: DateTime
+  limit: Int = 50
+}
+
+"""
+채널 멤버 추가 입력
+"""
+input AddChannelMembersInput {
+  channelId: ID!
+  userIds: [ID!]!
+}
+
+"""
+채널 멤버 추가 응답
+"""
+type AddChannelMembersPayload {
+  success: Boolean!
+  channel: ChatChannel
+}
+
+"""
+채팅 채널 목록 조회 필터
+"""
+input GetChannelsFilter {
+  search: String
+  includePrivate: Boolean = true
+  onlyJoined: Boolean = true
+}
+
+# Query 정의
+extend type Query {
+  """
+  채팅 채널 목록 조회
+  """
+  chatChannels(filter: GetChannelsFilter): [ChatChannel!]!
+
+  """
+  채팅 채널 상세 조회
+  """
+  chatChannel(id: ID!): ChatChannel
+
+  """
+  채팅 메시지 목록 조회
+  """
+  chatMessages(filter: GetMessagesFilter!): [ChatMessage!]!
+
+  """
+  채널 멤버 목록 조회
+  """
+  chatChannelMembers(channelId: ID!): [ChatChannelMember!]!
+
+  """
+  안 읽은 메시지 총 개수
+  """
+  totalUnreadMessageCount: Int! @computed
+}
+
+# Mutation 정의
+extend type Mutation {
+  """
+  채팅 채널 생성
+  """
+  createChatChannel(input: CreateChatChannelInput!): CreateChatChannelPayload!
+
+  """
+  채팅 메시지 전송
+  """
+  sendChatMessage(input: SendChatMessageInput!): SendChatMessagePayload!
+
+  """
+  채널 멤버 추가
+  """
+  addChatChannelMembers(input: AddChannelMembersInput!): AddChannelMembersPayload!
+
+  """
+  채널 멤버 제거
+  """
+  removeChatChannelMember(channelId: ID!, userId: ID!): Boolean!
+
+  """
+  채널 나가기
+  """
+  leaveChatChannel(channelId: ID!): Boolean!
+
+  """
+  메시지 마지막 읽은 시간 업데이트
+  """
+  markChannelAsRead(channelId: ID!): Boolean!
+}
+
+# Subscription 정의
+extend type Subscription {
+  """
+  새 메시지 구독
+  """
+  onNewChatMessage(channelId: ID!): ChatMessage!
+
+  """
+  채널 업데이트 구독
+  """
+  onChatChannelUpdated(channelId: ID!): ChatChannel!
+
+  """
+  멤버 변경 구독
+  """
+  onChatChannelMemberChanged(channelId: ID!): ChatChannelMember!
+}

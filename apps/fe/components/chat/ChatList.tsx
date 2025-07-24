@@ -1,0 +1,297 @@
+import React, { useRef, useEffect, useState } from "react";
+import {
+  View,
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
+  ViewStyle,
+  TextStyle,
+  Text,
+} from "react-native";
+import { useAppTheme } from "@/lib/theme/context";
+import type { ThemedStyle } from "@/lib/theme/types";
+import ChatMessage, { Message, MessageWithIsMe } from "./ChatMessage";
+import { User } from "@/lib/auth";
+import dayjs from "dayjs";
+
+/**
+ * 채팅 목록 Props 타입 정의
+ */
+interface ChatListProps {
+  messages: Message[];
+  currentUser: User | null;
+  isLoading?: boolean;
+  onRefresh?: () => void;
+  onLoadMore?: () => void;
+  onLongPressMessage?: (message: Message) => void;
+  hasMoreMessages?: boolean;
+}
+
+/**
+ * 날짜 구분선을 위한 데이터 타입
+ */
+type DateSeparator = {
+  id: string;
+  date: string;
+  isDateSeparator: true;
+};
+
+/**
+ * 목록에 표시될 아이템 타입
+ * (메시지 또는 날짜 구분선)
+ */
+type ListItem = MessageWithIsMe | DateSeparator;
+
+/**
+ * 날짜 포맷팅 함수
+ */
+const formatDate = (date: string): string => {
+  const now = dayjs();
+  const messageDate = dayjs(date);
+
+  if (now.isSame(messageDate, 'day')) {
+    return '오늘';
+  } else if (now.subtract(1, 'day').isSame(messageDate, 'day')) {
+    return '어제';
+  } else {
+    return messageDate.format('YYYY년 MM월 DD일');
+  }
+};
+
+/**
+ * 메시지 리스트에 날짜 구분선 추가하는 함수
+ */
+const addDateSeparators = (
+  messages: MessageWithIsMe[]
+): ListItem[] => {
+  if (messages.length === 0) return [];
+
+  const result: ListItem[] = [];
+  let currentDate = '';
+
+  messages.forEach((message) => {
+    // 날짜 변경 확인 (년/월/일)
+    const messageDate = dayjs(message.created_at).format('YYYY-MM-DD');
+
+    if (messageDate !== currentDate) {
+      currentDate = messageDate;
+      // 날짜 구분선 추가
+      result.push({
+        id: `date-${messageDate}`,
+        date: formatDate(message.created_at),
+        isDateSeparator: true,
+      });
+    }
+
+    // 메시지 추가
+    result.push(message);
+  });
+
+  return result;
+};
+
+/**
+ * 메시지 목록 채팅 컴포넌트
+ */
+export default function ChatList({
+  messages,
+  currentUser,
+  isLoading = false,
+  onRefresh,
+  onLoadMore,
+  onLongPressMessage,
+  hasMoreMessages = false,
+}: ChatListProps) {
+  const { themed } = useAppTheme();
+  const flatListRef = useRef<FlatList>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // 메시지에 현재 사용자 정보 추가
+  const messagesWithIsMe: MessageWithIsMe[] = messages.map((message) => ({
+    ...message,
+    isMe: currentUser?.id === message.user_id,
+  }));
+
+  // 날짜 구분선이 있는 최종 데이터
+  const listData = addDateSeparators(messagesWithIsMe);
+
+  // 메시지가 추가될 때 자동 스크롤
+  useEffect(() => {
+    if (messages.length > 0 && flatListRef.current) {
+      // 약간의 지연 후 스크롤 (렌더링 완료 보장)
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    }
+  }, [messages.length]);
+
+  /**
+   * 새로고침 핸들러
+   */
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setRefreshing(true);
+      await onRefresh();
+      setRefreshing(false);
+    }
+  };
+
+  /**
+   * 스크롤 이벤트 핸들러 (페이지네이션)
+   */
+  const handleOnScroll = (event: any) => {
+    // 스크롤 위치가 상단에 가까워지면 추가 메시지 로드
+    const { contentOffset } = event.nativeEvent;
+    if (contentOffset.y < 100 && hasMoreMessages && !isLoading && onLoadMore) {
+      onLoadMore();
+    }
+  };
+
+  /**
+   * 아이템 렌더링 함수
+   */
+  const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
+    // 날짜 구분선인 경우
+    if ('isDateSeparator' in item) {
+      return (
+        <View style={themed($dateSeparator)}>
+          <Text style={themed($dateSeparatorText)}>{item.date}</Text>
+        </View>
+      );
+    }
+
+    // 메시지인 경우
+    const message = item as MessageWithIsMe;
+
+    // 연속된 메시지인지 확인 (아바타 표시 여부 결정)
+    const showAvatar = (() => {
+      if (message.isMe) return false; // 내 메시지는 항상 아바타 숨김
+
+      // 다음 메시지가 있고, 같은 사용자인지 확인
+      const nextItem = listData[index + 1];
+      if (nextItem && !('isDateSeparator' in nextItem)) {
+        const nextMessage = nextItem as MessageWithIsMe;
+        return nextMessage.user_id !== message.user_id;
+      }
+      return true; // 기본적으로 표시
+    })();
+
+    // 시간 표시 여부
+    const showDate = true; // 항상 표시하거나, 연속된 짧은 시간 메시지라면 마지막에만 표시하는 로직 추가 가능
+
+    return (
+      <ChatMessage
+        message={message}
+        showAvatar={showAvatar}
+        showDate={showDate}
+        onLongPress={onLongPressMessage}
+      />
+    );
+  };
+
+  return (
+    <View style={themed($container)}>
+      {isLoading && listData.length === 0 ? (
+        <View style={themed($loadingContainer)}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text style={themed($loadingText)}>채팅을 불러오는 중...</Text>
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={listData}
+          renderItem={renderItem}
+          keyExtractor={(item) => ('isDateSeparator' in item ? item.id : item.id)}
+          style={themed($flatList)}
+          contentContainerStyle={themed($contentContainer)}
+          onScroll={handleOnScroll}
+          scrollEventThrottle={400}
+          inverted={false} // 정방향 표시 (최신 메시지가 아래)
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+              />
+            ) : undefined
+          }
+          ListHeaderComponent={
+            hasMoreMessages && isLoading ? (
+              <View style={themed($loadMoreContainer)}>
+                <ActivityIndicator size="small" color="#0000ff" />
+                <Text style={themed($loadMoreText)}>이전 메시지 불러오는 중...</Text>
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            !isLoading ? (
+              <View style={themed($emptyContainer)}>
+                <Text style={themed($emptyText)}>메시지가 없습니다</Text>
+              </View>
+            ) : null
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+// --- 스타일 정의 ---
+const $container: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $flatList: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $contentContainer: ThemedStyle<ViewStyle> = () => ({
+  flexGrow: 1,
+  paddingVertical: 8,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  marginTop: 8,
+  color: colors.textDim,
+});
+
+const $loadMoreContainer: ThemedStyle<ViewStyle> = () => ({
+  padding: 16,
+  alignItems: "center",
+});
+
+const $loadMoreText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  marginTop: 4,
+});
+
+const $emptyContainer: ThemedStyle<ViewStyle> = () => ({
+  padding: 20,
+  alignItems: "center",
+});
+
+const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+});
+
+const $dateSeparator: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "center",
+  marginVertical: 16,
+  paddingHorizontal: 16,
+});
+
+const $dateSeparatorText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  backgroundColor: colors.border + "50",
+  paddingHorizontal: 12,
+  paddingVertical: 4,
+  borderRadius: 12,
+});

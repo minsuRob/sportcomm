@@ -1,18 +1,18 @@
-import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
-import { setContext } from '@apollo/client/link/context';
-import { onError } from '@apollo/client/link/error';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
+import { setContext } from "@apollo/client/link/context";
+import { onError } from "@apollo/client/link/error";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
 /**
  * API 기본 URL 설정
  * 개발 환경에서는 로컬 서버, 프로덕션 환경에서는 실제 API 서버 URL 사용
  */
 const API_URL = __DEV__
-  ? Platform.OS === 'android'
-    ? 'http://10.0.2.2:4000/graphql' // Android 에뮬레이터용
-    : 'http://localhost:4000/graphql'  // iOS 에뮬레이터용
-  : 'https://api.sportcomm.com/graphql'; // 프로덕션 URL
+  ? Platform.OS === "android"
+    ? "http://10.0.2.2:4000/graphql" // Android 에뮬레이터용
+    : "http://localhost:4000/graphql" // iOS 에뮬레이터용
+  : "https://api.sportcomm.com/graphql"; // 프로덕션 URL
 
 /**
  * HTTP 링크 생성
@@ -44,13 +44,13 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
  */
 const authLink = setContext(async (_, { headers }) => {
   // AsyncStorage에서 토큰 가져오기
-  const token = await AsyncStorage.getItem('auth_token');
+  const token = await AsyncStorage.getItem("auth_token");
 
   // 헤더에 토큰 추가
   return {
     headers: {
       ...headers,
-      authorization: token ? `Bearer ${token}` : '',
+      authorization: token ? `Bearer ${token}` : "",
     },
   };
 });
@@ -73,17 +73,18 @@ export const client = new ApolloClient({
       },
     },
   }),
+  //
   defaultOptions: {
     watchQuery: {
-      fetchPolicy: 'cache-and-network',
-      errorPolicy: 'all',
+      fetchPolicy: "cache-and-network",
+      errorPolicy: "all",
     },
     query: {
-      fetchPolicy: 'network-only',
-      errorPolicy: 'all',
+      fetchPolicy: "network-only",
+      errorPolicy: "all",
     },
     mutate: {
-      errorPolicy: 'all',
+      errorPolicy: "all",
     },
   },
 });

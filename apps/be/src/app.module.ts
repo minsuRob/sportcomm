@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { UsersModule } from './modules/users/users.module';
 import { CommentsModule } from './modules/comments/comments.module';
+import { SearchModule } from './modules/search/search.module';
 
 /**
  * 메인 애플리케이션 모듈
@@ -23,6 +24,7 @@ import { CommentsModule } from './modules/comments/comments.module';
  * - PostgreSQL 데이터베이스 연결
  * - JWT 기반 인증
  * - 게시물 관리 시스템
+ * - 검색 기능
  * - 환경 변수 관리
  */
 @Module({
@@ -201,6 +203,7 @@ import { CommentsModule } from './modules/comments/comments.module';
     PostsModule,
     UsersModule,
     CommentsModule,
+    SearchModule,
   ],
 
   // 컨트롤러 및 서비스
@@ -280,6 +283,7 @@ export class AppModule {
     console.log('   - ✅ GraphQL API');
     console.log('   - ✅ 파일 업로드 지원');
     console.log('   - ✅ 실시간 구독 지원');
+    console.log('   - ✅ 검색 기능');
     console.log('   - ✅ 데이터베이스 캐싱');
 
     console.log('\n⚡ 성능 최적화:');

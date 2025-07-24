@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,23 +6,122 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  ActivityIndicator,
+  FlatList,
 } from "react-native";
 import { Search as SearchIcon } from "lucide-react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import SearchTabs, { SearchTabType } from "@/components/search/SearchTabs";
+import SearchResults, {
+  SearchResultItem,
+} from "@/components/search/SearchResults";
+import { searchApi, getPopularSearchTerms } from "@/lib/api/search";
+import { debounce } from "lodash";
 
 /**
  * 검색 화면 컴포넌트
- * 사용자가 게시물이나 사용자를 검색할 수 있는 기능을 제공합니다
+ * 사용자가 게시물이나 사용자를 검색할 수 있는 인기/최근/프로필 탭 기능을 제공합니다.
  */
 export default function SearchScreen() {
   const { themed, theme } = useAppTheme();
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<SearchTabType>("popular");
 
+  // 검색 결과 상태
+  const [results, setResults] = useState<SearchResultItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [popularTerms, setPopularTerms] = useState<string[]>([]);
+
+  // 디바운스된 검색 함수 생성
+  const debouncedSearch = useCallback(
+    debounce(async (query: string, tab: SearchTabType, page: number) => {
+      if (!query.trim()) {
+        setResults([]);
+        setHasMore(false);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await searchApi(
+          {
+            query,
+            page,
+            pageSize: 10,
+          },
+          tab,
+        );
+
+        const newResults =
+          page === 0 ? response.items : [...results, ...response.items];
+        setResults(newResults);
+        setHasMore(response.metadata.hasNextPage);
+        setCurrentPage(page);
+      } catch (error) {
+        console.error("검색 중 오류 발생:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300),
+    [results],
+  );
+
+  /**
+   * 검색 실행 함수
+   */
   const handleSearch = () => {
-    // TODO: 검색 로직 구현
-    console.log("검색어:", searchQuery);
+    // 페이지 초기화하고 검색 실행
+    setCurrentPage(0);
+    debouncedSearch(searchQuery, activeTab, 0);
   };
+
+  /**
+   * 더 많은 결과 불러오기
+   */
+  const loadMore = () => {
+    if (hasMore && !isLoading) {
+      debouncedSearch(searchQuery, activeTab, currentPage + 1);
+    }
+  };
+
+  /**
+   * 탭 변경 핸들러
+   */
+  const handleTabChange = (tab: SearchTabType) => {
+    setActiveTab(tab);
+    setCurrentPage(0);
+    if (searchQuery.trim()) {
+      debouncedSearch(searchQuery, tab, 0);
+    }
+  };
+
+  /**
+   * 인기 검색어 불러오기
+   */
+  const fetchPopularTerms = async () => {
+    try {
+      const terms = await getPopularSearchTerms(10);
+      setPopularTerms(terms);
+    } catch (error) {
+      console.error("인기 검색어 불러오기 실패:", error);
+    }
+  };
+
+  // 컴포넌트 마운트 시 인기 검색어 불러오기
+  useEffect(() => {
+    fetchPopularTerms();
+  }, []);
+
+  // 검색어가 변경되면 자동 검색 실행
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      handleSearch();
+    }
+  }, [searchQuery]);
 
   return (
     <View style={themed($container)}>
@@ -49,12 +148,35 @@ export default function SearchScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* 검색 탭 */}
+      <SearchTabs activeTab={activeTab} onTabChange={handleTabChange} />
+
       {/* 검색 결과 영역 */}
-      <View style={themed($resultsContainer)}>
-        <Text style={themed($placeholderText)}>
-          검색어를 입력하여 게시물이나 사용자를 찾아보세요
-        </Text>
-      </View>
+      {!searchQuery.trim() && popularTerms.length > 0 ? (
+        <View style={themed($popularTermsContainer)}>
+          <Text style={themed($sectionTitle)}>인기 검색어</Text>
+          <View style={themed($termsContainer)}>
+            {popularTerms.map((term, index) => (
+              <TouchableOpacity
+                key={index}
+                style={themed($termItem)}
+                onPress={() => setSearchQuery(term)}
+              >
+                <Text style={themed($termText)}>{term}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <SearchResults
+          activeTab={activeTab}
+          results={results}
+          isLoading={isLoading}
+          hasMore={hasMore}
+          loadMore={loadMore}
+          searchQuery={searchQuery}
+        />
+      )}
     </View>
   );
 }
@@ -128,4 +250,35 @@ const $placeholderText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 16,
   color: colors.textDim,
   textAlign: "center",
+});
+
+const $popularTermsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.md,
+  flex: 1,
+});
+
+const $sectionTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "600",
+  color: colors.text,
+  marginBottom: 12,
+});
+
+const $termsContainer: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+});
+
+const $termItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.separator,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  marginRight: 8,
+  marginBottom: 8,
+});
+
+const $termText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 14,
 });

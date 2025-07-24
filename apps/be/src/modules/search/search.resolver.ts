@@ -1,7 +1,7 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { SearchService } from './search.service';
 import { SearchResult } from './dto/search-result.object';
-import { SearchInput } from './dto/search.input.ts';
+import { SearchInput } from './dto/search.input';
 
 /**
  * 검색 리졸버
@@ -23,9 +23,7 @@ export class SearchResolver {
   @Query(() => SearchResult, {
     description: '검색 기능. 키워드로 게시물과 사용자를 검색합니다.',
   })
-  async search(
-    @Args('input') input: SearchInput,
-  ): Promise<SearchResult> {
+  async search(@Args('input') input: SearchInput): Promise<SearchResult> {
     return this.searchService.search(input);
   }
 

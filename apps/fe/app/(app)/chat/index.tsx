@@ -52,39 +52,9 @@ export default function ChatListScreen() {
     } catch (error) {
       console.error("채팅방 목록 로드 오류:", error);
 
-      // 개발 모드에서는 테스트 데이터 사용
-      if (__DEV__) {
-        // 테스트용 더미 데이터
-        setChannels([
-          {
-            id: "1",
-            name: "축구 토론방",
-            description: "축구에 대한 다양한 이야기를 나누는 공간입니다.",
-            created_at: new Date().toISOString(),
-            last_message: "어제 경기 보셨나요?",
-            last_message_at: new Date().toISOString(),
-            is_private: false,
-          },
-          {
-            id: "2",
-            name: "농구 전략 분석",
-            description: "농구 전략을 분석하는 채널입니다.",
-            created_at: dayjs().subtract(2, "day").toISOString(),
-            last_message: "4쿼터 전략이 좋았습니다",
-            last_message_at: dayjs().subtract(1, "hour").toISOString(),
-            is_private: false,
-          },
-          {
-            id: "3",
-            name: "야구팬 모임",
-            description: "야구 경기 소식과 선수 정보를 공유합니다.",
-            created_at: dayjs().subtract(5, "day").toISOString(),
-            last_message: "오늘 선발 투수는 누구인가요?",
-            last_message_at: dayjs().subtract(5, "hour").toISOString(),
-            is_private: false,
-          },
-        ]);
-      }
+      // 테스트 데이터를 사용하는 대신 chatService에서 채널 목록 다시 가져오기
+      const mockChannels = await chatService.getChannels();
+      setChannels(mockChannels);
     } finally {
       setIsLoading(false);
     }

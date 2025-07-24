@@ -11,6 +11,8 @@ import { setAndroidNavigationBar } from "../lib/android-navigation-bar";
 import { client } from "@/lib/urql-client";
 import Toast from "react-native-toast-message";
 import CustomToast from "@/components/CustomToast";
+import { ApolloProvider } from "@apollo/client";
+import { client as apolloClient } from "@/lib/api/client";
 
 import {
   ThemeProvider as AppThemeProvider,
@@ -74,11 +76,13 @@ export default function RootLayout() {
   // The urql Provider wraps everything, making the client available to all screens.
   return (
     <Provider value={client}>
-      <AppThemeProvider>
-        <RootLayoutNav />
-        <CustomToast />
-        <Toast />
-      </AppThemeProvider>
+      <ApolloProvider client={apolloClient}>
+        <AppThemeProvider>
+          <RootLayoutNav />
+          <CustomToast />
+          <Toast />
+        </AppThemeProvider>
+      </ApolloProvider>
     </Provider>
   );
 }

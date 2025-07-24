@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from '../../entities/post.entity';
 import { User } from '../../entities/user.entity';
-import { SearchInput, SearchSortBy, SearchType } from './dto/search.input.ts';
+import { SearchInput, SearchSortBy, SearchType } from './dto/search.input';
 import { SearchMetadata, SearchResult } from './dto/search-result.object';
 
 /**
@@ -34,7 +34,11 @@ export class SearchService {
   async search(input: SearchInput): Promise<SearchResult> {
     this.logger.log(`검색 시작: ${JSON.stringify(input)}`);
 
-    const { query, type = SearchType.ALL, sortBy = SearchSortBy.RELEVANCE } = input;
+    const {
+      query,
+      type = SearchType.ALL,
+      sortBy = SearchSortBy.RELEVANCE,
+    } = input;
     const page = input.page || 0;
     const pageSize = input.pageSize || 10;
 
@@ -58,7 +62,12 @@ export class SearchService {
 
     // 검색 실행 - 게시물
     if (type === SearchType.ALL || type === SearchType.POSTS) {
-      const [posts, postsCount] = await this.searchPosts(searchQuery, sortBy, page, pageSize);
+      const [posts, postsCount] = await this.searchPosts(
+        searchQuery,
+        sortBy,
+        page,
+        pageSize,
+      );
       result.posts = posts;
       result.items.push(...posts);
       result.metadata.totalCount += postsCount;
@@ -66,14 +75,21 @@ export class SearchService {
 
     // 검색 실행 - 사용자
     if (type === SearchType.ALL || type === SearchType.USERS) {
-      const [users, usersCount] = await this.searchUsers(searchQuery, sortBy, page, pageSize);
+      const [users, usersCount] = await this.searchUsers(
+        searchQuery,
+        sortBy,
+        page,
+        pageSize,
+      );
       result.users = users;
       result.items.push(...users);
       result.metadata.totalCount += usersCount;
     }
 
     // 메타데이터 계산
-    result.metadata.totalPages = Math.ceil(result.metadata.totalCount / pageSize);
+    result.metadata.totalPages = Math.ceil(
+      result.metadata.totalCount / pageSize,
+    );
     result.metadata.hasNextPage = page < result.metadata.totalPages - 1;
 
     // 통합 정렬 (인기순/최신순)
@@ -101,7 +117,8 @@ export class SearchService {
     page: number,
     pageSize: number,
   ): Promise<[Post[], number]> {
-    const queryBuilder = this.postRepository.createQueryBuilder('post')
+    const queryBuilder = this.postRepository
+      .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
       .where('post.title ILIKE :query', { query: searchQuery })
       .orWhere('post.content ILIKE :query', { query: searchQuery })
@@ -111,10 +128,12 @@ export class SearchService {
     switch (sortBy) {
       case SearchSortBy.POPULAR:
         // 인기순: 좋아요, 댓글, 조회수를 가중치로 계산
-        queryBuilder.addSelect(
-          `(post.likeCount * 3 + post.commentCount * 2 + post.viewCount * 0.5)`,
-          'popularity_score'
-        ).orderBy('popularity_score', 'DESC');
+        queryBuilder
+          .addSelect(
+            `(post.likeCount * 3 + post.commentCount * 2 + post.viewCount * 0.5)`,
+            'popularity_score',
+          )
+          .orderBy('popularity_score', 'DESC');
         break;
       case SearchSortBy.RECENT:
         // 최신순
@@ -132,7 +151,7 @@ export class SearchService {
               WHEN post.title ILIKE :query THEN 1
               ELSE 0.5
             END`,
-            'relevance_score'
+            'relevance_score',
           )
           .setParameter('exactQuery', searchQuery.replace(/%/g, ''))
           .setParameter('startQuery', searchQuery.replace(/^%/, ''))
@@ -141,9 +160,7 @@ export class SearchService {
     }
 
     // 페이징 처리
-    queryBuilder
-      .skip(page * pageSize)
-      .take(pageSize);
+    queryBuilder.skip(page * pageSize).take(pageSize);
 
     return await queryBuilder.getManyAndCount();
   }
@@ -164,7 +181,8 @@ export class SearchService {
     page: number,
     pageSize: number,
   ): Promise<[User[], number]> {
-    const queryBuilder = this.userRepository.createQueryBuilder('user')
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('user')
       .where('user.nickname ILIKE :query', { query: searchQuery })
       .orWhere('user.bio ILIKE :query', { query: searchQuery })
       .andWhere('user.isUserActive = :isActive', { isActive: true });
@@ -194,7 +212,7 @@ export class SearchService {
               WHEN user.nickname ILIKE :query THEN 1
               ELSE 0.5
             END`,
-            'relevance_score'
+            'relevance_score',
           )
           .setParameter('exactQuery', searchQuery.replace(/%/g, ''))
           .setParameter('startQuery', searchQuery.replace(/^%/, ''))
@@ -202,9 +220,7 @@ export class SearchService {
     }
 
     // 페이징 처리
-    queryBuilder
-      .skip(page * pageSize)
-      .take(pageSize);
+    queryBuilder.skip(page * pageSize).take(pageSize);
 
     return await queryBuilder.getManyAndCount();
   }
@@ -229,7 +245,9 @@ export class SearchService {
       case SearchSortBy.RECENT:
         // 최신순 정렬
         items.sort((a, b) => {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
         });
         break;
       // RELEVANCE는 이미 개별 쿼리에서 적용되었으므로 추가 정렬 필요 없음
@@ -246,9 +264,11 @@ export class SearchService {
   private calculatePopularityScore(item: Post | User): number {
     if ('title' in item) {
       // 게시물 인기도: 좋아요 * 3 + 댓글 * 2 + 조회수 * 0.5
-      return (item.likeCount || 0) * 3 +
-             (item.commentCount || 0) * 2 +
-             (item.viewCount || 0) * 0.5;
+      return (
+        (item.likeCount || 0) * 3 +
+        (item.commentCount || 0) * 2 +
+        (item.viewCount || 0) * 0.5
+      );
     } else if ('nickname' in item) {
       // 사용자 인기도: 팔로워 수
       return (item.followers?.length || 0) * 2;

@@ -86,15 +86,8 @@ export default function ChatDetailScreen() {
     try {
       setIsLoading(true);
 
-      // 실제 API 호출 또는 테스트 모드
-      let messageData;
-      if (__DEV__ && !process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        // 테스트 모드
-        messageData = chatService.getMockMessages(20);
-      } else {
-        // 실제 API
-        messageData = await chatService.getMessages(channelId);
-      }
+      // 로컬 모드로 동작
+      let messageData = await chatService.getMessages(channelId);
 
       setMessages(messageData);
       setHasMoreMessages(messageData.length >= 50);
@@ -116,19 +109,12 @@ export default function ChatDetailScreen() {
       setIsLoadingMore(true);
       const oldestMessage = messages[0];
 
-      // 실제 API 호출 또는 테스트 모드
-      let moreMessages;
-      if (__DEV__ && !process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        // 테스트 모드
-        moreMessages = chatService.getMockMessages(10);
-      } else {
-        // 실제 API
-        moreMessages = await chatService.getMessages(
-          channelId,
-          50,
-          oldestMessage.created_at
-        );
-      }
+      // 로컬 모드로 동작
+      let moreMessages = await chatService.getMessages(
+        channelId,
+        50,
+        oldestMessage.created_at,
+      );
 
       if (moreMessages.length > 0) {
         setMessages((prev) => [...moreMessages, ...prev]);
@@ -146,19 +132,7 @@ export default function ChatDetailScreen() {
    * 실시간 메시지 구독
    */
   const subscribeToMessages = () => {
-    if (__DEV__ && !process.env.EXPO_PUBLIC_SUPABASE_URL) {
-      // 테스트 모드에서는 구독 대신 주기적으로 새 메시지 추가
-      const intervalId = setInterval(() => {
-        if (Math.random() > 0.8) { // 20% 확률로 메시지 추가
-          const mockMsg = chatService.sendMockMessage("자동 생성된 테스트 메시지입니다.");
-          handleNewMessage(mockMsg);
-        }
-      }, 10000);
-
-      return () => clearInterval(intervalId);
-    }
-
-    // 실제 구독 로직
+    // 로컬 모드에서는 실시간 구독 설정
     chatService.subscribeToMessages(channelId, handleNewMessage);
   };
 
@@ -182,19 +156,9 @@ export default function ChatDetailScreen() {
     try {
       let newMessage;
 
-      // 테스트 모드 또는 실제 API
-      if (__DEV__ && !process.env.EXPO_PUBLIC_SUPABASE_URL) {
-        // 테스트 모드
-        newMessage = await chatService.sendMockMessage(text);
-      } else {
-        // 실제 메시지 전송
-        const replyId = replyingTo?.id;
-        newMessage = await chatService.sendMessage(
-          channelId,
-          text,
-          replyId
-        );
-      }
+      // 로컬 모드에서 메시지 전송
+      const replyId = replyingTo?.id;
+      newMessage = await chatService.sendMessage(channelId, text, replyId);
 
       // 로컬 메시지 목록에 추가
       if (newMessage) {
@@ -238,7 +202,7 @@ export default function ChatDetailScreen() {
           style: "cancel",
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 

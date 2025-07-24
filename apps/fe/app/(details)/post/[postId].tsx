@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery, useMutation } from "urql";
+import { useQuery, useMutation, RequestPolicy } from "urql";
 import {
   ArrowLeft,
   Heart,
@@ -29,8 +29,8 @@ import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import {
   GET_POST_DETAIL,
   TOGGLE_LIKE,
-  FOLLOW_USER,
-  UNFOLLOW_USER,
+  // FOLLOW_USER,
+  // UNFOLLOW_USER,
 } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { PostType } from "@/components/PostCard";
@@ -116,7 +116,7 @@ export default function PostDetailScreen() {
       query: GET_POST_DETAIL,
       variables: { id: postId },
       // 기본값으로 cache-first를 사용하고, 필요시에만 네트워크 요청으로 전환
-      requestPolicy: "cache-first",
+      requestPolicy: "cache-first" as RequestPolicy,
     }),
     [postId]
   );
@@ -126,8 +126,8 @@ export default function PostDetailScreen() {
     useQuery<PostDetailResponse>(queryOptions);
 
   const [, executeToggleLike] = useMutation(TOGGLE_LIKE);
-  const [, executeFollow] = useMutation(FOLLOW_USER);
-  const [, executeUnfollow] = useMutation(UNFOLLOW_USER);
+  // const [, executeFollow] = useMutation(FOLLOW_USER);
+  // const [, executeUnfollow] = useMutation(UNFOLLOW_USER);
 
   // 사용자 세션 확인
   useEffect(() => {
@@ -187,12 +187,12 @@ export default function PostDetailScreen() {
    */
   const handleCommentAdded = useCallback(() => {
     // 댓글이 추가되면 게시물 데이터를 새로고침합니다
-    refetchPost({ requestPolicy: "network-only" });
+    refetchPost({ requestPolicy: "network-only" as RequestPolicy });
   }, [refetchPost]);
 
   /**
    * 팔로우 토글 핸들러
-   */
+
   const handleFollowToggle = async () => {
     if (!currentUser) {
       showToast({
@@ -245,6 +245,7 @@ export default function PostDetailScreen() {
       });
     }
   };
+*/
 
   /**
    * 공유 핸들러
@@ -325,23 +326,23 @@ export default function PostDetailScreen() {
               })}
             </Text>
           </View>
-
+          /*
           <View style={themed($headerRight)}>
             {/* 팔로우 버튼 - 자기 자신이 아닐 때만 표시 */}
-            {currentUser && currentUser.id !== post.author.id && (
-              <TouchableOpacity
-                style={[
-                  themed($followButton),
-                  {
-                    backgroundColor: isFollowing
-                      ? "transparent"
-                      : theme.colors.tint,
-                    borderColor: isFollowing
-                      ? theme.colors.border
-                      : theme.colors.tint,
-                  },
-                ]}
-                onPress={handleFollowToggle}
+            {/*currentUser && currentUser.id !== post.author.id && (
+              // <TouchableOpacity
+              //   style={[
+              //     themed($followButton),
+              //     {
+              //       backgroundColor: isFollowing
+              //         ? "transparent"
+              //         : theme.colors.tint,
+              //       borderColor: isFollowing
+              //         ? theme.colors.border
+              //         : theme.colors.tint,
+              //     },
+              //   ]}
+                // onPress={handleFollowToggle}
               >
                 <Text
                   style={[
@@ -354,8 +355,7 @@ export default function PostDetailScreen() {
                     : t(TRANSLATION_KEYS.POST_FOLLOW)}
                 </Text>
               </TouchableOpacity>
-            )}
-
+            )*/}
             <View
               style={[
                 themed($typeBadge),

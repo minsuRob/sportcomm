@@ -18,7 +18,7 @@ import dayjs from "dayjs";
 import {
   useModerationActions,
   ModerationTarget,
-} from "@/hooks/useModerationActions";
+} from "@/lib/useModerationActions";
 import ReportModal from "../ReportModal";
 
 /**

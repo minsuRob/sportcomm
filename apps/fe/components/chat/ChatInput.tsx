@@ -49,6 +49,7 @@ export default function ChatInput({
   const { themed, theme } = useAppTheme();
   const [message, setMessage] = useState("");
   const [isEmojiActive, setIsEmojiActive] = useState(false); // 이모지 버튼 활성화 상태
+  const [inputHeight, setInputHeight] = useState(40); // 동적 입력창 높이
   const inputRef = useRef<TextInput>(null);
 
   /**
@@ -64,6 +65,9 @@ export default function ChatInput({
         : trimmedMessage;
       onSendMessage(finalMessage);
       setMessage("");
+
+      // 메시지 전송 후 입력창 높이 초기화
+      setInputHeight(40);
 
       // 특별 메시지 전송 후 토글 상태 해제 (선택적)
       if (isEmojiActive) {
@@ -96,6 +100,37 @@ export default function ChatInput({
     // 부모 컴포넌트에 상태 변경 알림 (선택적)
     if (onEmoji) {
       onEmoji();
+    }
+  };
+
+  /**
+   * 입력창 내용 크기 변경 핸들러
+   * 웹에서 동적 높이 조정을 위해 사용
+   */
+  const handleContentSizeChange = (event: any) => {
+    const { height } = event.nativeEvent.contentSize;
+    const minHeight = 40;
+    const maxHeight = 90;
+
+    // 빈 텍스트일 때는 기본 높이 사용
+    if (!message.trim()) {
+      setInputHeight(minHeight);
+      return;
+    }
+
+    // 내용이 있을 때만 동적 높이 계산
+    // 패딩(20px)을 고려하되, 최소 높이보다 작으면 기본값 사용
+    const calculatedHeight = height + 20;
+    const newHeight = Math.max(
+      minHeight,
+      Math.min(maxHeight, calculatedHeight)
+    );
+
+    // 계산된 높이가 기본 높이와 크게 다르지 않으면 기본값 유지
+    if (calculatedHeight <= minHeight + 5) {
+      setInputHeight(minHeight);
+    } else {
+      setInputHeight(newHeight);
     }
   };
 
@@ -160,7 +195,11 @@ export default function ChatInput({
         {/* 메시지 입력 필드 */}
         <TextInput
           ref={inputRef}
-          style={[themed($input), isEmojiActive ? themed($inputSpecial) : null]}
+          style={[
+            themed($input),
+            isEmojiActive ? themed($inputSpecial) : null,
+            { height: inputHeight }, // 동적 높이 적용
+          ]}
           placeholder={
             isEmojiActive ? "💌 특별한 메시지를 입력하세요..." : placeholder
           }
@@ -169,11 +208,15 @@ export default function ChatInput({
           }
           value={message}
           onChangeText={setMessage}
-          multiline
+          onContentSizeChange={handleContentSizeChange} // 내용 크기 변경 감지
+          multiline={true}
+          numberOfLines={1} // 초기 줄 수
           maxLength={1000}
           onSubmitEditing={handleSubmitEditing}
           editable={!disabled}
-          returnKeyType="send"
+          returnKeyType="default" // 멀티라인에서는 default가 더 적합
+          scrollEnabled={inputHeight >= 120} // 최대 높이 도달 시만 스크롤 활성화
+          textBreakStrategy="simple" // Android에서 텍스트 줄바꿈 최적화
         />
 
         {/* 이모지 버튼 */}
@@ -217,27 +260,30 @@ export default function ChatInput({
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
-  alignItems: "center",
+  alignItems: "flex-end", // 입력 필드 하단 기준으로 정렬
   paddingHorizontal: spacing?.sm || 12,
-  paddingVertical: spacing?.sm || 12,
+  paddingVertical: spacing?.md || 16, // 패딩 증가로 더 넓은 공간
   borderTopWidth: 1,
   borderTopColor: colors.border,
   backgroundColor: colors.background,
+  position: "relative", // 절대 위치 요소들의 기준점
+  minHeight: 60, // 최소 높이 보장
 });
 
 const $input: ThemedStyle<TextStyle> = ({ colors }) => ({
   flex: 1,
-  minHeight: 36,
-  maxHeight: 100,
+  // height는 동적으로 설정되므로 minHeight/maxHeight 제거
   borderWidth: 1,
   borderColor: colors.border,
-  borderRadius: 18,
-  paddingHorizontal: 12,
-  paddingVertical: 8,
+  borderRadius: 20, // 더 둥근 모서리
+  paddingHorizontal: 16, // 좌우 패딩 증가
+  paddingVertical: 10, // 상하 패딩 증가
   paddingRight: 80, // 이모지 버튼과 전송 버튼 공간 확보
-  fontSize: 15,
+  fontSize: 16, // 폰트 크기 약간 증가
   color: colors.text,
   backgroundColor: colors.background,
+  textAlignVertical: "top", // 멀티라인에서 상단 정렬이 더 자연스러움
+  lineHeight: 20, // 줄 간격 설정
 });
 
 const $inputSpecial: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -249,20 +295,22 @@ const $inputSpecial: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $addButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing?.xs || 8,
   marginRight: spacing?.xs || 8,
+  marginBottom: 8, // 입력 필드와 정렬을 위한 조정 (증가)
 });
 
 const $attachButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing?.xs || 8,
   marginRight: spacing?.xs || 8,
+  marginBottom: 8, // 입력 필드와 정렬을 위한 조정 (증가)
 });
 
 const $emojiButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",
   right: 56, // 전송 버튼과 겹치지 않도록 조정
-  bottom: spacing?.sm || 12,
-  height: 30,
-  width: 30,
-  borderRadius: 15,
+  bottom: (spacing?.md || 16) + 8, // 입력 필드와 정렬을 위해 조정 (증가)
+  height: 32, // 버튼 크기 약간 증가
+  width: 32,
+  borderRadius: 16,
   justifyContent: "center",
   alignItems: "center",
   borderWidth: 1,
@@ -278,16 +326,16 @@ const $emojiButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
 });
 
 const $emojiText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 20,
+  fontSize: 22, // 이모지 크기 약간 증가
 });
 
 const $sendButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",
   right: spacing?.md || 16,
-  bottom: spacing?.sm || 12,
-  width: 30,
-  height: 30,
-  borderRadius: 15,
+  bottom: (spacing?.md || 16) + 8, // 입력 필드와 정렬을 위해 조정 (증가)
+  width: 32, // 버튼 크기 약간 증가
+  height: 32,
+  borderRadius: 16,
   backgroundColor: colors.tint,
   justifyContent: "center",
   alignItems: "center",

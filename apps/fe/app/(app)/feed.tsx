@@ -92,7 +92,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         });
       }
@@ -216,7 +216,7 @@ export default function FeedScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={themed($chatButton)}
-              onPress={() => router.push("/(app)/chat")}
+              onPress={() => router.push("/chat")}
             >
               <MessageSquare color="white" size={20} />
               <Text style={themed($chatButtonText)}>

@@ -237,22 +237,7 @@ export default function ChatDetailScreen() {
 
   return (
     <View style={themed($container)}>
-      {/* 헤더 */}
-      <View style={themed($header)}>
-        <TouchableOpacity style={themed($backButton)} onPress={router.back}>
-          <ArrowLeft color={theme.colors.text} size={24} />
-        </TouchableOpacity>
-
-        <View style={themed($headerCenter)}>
-          <Text style={themed($headerTitle)} numberOfLines={1}>
-            {channelName || "채팅"}
-          </Text>
-        </View>
-
-        <TouchableOpacity style={themed($headerButton)}>
-          <MoreVertical color={theme.colors.text} size={24} />
-        </TouchableOpacity>
-      </View>
+      {/* 헤더 - ChatList 컴포넌트에서 표시할 것이므로 여기서는 제거 */}
 
       {/* 채팅 목록 */}
       <KeyboardAvoidingView
@@ -269,6 +254,8 @@ export default function ChatDetailScreen() {
             onLoadMore={loadMoreMessages}
             onLongPressMessage={handleLongPressMessage}
             hasMoreMessages={hasMoreMessages}
+            onBack={router.back}
+            title={channelName || "채팅"}
           />
         </View>
 
@@ -292,35 +279,7 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
 });
 
-const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingHorizontal: spacing?.md || 16,
-  paddingVertical: spacing?.md || 16,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
-  backgroundColor: colors.background,
-});
-
-const $backButton: ThemedStyle<ViewStyle> = () => ({
-  padding: 4,
-});
-
-const $headerCenter: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-  alignItems: "center",
-});
-
-const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 18,
-  fontWeight: "600",
-  color: colors.text,
-});
-
-const $headerButton: ThemedStyle<ViewStyle> = () => ({
-  padding: 4,
-});
+// 헤더 관련 스타일은 ChatList 컴포넌트로 이동됨
 
 const $chatContainer: ThemedStyle<ViewStyle> = () => ({
   flex: 1,

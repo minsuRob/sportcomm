@@ -3,6 +3,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Post } from '../../entities/post.entity';
 import { User } from '../../entities/user.entity';
+import { PostLike } from '../../entities/post-like.entity';
 import { SearchService } from './search.service';
 import { SearchResolver } from './search.resolver';
 
@@ -15,7 +16,7 @@ import { SearchResolver } from './search.resolver';
 @Module({
   imports: [
     // 검색에 필요한 엔티티 등록
-    TypeOrmModule.forFeature([Post, User]),
+    TypeOrmModule.forFeature([Post, User, PostLike]),
 
     // 검색 결과 캐싱 (TTL: 10분)
     CacheModule.register({

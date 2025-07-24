@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from '../../entities/post.entity';
 import { User } from '../../entities/user.entity';
+import { PostLike } from '../../entities/post-like.entity';
 import { SearchInput, SearchSortBy, SearchType } from './dto/search.input';
 import { SearchMetadata, SearchResult } from './dto/search-result.object';
 
@@ -22,6 +23,8 @@ export class SearchService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(PostLike)
+    private readonly postLikeRepository: Repository<PostLike>,
   ) {}
 
   /**
@@ -29,9 +32,13 @@ export class SearchService {
    * 입력받은 검색어와 옵션에 따라 검색을 수행합니다.
    *
    * @param input 검색 입력 (검색어, 유형, 정렬방식 등)
+   * @param currentUserId 현재 사용자 ID (좋아요 상태 확인용)
    * @returns 검색 결과
    */
-  async search(input: SearchInput): Promise<SearchResult> {
+  async search(
+    input: SearchInput,
+    currentUserId?: string,
+  ): Promise<SearchResult> {
     this.logger.log(`검색 시작: ${JSON.stringify(input)}`);
 
     const {
@@ -68,6 +75,19 @@ export class SearchService {
         page,
         pageSize,
       );
+
+      // 각 게시물에 대해 isLiked 상태 설정
+      if (currentUserId) {
+        for (const post of posts) {
+          post.isLiked = await this.isPostLikedByUser(post.id, currentUserId);
+        }
+      } else {
+        // 로그인하지 않은 경우 모든 게시물의 isLiked를 false로 설정
+        for (const post of posts) {
+          post.isLiked = false;
+        }
+      }
+
       result.posts = posts;
       result.items.push(...posts);
       result.metadata.totalCount += postsCount;
@@ -99,6 +119,26 @@ export class SearchService {
 
     this.logger.log(`검색 완료: ${result.metadata.totalCount}개 결과 반환`);
     return result;
+  }
+
+  /**
+   * 사용자가 특정 게시물에 좋아요를 눌렀는지 확인
+   *
+   * @param postId 게시물 ID
+   * @param userId 사용자 ID
+   * @returns 좋아요를 눌렀으면 true, 아니면 false
+   */
+  private async isPostLikedByUser(
+    postId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const like = await this.postLikeRepository.findOne({
+      where: {
+        post: { id: postId },
+        user: { id: userId },
+      },
+    });
+    return !!like;
   }
 
   /**

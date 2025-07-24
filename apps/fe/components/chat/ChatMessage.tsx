@@ -26,6 +26,7 @@ export type Message = {
     avatar_url?: string;
   };
   is_system?: boolean; // 시스템 메시지 여부
+  is_special?: boolean; // 특별 메시지 여부 (노란색 스타일)
   // 추가 필드 (확장성)
   reply_to?: string; // 답장 대상 메시지 ID
   attachments?: { url: string; type: string }[]; // 첨부 파일
@@ -68,6 +69,24 @@ export default function ChatMessage({
             {dayjs(message.created_at).format("HH:mm")}
           </Text>
         )}
+      </View>
+    );
+  }
+
+  // 특별 메시지 처리 (노란색 스타일) - 💌 이모지가 포함된 메시지
+  const isSpecialMessage = message.is_special || message.content.includes("💌");
+
+  if (isSpecialMessage) {
+    return (
+      <View style={themed($specialMessageContainer)}>
+        <View style={themed($specialMessageBox)}>
+          <Text style={themed($specialMessageText)}>{message.content}</Text>
+          {showDate && (
+            <Text style={themed($specialMessageDate)}>
+              {dayjs(message.created_at).format("HH:mm")}
+            </Text>
+          )}
+        </View>
       </View>
     );
   }
@@ -254,4 +273,46 @@ const $systemMessageText: ThemedStyle<TextStyle> = ({ colors }) => ({
   paddingHorizontal: 12,
   paddingVertical: 4,
   borderRadius: 12,
+});
+
+// --- 특별 메시지 스타일 (노란색) ---
+const $specialMessageContainer: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "center",
+  marginVertical: 8,
+  paddingHorizontal: 16,
+});
+
+const $specialMessageBox: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: "#FFD700", // 노란색 배경
+  borderWidth: 2,
+  borderColor: "#FFA500", // 주황색 테두리
+  borderRadius: 16,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  maxWidth: "90%",
+  minWidth: "60%",
+  shadowColor: "#000",
+  shadowOffset: {
+    width: 0,
+    height: 2,
+  },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3, // Android 그림자
+});
+
+const $specialMessageText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: "#8B4513", // 갈색 텍스트 (노란 배경과 대비)
+  textAlign: "center",
+  lineHeight: 22,
+});
+
+const $specialMessageDate: ThemedStyle<TextStyle> = () => ({
+  fontSize: 10,
+  color: "#8B4513",
+  marginTop: 4,
+  textAlign: "center",
+  opacity: 0.8,
 });

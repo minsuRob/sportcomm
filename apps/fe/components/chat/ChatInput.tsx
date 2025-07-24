@@ -48,6 +48,7 @@ export default function ChatInput({
 }: ChatInputProps) {
   const { themed, theme } = useAppTheme();
   const [message, setMessage] = useState("");
+  const [isEmojiActive, setIsEmojiActive] = useState(false); // 이모지 버튼 활성화 상태
   const inputRef = useRef<TextInput>(null);
 
   /**
@@ -68,6 +69,30 @@ export default function ChatInput({
   const handleSubmitEditing = () => {
     if (message.trim() && !disabled) {
       handleSend();
+    }
+  };
+
+  /**
+   * 이모지 버튼 클릭 핸들러
+   * 💌 특별 메시지를 전송하고 시각적 피드백 제공
+   */
+  const handleEmojiToggle = () => {
+    if (disabled) return;
+
+    // 💌 특별 메시지 전송 (노란색 스타일로 표시됨)
+    onSendMessage("💌 특별한 메시지입니다!");
+
+    // 시각적 피드백을 위한 잠시 활성화 상태 표시
+    setIsEmojiActive(true);
+
+    // 0.3초 후 비활성화 상태로 복원 (시각적 피드백)
+    setTimeout(() => {
+      setIsEmojiActive(false);
+    }, 300);
+
+    // 부모 컴포넌트에 상태 변경 알림 (선택적)
+    if (onEmoji) {
+      onEmoji();
     }
   };
 
@@ -148,9 +173,13 @@ export default function ChatInput({
         {/* 이모지 버튼 */}
         {onEmoji && (
           <TouchableOpacity
-            style={themed($emojiButton)}
-            onPress={onEmoji}
+            style={[
+              themed($emojiButton),
+              isEmojiActive ? themed($emojiButtonActive) : null,
+            ]}
+            onPress={handleEmojiToggle}
             disabled={disabled}
+            activeOpacity={0.7}
           >
             <Text style={themed($emojiText)}>💌</Text>
           </TouchableOpacity>
@@ -199,7 +228,7 @@ const $input: ThemedStyle<TextStyle> = ({ colors }) => ({
   borderRadius: 18,
   paddingHorizontal: 12,
   paddingVertical: 8,
-  paddingRight: 40,
+  paddingRight: 80, // 이모지 버튼과 전송 버튼 공간 확보
   fontSize: 15,
   color: colors.text,
   backgroundColor: colors.background,
@@ -215,15 +244,25 @@ const $attachButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginRight: spacing?.xs || 8,
 });
 
-const $emojiButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing?.xs || 8,
-  marginRight: spacing?.xs || 8,
+const $emojiButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",
-  right: 48,
+  right: 56, // 전송 버튼과 겹치지 않도록 조정
   bottom: spacing?.sm || 12,
   height: 30,
+  width: 30,
+  borderRadius: 15,
   justifyContent: "center",
   alignItems: "center",
+  borderWidth: 1,
+  borderColor: "transparent",
+  backgroundColor: "transparent",
+  zIndex: 10,
+  elevation: 10,
+});
+
+const $emojiButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  borderColor: colors.tint,
+  backgroundColor: colors.tint + "20", // 20% 투명도로 배경색 적용
 });
 
 const $emojiText: ThemedStyle<TextStyle> = () => ({
@@ -240,6 +279,8 @@ const $sendButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.tint,
   justifyContent: "center",
   alignItems: "center",
+  zIndex: 5,
+  elevation: 5,
 });
 
 const $sendButtonDisabled: ThemedStyle<ViewStyle> = ({ colors }) => ({

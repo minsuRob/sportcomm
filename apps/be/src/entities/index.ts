@@ -14,6 +14,8 @@ import { Media } from './media.entity';
 import { ChatRoom } from './chat-room.entity';
 import { ChatMessage } from './chat-message.entity';
 import { PostLike } from './post-like.entity';
+import { Report } from './report.entity';
+import { Block } from './block.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -57,6 +59,8 @@ export const entities = [
   ChatRoom,
   ChatMessage,
   PostLike,
+  Report,
+  Block,
 ];
 
 /**
@@ -74,6 +78,8 @@ export const tableNames = {
   chatRooms: 'chat_rooms',
   chatMessages: 'chat_messages',
   chatRoomParticipants: 'chat_room_participants',
+  reports: 'reports',
+  blocks: 'blocks',
 } as const;
 
 /**
@@ -112,6 +118,12 @@ export const entityRelations = {
   ChatMessage: {
     manyToOne: ['author', 'room', 'replyToMessage'],
   },
+  Report: {
+    manyToOne: ['reporter', 'reportedUser', 'post', 'message'],
+  },
+  Block: {
+    manyToOne: ['blocker', 'blockedUser'],
+  },
 } as const;
 
 /**
@@ -128,4 +140,13 @@ export const entityIndexes = {
   media: ['postId', 'type', 'status', 'createdAt'],
   chatRooms: ['type', 'isActive', 'createdAt', 'name'],
   chatMessages: ['authorId', 'roomId', 'type', 'createdAt', 'isRead'],
+  reports: [
+    'reporterId',
+    'reportedUserId',
+    'postId',
+    'type',
+    'status',
+    'createdAt',
+  ],
+  blocks: ['blockerId', 'blockedUserId', 'createdAt'],
 } as const;

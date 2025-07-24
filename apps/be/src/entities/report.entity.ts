@@ -5,7 +5,6 @@ import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { Post } from './post.entity';
 import { ChatMessage } from './chat-message.entity';
-import { ChatMessage } from './chat-message.entity';
 
 /**
  * 신고 유형 열거형
@@ -154,16 +153,6 @@ export class Report extends BaseEntity {
   })
   messageId?: string;
 
-  /**
-   * 신고된 채팅 메시지 ID
-   */
-  @Column({
-    type: 'uuid',
-    nullable: true,
-    comment: '신고된 채팅 메시지 ID',
-  })
-  chatMessageId?: string;
-
   // === 관계 설정 ===
 
   /**
@@ -243,12 +232,5 @@ export class Report extends BaseEntity {
    */
   isMessageReport(): boolean {
     return !!this.messageId;
-  }
-
-  /**
-   * 채팅 메시지 신고인지 확인
-   */
-  isChatMessageReport(): boolean {
-    return !!this.chatMessageId;
   }
 }

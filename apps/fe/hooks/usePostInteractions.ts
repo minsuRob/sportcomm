@@ -146,7 +146,9 @@ export function usePostInteractions({
     setIsFollowing(!previousIsFollowing);
 
     try {
-      const result = await toggleFollow({ userId: authorId });
+      const result = await toggleFollow({
+        variables: { userId: authorId },
+      });
 
       if (result.error || !result.data) {
         setIsFollowing(previousIsFollowing);

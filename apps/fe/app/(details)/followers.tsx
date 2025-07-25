@@ -107,7 +107,9 @@ export default function FollowersScreen() {
     isCurrentlyFollowing: boolean,
   ) => {
     try {
-      const result = await executeToggleFollow({ userId: targetUserId });
+      const result = await executeToggleFollow({
+        variables: { userId: targetUserId },
+      });
 
       if (result.error) {
         showToast({
@@ -267,7 +269,7 @@ export default function FollowersScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={themed($listContainer)}
         ListEmptyComponent={
-          !followersResult.fetching ? (
+          !followingLoading ? (
             <View style={themed($loadingContainer)}>
               <Text style={themed($loadingText)}>팔로워가 없습니다.</Text>
             </View>

@@ -107,7 +107,9 @@ export default function FollowingScreen() {
     isCurrentlyFollowing: boolean,
   ) => {
     try {
-      const { error } = await executeToggleFollow({ userId: targetUserId });
+      const { error } = await executeToggleFollow({
+        variables: { userId: targetUserId },
+      });
 
       if (error) {
         showToast({
@@ -268,7 +270,7 @@ export default function FollowingScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={themed($listContainer)}
         ListEmptyComponent={
-          !followingResult.fetching ? (
+          !followingLoading ? (
             <View style={themed($loadingContainer)}>
               <Text style={themed($loadingText)}>
                 팔로잉하는 사용자가 없습니다.

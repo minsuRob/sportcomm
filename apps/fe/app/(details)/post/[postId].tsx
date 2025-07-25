@@ -100,11 +100,8 @@ export default function PostDetailScreen() {
     isFollowing,
     isLikeProcessing,
     isLikeError,
-    showReportModal,
     handleLike,
     handleFollowToggle,
-    handleMorePress,
-    closeReportModal,
   } = usePostInteractions({
     postId: postId || "",
     authorId: data?.post?.author.id || "",
@@ -188,9 +185,7 @@ export default function PostDetailScreen() {
         <Text style={themed($headerTitle)}>
           {t(TRANSLATION_KEYS.POST_TITLE)}
         </Text>
-        <TouchableOpacity onPress={handleMorePress}>
-          <MoreHorizontal color={theme.colors.textDim} size={24} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView
@@ -199,13 +194,15 @@ export default function PostDetailScreen() {
       >
         {/* 게시물 헤더 */}
         <PostHeader
-          author={post.author}
-          createdAt={post.createdAt}
-          postType={post.type}
+          post={{
+            id: post.id,
+            author: post.author,
+            createdAt: post.createdAt,
+            type: post.type,
+          }}
           currentUserId={currentUserId}
           isFollowing={isFollowing}
           onFollowToggle={handleFollowToggle}
-          onMorePress={handleMorePress}
           showFollowButton={false} // 상세 페이지에서는 헤더에 팔로우 버튼 숨김
         />
 
@@ -247,15 +244,6 @@ export default function PostDetailScreen() {
           onCommentAdded={handleCommentAdded}
         />
       </ScrollView>
-
-      {/* 신고 모달 */}
-      <ReportModal
-        visible={showReportModal}
-        onClose={closeReportModal}
-        postId={post.id}
-        reportedUserId={post.author.id}
-        reportedUserName={post.author.nickname}
-      />
     </KeyboardAvoidingView>
   );
 }

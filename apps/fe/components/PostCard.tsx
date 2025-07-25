@@ -14,7 +14,6 @@ import PostHeader, { PostType } from "./shared/PostHeader";
 import PostMedia, { Media } from "./shared/PostMedia";
 import PostStats from "./shared/PostStats";
 import PostActions from "./shared/PostActions";
-import ReportModal from "./ReportModal";
 
 // --- Type Definitions ---
 export { PostType, Media };
@@ -64,11 +63,8 @@ export default function PostCard({ post }: PostCardProps) {
     isFollowing,
     isLikeProcessing,
     isLikeError,
-    showReportModal,
     handleLike,
     handleFollowToggle,
-    handleMorePress,
-    closeReportModal,
   } = usePostInteractions({
     postId: post.id,
     authorId: post.author.id,
@@ -92,13 +88,15 @@ export default function PostCard({ post }: PostCardProps) {
     <View style={themed($container)}>
       {/* 헤더 */}
       <PostHeader
-        author={post.author}
-        createdAt={post.createdAt}
-        postType={post.type}
+        post={{
+          id: post.id,
+          author: post.author,
+          createdAt: post.createdAt,
+          type: post.type,
+        }}
         currentUserId={currentUserId}
         isFollowing={isFollowing}
         onFollowToggle={handleFollowToggle}
-        onMorePress={handleMorePress}
         onPress={handlePostPress}
       />
 
@@ -143,15 +141,6 @@ export default function PostCard({ post }: PostCardProps) {
           </TouchableOpacity>
         </View>
       )}
-
-      {/* 신고 모달 */}
-      <ReportModal
-        visible={showReportModal}
-        onClose={closeReportModal}
-        postId={post.id}
-        reportedUserId={post.author.id}
-        reportedUserName={post.author.nickname}
-      />
     </View>
   );
 }

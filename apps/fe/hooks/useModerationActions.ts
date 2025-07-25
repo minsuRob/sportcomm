@@ -19,7 +19,7 @@ export interface ModerationTarget {
 export function useModerationActions() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTarget, setReportTarget] = useState<ModerationTarget | null>(
-    null,
+    null
   );
   const [executeBlockUser] = useMutation(BLOCK_USER);
 
@@ -79,14 +79,14 @@ export function useModerationActions() {
           style: "destructive",
           onPress: async () => {
             try {
-              const { data, errors } = await executeBlockUser({
+              const result = await executeBlockUser({
                 variables: {
                   blockedUserId: userId,
                 },
               });
 
-              if (errors) {
-                throw new Error(errors[0].message);
+              if (result.errors) {
+                throw new Error(result.errors[0].message);
               }
 
               showToast({
@@ -109,7 +109,7 @@ export function useModerationActions() {
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -145,7 +145,7 @@ export function useModerationActions() {
         text: option.text,
         onPress: option.onPress,
         style: option.style,
-      })),
+      }))
     );
   };
 

@@ -90,7 +90,7 @@ export default function ReportModal({
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [executeCreateReport, { loading }] = useMutation(CREATE_REPORT);
+  const [executeCreateReport] = useMutation(CREATE_REPORT);
 
   const handleSubmit = async () => {
     if (!selectedType) {
@@ -117,17 +117,19 @@ export default function ReportModal({
 
     try {
       const result = await executeCreateReport({
-        input: {
-          type: selectedType,
-          reason: reason.trim(),
-          postId,
-          messageId,
-          reportedUserId,
+        variables: {
+          input: {
+            type: selectedType,
+            reason: reason.trim(),
+            postId,
+            messageId,
+            reportedUserId,
+          },
         },
       });
 
-      if (result.error) {
-        throw new Error(result.error.message);
+      if (result.errors) {
+        throw new Error(result.errors[0].message);
       }
 
       showToast({

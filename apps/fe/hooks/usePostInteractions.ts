@@ -4,7 +4,6 @@ import { TOGGLE_LIKE, TOGGLE_FOLLOW } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { getSession } from "@/lib/auth";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
-import { useModerationActions } from "@/lib/useModerationActions";
 
 interface UsePostInteractionsProps {
   postId: string;
@@ -17,7 +16,7 @@ interface UsePostInteractionsProps {
 
 /**
  * 게시물 상호작용 로직을 관리하는 커스텀 훅
- * 좋아요, 팔로우, 신고/차단 기능을 포함
+ * 좋아요, 팔로우 기능을 포함
  */
 export function usePostInteractions({
   postId,
@@ -40,15 +39,6 @@ export function usePostInteractions({
   // GraphQL 뮤테이션
   const [executeLike, { loading: likeLoading }] = useMutation(TOGGLE_LIKE);
   const [toggleFollow, { loading: followLoading }] = useMutation(TOGGLE_FOLLOW);
-
-  // 신고/차단 기능
-  const {
-    showReportModal,
-    reportTarget,
-    openReportModal,
-    closeReportModal,
-    showModerationOptions,
-  } = useModerationActions();
 
   // 현재 사용자 확인
   useEffect(() => {
@@ -115,7 +105,7 @@ export function usePostInteractions({
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(
-            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1
           );
         }
       })
@@ -183,17 +173,6 @@ export function usePostInteractions({
     }
   };
 
-  /**
-   * 더보기 메뉴 핸들러
-   */
-  const handleMorePress = () => {
-    showModerationOptions({
-      userId: authorId,
-      userName: authorName,
-      postId,
-    });
-  };
-
   return {
     // 상태
     currentUserId,
@@ -203,14 +182,8 @@ export function usePostInteractions({
     isLikeProcessing,
     isLikeError,
 
-    // 신고/차단 관련
-    showReportModal,
-    reportTarget,
-
     // 핸들러
     handleLike,
     handleFollowToggle,
-    handleMorePress,
-    closeReportModal,
   };
 }

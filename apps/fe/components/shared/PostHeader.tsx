@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { MoreHorizontal } from "lucide-react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import PostContextMenu from "./PostContextMenu";
 export enum PostType {
   ANALYSIS = "ANALYSIS",
   CHEERING = "CHEERING",
@@ -19,18 +20,20 @@ export enum PostType {
 }
 
 interface PostHeaderProps {
-  author: {
+  post: {
     id: string;
-    nickname: string;
-    profileImageUrl?: string;
-    isFollowing?: boolean;
+    author: {
+      id: string;
+      nickname: string;
+      profileImageUrl?: string;
+      isFollowing?: boolean;
+    };
+    createdAt: string;
+    type: PostType;
   };
-  createdAt: string;
-  postType: PostType;
   currentUserId?: string | null;
   isFollowing: boolean;
   onFollowToggle: () => void;
-  onMorePress: () => void;
   onPress?: () => void;
   showFollowButton?: boolean;
 }
@@ -40,18 +43,18 @@ interface PostHeaderProps {
  * 작성자 정보, 팔로우 버튼, 더보기 버튼을 포함
  */
 export default function PostHeader({
-  author,
-  createdAt,
-  postType,
+  post,
   currentUserId,
   isFollowing,
   onFollowToggle,
-  onMorePress,
   onPress,
   showFollowButton = true,
 }: PostHeaderProps) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
+  const [showContextMenu, setShowContextMenu] = useState(false);
+
+  const { author, createdAt, type: postType } = post;
 
   const avatarUrl =
     author.profileImageUrl || `https://i.pravatar.cc/150?u=${author.id}`;
@@ -78,6 +81,20 @@ export default function PostHeader({
   };
 
   const postTypeStyle = getPostTypeStyle(postType);
+
+  /**
+   * 더보기 버튼 클릭 핸들러
+   */
+  const handleMorePress = () => {
+    setShowContextMenu(true);
+  };
+
+  /**
+   * 컨텍스트 메뉴 닫기 핸들러
+   */
+  const handleCloseContextMenu = () => {
+    setShowContextMenu(false);
+  };
 
   const HeaderContent = (
     <>
@@ -149,10 +166,18 @@ export default function PostHeader({
         </View>
 
         {/* 더보기 버튼 */}
-        <TouchableOpacity style={themed($moreButton)} onPress={onMorePress}>
+        <TouchableOpacity style={themed($moreButton)} onPress={handleMorePress}>
           <MoreHorizontal color={theme.colors.textDim} size={24} />
         </TouchableOpacity>
       </View>
+
+      {/* 컨텍스트 메뉴 */}
+      <PostContextMenu
+        visible={showContextMenu}
+        onClose={handleCloseContextMenu}
+        post={post}
+        currentUserId={currentUserId}
+      />
     </View>
   );
 }

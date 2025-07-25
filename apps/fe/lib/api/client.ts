@@ -7,9 +7,7 @@ import {
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
-// @ts-ignore
-// 임시로 apollo-upload-client 의존성을 제거하고 직접 구현합니다
-// import { createUploadLink } from "apollo-upload-client";
+import { createUploadLink } from "apollo-upload-client";
 import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
 
@@ -27,15 +25,7 @@ const API_URL = __DEV__
  * 파일 업로드를 지원하는 HTTP 링크 생성
  * (임시 구현: apollo-upload-client 패키지가 설치될 때까지)
  */
-// createUploadLink 함수를 임시로 대체합니다
-const createTempUploadLink = (options: any) => {
-  return new HttpLink({
-    uri: options.uri,
-    headers: options.headers,
-  });
-};
-
-const uploadLink = createTempUploadLink({
+const uploadLink = createUploadLink({
   uri: API_URL,
   headers: {
     "Apollo-Require-Preflight": "true", // CSRF 방지를 위한 헤더

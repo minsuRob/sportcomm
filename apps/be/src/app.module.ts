@@ -142,6 +142,14 @@ import { ModerationModule } from './modules/moderation/moderation.module';
                   'https://sportcomm.com',
                 ),
             credentials: true,
+            allowedHeaders: [
+              'Content-Type',
+              'Authorization',
+              'Accept',
+              'X-Requested-With',
+              'Origin',
+              'apollo-require-preflight',
+            ],
           },
 
           // 쿼리 복잡도 제한

@@ -1,29 +1,6 @@
 import { useMutation } from "@apollo/client";
 import { UPLOAD_FILES } from "@/lib/graphql";
-// @ts-ignore
-// Temporary fix for the missing apollo-upload-client module
-// import { ReactNativeFile } from "apollo-upload-client";
-
-// Define ReactNativeFile class locally to avoid dependency issues
-class ReactNativeFile {
-  uri: string;
-  name: string;
-  type: string;
-
-  constructor({
-    uri,
-    name,
-    type,
-  }: {
-    uri: string;
-    name: string;
-    type: string;
-  }) {
-    this.uri = uri;
-    this.name = name;
-    this.type = type;
-  }
-}
+import { ReactNativeFile } from "apollo-upload-client";
 
 /**
  * 업로드된 미디어 정보 타입

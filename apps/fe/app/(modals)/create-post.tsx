@@ -62,13 +62,17 @@ export default function CreatePostScreen() {
   const [uploadProgress, setUploadProgress] = useState<string>("");
 
   // GraphQL 뮤테이션
-  const [, executeCreatePost] = useMutation(CREATE_POST);
+  const [executeCreatePost] = useMutation(CREATE_POST);
 
   // 사용자 세션 확인
   React.useEffect(() => {
     const checkSession = async () => {
-      const { user } = await getSession();
-      if (user) {
+      const { user, token } = await getSession();
+      console.log("세션 확인:", {
+        사용자: user ? "있음" : "없음",
+        토큰: token ? "있음" : "없음",
+      });
+      if (user && token) {
         setCurrentUser(user);
       } else {
         // 로그인되지 않은 경우 피드로 리다이렉트
@@ -309,55 +313,92 @@ export default function CreatePostScreen() {
       // 2단계: 게시물 생성
       setUploadProgress("게시물 작성 중...");
 
-      const result = await executeCreatePost({
-        input: {
-          title: title.trim(),
-          content: content.trim(),
-          type: selectedType,
-          mediaIds: uploadedMediaIds.length > 0 ? uploadedMediaIds : undefined,
-        },
-      });
+      try {
+        // 요청 직전에 세션 토큰 다시 확인
+        const { token } = await getSession();
+        console.log(
+          "게시물 생성 요청 전 토큰 확인:",
+          token ? "토큰 있음" : "토큰 없음",
+        );
 
-      if (result.error) {
-        // GraphQL 에러에서 originalError 정보 추출
-        const graphQLError = result.error.graphQLErrors[0];
-        if (graphQLError?.extensions?.originalError) {
-          const { message, error, statusCode } = graphQLError.extensions
-            .originalError as {
-            message: string;
-            error: string;
-            statusCode: number;
-          };
+        const { data } = await executeCreatePost({
+          variables: {
+            input: {
+              title: title.trim(),
+              content: content.trim(),
+              type: selectedType,
+              mediaIds:
+                uploadedMediaIds.length > 0 ? uploadedMediaIds : undefined,
+            },
+          },
+          context: {
+            headers: {
+              authorization: token ? `Bearer ${token}` : "",
+            },
+          },
+        });
 
+        if (!data) {
           showToast({
             type: "error",
             title: "게시물 작성 실패",
-            message: `${message} [${statusCode}: ${error}]`,
-            duration: 5000,
+            message: "서버에서 응답이 오지 않았습니다",
+            duration: 4000,
           });
+          return;
+        }
+
+        // 성공 시
+        showToast({
+          type: "success",
+          title: "게시물 작성 완료",
+          message: "게시물이 성공적으로 작성되었습니다!",
+          duration: 3000,
+        });
+
+        // 피드로 돌아가기
+        router.back();
+        return;
+      } catch (apolloError: any) {
+        // GraphQL 에러에서 originalError 정보 추출
+        if (apolloError.graphQLErrors && apolloError.graphQLErrors.length > 0) {
+          const graphQLError = apolloError.graphQLErrors[0];
+          if (graphQLError?.extensions?.originalError) {
+            const { message, error, statusCode } = graphQLError.extensions
+              .originalError as {
+              message: string;
+              error: string;
+              statusCode: number;
+            };
+
+            showToast({
+              type: "error",
+              title: "게시물 작성 실패",
+              message: `${message} [${statusCode}: ${error}]`,
+              duration: 5000,
+            });
+          } else {
+            const errorMessage =
+              graphQLError?.message || "게시물 작성에 실패했습니다.";
+            showToast({
+              type: "error",
+              title: "게시물 작성 실패",
+              message: errorMessage,
+              duration: 4000,
+            });
+          }
         } else {
-          const errorMessage =
-            graphQLError?.message || "게시물 작성에 실패했습니다.";
           showToast({
             type: "error",
             title: "게시물 작성 실패",
-            message: errorMessage,
+            message: apolloError.message || "알 수 없는 오류가 발생했습니다",
             duration: 4000,
           });
         }
         return;
       }
 
-      // 성공
-      showToast({
-        type: "success",
-        title: "게시물 작성 완료",
-        message: "게시물이 성공적으로 작성되었습니다!",
-        duration: 3000,
-      });
-
-      // 피드로 돌아가기
-      router.back();
+      // 이미 try/catch 블록 안에서 처리됨
     } catch (error) {
       console.error("게시물 작성 오류:", error);
 

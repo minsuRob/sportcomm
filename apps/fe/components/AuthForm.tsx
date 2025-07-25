@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useMutation } from "@apollo/client";
 import { Button } from "./ui/button";
 import { Eye, EyeOff, AlertCircle } from "lucide-react-native";
-import { saveSession, User } from "../lib/auth";
+import { saveSession, getSession, User } from "../lib/auth";
 import { LOGIN_MUTATION, REGISTER_MUTATION } from "../lib/graphql";
 
 const SocialLogins = () => (
@@ -79,7 +79,16 @@ export default function AuthForm({
 
       if (result) {
         const { token, user } = result;
+        console.log("로그인/회원가입 성공:", {
+          토큰있음: !!token,
+          사용자: user,
+        });
         await saveSession(token, user);
+
+        // 토큰 저장 확인을 위한 로그
+        const { token: savedToken } = await getSession();
+        console.log("저장된 토큰 확인:", { 토큰저장됨: !!savedToken });
+
         onLoginSuccess(user);
       }
     } catch (error: any) {

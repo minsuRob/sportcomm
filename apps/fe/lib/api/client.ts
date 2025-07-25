@@ -3,11 +3,12 @@ import {
   InMemoryCache,
   createHttpLink,
   from,
+  ApolloLink,
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
+import { getSession } from "@/lib/auth";
 
 /**
  * API 기본 URL 설정
@@ -48,8 +49,11 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
  * 모든 요청에 JWT 토큰을 헤더에 추가합니다.
  */
 const authLink = setContext(async (_, { headers }) => {
-  // AsyncStorage에서 토큰 가져오기
-  const token = await AsyncStorage.getItem("auth_token");
+  // auth.ts의 getSession을 통해 토큰 가져오기
+  const { token } = await getSession();
+
+  // 디버깅을 위한 토큰 로그
+  console.log("현재 토큰 상태:", token ? "토큰 있음" : "토큰 없음");
 
   // 헤더에 토큰 추가
   return {
@@ -61,11 +65,31 @@ const authLink = setContext(async (_, { headers }) => {
 });
 
 /**
+ * 요청/응답 디버깅 링크
+ * 모든 GraphQL 요청과 응답을 콘솔에 출력합니다.
+ */
+const requestDebugLink = new ApolloLink((operation, forward) => {
+  console.log(`GraphQL 요청: ${operation.operationName}`, {
+    variables: operation.variables,
+    query: operation.query.loc?.source.body,
+    headers: operation.getContext().headers,
+  });
+
+  return forward(operation).map((response) => {
+    console.log(`GraphQL 응답: ${operation.operationName}`, {
+      data: response.data,
+      errors: response.errors,
+    });
+    return response;
+  });
+});
+
+/**
  * Apollo Client 생성
  * urql 대체용 Apollo Client 설정
  */
 export const client = new ApolloClient({
-  link: from([authLink, errorLink, httpLink]),
+  link: from([authLink, errorLink, requestDebugLink, httpLink]),
   cache: new InMemoryCache({
     typePolicies: {
       Query: {

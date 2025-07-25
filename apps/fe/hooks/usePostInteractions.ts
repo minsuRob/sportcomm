@@ -39,7 +39,7 @@ export function usePostInteractions({
 
   // GraphQL 뮤테이션
   const [executeLike, { loading: likeLoading }] = useMutation(TOGGLE_LIKE);
-  const [toggleFollow] = useMutation(TOGGLE_FOLLOW);
+  const [toggleFollow, { loading: followLoading }] = useMutation(TOGGLE_FOLLOW);
 
   // 신고/차단 기능
   const {
@@ -105,13 +105,13 @@ export function usePostInteractions({
             type: "error",
             title: t(TRANSLATION_KEYS.POST_LIKE_ERROR),
             message:
-              result.error.message || "좋아요 처리 중 오류가 발생했습니다.",
+              errors[0]?.message || "좋아요 처리 중 오류가 발생했습니다.",
             duration: 3000,
           });
           return;
         }
 
-        const likeSuccessful = result.data?.likePost;
+        const likeSuccessful = data?.likePost;
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(

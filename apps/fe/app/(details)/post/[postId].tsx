@@ -196,6 +196,8 @@ export default function PostDetailScreen() {
         <PostHeader
           post={{
             id: post.id,
+            title: undefined, // 상세 페이지에서는 title 정보가 없을 수 있음
+            content: post.content,
             author: post.author,
             createdAt: post.createdAt,
             type: post.type,
@@ -204,6 +206,10 @@ export default function PostDetailScreen() {
           isFollowing={isFollowing}
           onFollowToggle={handleFollowToggle}
           showFollowButton={false} // 상세 페이지에서는 헤더에 팔로우 버튼 숨김
+          onPostUpdated={(updatedPost) => {
+            // 게시물 수정 후 페이지 새로고침
+            refetchPost({ fetchPolicy: "network-only" });
+          }}
         />
 
         {/* 게시물 내용 */}

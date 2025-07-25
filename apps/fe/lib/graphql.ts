@@ -354,3 +354,34 @@ export const IS_USER_BLOCKED = gql`
     isUserBlocked(userId: $userId)
   }
 `;
+
+/**
+ * 게시물 수정 뮤테이션
+ */
+export const UPDATE_POST = gql`
+  mutation UpdatePost($input: UpdatePostInput!) {
+    updatePost(input: $input) {
+      id
+      title
+      content
+      type
+      createdAt
+      updatedAt
+      isPublic
+      isPinned
+      viewCount
+      likeCount
+      commentCount
+      author {
+        id
+        nickname
+        profileImageUrl
+      }
+      media {
+        id
+        url
+        type
+      }
+    }
+  }
+`;

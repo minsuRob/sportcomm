@@ -22,6 +22,8 @@ export enum PostType {
 interface PostHeaderProps {
   post: {
     id: string;
+    title?: string;
+    content: string;
     author: {
       id: string;
       nickname: string;
@@ -36,6 +38,7 @@ interface PostHeaderProps {
   onFollowToggle: () => void;
   onPress?: () => void;
   showFollowButton?: boolean;
+  onPostUpdated?: (updatedPost: any) => void;
 }
 
 /**
@@ -49,6 +52,7 @@ export default function PostHeader({
   onFollowToggle,
   onPress,
   showFollowButton = true,
+  onPostUpdated,
 }: PostHeaderProps) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
@@ -175,8 +179,15 @@ export default function PostHeader({
       <PostContextMenu
         visible={showContextMenu}
         onClose={handleCloseContextMenu}
-        post={post}
+        post={{
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          type: post.type,
+          author: post.author,
+        }}
         currentUserId={currentUserId}
+        onPostUpdated={onPostUpdated}
       />
     </View>
   );

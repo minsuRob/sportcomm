@@ -1,22 +1,27 @@
 import React, { useState } from "react";
-import { Flag, UserX, Share, Bookmark } from "lucide-react-native";
+import { Flag, UserX, Share, Bookmark, Edit3 } from "lucide-react-native";
 import ActionSheet, { ActionSheetOption } from "@/components/ActionSheet";
 import ReportModal from "@/components/ReportModal";
+import PostEditModal from "@/components/PostEditModal";
 import { useModerationActions } from "@/hooks/useModerationActions";
 import { useAppTheme } from "@/lib/theme/context";
-import { getSession } from "@/lib/auth";
+import { PostType } from "./PostHeader";
 
 interface PostContextMenuProps {
   visible: boolean;
   onClose: () => void;
   post: {
     id: string;
+    title?: string;
+    content: string;
+    type: PostType;
     author: {
       id: string;
       nickname: string;
     };
   };
   currentUserId?: string | null;
+  onPostUpdated?: (updatedPost: any) => void;
 }
 
 /**
@@ -28,8 +33,10 @@ export default function PostContextMenu({
   onClose,
   post,
   currentUserId,
+  onPostUpdated,
 }: PostContextMenuProps) {
   const { theme } = useAppTheme();
+  const [showEditModal, setShowEditModal] = useState(false);
   const {
     showReportModal,
     reportTarget,
@@ -74,6 +81,30 @@ export default function PostContextMenu({
     console.log("북마크 기능 - 향후 구현 예정");
   };
 
+  /**
+   * 수정하기 핸들러
+   */
+  const handleEdit = () => {
+    setShowEditModal(true);
+  };
+
+  /**
+   * 수정 모달 닫기 핸들러
+   */
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+  };
+
+  /**
+   * 게시물 수정 완료 핸들러
+   */
+  const handlePostUpdated = (updatedPost: any) => {
+    if (onPostUpdated) {
+      onPostUpdated(updatedPost);
+    }
+    setShowEditModal(false);
+  };
+
   // 액션시트 옵션 구성
   const options: ActionSheetOption[] = [
     // 공통 옵션
@@ -89,8 +120,15 @@ export default function PostContextMenu({
     },
   ];
 
-  // 다른 사용자의 게시물인 경우 신고/차단 옵션 추가
-  if (!isOwnPost) {
+  // 본인 게시물인 경우 수정 옵션 추가
+  if (isOwnPost) {
+    options.push({
+      text: "수정하기",
+      onPress: handleEdit,
+      icon: <Edit3 color={theme.colors.text} size={20} />,
+    });
+  } else {
+    // 다른 사용자의 게시물인 경우 신고/차단 옵션 추가
     options.push(
       {
         text: "신고하기",
@@ -123,6 +161,19 @@ export default function PostContextMenu({
         postId={reportTarget?.postId}
         reportedUserId={reportTarget?.userId}
         reportedUserName={reportTarget?.userName}
+      />
+
+      {/* 수정 모달 */}
+      <PostEditModal
+        visible={showEditModal}
+        onClose={handleCloseEditModal}
+        post={{
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          type: post.type,
+        }}
+        onPostUpdated={handlePostUpdated}
       />
     </>
   );

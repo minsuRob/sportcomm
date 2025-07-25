@@ -90,6 +90,8 @@ export default function PostCard({ post }: PostCardProps) {
       <PostHeader
         post={{
           id: post.id,
+          title: undefined, // PostCard에서는 title이 없을 수 있음
+          content: post.content,
           author: post.author,
           createdAt: post.createdAt,
           type: post.type,

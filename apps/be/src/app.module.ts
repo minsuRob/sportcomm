@@ -149,17 +149,23 @@ import { ModerationModule } from './modules/moderation/moderation.module';
               'X-Requested-With',
               'Origin',
               'apollo-require-preflight',
+              'Apollo-Require-Preflight',
+              'x-apollo-operation-name',
+              'x-apollo-operation-id',
+            ],
+            exposedHeaders: [
+              'Content-Type',
+              'Authorization',
+              'Apollo-Require-Preflight',
             ],
           },
 
           // 쿼리 복잡도 제한
           validationRules: [],
 
-          // 파일 업로드 설정 (GraphQL Upload 지원)
-          uploads: {
-            maxFileSize: 10 * 1024 * 1024, // 10MB
-            maxFiles: 4,
-          },
+          // Apollo Server v3 이상에서는 'uploads' 옵션이 더 이상 사용되지 않음
+          // GraphQL Upload를 위한 설정은 커스텀 스칼라와 미들웨어에서 처리
+          // 이 설정은 참고용으로 유지하나 실제로는 작동하지 않음
 
           // 파일 업로드 스칼라는 @Scalar 데코레이터로 자동 등록됨
 

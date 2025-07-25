@@ -157,7 +157,11 @@ export const createHybridUploadLink = ({
               // 웹 환경: File/Blob 객체 그대로 사용
               // 파일 객체는 '0', '1', '2'와 같은 문자열 키로 전송되어야 함
               if (file instanceof File || file instanceof Blob) {
-                form.append(i.toString(), file);
+                // 파일 이름 확보
+                const fileName =
+                  file instanceof File ? file.name : `blob_${Date.now()}`;
+                // 웹 환경에서는 File 객체를 직접 전달
+                form.append(i.toString(), file, fileName);
               } else {
                 console.error("웹 환경에서 유효한 File 객체가 아님:", file);
                 throw new Error("웹 환경에서 유효한 File 객체가 아닙니다");
@@ -182,14 +186,18 @@ export const createHybridUploadLink = ({
           headers: {
             ...requestHeaders,
             // FormData를 사용할 때는 Content-Type을 명시하지 않음
-            // 브라우저가 자동으로 boundary와 함께 추가함
-            // Apollo Upload 클라이언트 호환성을 위해 확실히 제거
-            "Content-Type": undefined,
+            // 브라우저가 자동으로 multipart/form-data를 boundary와 함께 설정함
+            // Apollo Upload 클라이언트 호환성을 위해 명시적으로 삭제
           },
           body: form,
           credentials,
           ...requestOptions,
         };
+
+        // Content-Type을 설정하지 않도록 명시적으로 삭제
+        if (uploadOptions.headers && "Content-Type" in uploadOptions.headers) {
+          delete uploadOptions.headers["Content-Type"];
+        }
 
         // 디버그 모드일 때만 로깅
         if (debug) {
@@ -207,14 +215,36 @@ export const createHybridUploadLink = ({
           // FormData 내용 로깅 (디버깅용)
           console.log("FormData 내용:");
           if (typeof form.entries === "function") {
-            for (const pair of form.entries()) {
-              console.log(
-                `- ${pair[0]}: ${
-                  pair[1] instanceof File
-                    ? `File(${pair[1].name}, ${pair[1].type}, ${pair[1].size} bytes)`
-                    : pair[1]
-                }`,
-              );
+            try {
+              for (const pair of form.entries()) {
+                if (pair[1] instanceof File || pair[1] instanceof Blob) {
+                  console.log(
+                    `- ${pair[0]}: File(${
+                      pair[1] instanceof File ? pair[1].name : "Blob"
+                    }, ${pair[1].type}, ${pair[1].size} bytes)`,
+                  );
+                } else if (typeof pair[1] === "string") {
+                  // operations와 map을 로그에 표시
+                  if (pair[0] === "operations" || pair[0] === "map") {
+                    try {
+                      const jsonValue = JSON.parse(pair[1]);
+                      console.log(
+                        `- ${pair[0]}: ${JSON.stringify(jsonValue).substring(0, 100)}...`,
+                      );
+                    } catch (e) {
+                      console.log(
+                        `- ${pair[0]}: ${pair[1].substring(0, 100)}...`,
+                      );
+                    }
+                  } else {
+                    console.log(`- ${pair[0]}: ${pair[1]}`);
+                  }
+                } else {
+                  console.log(`- ${pair[0]}: ${pair[1]}`);
+                }
+              }
+            } catch (err) {
+              console.error("FormData 항목 로깅 중 오류 발생:", err);
             }
           }
         }
@@ -225,7 +255,19 @@ export const createHybridUploadLink = ({
               method: uploadOptions.method,
               headers: uploadOptions.headers,
               hasBody: !!uploadOptions.body,
+              url: endpoint,
             });
+
+            // Content-Type 헤더 확인 - 없어야 함
+            if (
+              uploadOptions.headers &&
+              uploadOptions.headers["Content-Type"]
+            ) {
+              console.warn(
+                "경고: Content-Type이 명시적으로 설정되어 있습니다:",
+                uploadOptions.headers["Content-Type"],
+              );
+            }
           }
 
           const response = await fetch(endpoint, uploadOptions);

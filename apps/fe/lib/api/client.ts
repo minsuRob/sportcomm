@@ -30,6 +30,7 @@ const uploadLink = createHybridUploadLink({
   uri: API_URL,
   headers: {
     "Apollo-Require-Preflight": "true", // CORS 방지를 위한 헤더
+    "x-apollo-operation-name": "fileUpload", // 업로드용 작업 이름 명시
   },
   credentials: "include", // 쿠키 포함
   debug: true, // 항상 디버깅 활성화 (문제 해결 시까지)
@@ -133,6 +134,11 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
 logPlatformInfo();
 console.log(`Apollo 클라이언트 초기화 (${getPlatformType()} 환경)`);
 
+/**
+ * 업로드 관련 설정: Apollo Client에서 FormData 사용 시
+ * Content-Type 헤더를 수동으로 설정하지 않도록 함
+ * 브라우저가 자동으로 multipart/form-data를 적절한 boundary와 함께 설정
+ */
 export const client = new ApolloClient({
   link: from([requestDebugLink, authLink, errorLink, uploadLink]),
   cache: new InMemoryCache({
@@ -173,6 +179,11 @@ export const client = new ApolloClient({
     },
     mutate: {
       errorPolicy: "all",
+      context: {
+        // useMultipart가 true면 Apollo Client는
+        // multipart/form-data 형식으로 요청을 전송합니다
+        useMultipart: true,
+      },
     },
   },
 });

@@ -88,6 +88,14 @@ async function bootstrap() {
         'X-Requested-With',
         'Origin',
         'apollo-require-preflight',
+        'Apollo-Require-Preflight',
+        'x-apollo-operation-name',
+        'x-apollo-operation-id',
+      ],
+      exposedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'Apollo-Require-Preflight',
       ],
     });
 

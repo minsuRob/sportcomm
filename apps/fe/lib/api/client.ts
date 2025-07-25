@@ -32,7 +32,7 @@ const uploadLink = createHybridUploadLink({
     "Apollo-Require-Preflight": "true", // CORS 방지를 위한 헤더
   },
   credentials: "include", // 쿠키 포함
-  debug: __DEV__, // 개발 환경에서만 디버깅 활성화
+  debug: true, // 항상 디버깅 활성화 (문제 해결 시까지)
 });
 
 /**
@@ -77,17 +77,50 @@ const authLink = setContext(async (_, { headers }) => {
  * 모든 GraphQL 요청과 응답을 콘솔에 출력합니다.
  */
 const requestDebugLink = new ApolloLink((operation, forward) => {
+  // 요청 전 상세 정보 출력
   console.log(`GraphQL 요청: ${operation.operationName}`, {
     variables: operation.variables,
     query: operation.query.loc?.source.body,
     headers: operation.getContext().headers,
   });
 
+  // files 변수 확인 (파일 업로드 관련)
+  if (operation.variables && operation.variables.files) {
+    console.log("파일 업로드 변수 세부 정보:", operation.variables.files);
+
+    // 파일 객체 타입 검사
+    if (Array.isArray(operation.variables.files)) {
+      operation.variables.files.forEach((file, index) => {
+        console.log(
+          `파일[${index}] 타입:`,
+          file instanceof File
+            ? "File"
+            : file.uri
+              ? "ReactNativeFile"
+              : "알 수 없음",
+        );
+        console.log(`파일[${index}] 속성:`, Object.keys(file));
+      });
+    }
+  }
+
   return forward(operation).map((response) => {
+    // 응답 상세 정보 출력
     console.log(`GraphQL 응답: ${operation.operationName}`, {
       data: response.data,
       errors: response.errors,
+      extensions: response.extensions,
     });
+
+    // 에러 발생 시 더 자세한 정보 출력
+    if (response.errors && response.errors.length) {
+      console.error(`GraphQL 에러 상세 정보:`, {
+        operation: operation.operationName,
+        errorMessages: response.errors.map((e) => e.message),
+        errorDetails: response.errors,
+      });
+    }
+
     return response;
   });
 });
@@ -101,7 +134,7 @@ logPlatformInfo();
 console.log(`Apollo 클라이언트 초기화 (${getPlatformType()} 환경)`);
 
 export const client = new ApolloClient({
-  link: from([authLink, errorLink, requestDebugLink, uploadLink]),
+  link: from([requestDebugLink, authLink, errorLink, uploadLink]),
   cache: new InMemoryCache({
     typePolicies: {
       Query: {

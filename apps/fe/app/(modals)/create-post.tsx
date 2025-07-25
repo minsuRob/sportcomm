@@ -304,11 +304,23 @@ export default function CreatePostScreen() {
 
         try {
           console.log("이미지 업로드 시작:", imageUris.length, "개");
+          console.log("이미지 URI 상세 정보:", imageUris);
+
+          // 이미지 업로드 전에 세션 확인
+          const { token } = await getSession();
+          console.log(
+            "이미지 업로드 전 토큰 상태:",
+            token ? "토큰 있음" : "토큰 없음",
+          );
+
           const uploadedMedia = await uploadFiles(imageUris);
           uploadedMediaIds = uploadedMedia.map((media) => media.id);
-          console.log("이미지 업로드 완료:", uploadedMediaIds);
+          console.log("이미지 업로드 완료, 미디어 ID:", uploadedMediaIds);
+          console.log("업로드된 미디어 데이터:", uploadedMedia);
         } catch (uploadError) {
           console.error("이미지 업로드 중 오류 발생:", uploadError);
+          console.error("오류 상세 정보:", uploadError.message);
+          console.error("오류 스택:", uploadError.stack);
           throw uploadError;
         }
 

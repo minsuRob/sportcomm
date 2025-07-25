@@ -126,6 +126,7 @@ export const createHybridUploadLink = ({
         const form = new FormData();
 
         // GraphQL 쿼리, 변수, 오퍼레이션 이름을 FormData에 추가
+        // Apollo Server는 'operations'라는 필드에 GraphQL 작업을 기대합니다
         form.append(
           "operations",
           JSON.stringify({
@@ -136,7 +137,8 @@ export const createHybridUploadLink = ({
           }),
         );
 
-        // 파일 맵핑 정보 생성
+        // 파일 맵핑 정보 생성 (Apollo Upload 스펙)
+        // 각 파일은 변수 경로에 매핑되어야 합니다
         const map = {};
         let i = 0;
         files.forEach((paths, file) => {
@@ -144,23 +146,34 @@ export const createHybridUploadLink = ({
           i++;
         });
 
+        // map 객체를 JSON 문자열로 변환하여 'map' 필드에 추가
         form.append("map", JSON.stringify(map));
 
         // 파일 추가 (플랫폼별 처리)
         i = 0;
         files.forEach((paths, file) => {
-          if (isWeb()) {
-            // 웹 환경: File/Blob 객체 그대로 사용
-            form.append(i.toString(), file);
-          } else if (isReactNative()) {
-            // React Native 환경: 특수한 형태로 파일 정보 추가
-            form.append(i.toString(), {
-              uri: file.uri,
-              name: file.name,
-              type: file.type,
-            });
+          try {
+            if (isWeb()) {
+              // 웹 환경: File/Blob 객체 그대로 사용
+              // 파일 객체는 '0', '1', '2'와 같은 문자열 키로 전송되어야 함
+              if (file instanceof File || file instanceof Blob) {
+                form.append(i.toString(), file);
+              } else {
+                console.error("웹 환경에서 유효한 File 객체가 아님:", file);
+                throw new Error("웹 환경에서 유효한 File 객체가 아닙니다");
+              }
+            } else if (isReactNative()) {
+              // React Native 환경: 특수한 형태로 파일 정보 추가
+              form.append(i.toString(), {
+                uri: file.uri,
+                name: file.name,
+                type: file.type,
+              });
+            }
+            i++;
+          } catch (fileError) {
+            console.error(`파일 ${i} 추가 중 오류 발생:`, fileError);
           }
-          i++;
         });
 
         // 헤더 설정 (Content-Type은 FormData에서 자동 생성되므로 명시하지 않음)
@@ -170,6 +183,8 @@ export const createHybridUploadLink = ({
             ...requestHeaders,
             // FormData를 사용할 때는 Content-Type을 명시하지 않음
             // 브라우저가 자동으로 boundary와 함께 추가함
+            // Apollo Upload 클라이언트 호환성을 위해 확실히 제거
+            "Content-Type": undefined,
           },
           body: form,
           credentials,
@@ -188,14 +203,40 @@ export const createHybridUploadLink = ({
               type: files.get(key)?.type || "unknown",
             })),
           });
+
+          // FormData 내용 로깅 (디버깅용)
+          console.log("FormData 내용:");
+          if (typeof form.entries === "function") {
+            for (const pair of form.entries()) {
+              console.log(
+                `- ${pair[0]}: ${
+                  pair[1] instanceof File
+                    ? `File(${pair[1].name}, ${pair[1].type}, ${pair[1].size} bytes)`
+                    : pair[1]
+                }`,
+              );
+            }
+          }
         }
 
         try {
+          if (debug) {
+            console.log("업로드 요청 옵션:", {
+              method: uploadOptions.method,
+              headers: uploadOptions.headers,
+              hasBody: !!uploadOptions.body,
+            });
+          }
+
           const response = await fetch(endpoint, uploadOptions);
 
           // 응답 상태 확인
           if (!response.ok) {
-            throw new Error(`${response.status} ${response.statusText}`);
+            const errorText = await response.text();
+            console.error("서버 응답 에러:", errorText);
+            throw new Error(
+              `${response.status} ${response.statusText}: ${errorText}`,
+            );
           }
 
           const result = await response.json();

@@ -3,6 +3,7 @@ import { useMutation } from "@apollo/client";
 import { UPLOAD_FILE, UPLOAD_FILES } from "@/lib/graphql";
 import { getSession } from "@/lib/auth";
 import { isWeb, isReactNative } from "@/lib/platform";
+import { adaptFile, adaptFiles, UploadableFile } from "./uploadAdapter";
 
 /**
  * 업로드된 미디어 파일 정보를 위한 인터페이스
@@ -69,37 +70,32 @@ export function getFileNameFromUri(uri: string): string {
  * @returns ReactNativeFile 객체
  */
 export async function uriToReactNativeFile(
-  uri: string,
+  uri: string | File | Blob | { uri: string },
 ): Promise<ReactNativeFile | File> {
-  // 웹 환경에서는 URL에서 Blob을 가져와 File 객체 생성
-  if (
-    isWeb() &&
-    (uri.startsWith("http://") ||
-      uri.startsWith("https://") ||
-      uri.startsWith("blob:"))
-  ) {
-    try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const fileName = getFileNameFromUri(uri);
-      const file = new File([blob], fileName, {
-        type: getMimeTypeFromUri(uri),
-      });
-      return file;
-    } catch (error) {
-      console.error("Failed to convert URI to File:", error);
-      throw error;
-    }
+  console.log(
+    "파일 변환 시작:",
+    typeof uri === "string" ? uri : "File/Blob 객체",
+  );
+
+  // 새로운 어댑터 활용
+  try {
+    const adaptedFile = await adaptFile(uri, {
+      fileName: typeof uri === "string" ? getFileNameFromUri(uri) : undefined,
+      mimeType: typeof uri === "string" ? getMimeTypeFromUri(uri) : undefined,
+    });
+
+    console.log(
+      "파일 변환 완료:",
+      adaptedFile instanceof File
+        ? `File(${adaptedFile.name}, ${adaptedFile.type}, ${adaptedFile.size} bytes)`
+        : `ReactNativeFile(${(adaptedFile as any).name}, ${(adaptedFile as any).type})`,
+    );
+
+    return adaptedFile as ReactNativeFile | File;
+  } catch (error) {
+    console.error("파일 변환 실패:", error);
+    throw error;
   }
-
-  // React Native 환경에서는 ReactNativeFile 객체 생성
-  const fileUri = uri.startsWith("file://") ? uri : uri;
-
-  return new ReactNativeFile({
-    uri: fileUri,
-    name: getFileNameFromUri(uri),
-    type: getMimeTypeFromUri(uri),
-  });
 }
 
 /**
@@ -108,25 +104,35 @@ export async function uriToReactNativeFile(
  * @returns ReactNativeFile 객체 배열
  */
 export async function urisToFiles(
-  uris: string[],
+  uris: (string | File | Blob | { uri: string })[],
 ): Promise<(ReactNativeFile | File)[]> {
-  if (isWeb()) {
-    // 웹 환경에서는 Promise 결과를 기다려야 함
-    const promises = uris.map((uri) => uriToReactNativeFile(uri));
-    return Promise.all(promises);
-  } else {
-    // React Native 환경에서도 비동기 처리를 위해 Promise.all 사용
-    const promises = uris.map((uri) => uriToReactNativeFile(uri));
-    return Promise.all(promises);
+  console.log(`${uris.length}개의 파일을 변환 시작`);
+
+  try {
+    // 새로운 어댑터 활용
+    const results = await adaptFiles(uris, {
+      fileNames: uris.map((uri) =>
+        typeof uri === "string" ? getFileNameFromUri(uri) : undefined,
+      ),
+      mimeTypes: uris.map((uri) =>
+        typeof uri === "string" ? getMimeTypeFromUri(uri) : undefined,
+      ),
+    });
+
+    console.log(`총 ${results.length}개 파일 변환 완료`);
+    return results as (ReactNativeFile | File)[];
+  } catch (error) {
+    console.error("파일 배열 변환 실패:", error);
+    throw error;
   }
 }
 
 // 하위 호환성을 위한 별칭 함수
 export async function urisToReactNativeFiles(
-  uris: string[],
+  uris: (string | File | Blob | { uri: string })[],
 ): Promise<ReactNativeFile[]> {
   console.warn("urisToReactNativeFiles is deprecated, use urisToFiles instead");
-  const files = await Promise.all(uris.map((uri) => uriToReactNativeFile(uri)));
+  const files = await adaptFiles(uris);
   return files as ReactNativeFile[];
 }
 
@@ -136,7 +142,9 @@ export async function urisToReactNativeFiles(
 export function useUploadFile() {
   const [uploadFileMutation, { loading, error }] = useMutation(UPLOAD_FILE);
 
-  const uploadFile = async (uri: string): Promise<UploadedMedia> => {
+  const uploadFile = async (
+    uri: string | File | Blob | { uri: string },
+  ): Promise<UploadedMedia> => {
     try {
       console.log("단일 파일 업로드 시작:", uri);
 
@@ -182,19 +190,33 @@ export function useUploadFile() {
 export function useUploadFiles() {
   const [uploadFilesMutation, { loading, error }] = useMutation(UPLOAD_FILES);
 
-  const uploadFiles = async (uris: string[]): Promise<UploadedMedia[]> => {
+  const uploadFiles = async (
+    uris: (string | File | Blob | { uri: string })[],
+  ): Promise<UploadedMedia[]> => {
     try {
       console.log("여러 파일 업로드 시작:", uris.length, "개 파일");
 
       // 플랫폼에 맞는 파일 객체 생성
+      console.log("파일 변환 시작 중...");
       const files = await urisToFiles(uris);
 
-      console.log(
-        "파일 변환 완료:",
-        isWeb()
-          ? "Web 환경 (File 객체)"
-          : "React Native 환경 (ReactNativeFile 객체)",
-      );
+      // 디버깅용: 변환된 파일 정보 출력
+      if (isWeb()) {
+        files.forEach((file, index) => {
+          const f = file as File;
+          console.log(`[${index}] 웹 파일:`, f.name, f.type, f.size, "bytes");
+        });
+      } else {
+        files.forEach((file, index) => {
+          const f = file as ReactNativeFile;
+          console.log(
+            `[${index}] RN 파일:`,
+            f.name,
+            f.type,
+            f.uri.substring(0, 30) + "...",
+          );
+        });
+      }
 
       // 인증 토큰 가져오기
       const { token } = await getSession();

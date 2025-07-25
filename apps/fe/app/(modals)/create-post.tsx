@@ -26,7 +26,7 @@ import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { CREATE_POST } from "@/lib/graphql";
 import { PostType } from "@/components/PostCard";
 import { User, getSession } from "@/lib/auth";
-import { uploadImages, UploadedMedia } from "@/lib/api/media";
+import { useUploadFiles, UploadedMedia } from "@/lib/api/media";
 
 // --- 타입 정의 ---
 interface PostTypeOption {
@@ -61,8 +61,9 @@ export default function CreatePostScreen() {
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
 
-  // GraphQL 뮤테이션
+  // GraphQL 뮤테이션 및 파일 업로드
   const [executeCreatePost] = useMutation(CREATE_POST);
+  const { uploadFiles, loading: uploadLoading } = useUploadFiles();
 
   // 사용자 세션 확인
   React.useEffect(() => {
@@ -121,7 +122,7 @@ export default function CreatePostScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ],
+        ]
       );
     } else {
       router.back();
@@ -157,7 +158,7 @@ export default function CreatePostScreen() {
         {
           compress: 0.8, // 80% 품질
           format: ImageManipulator.SaveFormat.JPEG,
-        },
+        }
       );
 
       return {
@@ -185,7 +186,7 @@ export default function CreatePostScreen() {
         Alert.alert(
           "권한 필요",
           "이미지를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }],
+          [{ text: "확인" }]
         );
         return;
       }
@@ -299,7 +300,7 @@ export default function CreatePostScreen() {
         setUploadProgress("이미지 업로드 중...");
 
         const imageUris = selectedImages.map((img) => img.uri);
-        const uploadedMedia = await uploadImages(imageUris);
+        const uploadedMedia = await uploadFiles(imageUris);
         uploadedMediaIds = uploadedMedia.map((media) => media.id);
 
         showToast({
@@ -318,7 +319,7 @@ export default function CreatePostScreen() {
         const { token } = await getSession();
         console.log(
           "게시물 생성 요청 전 토큰 확인:",
-          token ? "토큰 있음" : "토큰 없음",
+          token ? "토큰 있음" : "토큰 없음"
         );
 
         const { data } = await executeCreatePost({
@@ -564,7 +565,9 @@ export default function CreatePostScreen() {
           <TouchableOpacity
             style={themed($imageUploadButton)}
             onPress={handleImagePicker}
-            disabled={isSubmitting || selectedImages.length >= 4}
+            disabled={
+              isSubmitting || uploadLoading || selectedImages.length >= 4
+            }
           >
             <ImageIcon color={theme.colors.tint} size={20} />
             <Text style={themed($imageUploadText)}>

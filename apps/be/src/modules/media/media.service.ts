@@ -33,9 +33,12 @@ export class MediaService {
         // 이미지 메타데이터 추출
         const metadata = await this.extractImageMetadata(file.path);
 
+        // 환경에 따른 기본 URL 설정
+        const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+
         const media = this.mediaRepository.create({
           originalName: file.originalname,
-          url: `/uploads/images/${file.filename}`,
+          url: `${baseUrl}/uploads/images/${file.filename}`,
           type: MediaType.IMAGE,
           status: UploadStatus.COMPLETED,
           fileSize: file.size,

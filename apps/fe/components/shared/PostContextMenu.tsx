@@ -3,7 +3,7 @@ import { Flag, UserX, Share, Bookmark, Edit3 } from "lucide-react-native";
 import ActionSheet, { ActionSheetOption } from "@/components/ActionSheet";
 import ReportModal from "@/components/ReportModal";
 import PostEditModal from "@/components/PostEditModal";
-import { useModerationActions } from "@/hooks/useModerationActions";
+import { useModerationActions } from "../../hooks/useModerationActions";
 import { useAppTheme } from "@/lib/theme/context";
 import { PostType } from "./PostHeader";
 

@@ -385,3 +385,39 @@ export const UPDATE_POST = gql`
     }
   }
 `;
+
+/**
+ * GraphQL 파일 업로드 뮤테이션
+ */
+export const UPLOAD_FILES = gql`
+  mutation UploadFiles($files: [Upload!]!) {
+    uploadFiles(files: $files) {
+      id
+      originalName
+      url
+      type
+      fileSize
+      mimeType
+      width
+      height
+    }
+  }
+`;
+
+/**
+ * 단일 파일 업로드 뮤테이션
+ */
+export const UPLOAD_FILE = gql`
+  mutation UploadFile($file: Upload!) {
+    uploadFile(file: $file) {
+      id
+      originalName
+      url
+      type
+      fileSize
+      mimeType
+      width
+      height
+    }
+  }
+`;

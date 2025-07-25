@@ -1,95 +1,92 @@
-import { getSession } from "@/lib/auth";
+import { useMutation } from "@apollo/client";
+import { UPLOAD_FILES } from "@/lib/graphql";
+// @ts-ignore
+import { ReactNativeFile } from "apollo-upload-client";
 
 /**
  * 업로드된 미디어 정보 타입
  */
 export interface UploadedMedia {
   id: string;
+  originalName: string;
   url: string;
   type: string;
-  filename: string;
-  size: number;
+  fileSize: number;
+  mimeType: string;
+  width?: number;
+  height?: number;
 }
 
 /**
- * 이미지 업로드 응답 타입
+ * GraphQL 파일 업로드 훅
+ * Apollo Client의 GraphQL Upload를 사용하여 파일을 업로드합니다.
  */
-interface UploadResponse {
-  success: boolean;
-  message: string;
-  data: UploadedMedia[];
+export function useUploadFiles() {
+  const [uploadFilesMutation, { loading, error }] = useMutation(UPLOAD_FILES);
+
+  const uploadFiles = async (imageUris: string[]): Promise<UploadedMedia[]> => {
+    try {
+      console.log("GraphQL 파일 업로드 시작:", imageUris.length, "개 파일");
+
+      // React Native 파일 객체 생성
+      const files = imageUris.map((uri, index) => {
+        return new ReactNativeFile({
+          uri,
+          type: "image/jpeg",
+          name: `image_${Date.now()}_${index}.jpg`,
+        });
+      });
+
+      // GraphQL 뮤테이션 실행
+      const { data } = await uploadFilesMutation({
+        variables: {
+          files,
+        },
+      });
+
+      if (!data?.uploadFiles) {
+        throw new Error("업로드 응답 데이터가 없습니다.");
+      }
+
+      console.log(
+        "GraphQL 파일 업로드 완료:",
+        data.uploadFiles.length,
+        "개 파일"
+      );
+      return data.uploadFiles;
+    } catch (error) {
+      console.error("GraphQL 파일 업로드 오류:", error);
+      throw error;
+    }
+  };
+
+  return {
+    uploadFiles,
+    loading,
+    error,
+  };
 }
 
 /**
- * 이미지 파일들을 서버에 업로드합니다.
- *
- * @param imageUris - 업로드할 이미지 URI 배열
- * @returns 업로드된 미디어 정보 배열
+ * 레거시 함수 (호환성 유지)
+ * @deprecated useUploadFiles 훅을 사용하세요
  */
 export async function uploadImages(
   imageUris: string[]
 ): Promise<UploadedMedia[]> {
-  try {
-    // 인증 토큰 가져오기
-    const { token } = await getSession();
-    if (!token) {
-      throw new Error("로그인이 필요합니다.");
-    }
-
-    // FormData 생성
-    const formData = new FormData();
-
-    for (let i = 0; i < imageUris.length; i++) {
-      const uri = imageUris[i];
-
-      // React Native에서 파일 객체 생성
-      const fileObject = {
-        uri: uri,
-        type: "image/jpeg",
-        name: `image_${i}.jpg`,
-      };
-
-      // FormData에 파일 추가
-      formData.append("files", fileObject as any);
-    }
-
-    // 서버에 업로드 요청
-    const uploadResponse = await fetch(`http://localhost:3000/media/upload`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        // Content-Type은 FormData 사용 시 자동으로 설정됨
-      },
-      body: formData,
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      throw new Error(`업로드 실패: ${uploadResponse.status} ${errorText}`);
-    }
-
-    const result: UploadResponse = await uploadResponse.json();
-
-    if (!result.success) {
-      throw new Error(result.message || "업로드에 실패했습니다.");
-    }
-
-    return result.data;
-  } catch (error) {
-    console.error("이미지 업로드 오류:", error);
-    throw error;
-  }
+  throw new Error(
+    "uploadImages는 더 이상 지원되지 않습니다. useUploadFiles 훅을 사용하세요."
+  );
 }
 
 /**
  * 단일 이미지 업로드 (편의 함수)
- *
- * @param imageUri - 업로드할 이미지 URI
- * @returns 업로드된 미디어 정보
+ * @deprecated useUploadFiles 훅을 사용하세요
  */
 export async function uploadSingleImage(
   imageUri: string
 ): Promise<UploadedMedia> {
-  const results = await uploadImages([imageUri]);
-  return results[0];
+  throw new Error(
+    "uploadSingleImage는 더 이상 지원되지 않습니다. useUploadFiles 훅을 사용하세요."
+  );
 }

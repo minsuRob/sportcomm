@@ -7,6 +7,8 @@ import {
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
+// @ts-ignore
+import { createUploadLink } from "apollo-upload-client";
 import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
 
@@ -21,10 +23,13 @@ const API_URL = __DEV__
   : "https://api.sportcomm.com/graphql"; // 프로덕션 URL
 
 /**
- * HTTP 링크 생성
+ * 파일 업로드를 지원하는 HTTP 링크 생성
  */
-const httpLink = createHttpLink({
+const uploadLink = createUploadLink({
   uri: API_URL,
+  headers: {
+    "Apollo-Require-Preflight": "true", // CSRF 방지를 위한 헤더
+  },
 });
 
 /**
@@ -34,7 +39,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, locations, path }) => {
       console.error(
-        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`,
+        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`
       );
     });
   }
@@ -89,7 +94,7 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
  * urql 대체용 Apollo Client 설정
  */
 export const client = new ApolloClient({
-  link: from([authLink, errorLink, requestDebugLink, httpLink]),
+  link: from([authLink, errorLink, requestDebugLink, uploadLink]),
   cache: new InMemoryCache({
     typePolicies: {
       Query: {

@@ -17,10 +17,9 @@ import { useMutation } from "@apollo/client";
 import { showToast } from "@/components/CustomToast";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { useTranslation } from "@/lib/i18n/useTranslation";
+
 import { CREATE_POST } from "@/lib/graphql";
 import { PostType } from "./PostCard";
-import { User } from "@/lib/auth";
 
 // 미디어 아이템 타입
 interface MediaItem {
@@ -40,7 +39,6 @@ interface CreatePostModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  currentUser: User | null;
 }
 
 /**
@@ -51,40 +49,33 @@ export default function CreatePostModal({
   visible,
   onClose,
   onSuccess,
-  currentUser,
 }: CreatePostModalProps) {
   // 상태 관리
   const { themed, theme } = useAppTheme();
-  const { t } = useTranslation();
   const [content, setContent] = useState("");
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // GraphQL 뮤테이션
-  const [executeCreatePost, { loading }] = useMutation(CREATE_POST);
+  const [executeCreatePost] = useMutation(CREATE_POST);
 
   // 게시물 타입 옵션
   const postTypeOptions: PostTypeOption[] = [
     {
-      value: "general",
-      label: "일반",
+      value: PostType.ANALYSIS,
+      label: "분석",
       icon: <Hash color={theme.colors.text} size={20} />,
     },
     {
-      value: "photo",
-      label: "사진",
+      value: PostType.HIGHLIGHT,
+      label: "하이라이트",
       icon: <Image color={theme.colors.text} size={20} />,
     },
     {
-      value: "video",
-      label: "비디오",
+      value: PostType.CHEERING,
+      label: "응원",
       icon: <Camera color={theme.colors.text} size={20} />,
-    },
-    {
-      value: "audio",
-      label: "오디오",
-      icon: <Mic color={theme.colors.text} size={20} />,
     },
   ];
 
@@ -112,7 +103,7 @@ export default function CreatePostModal({
             },
           },
         ],
-        { cancelable: true },
+        { cancelable: true }
       );
     } else {
       onClose();
@@ -153,7 +144,7 @@ export default function CreatePostModal({
     setIsSubmitting(true);
 
     try {
-      const { data, errors } = await executeCreatePost({
+      const { errors } = await executeCreatePost({
         variables: {
           input: {
             content: content.trim(),

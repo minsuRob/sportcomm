@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import { initializeDatabase, printDatabaseInfo } from './database/datasource';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import graphqlUploadExpress from 'graphql-upload/graphqlUploadExpress.mjs';
 
 /**
  * 스포츠 커뮤니티 백엔드 애플리케이션 진입점
@@ -20,6 +21,11 @@ async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger: ['error', 'warn', 'log'],
     });
+
+    // GraphQL 파일 업로드 미들웨어 설정
+    app.use(
+      graphqlUploadExpress({ maxFileSize: 10 * 1024 * 1024, maxFiles: 4 }),
+    );
 
     // 정적 파일 서빙 설정 (업로드된 이미지)
     app.useStaticAssets(join(__dirname, '..', 'uploads'), {

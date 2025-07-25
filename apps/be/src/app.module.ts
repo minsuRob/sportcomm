@@ -146,8 +146,11 @@ import { ModerationModule } from './modules/moderation/moderation.module';
           // 쿼리 복잡도 제한
           validationRules: [],
 
-          // 파일 업로드 설정
-          uploads: false,
+          // 파일 업로드 설정 (GraphQL Upload 지원)
+          uploads: {
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+            maxFiles: 4,
+          },
 
           // 구독 설정 (실시간 기능용)
           subscriptions: {

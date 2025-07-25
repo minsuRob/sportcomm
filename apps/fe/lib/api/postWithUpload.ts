@@ -2,8 +2,8 @@ import {
   UploadedMedia,
   UploadError,
   uploadFilesWithProgress,
-  ProgressCallback,
-} from "./restUpload";
+  UploadProgress,
+} from "./fileUpload";
 import { client } from "./client";
 import { gql } from "@apollo/client";
 
@@ -60,11 +60,7 @@ export interface CreatePostWithFilesInput {
   type: "ANALYSIS" | "CHEERING" | "HIGHLIGHT";
   isPublic?: boolean;
   files?: File[] | any[]; // 웹 File 객체 또는 React Native 파일 객체
-  onProgress?: (progress: {
-    percentage: number;
-    loaded: number;
-    total: number;
-  }) => void; // 업로드 진행률 콜백
+  onProgress?: (progress: UploadProgress) => void; // 업로드 진행률 콜백
 }
 
 /**
@@ -131,7 +127,7 @@ export async function createPostWithFiles(
 
       // 진행 상황 콜백 함수가 input에 있는 경우 사용
       const progressCallback = (input as any).onProgress as
-        | ProgressCallback
+        | ((progress: UploadProgress) => void)
         | undefined;
 
       try {
@@ -247,7 +243,7 @@ export async function createPostWithSingleFile(
 
     // 진행 상황 콜백 함수가 input에 있는 경우 사용
     const progressCallback = (input as any).onProgress as
-      | ProgressCallback
+      | ((progress: UploadProgress) => void)
       | undefined;
 
     try {

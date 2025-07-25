@@ -19,6 +19,12 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { showToast } from "@/components/CustomToast";
 import Toast from "react-native-toast-message";
+/**
+ * 통합된 fileUpload.ts 유틸리티에서 필요한 기능 가져오기
+ * - createReactNativeFile: 선택된 이미지를 업로드 가능한 형식으로 변환
+ * - UploadProgress: 파일 업로드 진행 상태 추적을 위한 타입
+ */
+import { createReactNativeFile, UploadProgress } from "@/lib/api/fileUpload";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -49,12 +55,6 @@ interface SelectedImage {
   mimeType?: string;
   source?: string;
   name?: string;
-}
-
-interface UploadProgress {
-  percentage: number;
-  loaded: number;
-  total: number;
 }
 
 /**
@@ -258,18 +258,26 @@ export default function CreatePostScreen() {
   };
 
   /**
-   * React Native 파일 객체 생성 함수
+   * 선택된 이미지를 업로드 가능한 형식으로 준비하는 함수
+   *
+   * fileUpload.ts의 createReactNativeFile 유틸리티 함수를 활용해
+   * expo-image-picker에서 선택한 이미지를 업로드에 적합한 형식으로 변환합니다.
+   *
+   * @param image 선택된 이미지 정보
+   * @param index 배열 내 이미지 인덱스 (파일명 생성 시 사용)
+   * @returns 업로드 가능한 형식의 파일 객체
    */
-  const createReactNativeFile = (image: SelectedImage, index: number) => {
-    const timestamp = Date.now();
-    const extension = image.mimeType?.split("/")[1] || "jpg";
-
-    return {
-      uri: image.uri,
-      type: image.mimeType || "image/jpeg",
-      name: image.name || `image_${timestamp}_${index}.${extension}`,
-      size: image.fileSize,
-    };
+  const prepareImageForUpload = (image: SelectedImage, index: number) => {
+    return createReactNativeFile(
+      {
+        uri: image.uri,
+        mimeType: image.mimeType || "image/jpeg",
+        name: image.name,
+        width: image.width,
+        height: image.height,
+      },
+      index,
+    );
   };
 
   /**
@@ -344,13 +352,15 @@ export default function CreatePostScreen() {
         setUploadProgress("이미지 업로드 중...");
 
         try {
-          // REST API + GraphQL 하이브리드 방식으로 게시물 생성
+          // fileUpload.ts를 사용한 REST API + GraphQL 하이브리드 방식 게시물 생성
           createdPost = await createPostWithFiles({
             ...postInput,
+            // 각 이미지를 업로드 가능한 형식으로 변환
             files: selectedImages.map((image, index) =>
-              createReactNativeFile(image, index),
+              prepareImageForUpload(image, index),
             ),
-            onProgress: (progress) => {
+            // 업로드 진행률 추적 콜백
+            onProgress: (progress: UploadProgress) => {
               setUploadPercentage(progress.percentage);
               setUploadProgress(`이미지 업로드 중... ${progress.percentage}%`);
             },

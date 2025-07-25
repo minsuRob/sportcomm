@@ -68,7 +68,9 @@ export function getFileNameFromUri(uri: string): string {
  * @param uri 파일 URI
  * @returns ReactNativeFile 객체
  */
-export function uriToReactNativeFile(uri: string): ReactNativeFile | File {
+export async function uriToReactNativeFile(
+  uri: string,
+): Promise<ReactNativeFile | File> {
   // 웹 환경에서는 URL에서 Blob을 가져와 File 객체 생성
   if (
     isWeb() &&
@@ -76,21 +78,18 @@ export function uriToReactNativeFile(uri: string): ReactNativeFile | File {
       uri.startsWith("https://") ||
       uri.startsWith("blob:"))
   ) {
-    return new Promise((resolve, reject) => {
-      fetch(uri)
-        .then((response) => response.blob())
-        .then((blob) => {
-          const fileName = getFileNameFromUri(uri);
-          const file = new File([blob], fileName, {
-            type: getMimeTypeFromUri(uri),
-          });
-          resolve(file);
-        })
-        .catch((error) => {
-          console.error("Failed to convert URI to File:", error);
-          reject(error);
-        });
-    });
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const fileName = getFileNameFromUri(uri);
+      const file = new File([blob], fileName, {
+        type: getMimeTypeFromUri(uri),
+      });
+      return file;
+    } catch (error) {
+      console.error("Failed to convert URI to File:", error);
+      throw error;
+    }
   }
 
   // React Native 환경에서는 ReactNativeFile 객체 생성
@@ -116,15 +115,19 @@ export async function urisToFiles(
     const promises = uris.map((uri) => uriToReactNativeFile(uri));
     return Promise.all(promises);
   } else {
-    // React Native 환경에서는 즉시 ReactNativeFile 배열 반환
-    return uris.map((uri) => uriToReactNativeFile(uri) as ReactNativeFile);
+    // React Native 환경에서도 비동기 처리를 위해 Promise.all 사용
+    const promises = uris.map((uri) => uriToReactNativeFile(uri));
+    return Promise.all(promises);
   }
 }
 
 // 하위 호환성을 위한 별칭 함수
-export function urisToReactNativeFiles(uris: string[]): ReactNativeFile[] {
+export async function urisToReactNativeFiles(
+  uris: string[],
+): Promise<ReactNativeFile[]> {
   console.warn("urisToReactNativeFiles is deprecated, use urisToFiles instead");
-  return uris.map((uri) => uriToReactNativeFile(uri) as ReactNativeFile);
+  const files = await Promise.all(uris.map((uri) => uriToReactNativeFile(uri)));
+  return files as ReactNativeFile[];
 }
 
 /**

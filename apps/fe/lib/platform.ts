@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 /**
  * 플랫폼 감지 유틸리티
  *
@@ -34,15 +36,25 @@ export const isWeb = (): boolean => {
 export const isReactNative = (): boolean => {
   try {
     // React Native 환경 확인 방법:
-    // 1. navigator.product가 'ReactNative'인지 확인
-    // 2. global.expo 객체의 존재로 Expo 환경 확인
-    // 3. window.ReactNative 객체 존재 확인
-    // @ts-ignore - 타입 체크 무시
+    // 1. Platform 객체 존재 여부
+    // 2. navigator.product가 'ReactNative'인지 확인
+    // 3. global.expo 객체의 존재로 Expo 환경 확인
+    // 4. __DEV__ 전역 변수 존재 확인 (React Native 개발 환경)
+
+    // Platform 객체 존재 여부 확인 (가장 신뢰할 수 있는 방법)
+    if (typeof Platform !== "undefined") {
+      return true;
+    }
+
+    // 기타 확인 방법들
     return (
+      // @ts-ignore - 타입 체크 무시
       (typeof navigator !== "undefined" &&
         navigator.product === "ReactNative") ||
       // @ts-ignore - global은 React Native에서만 접근 가능
       (typeof global !== "undefined" && "expo" in global) ||
+      // @ts-ignore - __DEV__는 React Native에서 사용
+      typeof __DEV__ !== "undefined" ||
       // @ts-ignore - window.ReactNative는 React Native 웹에서 사용 가능
       (typeof window !== "undefined" && window.ReactNative)
     );
@@ -58,12 +70,7 @@ export const isReactNative = (): boolean => {
 export const isAndroid = (): boolean => {
   try {
     // React Native 환경이고 플랫폼이 Android인 경우
-    // @ts-ignore - Platform은 React Native에서만 사용 가능
-    return (
-      isReactNative() &&
-      typeof Platform !== "undefined" &&
-      Platform.OS === "android"
-    );
+    return isReactNative() && Platform.OS === "android";
   } catch (e) {
     return false;
   }
@@ -76,12 +83,7 @@ export const isAndroid = (): boolean => {
 export const isIOS = (): boolean => {
   try {
     // React Native 환경이고 플랫폼이 iOS인 경우
-    // @ts-ignore - Platform은 React Native에서만 사용 가능
-    return (
-      isReactNative() &&
-      typeof Platform !== "undefined" &&
-      Platform.OS === "ios"
-    );
+    return isReactNative() && Platform.OS === "ios";
   } catch (e) {
     return false;
   }
@@ -130,4 +132,15 @@ export function logPlatformInfo(): void {
   console.log(`- Android: ${isAndroid()}`);
   console.log(`- iOS: ${isIOS()}`);
   console.log(`- 플랫폼 타입: ${getPlatformType()}`);
+
+  // 디버깅에 유용한 추가 정보
+  if (isReactNative()) {
+    console.log(`- React Native Platform.OS: ${Platform.OS}`);
+    console.log(`- React Native Platform.Version: ${Platform.Version}`);
+  }
+
+  // 브라우저 환경 정보
+  if (isWeb() && typeof navigator !== "undefined") {
+    console.log(`- 브라우저: ${navigator.userAgent}`);
+  }
 }

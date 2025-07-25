@@ -32,7 +32,7 @@ const uploadLink = createHybridUploadLink({
     "Apollo-Require-Preflight": "true", // CORS 방지를 위한 헤더
   },
   credentials: "include", // 쿠키 포함
-  debug: true, // 디버그 로깅 활성화
+  debug: __DEV__, // 개발 환경에서만 디버깅 활성화
 });
 
 /**

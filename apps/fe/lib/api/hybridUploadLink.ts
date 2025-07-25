@@ -53,9 +53,15 @@ export const createHybridUploadLink = ({
   includeExtensions?: boolean;
   debug?: boolean;
   [key: string]: any;
-}>) => {
-  const debug = requestOptions.debug || false;
-  delete requestOptions.debug;
+}) => {
+  // 디버그 옵션이 있으면 사용하고, 없으면 기본값 false 적용
+  const debug =
+    typeof requestOptions.debug === "boolean" ? requestOptions.debug : false;
+
+  // requestOptions에서 debug 속성 제거 (표준 fetch 옵션이 아니므로)
+  if ("debug" in requestOptions) {
+    delete requestOptions.debug;
+  }
 
   return new ApolloLink((operation) => {
     return new Observable(async (observer) => {
@@ -170,11 +176,17 @@ export const createHybridUploadLink = ({
           ...requestOptions,
         };
 
+        // 디버그 모드일 때만 로깅
         if (debug) {
           console.log("[Apollo Upload Link] 파일 업로드 요청:", {
             endpoint,
             filesCount: files.size,
-            headers: uploadOptions.headers,
+            operation: operationName,
+            variables: clone,
+            formDataEntries: Array.from(files.keys()).map((key) => ({
+              key,
+              type: files.get(key)?.type || "unknown",
+            })),
           });
         }
 

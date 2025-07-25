@@ -1,7 +1,29 @@
 import { useMutation } from "@apollo/client";
 import { UPLOAD_FILES } from "@/lib/graphql";
 // @ts-ignore
-import { ReactNativeFile } from "apollo-upload-client";
+// Temporary fix for the missing apollo-upload-client module
+// import { ReactNativeFile } from "apollo-upload-client";
+
+// Define ReactNativeFile class locally to avoid dependency issues
+class ReactNativeFile {
+  uri: string;
+  name: string;
+  type: string;
+
+  constructor({
+    uri,
+    name,
+    type,
+  }: {
+    uri: string;
+    name: string;
+    type: string;
+  }) {
+    this.uri = uri;
+    this.name = name;
+    this.type = type;
+  }
+}
 
 /**
  * 업로드된 미디어 정보 타입
@@ -30,6 +52,7 @@ export function useUploadFiles() {
 
       // React Native 파일 객체 생성
       const files = imageUris.map((uri, index) => {
+        // Using our temporary ReactNativeFile implementation
         return new ReactNativeFile({
           uri,
           type: "image/jpeg",
@@ -51,7 +74,7 @@ export function useUploadFiles() {
       console.log(
         "GraphQL 파일 업로드 완료:",
         data.uploadFiles.length,
-        "개 파일"
+        "개 파일",
       );
       return data.uploadFiles;
     } catch (error) {
@@ -72,10 +95,10 @@ export function useUploadFiles() {
  * @deprecated useUploadFiles 훅을 사용하세요
  */
 export async function uploadImages(
-  imageUris: string[]
+  imageUris: string[],
 ): Promise<UploadedMedia[]> {
   throw new Error(
-    "uploadImages는 더 이상 지원되지 않습니다. useUploadFiles 훅을 사용하세요."
+    "uploadImages는 더 이상 지원되지 않습니다. useUploadFiles 훅을 사용하세요.",
   );
 }
 
@@ -84,9 +107,9 @@ export async function uploadImages(
  * @deprecated useUploadFiles 훅을 사용하세요
  */
 export async function uploadSingleImage(
-  imageUri: string
+  imageUri: string,
 ): Promise<UploadedMedia> {
   throw new Error(
-    "uploadSingleImage는 더 이상 지원되지 않습니다. useUploadFiles 훅을 사용하세요."
+    "uploadSingleImage는 더 이상 지원되지 않습니다. useUploadFiles 훅을 사용하세요.",
   );
 }

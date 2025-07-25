@@ -5,7 +5,8 @@ import { AppModule } from './app.module';
 import { initializeDatabase, printDatabaseInfo } from './database/datasource';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
-import graphqlUploadExpress from 'graphql-upload/graphqlUploadExpress.mjs';
+import { json } from 'express';
+import { ensureDir } from 'fs-extra';
 
 /**
  * 스포츠 커뮤니티 백엔드 애플리케이션 진입점
@@ -22,10 +23,17 @@ async function bootstrap() {
       logger: ['error', 'warn', 'log'],
     });
 
-    // GraphQL 파일 업로드 미들웨어 설정
-    app.use(
-      graphqlUploadExpress({ maxFileSize: 10 * 1024 * 1024, maxFiles: 4 }),
-    );
+    // multipart/form-data 요청을 처리하는 미들웨어 설정
+    app.use(json({ limit: '10mb' }));
+
+    // 정적 파일 폴더가 존재하는지 확인하고 생성
+    try {
+      const uploadsDir = join(__dirname, '..', 'uploads', 'images');
+      await ensureDir(uploadsDir);
+      console.log(`✅ 업로드 디렉터리 확인: ${uploadsDir}`);
+    } catch (error) {
+      console.error('❌ 업로드 디렉터리 생성 실패:', error);
+    }
 
     // 정적 파일 서빙 설정 (업로드된 이미지)
     app.useStaticAssets(join(__dirname, '..', 'uploads'), {

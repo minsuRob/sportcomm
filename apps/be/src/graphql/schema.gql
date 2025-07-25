@@ -1,0 +1,26 @@
+scalar Upload
+
+type Query {
+  _empty: String
+}
+
+type Media {
+  id: ID!
+  originalName: String!
+  url: String!
+  type: String!
+  status: String!
+  fileSize: Int!
+  mimeType: String!
+  extension: String!
+  width: Int
+  height: Int
+  postId: String
+  createdAt: String
+  updatedAt: String
+}
+
+type Mutation {
+  uploadFiles(files: [Upload!]!): [Media!]!
+  uploadFile(file: Upload!): Media!
+}

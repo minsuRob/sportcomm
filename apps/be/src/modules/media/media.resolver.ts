@@ -1,14 +1,6 @@
-import {
-  Resolver,
-  Mutation,
-  Args,
-  InputType,
-  Field,
-  Scalar,
-} from '@nestjs/graphql';
+import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import type { FileUpload } from 'graphql-upload/processRequest.mjs';
-import { GraphQLScalarType, Kind } from 'graphql';
+import { GraphQLUpload } from '../../common/scalars/upload.scalar';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
@@ -19,50 +11,12 @@ import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { ensureDir } from 'fs-extra';
 
-/**
- * Upload 스칼라 타입 정의
- * GraphQLUpload 의존성을 제거하고 직접 구현
- */
-@Scalar('Upload')
-export class UploadScalar extends GraphQLScalarType {
-  constructor() {
-    super({
-      name: 'Upload',
-      description:
-        'The `Upload` scalar type represents a file upload promise that resolves an object containing `stream`, `filename`, `mimetype` and `encoding`.',
-      parseValue: (value) => {
-        if (value instanceof Promise) {
-          return value;
-        }
-        if (typeof value === 'object' && value !== null) {
-          return Promise.resolve(value);
-        }
-        throw new TypeError(
-          `Upload value must be an object or Promise, received: ${value}`,
-        );
-      },
-      parseLiteral: (ast) => {
-        if (ast.kind !== Kind.OBJECT) {
-          throw new TypeError(
-            `Upload literal must be an object, received: ${ast.kind}`,
-          );
-        }
-        throw new Error('Upload literal unsupported.');
-      },
-      serialize: () => {
-        throw new Error('Upload scalar serialization unsupported.');
-      },
-    });
-  }
-}
-
-/**
- * 파일 업로드 입력 타입
- */
-@InputType()
-class UploadFilesInput {
-  @Field(() => [UploadScalar], { description: '업로드할 파일들' })
-  files: FileUpload[];
+// FileUpload 타입 직접 정의
+interface FileUpload {
+  filename: string;
+  mimetype: string;
+  encoding: string;
+  createReadStream: () => NodeJS.ReadableStream;
 }
 
 /**
@@ -85,7 +39,7 @@ export class MediaResolver {
   @Mutation(() => [Media], { description: '파일 업로드' })
   async uploadFiles(
     @CurrentUser() user: User,
-    @Args({ name: 'files', type: () => [UploadScalar] }) files: FileUpload[],
+    @Args({ name: 'files', type: () => [GraphQLUpload] }) files: FileUpload[],
   ): Promise<Media[]> {
     if (!files || files.length === 0) {
       throw new Error('업로드할 파일이 없습니다.');
@@ -102,8 +56,9 @@ export class MediaResolver {
 
     try {
       // 각 파일을 처리
-      for (const file of files) {
-        const { createReadStream, filename, mimetype, encoding } = await file;
+      for (const filePromise of files) {
+        const file = await filePromise;
+        const { createReadStream, filename, mimetype, encoding } = file;
 
         // 파일 타입 검증
         if (!mimetype.startsWith('image/')) {
@@ -172,7 +127,7 @@ export class MediaResolver {
   @Mutation(() => Media, { description: '단일 파일 업로드' })
   async uploadFile(
     @CurrentUser() user: User,
-    @Args({ name: 'file', type: () => UploadScalar }) file: FileUpload,
+    @Args({ name: 'file', type: () => GraphQLUpload }) file: FileUpload,
   ): Promise<Media> {
     const result = await this.uploadFiles(user, [file]);
     return result[0];

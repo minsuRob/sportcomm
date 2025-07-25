@@ -4,6 +4,7 @@ import { Media } from '../../entities/media.entity';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 import { MediaResolver } from './media.resolver';
+import { UploadScalar } from '../../common/scalars/upload.scalar';
 
 /**
  * 미디어 모듈
@@ -12,7 +13,7 @@ import { MediaResolver } from './media.resolver';
 @Module({
   imports: [TypeOrmModule.forFeature([Media])],
   controllers: [MediaController],
-  providers: [MediaService, MediaResolver],
+  providers: [MediaService, MediaResolver, UploadScalar],
   exports: [MediaService],
 })
 export class MediaModule {}

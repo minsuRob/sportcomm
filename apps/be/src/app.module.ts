@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
+import { UploadScalar } from './common/scalars/upload.scalar';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { entities, Post, User } from './entities';
@@ -152,6 +153,8 @@ import { ModerationModule } from './modules/moderation/moderation.module';
             maxFiles: 4,
           },
 
+          // Upload 스칼라 타입은 별도의 스칼라 제공자로 등록
+
           // 구독 설정 (실시간 기능용)
           subscriptions: {
             'graphql-ws': true,
@@ -215,7 +218,7 @@ import { ModerationModule } from './modules/moderation/moderation.module';
 
   // 컨트롤러 및 서비스
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, UploadScalar],
 })
 export class AppModule {
   constructor(private readonly configService: ConfigService) {

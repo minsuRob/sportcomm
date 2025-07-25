@@ -40,6 +40,7 @@
     "expo-splash-screen": "~0.30.8",
     "expo-status-bar": "~2.2.3",
     "expo-system-ui": "~5.0.7",
+    "extract-files": "^11.0.0",
     "graphql": "^16.11.0",
     "i18next": "^25.3.2",
     "lucide-react-native": "^0.511.0",

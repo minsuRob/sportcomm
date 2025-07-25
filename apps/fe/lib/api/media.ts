@@ -1,65 +1,18 @@
-import { useMutation } from "@apollo/client";
-import { UPLOAD_FILES } from "@/lib/graphql";
-import { ReactNativeFile } from "apollo-upload-client";
+import { useUploadFiles as useUploadFilesInternal } from "./upload";
+export { uriToReactNativeFile, urisToReactNativeFiles } from "./upload";
+
+// upload.ts에서 새로운 업로드 타입과 함수를 가져옴
+export { UploadedMedia, useUploadFile } from "./upload";
 
 /**
- * 업로드된 미디어 정보 타입
- */
-export interface UploadedMedia {
-  id: string;
-  originalName: string;
-  url: string;
-  type: string;
-  fileSize: number;
-  mimeType: string;
-  width?: number;
-  height?: number;
-}
-
-/**
- * GraphQL 파일 업로드 훅
- * Apollo Client의 GraphQL Upload를 사용하여 파일을 업로드합니다.
+ * GraphQL 파일 업로드 훅 (기존 호환성을 위해 유지)
+ * 내부적으로는 upload.ts의 개선된 구현을 사용합니다.
  */
 export function useUploadFiles() {
-  const [uploadFilesMutation, { loading, error }] = useMutation(UPLOAD_FILES);
+  // 신규 구현된 업로드 훅 사용
+  const { uploadFiles, loading, error } = useUploadFilesInternal();
 
-  const uploadFiles = async (imageUris: string[]): Promise<UploadedMedia[]> => {
-    try {
-      console.log("GraphQL 파일 업로드 시작:", imageUris.length, "개 파일");
-
-      // React Native 파일 객체 생성
-      const files = imageUris.map((uri, index) => {
-        // Using our temporary ReactNativeFile implementation
-        return new ReactNativeFile({
-          uri,
-          type: "image/jpeg",
-          name: `image_${Date.now()}_${index}.jpg`,
-        });
-      });
-
-      // GraphQL 뮤테이션 실행
-      const { data } = await uploadFilesMutation({
-        variables: {
-          files,
-        },
-      });
-
-      if (!data?.uploadFiles) {
-        throw new Error("업로드 응답 데이터가 없습니다.");
-      }
-
-      console.log(
-        "GraphQL 파일 업로드 완료:",
-        data.uploadFiles.length,
-        "개 파일",
-      );
-      return data.uploadFiles;
-    } catch (error) {
-      console.error("GraphQL 파일 업로드 오류:", error);
-      throw error;
-    }
-  };
-
+  // 기존 API 형태를 유지하면서 내부 구현만 개선
   return {
     uploadFiles,
     loading,
@@ -74,9 +27,9 @@ export function useUploadFiles() {
 export async function uploadImages(
   imageUris: string[],
 ): Promise<UploadedMedia[]> {
-  throw new Error(
-    "uploadImages는 더 이상 지원되지 않습니다. useUploadFiles 훅을 사용하세요.",
-  );
+  // 새로운 구현을 사용하여 레거시 함수 지원
+  const { uploadFiles } = useUploadFilesInternal();
+  return uploadFiles(imageUris);
 }
 
 /**
@@ -86,7 +39,7 @@ export async function uploadImages(
 export async function uploadSingleImage(
   imageUri: string,
 ): Promise<UploadedMedia> {
-  throw new Error(
-    "uploadSingleImage는 더 이상 지원되지 않습니다. useUploadFiles 훅을 사용하세요.",
-  );
+  // 새로운 구현을 사용하여 레거시 함수 지원
+  const { uploadFile } = useUploadFile();
+  return uploadFile(imageUri);
 }

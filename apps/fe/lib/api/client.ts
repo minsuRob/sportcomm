@@ -7,9 +7,9 @@ import {
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
-import { createUploadLink } from "apollo-upload-client";
 import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
+import { createReactNativeUploadLink } from "./reactNativeUploadLink";
 
 /**
  * API 기본 URL 설정
@@ -23,13 +23,14 @@ const API_URL = __DEV__
 
 /**
  * 파일 업로드를 지원하는 HTTP 링크 생성
- * (임시 구현: apollo-upload-client 패키지가 설치될 때까지)
+ * React Native 환경에 맞게 최적화된 업로드 링크 사용
  */
-const uploadLink = createUploadLink({
+const uploadLink = createReactNativeUploadLink({
   uri: API_URL,
   headers: {
     "Apollo-Require-Preflight": "true", // CSRF 방지를 위한 헤더
   },
+  includeExtensions: true,
 });
 
 /**

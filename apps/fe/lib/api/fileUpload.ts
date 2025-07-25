@@ -3,13 +3,40 @@
  *
  * 이 모듈은 REST API를 통해 파일을 업로드하는 기능을 제공합니다.
  * 웹과 React Native 환경 모두에서 작동하며 진행률 추적 기능을 포함합니다.
- * upload.ts와 restUpload.ts의 모든 기능을 통합했습니다.
+ * 파일 업로드 후 GraphQL을 통한 메타데이터 처리를 위한 함수들도 포함합니다.
+ * upload.ts, restUpload.ts, media.ts, uploadAdapter.ts, hybridUploadLink.ts, reactNativeUploadLink.js, postWithUpload.ts의 모든 기능을 통합했습니다.
+ *
+ * 이 파일은 SportComm 앱의 모든 파일 업로드 관련 기능을 담당합니다.
+ * 다른 파일 업로드 관련 모듈을 사용하지 말고 이 모듈만 사용하세요.
  */
 
 import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
-import { isWeb, isReactNative } from "@/lib/platform";
+import {
+  isWeb,
+  isReactNative,
+  getPlatformType,
+  logPlatformInfo,
+} from "@/lib/platform";
 import { ReactNativeFile } from "apollo-upload-client";
+import { ApolloLink, Observable, gql } from "@apollo/client";
+import { print } from "graphql";
+import { extractFiles } from "extract-files";
+import { client } from "./client";
+
+// --------------------------
+// 모듈 설명
+// --------------------------
+/**
+ * 이 모듈은 다음 기능을 제공합니다:
+ * 1. 파일 업로드 기본 함수 (uploadFiles, uploadFile)
+ * 2. 진행률 추적 지원 함수 (uploadFilesWithProgress)
+ * 3. React 훅 인터페이스 (useFileUpload, useUploadWithProgress)
+ * 4. 파일 형식 변환 유틸리티 (createReactNativeFile, adaptFile)
+ * 5. 게시물 생성 관련 함수 (createPostWithFiles, createPostWithSingleFile, createTextOnlyPost)
+ * 6. Apollo 클라이언트용 하이브리드 업로드 링크 (createHybridUploadLink)
+ * 7. 웹 환경에서 파일 선택기 유틸리티 (createWebFileSelector)
+ */
 
 // --------------------------
 // 타입 정의
@@ -124,6 +151,13 @@ const API_BASE_URL = __DEV__
 const UPLOAD_ENDPOINT = `${API_BASE_URL}/api/upload`;
 const UPLOAD_SINGLE_ENDPOINT = `${API_BASE_URL}/api/upload/single`;
 
+// GraphQL API 엔드포인트
+const GRAPHQL_ENDPOINT = __DEV__
+  ? Platform.OS === "android"
+    ? "http://10.0.2.2:3000/graphql" // Android 에뮬레이터용
+    : "http://localhost:3000/graphql" // iOS 에뮬레이터와 웹용
+  : "https://api.sportcomm.com/graphql"; // 프로덕션 URL
+
 // --------------------------
 // 유틸리티 함수
 // --------------------------
@@ -199,9 +233,14 @@ export function debugFormData(formData: FormData): void {
   console.log("===== FormData 디버깅 =====");
 
   // FormData 항목 순회 (지원되는 브라우저에서만)
-  if (typeof formData.entries === "function") {
+  // 타입 안전하게 entries 메서드 체크
+  const hasEntries =
+    "entries" in formData && typeof (formData as any).entries === "function";
+  if (hasEntries) {
     try {
-      for (const pair of formData.entries()) {
+      // entries 메서드를 사용하여 FormData 내용 순회
+      const entries = Array.from((formData as any).entries());
+      for (const pair of entries) {
         const key = pair[0];
         const value = pair[1];
 
@@ -595,3 +634,1154 @@ export async function uploadImages(
   );
   return uploadFiles(files);
 }
+
+// --------------------------
+// 유틸리티 함수 (이전 media.ts, uploadAdapter.ts에서 통합)
+// --------------------------
+
+/**
+ * 이미지 URI를 ReactNativeFile 객체로 변환
+ * @param uri 이미지 URI
+ * @param index 인덱스 (파일명 생성 시 사용)
+ * @returns ReactNativeFile 객체
+ * @deprecated createReactNativeFile 사용 권장
+ */
+export function uriToReactNativeFile(
+  uri: string,
+  index: number = 0,
+): ReactNativeFile {
+  return createReactNativeFile({ uri }, index);
+}
+
+/**
+ * 여러 이미지 URI를 ReactNativeFile 객체 배열로 변환
+ * @param uris 이미지 URI 배열
+ * @returns ReactNativeFile 객체 배열
+ */
+export function urisToReactNativeFiles(uris: string[]): ReactNativeFile[] {
+  return uris.map((uri, index) => createReactNativeFile({ uri }, index));
+}
+
+/**
+ * 파일 선택 및 업로드를 위한 훅
+ * @deprecated useFileUpload 사용 권장
+ */
+export function useUploadFile() {
+  return {
+    uploadFile,
+    loading: false,
+    error: null,
+  };
+}
+
+// uploadAdapter.ts에서 가져온 유틸리티 함수들
+
+// --------------------------
+// 파일 변환 및 FormData 유틸리티 (이전 uploadAdapter.ts에서 통합)
+// --------------------------
+
+/**
+ * 파일 타입 정의
+ * 웹과 React Native 환경에서 사용되는 파일 타입을 통합적으로 관리
+ */
+export type UploadableFile =
+  | File
+  | Blob
+  | ReactNativeFile
+  | {
+      uri: string;
+      name: string;
+      type: string;
+    };
+
+/**
+ * 파일 URI/객체를 적절한 업로드 가능한 형식으로 변환
+ * @param fileOrUri 파일 객체 또는 URI 문자열
+ * @param options 추가 옵션
+ * @returns 업로드 가능한 파일 객체
+ */
+export async function adaptFile(
+  fileOrUri: File | Blob | string | { uri: string },
+  options?: { fileName?: string; mimeType?: string },
+): Promise<UploadableFile> {
+  try {
+    // 웹 환경 처리
+    if (isWeb()) {
+      // 이미 File 객체인 경우
+      if (fileOrUri instanceof File) {
+        return fileOrUri;
+      }
+
+      // Blob인 경우 File로 변환
+      if (fileOrUri instanceof Blob) {
+        const fileName = options?.fileName || `file_${Date.now()}`;
+        return new File([fileOrUri], fileName, {
+          type:
+            options?.mimeType || fileOrUri.type || "application/octet-stream",
+        });
+      }
+
+      // 문자열 URI인 경우
+      if (typeof fileOrUri === "string") {
+        // data: URI (base64)인 경우
+        if (fileOrUri.startsWith("data:")) {
+          const response = await fetch(fileOrUri);
+          const blob = await response.blob();
+          const mimeMatch = fileOrUri.match(/^data:([^;]+);/);
+          const mimeType = mimeMatch
+            ? mimeMatch[1]
+            : "application/octet-stream";
+          const extension = mimeType.split("/")[1] || "bin";
+          const fileName =
+            options?.fileName || `file_${Date.now()}.${extension}`;
+
+          return new File([blob], fileName, { type: mimeType });
+        }
+
+        // http(s): 또는 blob: URI인 경우
+        if (fileOrUri.startsWith("http") || fileOrUri.startsWith("blob:")) {
+          const response = await fetch(fileOrUri);
+          const blob = await response.blob();
+          const urlParts = fileOrUri.split("/");
+          const fileName =
+            options?.fileName ||
+            urlParts[urlParts.length - 1] ||
+            `file_${Date.now()}`;
+
+          return new File([blob], fileName, {
+            type: options?.mimeType || blob.type || "application/octet-stream",
+          });
+        }
+      }
+
+      // URI 객체인 경우
+      if (typeof fileOrUri === "object" && "uri" in fileOrUri) {
+        const uri = fileOrUri.uri;
+        if (typeof uri === "string") {
+          return await adaptFile(uri, options);
+        }
+      }
+
+      throw new Error("지원하지 않는 파일 형식");
+    }
+
+    // React Native 환경 처리
+    if (isReactNative()) {
+      // 이미 ReactNativeFile인 경우
+      if (
+        typeof fileOrUri === "object" &&
+        "uri" in fileOrUri &&
+        "name" in fileOrUri &&
+        "type" in fileOrUri
+      ) {
+        return fileOrUri as ReactNativeFile;
+      }
+
+      // 문자열 URI인 경우
+      if (typeof fileOrUri === "string") {
+        const uri = fileOrUri;
+        const uriParts = uri.split("/");
+        const fileName =
+          options?.fileName ||
+          uriParts[uriParts.length - 1] ||
+          `file_${Date.now()}`;
+
+        // MIME 타입 결정
+        let mimeType = options?.mimeType || "application/octet-stream";
+        const extension = fileName.split(".").pop()?.toLowerCase();
+
+        if (extension && !options?.mimeType) {
+          if (["jpg", "jpeg"].includes(extension)) mimeType = "image/jpeg";
+          else if (extension === "png") mimeType = "image/png";
+          else if (extension === "gif") mimeType = "image/gif";
+          else if (extension === "webp") mimeType = "image/webp";
+          else if (extension === "pdf") mimeType = "application/pdf";
+        }
+
+        return new ReactNativeFile({
+          uri,
+          name: fileName,
+          type: mimeType,
+        });
+      }
+
+      // URI 객체인 경우
+      if (typeof fileOrUri === "object" && "uri" in fileOrUri) {
+        const uri = fileOrUri.uri;
+        if (typeof uri === "string") {
+          return await adaptFile(uri, options);
+        }
+      }
+
+      throw new Error("지원하지 않는 파일 형식");
+    }
+
+    // 지원하지 않는 환경
+    throw new Error("지원하지 않는 환경");
+  } catch (error) {
+    console.error("파일 형식 변환 실패:", error);
+    throw error;
+  }
+}
+
+/**
+ * 여러 파일을 업로드 가능한 형식으로 변환
+ * @param filesOrUris 파일 객체 또는 URI 문자열 배열
+ * @returns 업로드 가능한 파일 객체 배열
+ */
+export async function adaptFiles(
+  filesOrUris: Array<File | Blob | string | { uri: string }>,
+  options?: { fileNames?: string[]; mimeTypes?: string[] },
+): Promise<UploadableFile[]> {
+  const adaptedFiles = await Promise.all(
+    filesOrUris.map((fileOrUri, index) =>
+      adaptFile(fileOrUri, {
+        fileName: options?.fileNames?.[index],
+        mimeType: options?.mimeTypes?.[index],
+      }),
+    ),
+  );
+
+  return adaptedFiles;
+}
+
+/**
+ * GraphQL 변수에서 파일을 추출하여 FormData로 변환
+ * (Apollo Upload 스펙에 맞게 구성)
+ * @param operations GraphQL 작업 (쿼리, 변수 등)
+ * @param files 파일 객체 목록
+ * @returns FormData 객체
+ */
+export function createUploadFormData(
+  operations: {
+    query: string;
+    variables: any;
+    operationName?: string;
+    extensions?: any;
+  },
+  filesMap: { [path: string]: UploadableFile },
+): FormData {
+  // FormData 생성
+  const formData = new FormData();
+
+  // operations 추가 (GraphQL 작업 정보)
+  formData.append("operations", JSON.stringify(operations));
+
+  // map 객체 생성 (파일 경로 매핑)
+  const map: { [key: string]: string[] } = {};
+  let i = 0;
+
+  // 파일 경로 매핑
+  for (const [path, file] of Object.entries(filesMap)) {
+    map[i.toString()] = [path];
+    i++;
+  }
+
+  // map 추가
+  formData.append("map", JSON.stringify(map));
+
+  // 파일 추가
+  i = 0;
+  for (const file of Object.values(filesMap)) {
+    formData.append(i.toString(), file);
+    i++;
+  }
+
+  return formData;
+}
+
+/**
+ * 웹 환경에서 input 요소로부터 파일 선택 처리
+ * @returns 선택된 파일 목록을 처리하는 함수
+ */
+export function createWebFileSelector(): () => Promise<File[]> {
+  return () => {
+    return new Promise((resolve, reject) => {
+      // 웹 환경인지 확인
+      if (!isWeb()) {
+        reject(new Error("웹 환경에서만 사용 가능합니다"));
+        return;
+      }
+
+      // --------------------------
+      // 끝
+      // --------------------------
+
+      // 파일 선택 input 생성
+      const input = document.createElement("input");
+      input.type = "file";
+      input.multiple = true;
+      input.accept = "image/*";
+
+      // 파일 선택 이벤트 처리
+      input.onchange = (event) => {
+        const files = Array.from(
+          (event.target as HTMLInputElement).files || [],
+        );
+        resolve(files);
+      };
+
+      // 취소 처리
+      input.oncancel = () => {
+        resolve([]);
+      };
+
+      // 에러 처리
+      input.onerror = (error) => {
+        reject(error);
+      };
+
+      // 클릭하여 파일 선택 다이얼로그 표시
+      input.click();
+    });
+  };
+}
+
+// --------------------------
+// 게시물 생성 관련 기능
+// --------------------------
+
+/**
+ * 게시물 생성 GraphQL 뮤테이션
+ */
+const CREATE_POST_MUTATION = gql`
+  mutation CreatePost($input: CreatePostInput!) {
+    createPost(input: $input) {
+      id
+      title
+      content
+      type
+      isPublic
+      author {
+        id
+        nickname
+        profileImageUrl
+      }
+      media {
+        id
+        url
+        originalName
+        type
+        thumbnailUrl
+      }
+      likeCount
+      commentCount
+      shareCount
+      viewCount
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+/**
+ * 게시물 생성 입력 타입
+ */
+export interface CreatePostInput {
+  title: string;
+  content: string;
+  type: "ANALYSIS" | "CHEERING" | "HIGHLIGHT";
+  isPublic?: boolean;
+  mediaIds?: string[];
+}
+
+/**
+ * 파일과 함께 게시물 생성 입력 타입
+ */
+export interface CreatePostWithFilesInput {
+  title: string;
+  content: string;
+  type: "ANALYSIS" | "CHEERING" | "HIGHLIGHT";
+  isPublic?: boolean;
+  files?: File[] | any[]; // 웹 File 객체 또는 React Native 파일 객체
+  onProgress?: (progress: UploadProgress) => void; // 업로드 진행률 콜백
+}
+
+/**
+ * 게시물 생성 응답 타입
+ */
+export interface CreatePostResponse {
+  id: string;
+  title: string;
+  content: string;
+  type: string;
+  isPublic: boolean;
+  author: {
+    id: string;
+    nickname: string;
+    profileImageUrl?: string;
+  };
+  media: Array<{
+    id: string;
+    url: string;
+    originalName: string;
+    type: string;
+    thumbnailUrl?: string;
+  }>;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 통합 에러 타입
+ */
+export class PostCreationError extends Error {
+  constructor(
+    message: string,
+    public phase: "upload" | "post_creation",
+    public originalError?: any,
+  ) {
+    super(message);
+    this.name = "PostCreationError";
+  }
+}
+
+/**
+ * 파일 업로드와 게시물 생성을 통합한 함수
+ *
+ * 1. 파일이 있으면 먼저 REST API로 업로드
+ * 2. 업로드된 파일 ID들을 사용하여 GraphQL로 게시물 생성
+ *
+ * @param input 게시물 생성 입력 데이터
+ * @returns 생성된 게시물 정보
+ */
+export async function createPostWithFiles(
+  input: CreatePostWithFilesInput,
+): Promise<CreatePostResponse> {
+  try {
+    let mediaIds: string[] = [];
+
+    // 1단계: 파일 업로드 (파일이 있는 경우)
+    if (input.files && input.files.length > 0) {
+      console.log(`${input.files.length}개의 파일 업로드 시작...`);
+
+      // 진행 상황 콜백 함수가 input에 있는 경우 사용
+      const progressCallback = (input as any).onProgress as
+        | ((progress: UploadProgress) => void)
+        | undefined;
+
+      try {
+        const uploadedFiles = await uploadFilesWithProgress(
+          input.files,
+          progressCallback,
+        );
+        mediaIds = uploadedFiles.map((file) => file.id);
+
+        console.log("파일 업로드 완료:", {
+          uploadedCount: uploadedFiles.length,
+          mediaIds,
+        });
+      } catch (uploadError) {
+        console.error("파일 업로드 실패:", uploadError);
+
+        if (uploadError instanceof UploadError) {
+          throw new PostCreationError(
+            `파일 업로드 실패: ${uploadError.message}`,
+            "upload",
+            uploadError,
+          );
+        }
+
+        throw new PostCreationError(
+          "파일 업로드 중 알 수 없는 오류가 발생했습니다.",
+          "upload",
+          uploadError,
+        );
+      }
+    }
+
+    // 2단계: GraphQL로 게시물 생성
+    console.log("게시물 생성 시작...", {
+      title: input.title,
+      type: input.type,
+      mediaIds,
+    });
+
+    try {
+      const postInput: CreatePostInput = {
+        title: input.title,
+        content: input.content,
+        type: input.type,
+        isPublic: input.isPublic ?? true,
+        mediaIds: mediaIds.length > 0 ? mediaIds : undefined,
+      };
+
+      const result = await client.mutate({
+        mutation: CREATE_POST_MUTATION,
+        variables: { input: postInput },
+        // 캐시 업데이트를 위해 관련 쿼리들을 다시 가져오기
+        refetchQueries: ["GetPosts", "GetMyPosts"],
+        awaitRefetchQueries: true,
+      });
+
+      if (result.errors) {
+        throw new Error(result.errors.map((e) => e.message).join(", "));
+      }
+
+      const createdPost = result.data?.createPost;
+      if (!createdPost) {
+        throw new Error("게시물 생성 응답이 비어있습니다.");
+      }
+
+      console.log("게시물 생성 완료:", {
+        postId: createdPost.id,
+        title: createdPost.title,
+        mediaCount: createdPost.media?.length || 0,
+      });
+
+      return createdPost;
+    } catch (postError) {
+      console.error("게시물 생성 실패:", postError);
+
+      throw new PostCreationError(
+        `게시물 생성 실패: ${postError.message}`,
+        "post_creation",
+        postError,
+      );
+    }
+  } catch (error) {
+    console.error("게시물 생성 프로세스 전체 실패:", error);
+
+    if (error instanceof PostCreationError) {
+      throw error;
+    }
+
+    throw new PostCreationError(
+      "게시물 생성 중 알 수 없는 오류가 발생했습니다.",
+      "post_creation",
+      error,
+    );
+  }
+}
+
+/**
+ * 단일 파일과 함께 게시물 생성하는 함수
+ *
+ * @param input 게시물 생성 입력 데이터 (단일 파일)
+ * @param file 업로드할 단일 파일
+ * @returns 생성된 게시물 정보
+ */
+export async function createPostWithSingleFile(
+  input: Omit<CreatePostWithFilesInput, "files">,
+  file: File | any,
+): Promise<CreatePostResponse> {
+  try {
+    let mediaIds: string[] = [];
+
+    // 1단계: 단일 파일 업로드
+    console.log("단일 파일 업로드 시작...");
+
+    // 진행 상황 콜백 함수가 input에 있는 경우 사용
+    const progressCallback = (input as any).onProgress as
+      | ((progress: UploadProgress) => void)
+      | undefined;
+
+    try {
+      const uploadedFiles = await uploadFilesWithProgress(
+        [file],
+        progressCallback,
+      );
+      if (uploadedFiles.length > 0) {
+        mediaIds = [uploadedFiles[0].id];
+      }
+
+      console.log("단일 파일 업로드 완료:", {
+        mediaId: uploadedFiles[0]?.id,
+        originalName: uploadedFiles[0]?.originalName,
+      });
+    } catch (uploadError) {
+      console.error("단일 파일 업로드 실패:", uploadError);
+
+      if (uploadError instanceof UploadError) {
+        throw new PostCreationError(
+          `파일 업로드 실패: ${uploadError.message}`,
+          "upload",
+          uploadError,
+        );
+      }
+
+      throw new PostCreationError(
+        "파일 업로드 중 알 수 없는 오류가 발생했습니다.",
+        "upload",
+        uploadError,
+      );
+    }
+
+    // 2단계: GraphQL로 게시물 생성
+    console.log("게시물 생성 시작...", {
+      title: input.title,
+      type: input.type,
+      mediaIds,
+    });
+
+    try {
+      const postInput: CreatePostInput = {
+        title: input.title,
+        content: input.content,
+        type: input.type,
+        isPublic: input.isPublic ?? true,
+        mediaIds,
+      };
+
+      const result = await client.mutate({
+        mutation: CREATE_POST_MUTATION,
+        variables: { input: postInput },
+        refetchQueries: ["GetPosts", "GetMyPosts"],
+        awaitRefetchQueries: true,
+      });
+
+      if (result.errors) {
+        throw new Error(result.errors.map((e) => e.message).join(", "));
+      }
+
+      const createdPost = result.data?.createPost;
+      if (!createdPost) {
+        throw new Error("게시물 생성 응답이 비어있습니다.");
+      }
+
+      console.log("단일 파일 게시물 생성 완료:", {
+        postId: createdPost.id,
+        title: createdPost.title,
+        mediaCount: createdPost.media?.length || 0,
+      });
+
+      return createdPost;
+    } catch (postError) {
+      console.error("게시물 생성 실패:", postError);
+
+      throw new PostCreationError(
+        `게시물 생성 실패: ${postError.message}`,
+        "post_creation",
+        postError,
+      );
+    }
+  } catch (error) {
+    console.error("단일 파일 게시물 생성 프로세스 전체 실패:", error);
+
+    if (error instanceof PostCreationError) {
+      throw error;
+    }
+
+    throw new PostCreationError(
+      "게시물 생성 중 알 수 없는 오류가 발생했습니다.",
+      "post_creation",
+      error,
+    );
+  }
+}
+
+/**
+ * 파일 없이 텍스트만으로 게시물 생성하는 함수
+ *
+ * @param input 게시물 생성 입력 데이터
+ * @returns 생성된 게시물 정보
+ */
+export async function createTextOnlyPost(
+  input: Omit<CreatePostWithFilesInput, "files">,
+): Promise<CreatePostResponse> {
+  try {
+    console.log("텍스트 전용 게시물 생성 시작...", {
+      title: input.title,
+      type: input.type,
+    });
+
+    const postInput: CreatePostInput = {
+      title: input.title,
+      content: input.content,
+      type: input.type,
+      isPublic: input.isPublic ?? true,
+    };
+
+    const result = await client.mutate({
+      mutation: CREATE_POST_MUTATION,
+      variables: { input: postInput },
+      refetchQueries: ["GetPosts", "GetMyPosts"],
+      awaitRefetchQueries: true,
+    });
+
+    if (result.errors) {
+      throw new Error(result.errors.map((e) => e.message).join(", "));
+    }
+
+    const createdPost = result.data?.createPost;
+    if (!createdPost) {
+      throw new Error("게시물 생성 응답이 비어있습니다.");
+    }
+
+    console.log("텍스트 전용 게시물 생성 완료:", {
+      postId: createdPost.id,
+      title: createdPost.title,
+    });
+
+    return createdPost;
+  } catch (error) {
+    console.error("텍스트 전용 게시물 생성 실패:", error);
+
+    throw new PostCreationError(
+      `게시물 생성 실패: ${error.message}`,
+      "post_creation",
+      error,
+    );
+  }
+}
+
+/**
+ * 하이브리드 업로드 링크 생성 함수
+ * 웹과 React Native 환경 모두를 지원하는 Apollo 업로드 링크를 생성합니다.
+ *
+ * @param options 링크 생성 옵션
+ * @returns Apollo 링크 인스턴스
+ */
+export const createHybridUploadLink = ({
+  uri,
+  headers = {},
+  credentials,
+  includeExtensions = false,
+  ...requestOptions
+}: {
+  uri: string | ((operation: any) => string);
+  headers?: Record<string, string>;
+  credentials?: string;
+  includeExtensions?: boolean;
+  debug?: boolean;
+  [key: string]: any;
+}) => {
+  // 디버그 옵션이 있으면 사용하고, 없으면 기본값 false 적용
+  const debug =
+    typeof requestOptions.debug === "boolean" ? requestOptions.debug : false;
+
+  // requestOptions에서 debug 속성 제거 (표준 fetch 옵션이 아니므로)
+  if ("debug" in requestOptions) {
+    delete requestOptions.debug;
+  }
+
+  return new ApolloLink((operation) => {
+    return new Observable((observer) => {
+      (async () => {
+        try {
+          // 인증 토큰 가져오기
+          const { token } = await getSession();
+          const authHeaders = token ? { authorization: `Bearer ${token}` } : {};
+
+          // 운영 컨텍스트에서 추가 헤더 가져오기
+          const contextHeaders = operation.getContext().headers || {};
+
+          // 요청 헤더 통합
+          const requestHeaders = {
+            ...headers,
+            ...authHeaders,
+            ...contextHeaders,
+            "Apollo-Require-Preflight": "true", // CORS 프리플라이트 요청 방지
+          };
+
+          // 쿼리 정보 추출
+          const { variables, operationName, query } = operation;
+          const queryString = print(query);
+
+          // 파일 추출
+          const { clone, files } = extractFiles(variables, "", isUploadable);
+
+          // 실행 환경에 맞는 endpoint URI 결정
+          const endpoint = typeof uri === "function" ? uri(operation) : uri;
+
+          // 파일이 없으면 일반 JSON 요청으로 처리
+          if (files.size === 0) {
+            const options = {
+              method: "POST",
+              headers: {
+                ...requestHeaders,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                query: queryString,
+                variables: clone,
+                operationName,
+                extensions: includeExtensions
+                  ? operation.extensions
+                  : undefined,
+              }),
+              credentials: credentials as RequestCredentials,
+              ...requestOptions,
+            };
+
+            const response = await fetch(endpoint, options);
+            const result = await response.json();
+
+            if (result.errors) {
+              observer.next(result);
+              observer.error(new Error(JSON.stringify(result.errors)));
+            } else {
+              observer.next(result);
+              observer.complete();
+            }
+            return;
+          }
+
+          // 파일이 있으면 multipart/form-data로 요청
+          const form = new FormData();
+
+          // GraphQL 쿼리, 변수, 오퍼레이션 이름을 FormData에 추가
+          // Apollo Server는 'operations'라는 필드에 GraphQL 작업을 기대합니다
+          form.append(
+            "operations",
+            JSON.stringify({
+              query: queryString,
+              variables: clone,
+              operationName,
+              extensions: includeExtensions ? operation.extensions : undefined,
+            }),
+          );
+
+          // 파일 맵핑 정보 생성 (Apollo Upload 스펙)
+          // 각 파일은 변수 경로에 매핑되어야 합니다
+          const map = {};
+          let i = 0;
+          files.forEach((paths, file) => {
+            map[i] = paths;
+            i++;
+          });
+
+          // map 객체를 JSON 문자열로 변환하여 'map' 필드에 추가
+          form.append("map", JSON.stringify(map));
+
+          // 파일 추가 (플랫폼별 처리)
+          i = 0;
+          files.forEach((paths, file) => {
+            try {
+              if (isWeb()) {
+                // 웹 환경: File/Blob 객체 그대로 사용
+                // 파일 객체는 '0', '1', '2'와 같은 문자열 키로 전송되어야 함
+                if (file instanceof File || file instanceof Blob) {
+                  form.append(i.toString(), file);
+                } else {
+                  console.error("웹 환경에서 유효한 File 객체가 아님:", file);
+                  throw new Error("웹 환경에서 유효한 File 객체가 아닙니다");
+                }
+              } else if (isReactNative()) {
+                // React Native 환경: 특수한 형태로 파일 정보 추가
+                // TypeScript 타입 오류를 방지하기 위해 타입 단언 사용
+                form.append(i.toString(), {
+                  uri: file.uri,
+                  name: file.name,
+                  type: file.type,
+                } as unknown as Blob);
+              }
+              i++;
+            } catch (fileError) {
+              console.error(`파일 ${i} 추가 중 오류 발생:`, fileError);
+            }
+          });
+
+          // 헤더 설정 (Content-Type은 FormData에서 자동 생성되므로 명시하지 않음)
+          const uploadOptions = {
+            method: "POST",
+            headers: {
+              ...requestHeaders,
+              // FormData를 사용할 때는 Content-Type을 명시하지 않음
+              // 브라우저가 자동으로 boundary와 함께 추가함
+              // Apollo Upload 클라이언트 호환성을 위해 확실히 제거
+              "Content-Type": undefined,
+            },
+            body: form,
+            credentials: credentials as RequestCredentials,
+            ...requestOptions,
+          };
+
+          // 디버그 모드일 때만 로깅
+          if (debug) {
+            console.log("[Apollo Upload Link] 파일 업로드 요청:", {
+              endpoint,
+              filesCount: files.size,
+              operation: operationName,
+              variables: clone,
+              formDataEntries: Array.from(files.keys()).map((key) => ({
+                key,
+                type: files.get(key)?.type || "unknown",
+              })),
+            });
+
+            // FormData 내용 로깅 (디버깅용)
+            console.log("FormData 내용:");
+            // React Native에서는 entries 함수가 없을 수 있으므로 타입 체크
+            if (isWeb()) {
+              try {
+                // 웹 환경에서만 entries 메서드 사용 가능
+                const hasEntries =
+                  "entries" in form &&
+                  typeof (form as any).entries === "function";
+                if (hasEntries) {
+                  const entries = Array.from((form as any).entries());
+                  for (const pair of entries) {
+                    console.log(
+                      `- ${pair[0]}: ${
+                        pair[1] instanceof File
+                          ? `File(${pair[1].name}, ${pair[1].type}, ${pair[1].size} bytes)`
+                          : pair[1]
+                      }`,
+                    );
+                  }
+                } else {
+                  console.log("FormData entries 메서드를 사용할 수 없습니다.");
+                }
+              } catch (e) {
+                console.log("FormData entries 접근 오류:", e);
+              }
+            }
+          }
+
+          try {
+            if (debug) {
+              console.log("업로드 요청 옵션:", {
+                method: uploadOptions.method,
+                headers: uploadOptions.headers,
+                hasBody: !!uploadOptions.body,
+              });
+            }
+
+            const response = await fetch(endpoint, uploadOptions);
+
+            // 응답 상태 확인
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("서버 응답 에러:", errorText);
+              throw new Error(
+                `${response.status} ${response.statusText}: ${errorText}`,
+              );
+            }
+
+            const result = await response.json();
+
+            // GraphQL 결과 처리
+            if (result.errors) {
+              observer.next(result);
+              observer.error(new Error(JSON.stringify(result.errors)));
+            } else {
+              observer.next(result);
+              observer.complete();
+            }
+          } catch (fetchError) {
+            console.error(`[Apollo 업로드 링크 에러]: ${fetchError.message}`);
+            if (debug) {
+              console.error("[Apollo Upload Link] 요청 실패:", fetchError);
+            }
+            observer.error(fetchError);
+          }
+        } catch (error) {
+          console.error("[업로드 링크 에러]:", error);
+          observer.error(error);
+        }
+      })();
+
+      // 구독 해제 핸들러 반환
+      return () => {};
+    });
+  });
+};
+
+// 파일 타입 체커 - 웹의 File/Blob 객체 또는 React Native의 파일 객체인지 확인
+export const isUploadable = (value: any): boolean => {
+  if (value === null || typeof value !== "object") return false;
+
+  // 웹 환경: File 또는 Blob 객체 확인
+  if (isWeb()) {
+    return (
+      (typeof File !== "undefined" && value instanceof File) ||
+      (typeof Blob !== "undefined" && value instanceof Blob)
+    );
+  }
+
+  // React Native 환경: uri, name, type을 가진 객체 확인
+  if (isReactNative()) {
+    return (
+      typeof value.uri === "string" &&
+      typeof value.name === "string" &&
+      typeof value.type === "string"
+    );
+  }
+
+  return false;
+};
+
+/**
+ * React Native 환경에서 GraphQL 파일 업로드를 지원하는 Apollo 링크 생성
+ */
+export const createReactNativeUploadLink = ({
+  uri,
+  headers = {},
+  credentials,
+  includeExtensions = false,
+  ...requestOptions
+}: {
+  uri: string | ((operation: any) => string);
+  headers?: Record<string, string>;
+  credentials?: string;
+  includeExtensions?: boolean;
+  [key: string]: any;
+}) => {
+  return new ApolloLink((operation) => {
+    return new Observable((observer) => {
+      (async () => {
+        try {
+          // 인증 토큰 가져오기
+          const { token } = await getSession();
+          if (token) {
+            operation.setContext({
+              headers: {
+                authorization: `Bearer ${token}`,
+              },
+            });
+          }
+
+          // 쿼리 정보 추출
+          const { variables, operationName, query } = operation;
+          const queryString = print(query);
+
+          // 파일 추출
+          const { clone, files } = extractFiles(variables, "", (value) => {
+            return (
+              value !== null &&
+              typeof value === "object" &&
+              typeof value.uri === "string" &&
+              typeof value.name === "string" &&
+              typeof value.type === "string"
+            );
+          });
+
+          // 실행 환경에 맞는 endpoint URI 결정
+          const endpoint = typeof uri === "function" ? uri(operation) : uri;
+
+          // 파일이 없으면 일반 JSON 요청으로 처리
+          if (files.size === 0) {
+            // 운영 컨텍스트에서 인증 헤더 가져오기
+            const contextHeaders = operation.getContext().headers || {};
+
+            const options = {
+              method: "POST",
+              headers: {
+                ...headers,
+                ...contextHeaders, // 컨텍스트 헤더 포함 (인증 토큰 포함)
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                query: queryString,
+                variables: clone,
+                operationName,
+                extensions: includeExtensions
+                  ? operation.extensions
+                  : undefined,
+              }),
+              credentials: credentials as RequestCredentials,
+              ...requestOptions,
+            };
+
+            const response = await fetch(endpoint, options);
+            const result = await response.json();
+
+            if (result.errors) {
+              observer.next(result);
+              observer.error(new Error(JSON.stringify(result.errors)));
+            } else {
+              observer.next(result);
+              observer.complete();
+            }
+            return;
+          }
+
+          // 파일이 있으면 multipart/form-data로 요청
+          const form = new FormData();
+
+          // GraphQL 쿼리, 변수, 오퍼레이션 이름을 FormData에 추가
+          form.append(
+            "operations",
+            JSON.stringify({
+              query: queryString,
+              variables: clone,
+              operationName,
+              extensions: includeExtensions ? operation.extensions : undefined,
+            }),
+          );
+
+          // 파일 맵핑 정보 생성
+          const map = {};
+          let i = 0;
+          files.forEach((paths, file) => {
+            map[i] = paths;
+            i++;
+          });
+
+          form.append("map", JSON.stringify(map));
+
+          // 파일 추가
+          i = 0;
+          files.forEach((paths, file) => {
+            // React Native의 파일 객체 구조에 맞게 처리
+            if (file.uri && file.name && file.type) {
+              // React Native에서는 이 형식으로 동작함
+              // TypeScript 오류 방지를 위해 타입 단언 사용
+              form.append(i.toString(), {
+                uri: file.uri,
+                name: file.name,
+                type: file.type,
+              } as unknown as Blob);
+            }
+            i++;
+          });
+
+          // 운영 컨텍스트에서 인증 헤더 가져오기
+          const contextHeaders = operation.getContext().headers || {};
+
+          const uploadOptions = {
+            method: "POST",
+            headers: {
+              ...headers,
+              ...contextHeaders, // 컨텍스트 헤더 포함 (인증 토큰 포함)
+              // multipart/form-data는 헤더에서 Content-Type을 명시하지 않음
+              // React Native가 자동으로 boundary를 설정
+              "Apollo-Require-Preflight": "true", // CORS 프리플라이트 요청 방지
+            },
+            body: form,
+            credentials: credentials as RequestCredentials,
+            ...requestOptions,
+          };
+
+          try {
+            const response = await fetch(endpoint, uploadOptions);
+
+            // 응답 상태 확인
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("서버 응답 에러:", errorText);
+              throw new Error(
+                `${response.status} ${response.statusText}: ${errorText}`,
+              );
+            }
+
+            const result = await response.json();
+
+            // GraphQL 결과 처리
+            if (result.errors) {
+              observer.next(result);
+              observer.error(new Error(JSON.stringify(result.errors)));
+            } else {
+              observer.next(result);
+              observer.complete();
+            }
+          } catch (fetchError) {
+            console.error(`[Apollo 업로드 링크 에러]: ${fetchError.message}`);
+            observer.error(fetchError);
+          }
+        } catch (error) {
+          console.error("[인증 에러]:", error);
+          observer.error(error);
+        }
+      })();
+
+      // 구독 해제 핸들러 반환
+      return () => {};
+    });
+  });
+};

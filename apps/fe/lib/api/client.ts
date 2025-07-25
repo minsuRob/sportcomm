@@ -9,7 +9,7 @@ import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
 import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
-import { createHybridUploadLink } from "./hybridUploadLink";
+import { createHybridUploadLink } from "./fileUpload";
 import { logPlatformInfo, getPlatformType } from "@/lib/platform";
 
 /**

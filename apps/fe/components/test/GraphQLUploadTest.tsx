@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { useUploadFiles } from "@/lib/api/media";
+import { useUploadFiles } from "@/lib/api/fileUpload";
 
 /**
  * GraphQL 파일 업로드 테스트 컴포넌트

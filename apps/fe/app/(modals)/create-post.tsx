@@ -12,6 +12,7 @@ import {
   Alert,
   Image,
   Dimensions,
+  ImageStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Send, ImageIcon, X } from "lucide-react-native";
@@ -23,8 +24,13 @@ import Toast from "react-native-toast-message";
  * 통합된 fileUpload.ts 유틸리티에서 필요한 기능 가져오기
  * - createReactNativeFile: 선택된 이미지를 업로드 가능한 형식으로 변환
  * - UploadProgress: 파일 업로드 진행 상태 추적을 위한 타입
+ * - UploadError: 업로드 중 발생 가능한 오류 타입
  */
-import { createReactNativeFile, UploadProgress } from "@/lib/api/fileUpload";
+import {
+  createReactNativeFile,
+  UploadProgress,
+  UploadError,
+} from "@/lib/api/fileUpload";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -35,8 +41,7 @@ import {
   createTextOnlyPost,
   PostCreationError,
   CreatePostWithFilesInput,
-} from "@/lib/api/postWithUpload";
-import { createReactNativeFile, UploadError } from "@/lib/api/restUpload";
+} from "@/lib/api/fileUpload";
 
 // --- 타입 정의 ---
 interface PostTypeOption {
@@ -74,6 +79,7 @@ export default function CreatePostScreen() {
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [uploadPercentage, setUploadPercentage] = useState<number>(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // 사용자 세션 확인
   React.useEffect(() => {
@@ -175,7 +181,7 @@ export default function CreatePostScreen() {
         uri: manipulatedImage.uri,
         width: manipulatedImage.width,
         height: manipulatedImage.height,
-        fileSize: manipulatedImage.fileSize,
+        fileSize: (manipulatedImage as any).fileSize,
         mimeType: "image/jpeg",
       };
     } catch (error) {
@@ -412,13 +418,17 @@ export default function CreatePostScreen() {
         errorMessage = error.message;
         if (error.phase === "upload") {
           errorTitle = "이미지 업로드 실패";
+          setUploadError(errorMessage);
         }
       } else if (error instanceof UploadError) {
         errorTitle = "파일 업로드 실패";
         errorMessage = error.message;
+        setUploadError(error.message);
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
+
+      setUploadError(errorMessage);
 
       showToast({
         type: "error",
@@ -584,6 +594,15 @@ export default function CreatePostScreen() {
             </Text>
           </TouchableOpacity>
 
+          {/* 업로드 에러 표시 */}
+          {uploadError && (
+            <Text
+              style={{ color: "red", marginVertical: 8, paddingHorizontal: 16 }}
+            >
+              오류: {uploadError}
+            </Text>
+          )}
+
           {/* 선택된 이미지 미리보기 */}
           {selectedImages.length > 0 && (
             <View style={themed($imagePreviewContainer)}>
@@ -681,6 +700,12 @@ const $username: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "bold",
   color: colors.text,
+});
+
+const $progressText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: "white",
+  fontSize: 12,
+  marginLeft: 8,
 });
 
 const $userHandle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
@@ -805,7 +830,7 @@ const $imagePreviewItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "relative",
 });
 
-const $imagePreview: ThemedStyle<ViewStyle> = () => ({
+const $imagePreview: ThemedStyle<ImageStyle> = () => ({
   width: 100,
   height: 100,
   borderRadius: 8,

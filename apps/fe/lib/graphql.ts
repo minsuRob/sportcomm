@@ -1,5 +1,7 @@
 // sportcomm/apps/fe/lib/graphql.ts
 
+import { gql } from "@apollo/client";
+
 /**
  * This file contains the GraphQL queries and mutations for interacting with the backend API.
  * Using a central file for these definitions helps maintain consistency.
@@ -10,7 +12,7 @@
  * It retrieves all necessary fields to render a post card, along with pagination metadata.
  * The query now uses an 'input' object to pass arguments, matching the backend resolver.
  */
-export const GET_POSTS = `
+export const GET_POSTS = gql`
   query GetPosts($input: FindPostsInput) {
     posts(input: $input) {
       posts {
@@ -50,7 +52,7 @@ export const GET_POSTS = `
  * The backend will use the authenticated user's ID for the author.
  * Returns the newly created post with the same fields as the feed query.
  */
-export const CREATE_POST = `
+export const CREATE_POST = gql`
   mutation CreatePost($input: CreatePostInput!) {
     createPost(input: $input) {
       id
@@ -85,7 +87,7 @@ export const CREATE_POST = `
  * - true: 좋아요 설정됨 (like)
  * - false: 좋아요 취소됨 (unlike)
  */
-export const TOGGLE_LIKE = `
+export const TOGGLE_LIKE = gql`
   mutation ToggleLike($postId: String!) {
     likePost(id: $postId)
   }
@@ -95,7 +97,7 @@ export const TOGGLE_LIKE = `
  * Logs in a user.
  * Returns an access token and user information upon successful authentication.
  */
-export const LOGIN_MUTATION = `
+export const LOGIN_MUTATION = gql`
   mutation Login($input: LoginInput!) {
     login(input: $input) {
       token: accessToken
@@ -113,7 +115,7 @@ export const LOGIN_MUTATION = `
  * Requires email, nickname, and password.
  * Returns an access token and user information upon successful registration.
  */
-export const REGISTER_MUTATION = `
+export const REGISTER_MUTATION = gql`
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
       token: accessToken
@@ -130,7 +132,7 @@ export const REGISTER_MUTATION = `
  * 게시물 상세 정보를 조회합니다.
  * 게시물의 모든 정보와 댓글 목록을 포함합니다.
  */
-export const GET_POST_DETAIL = `
+export const GET_POST_DETAIL = gql`
   query GetPostDetail($id: String!) {
     post(id: $id) {
       id
@@ -172,7 +174,7 @@ export const GET_POST_DETAIL = `
  * 댓글을 생성합니다.
  * 게시물 ID와 댓글 내용을 받아 새로운 댓글을 생성합니다.
  */
-export const CREATE_COMMENT = `
+export const CREATE_COMMENT = gql`
   mutation CreateComment($input: CreateCommentInput!) {
     createComment(input: $input) {
       id
@@ -192,7 +194,7 @@ export const CREATE_COMMENT = `
  * userId를 인자로 받아, 해당 유저에 대한 팔로우/언팔로우를 처리합니다.
  * 뮤테이션의 결과로 새로운 팔로우 상태(boolean)를 반환합니다.
  */
-export const TOGGLE_FOLLOW = `
+export const TOGGLE_FOLLOW = gql`
   mutation ToggleFollow($userId: String!) {
     toggleFollow(userId: $userId)
   }
@@ -201,7 +203,7 @@ export const TOGGLE_FOLLOW = `
 /**
  * 사용자의 팔로워 목록을 조회합니다.
  */
-export const GET_FOLLOWERS = `
+export const GET_FOLLOWERS = gql`
   query GetFollowers($userId: String!) {
     getUserById(userId: $userId) {
       followers {
@@ -221,7 +223,7 @@ export const GET_FOLLOWERS = `
 /**
  * 사용자의 팔로잉 목록을 조회합니다.
  */
-export const GET_FOLLOWING = `
+export const GET_FOLLOWING = gql`
   query GetFollowing($userId: String!) {
     getUserById(userId: $userId) {
       following {
@@ -242,7 +244,7 @@ export const GET_FOLLOWING = `
  * 사용자 프로필 정보를 조회합니다.
  * 백엔드에서는 ResolveField를 통해 followerCount, followingCount, postCount, isFollowing을 계산합니다.
  */
-export const GET_USER_PROFILE = `
+export const GET_USER_PROFILE = gql`
   query GetUserProfile($userId: String!) {
     getUserById(userId: $userId) {
       id
@@ -262,7 +264,7 @@ export const GET_USER_PROFILE = `
  * GET_POSTS와 동일한 구조를 가지지만, 프로필 화면에서 사용자의 게시물을 가져오는 데 특화되어 있습니다.
  * 'authorId'를 포함한 FindPostsInput으로 필터링합니다.
  */
-export const GET_USER_POSTS = `
+export const GET_USER_POSTS = gql`
   query GetUserPosts($input: FindPostsInput) {
     posts(input: $input) {
       posts {
@@ -300,7 +302,7 @@ export const GET_USER_POSTS = `
 /**
  * 신고 생성 뮤테이션
  */
-export const CREATE_REPORT = `
+export const CREATE_REPORT = gql`
   mutation CreateReport($input: CreateReportInput!) {
     createReport(input: $input) {
       id
@@ -315,7 +317,7 @@ export const CREATE_REPORT = `
 /**
  * 사용자 차단 뮤테이션
  */
-export const BLOCK_USER = `
+export const BLOCK_USER = gql`
   mutation BlockUser($blockedUserId: String!) {
     blockUser(blockedUserId: $blockedUserId) {
       id
@@ -329,7 +331,7 @@ export const BLOCK_USER = `
 /**
  * 사용자 차단 해제 뮤테이션
  */
-export const UNBLOCK_USER = `
+export const UNBLOCK_USER = gql`
   mutation UnblockUser($blockedUserId: String!) {
     unblockUser(blockedUserId: $blockedUserId)
   }
@@ -338,7 +340,7 @@ export const UNBLOCK_USER = `
 /**
  * 차단된 사용자 목록 조회
  */
-export const GET_BLOCKED_USERS = `
+export const GET_BLOCKED_USERS = gql`
   query GetBlockedUsers {
     getBlockedUsers
   }
@@ -347,7 +349,7 @@ export const GET_BLOCKED_USERS = `
 /**
  * 사용자 차단 여부 확인
  */
-export const IS_USER_BLOCKED = `
+export const IS_USER_BLOCKED = gql`
   query IsUserBlocked($userId: String!) {
     isUserBlocked(userId: $userId)
   }

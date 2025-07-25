@@ -1,4 +1,9 @@
-import { ApolloClient, InMemoryCache, createHttpLink } from "@apollo/client";
+import {
+  ApolloClient,
+  InMemoryCache,
+  createHttpLink,
+  from,
+} from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -10,8 +15,8 @@ import { Platform } from "react-native";
  */
 const API_URL = __DEV__
   ? Platform.OS === "android"
-    ? "http://10.0.2.2:4000/graphql" // Android 에뮬레이터용
-    : "http://localhost:4000/graphql" // iOS 에뮬레이터용
+    ? "http://10.0.2.2:3000/graphql" // Android 에뮬레이터용
+    : "http://localhost:3000/graphql" // iOS 에뮬레이터용
   : "https://api.sportcomm.com/graphql"; // 프로덕션 URL
 
 /**
@@ -57,9 +62,10 @@ const authLink = setContext(async (_, { headers }) => {
 
 /**
  * Apollo Client 생성
+ * urql 대체용 Apollo Client 설정
  */
 export const client = new ApolloClient({
-  link: authLink.concat(errorLink).concat(httpLink),
+  link: from([authLink, errorLink, httpLink]),
   cache: new InMemoryCache({
     typePolicies: {
       Query: {
@@ -69,15 +75,28 @@ export const client = new ApolloClient({
             // 검색 결과는 항상 새로운 데이터로 간주 (캐시 병합 안함)
             merge: false,
           },
+          // posts 쿼리 필드에 대한 병합 정책 (페이지네이션 지원)
+          posts: {
+            keyArgs: ["input", ["authorId", "type"]],
+            merge(existing, incoming, { args }) {
+              if (!existing) return incoming;
+              if (args?.input?.page === 1) return incoming;
+
+              return {
+                ...incoming,
+                posts: [...(existing.posts || []), ...(incoming.posts || [])],
+              };
+            },
+          },
         },
       },
     },
   }),
-  //
   defaultOptions: {
     watchQuery: {
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
+      nextFetchPolicy: "cache-first",
     },
     query: {
       fetchPolicy: "network-only",

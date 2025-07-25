@@ -9,7 +9,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { useQuery } from "urql";
+import { useQuery } from "@apollo/client";
 import { useRouter } from "expo-router";
 
 import { GET_POSTS, GET_BLOCKED_USERS } from "@/lib/graphql";
@@ -61,18 +61,24 @@ export default function FeedScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
 
-  const [result, executeQuery] = useQuery<PostsQueryResponse>({
-    query: GET_POSTS,
+  const {
+    data,
+    loading: fetching,
+    error,
+    refetch,
+    fetchMore,
+  } = useQuery<PostsQueryResponse>(GET_POSTS, {
     variables: { input: { page: 1, limit: PAGE_SIZE } },
+    notifyOnNetworkStatusChange: true,
   });
 
   // 차단된 사용자 목록 조회
-  const [blockedUsersResult] = useQuery<{ getBlockedUsers: string[] }>({
-    query: GET_BLOCKED_USERS,
-    pause: !currentUser, // 로그인하지 않은 경우 실행하지 않음
-  });
-
-  const { data, fetching, error } = result;
+  const { data: blockedUsersData } = useQuery<{ getBlockedUsers: string[] }>(
+    GET_BLOCKED_USERS,
+    {
+      skip: !currentUser, // 로그인하지 않은 경우 실행하지 않음
+    },
+  );
 
   useEffect(() => {
     const checkSession = async () => {
@@ -84,10 +90,10 @@ export default function FeedScreen() {
 
   // 차단된 사용자 목록 업데이트
   useEffect(() => {
-    if (blockedUsersResult.data?.getBlockedUsers) {
-      setBlockedUserIds(blockedUsersResult.data.getBlockedUsers);
+    if (blockedUsersData?.getBlockedUsers) {
+      setBlockedUserIds(blockedUsersData.getBlockedUsers);
     }
-  }, [blockedUsersResult.data]);
+  }, [blockedUsersData]);
 
   useEffect(() => {
     if (data?.posts?.posts) {
@@ -108,7 +114,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
       }
@@ -118,19 +124,22 @@ export default function FeedScreen() {
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    executeQuery({
-      requestPolicy: "network-only",
-      variables: { input: { page: 1, limit: PAGE_SIZE } },
+    refetch({
+      input: { page: 1, limit: PAGE_SIZE },
     });
-  }, [executeQuery]);
+  }, [refetch]);
 
   const handleLoadMore = useCallback(() => {
     if (fetching || !data?.posts?.hasNext) return;
     const nextPage = (data?.posts?.page ?? 0) + 1;
-    executeQuery({
+    fetchMore({
       variables: { input: { page: nextPage, limit: PAGE_SIZE } },
+      updateQuery: (prev, { fetchMoreResult }) => {
+        if (!fetchMoreResult) return prev;
+        return fetchMoreResult;
+      },
     });
-  }, [fetching, executeQuery, data]);
+  }, [fetching, fetchMore, data]);
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);

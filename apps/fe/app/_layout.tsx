@@ -6,13 +6,11 @@ import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as React from "react";
 import { Platform, View, Text } from "react-native";
-import { Provider } from "urql";
 import { setAndroidNavigationBar } from "../lib/android-navigation-bar";
-import { client } from "@/lib/urql-client";
 import Toast from "react-native-toast-message";
 import CustomToast from "@/components/CustomToast";
 import { ApolloProvider } from "@apollo/client";
-import { client as apolloClient } from "@/lib/api/client";
+import { client } from "@/lib/api/client";
 
 import {
   ThemeProvider as AppThemeProvider,
@@ -22,8 +20,6 @@ import { customFontsToLoad } from "@/lib/theme/typography";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { initializeI18n } from "@/lib/i18n";
-
-// urql 클라이언트는 별도 파일에서 가져옵니다
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -74,14 +70,14 @@ export default function RootLayout() {
     return null;
   }
 
-  // The urql Provider wraps everything, making the client available to all screens.
+  // The Apollo Provider wraps everything, making the client available to all screens.
   return (
-    <Provider value={client}>
+    <ApolloProvider client={client}>
       <AppThemeProvider>
         <RootLayoutNav />
         <CustomToast />
         <Toast />
       </AppThemeProvider>
-    </Provider>
+    </ApolloProvider>
   );
 }

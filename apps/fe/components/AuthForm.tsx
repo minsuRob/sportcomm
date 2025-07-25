@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
-import { useMutation } from "urql";
+import { useMutation } from "@apollo/client";
 import { Button } from "./ui/button";
 import { Eye, EyeOff, AlertCircle } from "lucide-react-native";
 import { saveSession, User } from "../lib/auth";
@@ -51,8 +51,10 @@ export default function AuthForm({
   const nicknameInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
 
-  const [loginResult, login] = useMutation(LOGIN_MUTATION);
-  const [registerResult, register] = useMutation(REGISTER_MUTATION);
+  const [login, { loading: loginLoading, error: loginError }] =
+    useMutation(LOGIN_MUTATION);
+  const [register, { loading: registerLoading, error: registerError }] =
+    useMutation(REGISTER_MUTATION);
 
   // 에러 상태 초기화
   const clearErrors = () => {
@@ -71,20 +73,24 @@ export default function AuthForm({
       ? { input: { email, password } }
       : { input: { email, nickname, password } };
 
-    const result = await mutation(variables);
-    const data = result.data?.[action];
+    try {
+      const { data } = await mutation({ variables });
+      const result = data?.[action];
 
-    if (data) {
-      const { token, user } = data;
-      await saveSession(token, user);
-      onLoginSuccess(user);
-    } else if (result.error) {
-      const originalError = result.error.graphQLErrors[0]?.extensions
-        ?.originalError as { message?: string[] | string };
+      if (result) {
+        const { token, user } = result;
+        await saveSession(token, user);
+        onLoginSuccess(user);
+      }
+    } catch (error: any) {
+      const graphQLErrors = error?.graphQLErrors;
+      const originalError = graphQLErrors?.[0]?.extensions?.originalError as {
+        message?: string[] | string;
+      };
       const messages = originalError?.message;
       const errorMessage = Array.isArray(messages)
         ? messages.join(", ")
-        : result.error.message;
+        : error?.message || "오류가 발생했습니다";
 
       // 에러 메시지에 따라 적절한 필드에 에러 설정
       if (
@@ -266,7 +272,7 @@ export default function AuthForm({
         size="lg"
         className="bg-foreground"
         onPress={handleContinue}
-        disabled={loginResult.fetching || registerResult.fetching}
+        disabled={loginLoading || registerLoading}
       >
         <Text className="text-background">계속</Text>
       </Button>

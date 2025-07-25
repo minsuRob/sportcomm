@@ -10,7 +10,7 @@ import {
   ImageStyle,
 } from "react-native";
 import { Send } from "lucide-react-native";
-import { useMutation } from "urql";
+import { useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { CREATE_COMMENT } from "@/lib/graphql";
@@ -49,7 +49,7 @@ export default function CommentSection({
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [, executeCreateComment] = useMutation(CREATE_COMMENT);
+  const [executeCreateComment, { loading }] = useMutation(CREATE_COMMENT);
 
   /**
    * 댓글 작성 핸들러
@@ -68,25 +68,27 @@ export default function CommentSection({
     let shouldUpdateUI = false;
 
     try {
-      const result = await executeCreateComment({
-        input: {
-          postId,
-          content,
+      const { data, errors } = await executeCreateComment({
+        variables: {
+          input: {
+            postId,
+            content,
+          },
         },
       });
 
-      if (result.error) {
+      if (errors) {
         // 네트워크 또는 GraphQL 오류가 발생했지만,
         // 요청은 서버에 도달했고 댓글은 생성되었을 수 있음
-        console.error("댓글 작성 중 오류 발생:", result.error);
+        console.error("댓글 작성 중 오류 발생:", errors);
 
         // 오류 메시지에 author 필드 관련 내용이 있으면 백엔드에 저장은 됐지만
         // 응답에 문제가 있는 경우로 판단합니다
-        if (result.error.message.includes("author")) {
+        if (errors.some((error) => error.message.includes("author"))) {
           console.log("댓글이 저장되었을 수 있습니다. UI 업데이트 예약...");
           shouldUpdateUI = true;
         }
-      } else {
+      } else if (data) {
         // 성공적으로 댓글이 생성됨
         shouldUpdateUI = true;
       }

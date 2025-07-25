@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Settings, Edit3, Users, UserPlus } from "lucide-react-native";
-import { useQuery } from "urql";
+import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
@@ -43,21 +43,27 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   // 사용자 프로필 데이터 조회
-  const [profileResult, executeQuery] = useQuery<{ getUserById: UserProfile }>({
-    query: GET_USER_PROFILE,
+  const {
+    data: profileData,
+    loading: profileLoading,
+    refetch: refetchProfile,
+  } = useQuery<{ getUserById: UserProfile }>(GET_USER_PROFILE, {
     variables: { userId: currentUser?.id },
-    pause: !currentUser?.id, // currentUser가 없으면 쿼리 중단
-    requestPolicy: "network-only", // 캐시를 사용하지 않고 항상 네트워크 요청
+    skip: !currentUser?.id, // currentUser가 없으면 쿼리 중단
+    fetchPolicy: "network-only", // 캐시를 사용하지 않고 항상 네트워크 요청
   });
 
   // 사용자의 게시물 목록 조회
-  const [postsResult, executePostsQuery] = useQuery<{
+  const {
+    data: postsData,
+    loading: postsLoading,
+    refetch: refetchPosts,
+  } = useQuery<{
     posts: { posts: Post[] };
-  }>({
-    query: GET_USER_POSTS,
+  }>(GET_USER_POSTS, {
     variables: { input: { authorId: currentUser?.id } },
-    pause: !currentUser?.id,
-    requestPolicy: "network-only",
+    skip: !currentUser?.id,
+    fetchPolicy: "network-only",
   });
 
   useEffect(() => {
@@ -71,17 +77,17 @@ export default function ProfileScreen() {
   // 사용자 정보가 변경되면 프로필 및 게시물 쿼리 다시 실행
   useEffect(() => {
     if (currentUser?.id) {
-      executeQuery({ requestPolicy: "network-only" });
-      executePostsQuery({ requestPolicy: "network-only" });
+      refetchProfile();
+      refetchPosts();
     }
-  }, [currentUser?.id, executeQuery, executePostsQuery]);
+  }, [currentUser?.id, refetchProfile, refetchPosts]);
 
   // 게시물 데이터가 변경되면 상태 업데이트
   useEffect(() => {
-    if (postsResult.data?.posts?.posts) {
-      setUserPosts(postsResult.data.posts.posts);
+    if (postsData?.posts?.posts) {
+      setUserPosts(postsData.posts.posts);
     }
-  }, [postsResult.data]);
+  }, [postsData]);
 
   const handleEditProfile = () => {
     // TODO: 프로필 편집 로직 구현
@@ -115,7 +121,7 @@ export default function ProfileScreen() {
   }
 
   // 프로필 데이터 (GraphQL 결과 또는 기본값)
-  const profileData = profileResult.data?.getUserById || {
+  const userProfile = profileData?.getUserById || {
     id: currentUser.id,
     nickname: currentUser.nickname,
     email: currentUser.email || "",
@@ -127,8 +133,8 @@ export default function ProfileScreen() {
   };
 
   const avatarUrl =
-    profileData.profileImageUrl ||
-    `https://i.pravatar.cc/150?u=${profileData.id}`;
+    userProfile.profileImageUrl ||
+    `https://i.pravatar.cc/150?u=${userProfile.id}`;
 
   return (
     <ScrollView style={themed($container)}>
@@ -143,7 +149,7 @@ export default function ProfileScreen() {
       {/* 프로필 정보 */}
       <View style={themed($profileSection)}>
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
-        <Text style={themed($username)}>{profileData.nickname}</Text>
+        <Text style={themed($username)}>{userProfile.nickname}</Text>
 
         {/* 프로필 편집 버튼 */}
         <TouchableOpacity
@@ -158,21 +164,21 @@ export default function ProfileScreen() {
       {/* 통계 정보 */}
       <View style={themed($statsSection)}>
         <View style={themed($statItem)}>
-          <Text style={themed($statNumber)}>{profileData.postCount}</Text>
+          <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
           <Text style={themed($statLabel)}>게시물</Text>
         </View>
         <TouchableOpacity
           style={themed($statItem)}
           onPress={handleFollowersPress}
         >
-          <Text style={themed($statNumber)}>{profileData.followerCount}</Text>
+          <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
           <Text style={themed($statLabel)}>팔로워</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={themed($statItem)}
           onPress={handleFollowingPress}
         >
-          <Text style={themed($statNumber)}>{profileData.followingCount}</Text>
+          <Text style={themed($statNumber)}>{userProfile.followingCount}</Text>
           <Text style={themed($statLabel)}>팔로잉</Text>
         </TouchableOpacity>
       </View>
@@ -180,7 +186,7 @@ export default function ProfileScreen() {
       {/* 내 게시물 섹션 */}
       <View style={themed($postsSection)}>
         <Text style={themed($sectionTitle)}>내 게시물</Text>
-        {postsResult.fetching ? (
+        {postsLoading ? (
           <View style={themed($loadingContainer)}>
             <ActivityIndicator size="large" color={theme.colors.tint} />
           </View>

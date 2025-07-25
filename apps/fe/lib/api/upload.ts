@@ -1,312 +1,369 @@
-import { ReactNativeFile } from "apollo-upload-client";
-import { useMutation } from "@apollo/client";
-import { UPLOAD_FILE, UPLOAD_FILES } from "@/lib/graphql";
+import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
-import { isWeb, isReactNative } from "@/lib/platform";
-import { adaptFile, adaptFiles, UploadableFile } from "./uploadAdapter";
 
 /**
- * 업로드된 미디어 파일 정보를 위한 인터페이스
+ * REST API 기본 URL 설정
  */
-export interface UploadedMedia {
+const API_BASE_URL = __DEV__
+  ? Platform.OS === "android"
+    ? "http://10.0.2.2:3000"
+    : "http://localhost:3000"
+  : "https://api.sportcomm.com";
+
+/**
+ * 파일 업로드 응답 타입 정의
+ */
+export interface UploadedFile {
   id: string;
-  originalName: string;
   url: string;
-  type: string;
-  fileSize: number;
+  originalName: string;
   mimeType: string;
-  width?: number;
-  height?: number;
+  fileSize: number;
+  type: "IMAGE" | "VIDEO";
+  status: "UPLOADING" | "COMPLETED" | "FAILED";
+  thumbnailUrl?: string;
+}
+
+export interface UploadResponse {
+  success: boolean;
+  message: string;
+  data: {
+    files: UploadedFile[];
+    totalCount: number;
+  };
+  timestamp: string;
+}
+
+export interface SingleUploadResponse {
+  success: boolean;
+  message: string;
+  data: UploadedFile;
+  timestamp: string;
 }
 
 /**
- * URI에서 MIME 타입을 추측합니다.
- * @param uri 파일 URI
- * @returns 추측된 MIME 타입
+ * 파일 업로드 에러 타입
  */
-export function getMimeTypeFromUri(uri: string): string {
-  const extension = uri.split(".").pop()?.toLowerCase() || "";
-
-  switch (extension) {
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "png":
-      return "image/png";
-    case "gif":
-      return "image/gif";
-    case "webp":
-      return "image/webp";
-    case "mp4":
-      return "video/mp4";
-    case "mov":
-      return "video/quicktime";
-    default:
-      return "application/octet-stream";
+export class UploadError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public details?: any
+  ) {
+    super(message);
+    this.name = "UploadError";
   }
 }
 
 /**
- * URI에서 파일 이름을 추출합니다.
- * @param uri 파일 URI
- * @returns 파일 이름 (없으면 타임스탬프 기반 이름 생성)
+ * 여러 파일 업로드 함수
+ * REST API를 통해 최대 4개의 파일을 업로드합니다.
+ *
+ * @param files 업로드할 파일들 (File 또는 React Native의 파일 객체)
+ * @returns 업로드된 파일들의 정보
  */
-export function getFileNameFromUri(uri: string): string {
-  // URI에서 마지막 슬래시 이후의 부분을 파일 이름으로 간주
-  const name = uri.split("/").pop();
-
-  if (name) {
-    return name;
-  }
-
-  // 파일 이름을 추출할 수 없는 경우 타임스탬프 기반 이름 생성
-  const extension = uri.split(".").pop() || "jpg";
-  return `file_${Date.now()}.${extension}`;
-}
-
-/**
- * URI를 ReactNativeFile 객체로 변환합니다.
- * @param uri 파일 URI
- * @returns ReactNativeFile 객체
- */
-export async function uriToReactNativeFile(
-  uri: string | File | Blob | { uri: string },
-): Promise<ReactNativeFile | File> {
-  console.log(
-    "파일 변환 시작:",
-    typeof uri === "string" ? uri : "File/Blob 객체",
-  );
-
-  // 새로운 어댑터 활용
+export async function uploadFiles(
+  files: File[] | any[]
+): Promise<UploadResponse> {
   try {
-    const adaptedFile = await adaptFile(uri, {
-      fileName: typeof uri === "string" ? getFileNameFromUri(uri) : undefined,
-      mimeType: typeof uri === "string" ? getMimeTypeFromUri(uri) : undefined,
-    });
+    // 세션에서 토큰 가져오기
+    const { token } = await getSession();
 
-    console.log(
-      "파일 변환 완료:",
-      adaptedFile instanceof File
-        ? `File(${adaptedFile.name}, ${adaptedFile.type}, ${adaptedFile.size} bytes)`
-        : `ReactNativeFile(${(adaptedFile as any).name}, ${(adaptedFile as any).type})`,
-    );
-
-    return adaptedFile as ReactNativeFile | File;
-  } catch (error) {
-    console.error("파일 변환 실패:", error);
-    throw error;
-  }
-}
-
-/**
- * 여러 URI를 ReactNativeFile 배열로 변환합니다.
- * @param uris 파일 URI 배열
- * @returns ReactNativeFile 객체 배열
- */
-export async function urisToFiles(
-  uris: (string | File | Blob | { uri: string })[],
-): Promise<(ReactNativeFile | File)[]> {
-  console.log(`${uris.length}개의 파일을 변환 시작`);
-
-  try {
-    // 새로운 어댑터 활용
-    const results = await adaptFiles(uris, {
-      fileNames: uris.map((uri) =>
-        typeof uri === "string" ? getFileNameFromUri(uri) : undefined,
-      ),
-      mimeTypes: uris.map((uri) =>
-        typeof uri === "string" ? getMimeTypeFromUri(uri) : undefined,
-      ),
-    });
-
-    console.log(`총 ${results.length}개 파일 변환 완료`);
-    return results as (ReactNativeFile | File)[];
-  } catch (error) {
-    console.error("파일 배열 변환 실패:", error);
-    throw error;
-  }
-}
-
-// 하위 호환성을 위한 별칭 함수
-export async function urisToReactNativeFiles(
-  uris: (string | File | Blob | { uri: string })[],
-): Promise<ReactNativeFile[]> {
-  console.warn("urisToReactNativeFiles is deprecated, use urisToFiles instead");
-  const files = await adaptFiles(uris);
-  return files as ReactNativeFile[];
-}
-
-/**
- * 단일 파일 업로드를 위한 훅
- */
-export function useUploadFile() {
-  const [uploadFileMutation, { loading, error }] = useMutation(UPLOAD_FILE);
-
-  const uploadFile = async (
-    uri: string | File | Blob | { uri: string },
-  ): Promise<UploadedMedia> => {
-    try {
-      console.log("단일 파일 업로드 시작:", uri);
-
-      // 플랫폼에 맞는 파일 객체 생성
-      const file = await uriToReactNativeFile(uri);
-
-      // 인증 토큰 가져오기
-      const { token } = await getSession();
-
-      const { data } = await uploadFileMutation({
-        variables: { file },
-        context: {
-          // 공통 헤더 설정
-          headers: {
-            "Apollo-Require-Preflight": "true",
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-        },
-      });
-
-      if (!data?.uploadFile) {
-        throw new Error("업로드 응답 데이터가 없습니다.");
-      }
-
-      console.log("파일 업로드 완료:", data.uploadFile.url);
-      return data.uploadFile;
-    } catch (error) {
-      console.error("파일 업로드 실패:", error);
-      throw error;
+    if (!token) {
+      throw new UploadError("인증 토큰이 없습니다. 로그인이 필요합니다.", 401);
     }
-  };
 
-  return {
-    uploadFile,
-    loading,
-    error,
-  };
-}
+    // 파일 개수 검증
+    if (!files || files.length === 0) {
+      throw new UploadError("업로드할 파일이 없습니다.", 400);
+    }
 
-/**
- * 여러 파일 업로드를 위한 훅
- */
-export function useUploadFiles() {
-  const [uploadFilesMutation, { loading, error }] = useMutation(UPLOAD_FILES);
+    if (files.length > 4) {
+      throw new UploadError("최대 4개의 파일만 업로드할 수 있습니다.", 400);
+    }
 
-  const uploadFiles = async (
-    uris: (string | File | Blob | { uri: string })[],
-  ): Promise<UploadedMedia[]> => {
-    try {
-      console.log("여러 파일 업로드 시작:", uris.length, "개 파일");
+    // FormData 생성
+    const formData = new FormData();
 
-      // 플랫폼에 맞는 파일 객체 생성
-      console.log("파일 변환 시작 중...");
-      const files = await urisToFiles(uris);
-
-      // 디버깅용: 변환된 파일 정보 출력
-      if (isWeb()) {
-        files.forEach((file, index) => {
-          const f = file as File;
-          console.log(`[${index}] 웹 파일:`, f.name, f.type, f.size, "bytes");
-        });
+    files.forEach((file, index) => {
+      // React Native와 웹 환경 모두 지원
+      if (file.uri) {
+        // React Native 파일 객체
+        formData.append("files", {
+          uri: file.uri,
+          type: file.type || file.mimeType,
+          name: file.name || file.fileName || `file_${index}`,
+        } as any);
       } else {
-        files.forEach((file, index) => {
-          const f = file as ReactNativeFile;
-          console.log(
-            `[${index}] RN 파일:`,
-            f.name,
-            f.type,
-            f.uri.substring(0, 30) + "...",
-          );
-        });
+        // 웹 File 객체
+        formData.append("files", file);
       }
+    });
 
-      // 인증 토큰 가져오기
-      const { token } = await getSession();
+    // REST API 호출
+    const response = await fetch(`${API_BASE_URL}/api/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Content-Type은 FormData 사용 시 자동 설정되므로 명시하지 않음
+      },
+      body: formData,
+    });
 
-      const { data } = await uploadFilesMutation({
-        variables: { files },
-        context: {
-          // 공통 헤더 설정
-          headers: {
-            "Apollo-Require-Preflight": "true",
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-        },
-      });
+    // 응답 처리
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new UploadError(
+        errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+        response.status,
+        errorData
+      );
+    }
 
-      if (!data?.uploadFiles) {
-        throw new Error("업로드 응답 데이터가 없습니다.");
-      }
+    const result: UploadResponse = await response.json();
 
-      console.log("파일 업로드 완료:", data.uploadFiles.length, "개 파일");
-      return data.uploadFiles;
-    } catch (error) {
-      console.error("파일 업로드 실패:", error);
+    if (!result.success) {
+      throw new UploadError(
+        result.message || "파일 업로드에 실패했습니다.",
+        500,
+        result
+      );
+    }
+
+    console.log("파일 업로드 성공:", result);
+    return result;
+  } catch (error) {
+    console.error("파일 업로드 오류:", error);
+
+    if (error instanceof UploadError) {
       throw error;
     }
-  };
 
-  return {
-    uploadFiles,
-    loading,
-    error,
-  };
-}
-
-/**
- * Base64 인코딩된 이미지를 업로드용 임시 파일로 변환합니다.
- * (React Native에서 base64 데이터를 파일처럼 처리)
- */
-export function base64ToFile(
-  base64: string,
-  fileName: string,
-): Promise<File | ReactNativeFile> {
-  // Base64 문자열에서 MIME 타입 추출 (data:image/jpeg;base64,/9j/4AAQ... 형식)
-  const mimeMatch = base64.match(/^data:([^;]+);base64,/);
-  const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
-
-  if (isWeb()) {
-    // 웹 환경에서는 Base64를 Blob으로 변환 후 File 객체 생성
-    return new Promise((resolve) => {
-      const base64WithoutHeader = base64.replace(/^data:([^;]+);base64,/, "");
-      const binaryString = atob(base64WithoutHeader);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const blob = new Blob([bytes], { type: mimeType });
-      const file = new File(
-        [blob],
-        fileName || `image_${Date.now()}.${mimeType.split("/")[1]}`,
-        { type: mimeType },
-      );
-
-      resolve(file);
-    });
-  } else {
-    // React Native 환경에서는 ReactNativeFile 객체 생성
-    return Promise.resolve(
-      new ReactNativeFile({
-        uri: base64,
-        name: fileName || `image_${Date.now()}.${mimeType.split("/")[1]}`,
-        type: mimeType,
-      }),
+    // 네트워크 오류 등 기타 오류 처리
+    throw new UploadError(
+      error.message || "파일 업로드 중 알 수 없는 오류가 발생했습니다.",
+      500,
+      error
     );
   }
 }
 
-// 하위 호환성을 위한 별칭 함수
-export function base64ToReactNativeFile(
-  base64: string,
-  fileName: string,
-): ReactNativeFile {
-  console.warn(
-    "base64ToReactNativeFile is deprecated, use base64ToFile instead",
-  );
-  return new ReactNativeFile({
-    uri: base64,
-    name: fileName || `image_${Date.now()}.${mimeType.split("/")[1]}`,
-    type: mimeMatch ? mimeMatch[1] : "image/jpeg",
+/**
+ * 단일 파일 업로드 함수
+ * REST API를 통해 하나의 파일을 업로드합니다.
+ *
+ * @param file 업로드할 파일 (File 또는 React Native의 파일 객체)
+ * @returns 업로드된 파일의 정보
+ */
+export async function uploadSingleFile(
+  file: File | any
+): Promise<SingleUploadResponse> {
+  try {
+    // 세션에서 토큰 가져오기
+    const { token } = await getSession();
+
+    if (!token) {
+      throw new UploadError("인증 토큰이 없습니다. 로그인이 필요합니다.", 401);
+    }
+
+    if (!file) {
+      throw new UploadError("업로드할 파일이 없습니다.", 400);
+    }
+
+    // FormData 생성
+    const formData = new FormData();
+
+    if (file.uri) {
+      // React Native 파일 객체
+      formData.append("file", {
+        uri: file.uri,
+        type: file.type || file.mimeType,
+        name: file.name || file.fileName || "file",
+      } as any);
+    } else {
+      // 웹 File 객체
+      formData.append("file", file);
+    }
+
+    // REST API 호출
+    const response = await fetch(`${API_BASE_URL}/api/upload/single`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    // 응답 처리
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new UploadError(
+        errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+        response.status,
+        errorData
+      );
+    }
+
+    const result: SingleUploadResponse = await response.json();
+
+    if (!result.success) {
+      throw new UploadError(
+        result.message || "파일 업로드에 실패했습니다.",
+        500,
+        result
+      );
+    }
+
+    console.log("단일 파일 업로드 성공:", result);
+    return result;
+  } catch (error) {
+    console.error("단일 파일 업로드 오류:", error);
+
+    if (error instanceof UploadError) {
+      throw error;
+    }
+
+    throw new UploadError(
+      error.message || "파일 업로드 중 알 수 없는 오류가 발생했습니다.",
+      500,
+      error
+    );
+  }
+}
+
+/**
+ * 파일 업로드 진행률 콜백 타입
+ */
+export type UploadProgressCallback = (progress: {
+  loaded: number;
+  total: number;
+  percentage: number;
+}) => void;
+
+/**
+ * 진행률을 지원하는 파일 업로드 함수
+ * XMLHttpRequest를 사용하여 업로드 진행률을 추적합니다.
+ *
+ * @param files 업로드할 파일들
+ * @param onProgress 진행률 콜백 함수
+ * @returns 업로드된 파일들의 정보
+ */
+export async function uploadFilesWithProgress(
+  files: File[] | any[],
+  onProgress?: UploadProgressCallback
+): Promise<UploadResponse> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // 세션에서 토큰 가져오기
+      const { token } = await getSession();
+
+      if (!token) {
+        throw new UploadError(
+          "인증 토큰이 없습니다. 로그인이 필요합니다.",
+          401
+        );
+      }
+
+      // 파일 개수 검증
+      if (!files || files.length === 0) {
+        throw new UploadError("업로드할 파일이 없습니다.", 400);
+      }
+
+      if (files.length > 4) {
+        throw new UploadError("최대 4개의 파일만 업로드할 수 있습니다.", 400);
+      }
+
+      // FormData 생성
+      const formData = new FormData();
+
+      files.forEach((file, index) => {
+        if (file.uri) {
+          // React Native 파일 객체
+          formData.append("files", {
+            uri: file.uri,
+            type: file.type || file.mimeType,
+            name: file.name || file.fileName || `file_${index}`,
+          } as any);
+        } else {
+          // 웹 File 객체
+          formData.append("files", file);
+        }
+      });
+
+      // XMLHttpRequest 사용하여 진행률 추적
+      const xhr = new XMLHttpRequest();
+
+      // 진행률 이벤트 리스너
+      if (onProgress) {
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percentage = Math.round((event.loaded / event.total) * 100);
+            onProgress({
+              loaded: event.loaded,
+              total: event.total,
+              percentage,
+            });
+          }
+        });
+      }
+
+      // 완료 이벤트 리스너
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result: UploadResponse = JSON.parse(xhr.responseText);
+            if (result.success) {
+              console.log("진행률 추적 파일 업로드 성공:", result);
+              resolve(result);
+            } else {
+              reject(
+                new UploadError(
+                  result.message || "파일 업로드에 실패했습니다.",
+                  xhr.status,
+                  result
+                )
+              );
+            }
+          } catch (parseError) {
+            reject(new UploadError("응답 파싱 오류", xhr.status, parseError));
+          }
+        } else {
+          try {
+            const errorData = JSON.parse(xhr.responseText);
+            reject(
+              new UploadError(
+                errorData.message || `HTTP ${xhr.status}: ${xhr.statusText}`,
+                xhr.status,
+                errorData
+              )
+            );
+          } catch {
+            reject(
+              new UploadError(
+                `HTTP ${xhr.status}: ${xhr.statusText}`,
+                xhr.status
+              )
+            );
+          }
+        }
+      });
+
+      // 에러 이벤트 리스너
+      xhr.addEventListener("error", () => {
+        reject(new UploadError("네트워크 오류가 발생했습니다.", 0));
+      });
+
+      // 요청 설정 및 전송
+      xhr.open("POST", `${API_BASE_URL}/api/upload`);
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      xhr.send(formData);
+    } catch (error) {
+      console.error("진행률 추적 파일 업로드 오류:", error);
+      reject(
+        error instanceof UploadError
+          ? error
+          : new UploadError(error.message, 500, error)
+      );
+    }
   });
 }

@@ -39,18 +39,23 @@ import 'multer';
 
 /**
  * 미디어 업로드 컨트롤러
- * 파일 업로드 및 미디어 관리 기능을 제공합니다.
+ * REST API를 통한 파일 업로드 기능을 제공합니다.
+ * GraphQL과 분리하여 파일 업로드만 처리합니다.
  */
-@Controller('media')
+@Controller('api/upload')
 @UseGuards(GqlAuthGuard)
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
   /**
-   * 이미지 파일 업로드
-   * 최대 4개의 이미지 파일을 업로드할 수 있습니다.
+   * 파일 업로드 REST API
+   * 최대 4개의 이미지/비디오 파일을 업로드할 수 있습니다.
+   *
+   * @param files 업로드할 파일들
+   * @param user 현재 인증된 사용자
+   * @returns 업로드된 파일들의 ID와 URL 정보
    */
-  @Post('upload')
+  @Post()
   @UseInterceptors(
     FilesInterceptor('files', 4, {
       storage: diskStorage({
@@ -58,25 +63,41 @@ export class MediaController {
         filename: (req, file, callback) => {
           const uniqueSuffix = uuidv4();
           const ext = extname(file.originalname);
-          callback(null, `${uniqueSuffix}${ext}`);
+          const timestamp = Date.now();
+          callback(null, `${timestamp}_${uniqueSuffix}${ext}`);
         },
       }),
       fileFilter: (req, file, callback) => {
-        // 이미지 파일만 허용
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+        // 이미지 및 비디오 파일 허용
+        const allowedMimeTypes = [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'video/mp4',
+          'video/avi',
+          'video/mov',
+          'video/wmv',
+        ];
+
+        if (!allowedMimeTypes.includes(file.mimetype)) {
           return callback(
-            new BadRequestException('이미지 파일만 업로드 가능합니다.'),
+            new BadRequestException(
+              '지원되지 않는 파일 형식입니다. 이미지(jpg, png, gif, webp) 또는 비디오(mp4, avi, mov, wmv) 파일만 업로드 가능합니다.',
+            ),
             false,
           );
         }
         callback(null, true);
       },
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB 제한
+        fileSize: 50 * 1024 * 1024, // 50MB 제한 (비디오 파일 고려)
+        files: 4, // 최대 4개 파일
       },
     }),
   )
-  async uploadImages(
+  async uploadFiles(
     @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: User,
   ) {
@@ -84,18 +105,127 @@ export class MediaController {
       throw new BadRequestException('업로드할 파일이 없습니다.');
     }
 
+    if (files.length > 4) {
+      throw new BadRequestException('최대 4개의 파일만 업로드할 수 있습니다.');
+    }
+
     try {
+      // 미디어 엔티티 생성
       const uploadedMedia = await this.mediaService.createMediaFromFiles(
         files,
         user.id,
       );
 
+      // REST API 표준 응답 형식
       return {
         success: true,
         message: `${files.length}개의 파일이 성공적으로 업로드되었습니다.`,
-        data: uploadedMedia,
+        data: {
+          files: uploadedMedia.map((media) => ({
+            id: media.id,
+            url: media.url,
+            originalName: media.originalName,
+            mimeType: media.mimeType,
+            fileSize: media.fileSize,
+            type: media.type,
+            status: media.status,
+            thumbnailUrl: media.thumbnailUrl,
+          })),
+          totalCount: uploadedMedia.length,
+        },
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
+      console.error('파일 업로드 오류:', error);
+      throw new BadRequestException(
+        `파일 업로드 중 오류가 발생했습니다: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * 단일 파일 업로드 REST API
+   * 편의를 위한 단일 파일 업로드 엔드포인트
+   *
+   * @param file 업로드할 파일
+   * @param user 현재 인증된 사용자
+   * @returns 업로드된 파일의 ID와 URL 정보
+   */
+  @Post('single')
+  @UseInterceptors(
+    FilesInterceptor('file', 1, {
+      storage: diskStorage({
+        destination: './uploads/images',
+        filename: (req, file, callback) => {
+          const uniqueSuffix = uuidv4();
+          const ext = extname(file.originalname);
+          const timestamp = Date.now();
+          callback(null, `${timestamp}_${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (req, file, callback) => {
+        const allowedMimeTypes = [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'video/mp4',
+          'video/avi',
+          'video/mov',
+          'video/wmv',
+        ];
+
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          return callback(
+            new BadRequestException(
+              '지원되지 않는 파일 형식입니다. 이미지 또는 비디오 파일만 업로드 가능합니다.',
+            ),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB 제한
+      },
+    }),
+  )
+  async uploadSingleFile(
+    @UploadedFiles() files: Express.Multer.File[],
+    @CurrentUser() user: User,
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('업로드할 파일이 없습니다.');
+    }
+
+    const file = files[0];
+
+    try {
+      const uploadedMedia = await this.mediaService.createMediaFromFiles(
+        [file],
+        user.id,
+      );
+
+      const media = uploadedMedia[0];
+
+      return {
+        success: true,
+        message: '파일이 성공적으로 업로드되었습니다.',
+        data: {
+          id: media.id,
+          url: media.url,
+          originalName: media.originalName,
+          mimeType: media.mimeType,
+          fileSize: media.fileSize,
+          type: media.type,
+          status: media.status,
+          thumbnailUrl: media.thumbnailUrl,
+        },
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('단일 파일 업로드 오류:', error);
       throw new BadRequestException(
         `파일 업로드 중 오류가 발생했습니다: ${error.message}`,
       );

@@ -11,9 +11,11 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
 import { MediaService } from './media.service';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+// multer v2에서는 diskStorage 사용 방식이 변경됨
+// import { diskStorage } from 'multer';
+import { extname, join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { existsSync, mkdirSync } from 'fs';
 import { GqlAuthGuard } from 'src/common/guards/gql-auth.guard';
 // Multer 타입 정의 추가
 import 'multer';
@@ -44,7 +46,6 @@ import 'multer';
  * 웹과 React Native 클라이언트 모두 지원합니다.
  */
 @Controller('api/upload')
-@UseGuards(GqlAuthGuard)
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
@@ -57,17 +58,29 @@ export class MediaController {
    * @returns 업로드된 파일들의 ID와 URL 정보
    */
   @Post()
+  @UseGuards(GqlAuthGuard)
   @UseInterceptors(
     FilesInterceptor('files', 4, {
-      storage: diskStorage({
-        destination: './uploads/images',
+      storage: {
+        destination: (req, file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads/images');
+          // 디렉토리 존재 확인 및 생성
+          try {
+            if (!existsSync(uploadPath)) {
+              mkdirSync(uploadPath, { recursive: true });
+            }
+            cb(null, uploadPath);
+          } catch (error) {
+            cb(new Error(`디렉토리 생성 오류: ${error.message}`), '');
+          }
+        },
         filename: (req, file, callback) => {
           const uniqueSuffix = uuidv4();
           const ext = extname(file.originalname);
           const timestamp = Date.now();
           callback(null, `${timestamp}_${uniqueSuffix}${ext}`);
         },
-      }),
+      },
       fileFilter: (req, file, callback) => {
         // 이미지 및 비디오 파일 허용
         const allowedMimeTypes = [
@@ -207,17 +220,29 @@ export class MediaController {
    * @returns 업로드된 파일의 ID와 URL 정보
    */
   @Post('single')
+  @UseGuards(GqlAuthGuard)
   @UseInterceptors(
     FilesInterceptor('file', 1, {
-      storage: diskStorage({
-        destination: './uploads/images',
+      storage: {
+        destination: (req, file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads/images');
+          // 디렉토리 존재 확인 및 생성
+          try {
+            if (!existsSync(uploadPath)) {
+              mkdirSync(uploadPath, { recursive: true });
+            }
+            cb(null, uploadPath);
+          } catch (error) {
+            cb(new Error(`디렉토리 생성 오류: ${error.message}`), '');
+          }
+        },
         filename: (req, file, callback) => {
           const uniqueSuffix = uuidv4();
           const ext = extname(file.originalname);
           const timestamp = Date.now();
           callback(null, `${timestamp}_${uniqueSuffix}${ext}`);
         },
-      }),
+      },
       fileFilter: (req, file, callback) => {
         const allowedMimeTypes = [
           'image/jpeg',

@@ -31,14 +31,26 @@ async function bootstrap() {
       const uploadsDir = join(__dirname, '..', 'uploads', 'images');
       await ensureDir(uploadsDir);
       console.log(`✅ 업로드 디렉터리 확인: ${uploadsDir}`);
+
+      // 디렉터리 권한 설정 (읽기/쓰기 권한 추가)
+      const fs = require('fs');
+      fs.chmodSync(uploadsDir, '0755');
+      console.log('✅ 업로드 디렉터리 권한 설정 완료');
     } catch (error) {
       console.error('❌ 업로드 디렉터리 생성 실패:', error);
     }
 
     // 정적 파일 서빙 설정 (업로드된 이미지)
-    app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    // 정적 파일 제공을 위한 설정 (업로드된 파일 접근용)
+    const uploadsPath = join(__dirname, '..', 'uploads');
+    app.useStaticAssets(uploadsPath, {
       prefix: '/uploads/',
+      setHeaders: (res) => {
+        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+        res.set('Access-Control-Allow-Origin', '*');
+      },
     });
+    console.log(`✅ 정적 파일 서빙 설정 완료: ${uploadsPath}`);
 
     // 설정 서비스 가져오기
     const configService = app.get(ConfigService);

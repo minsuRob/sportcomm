@@ -36,9 +36,13 @@ export class MediaService {
         // 환경에 따른 기본 URL 설정
         const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
 
+        // 파일 경로에서 '/uploads/images/' 이후 부분만 추출
+        const relativePath =
+          file.path.split('uploads/images/')[1] || file.filename;
+
         const media = this.mediaRepository.create({
           originalName: file.originalname,
-          url: `${baseUrl}/uploads/images/${file.filename}`,
+          url: `${baseUrl}/uploads/images/${relativePath}`,
           type: MediaType.IMAGE,
           status: UploadStatus.COMPLETED,
           fileSize: file.size,

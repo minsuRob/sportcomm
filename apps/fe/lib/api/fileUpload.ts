@@ -408,7 +408,7 @@ export async function uploadFilesWithProgress(
       // 요청 초기화 및 전송
       xhr.open("POST", UPLOAD_ENDPOINT, true);
 
-      // 헤더 설정
+      // 인증 헤더 설정
       if (token) {
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
       }

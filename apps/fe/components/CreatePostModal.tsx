@@ -103,7 +103,7 @@ export default function CreatePostModal({
             },
           },
         ],
-        { cancelable: true }
+        { cancelable: true },
       );
     } else {
       onClose();

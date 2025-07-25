@@ -1,6 +1,8 @@
 import { ReactNativeFile } from "apollo-upload-client";
 import { useMutation } from "@apollo/client";
 import { UPLOAD_FILE, UPLOAD_FILES } from "@/lib/graphql";
+import { getSession } from "@/lib/auth";
+import { isWeb, isReactNative } from "@/lib/platform";
 
 /**
  * 업로드된 미디어 파일 정보를 위한 인터페이스
@@ -66,8 +68,32 @@ export function getFileNameFromUri(uri: string): string {
  * @param uri 파일 URI
  * @returns ReactNativeFile 객체
  */
-export function uriToReactNativeFile(uri: string): ReactNativeFile {
-  // React Native에서 uri는 파일 시스템 경로이며, 'file://' 접두사가 있을 수 있음
+export function uriToReactNativeFile(uri: string): ReactNativeFile | File {
+  // 웹 환경에서는 URL에서 Blob을 가져와 File 객체 생성
+  if (
+    isWeb() &&
+    (uri.startsWith("http://") ||
+      uri.startsWith("https://") ||
+      uri.startsWith("blob:"))
+  ) {
+    return new Promise((resolve, reject) => {
+      fetch(uri)
+        .then((response) => response.blob())
+        .then((blob) => {
+          const fileName = getFileNameFromUri(uri);
+          const file = new File([blob], fileName, {
+            type: getMimeTypeFromUri(uri),
+          });
+          resolve(file);
+        })
+        .catch((error) => {
+          console.error("Failed to convert URI to File:", error);
+          reject(error);
+        });
+    });
+  }
+
+  // React Native 환경에서는 ReactNativeFile 객체 생성
   const fileUri = uri.startsWith("file://") ? uri : uri;
 
   return new ReactNativeFile({
@@ -82,8 +108,23 @@ export function uriToReactNativeFile(uri: string): ReactNativeFile {
  * @param uris 파일 URI 배열
  * @returns ReactNativeFile 객체 배열
  */
+export async function urisToFiles(
+  uris: string[],
+): Promise<(ReactNativeFile | File)[]> {
+  if (isWeb()) {
+    // 웹 환경에서는 Promise 결과를 기다려야 함
+    const promises = uris.map((uri) => uriToReactNativeFile(uri));
+    return Promise.all(promises);
+  } else {
+    // React Native 환경에서는 즉시 ReactNativeFile 배열 반환
+    return uris.map((uri) => uriToReactNativeFile(uri) as ReactNativeFile);
+  }
+}
+
+// 하위 호환성을 위한 별칭 함수
 export function urisToReactNativeFiles(uris: string[]): ReactNativeFile[] {
-  return uris.map((uri) => uriToReactNativeFile(uri));
+  console.warn("urisToReactNativeFiles is deprecated, use urisToFiles instead");
+  return uris.map((uri) => uriToReactNativeFile(uri) as ReactNativeFile);
 }
 
 /**
@@ -96,14 +137,19 @@ export function useUploadFile() {
     try {
       console.log("단일 파일 업로드 시작:", uri);
 
-      const file = uriToReactNativeFile(uri);
+      // 플랫폼에 맞는 파일 객체 생성
+      const file = await uriToReactNativeFile(uri);
+
+      // 인증 토큰 가져오기
+      const { token } = await getSession();
 
       const { data } = await uploadFileMutation({
         variables: { file },
         context: {
-          // React Native에서 필요한 헤더 설정
+          // 공통 헤더 설정
           headers: {
             "Apollo-Require-Preflight": "true",
+            Authorization: token ? `Bearer ${token}` : "",
           },
         },
       });
@@ -137,15 +183,26 @@ export function useUploadFiles() {
     try {
       console.log("여러 파일 업로드 시작:", uris.length, "개 파일");
 
-      const files = urisToReactNativeFiles(uris);
+      // 플랫폼에 맞는 파일 객체 생성
+      const files = await urisToFiles(uris);
 
-      // FormData 형식으로 직접 변환 (ReactNativeFile 객체의 특성 유지)
+      console.log(
+        "파일 변환 완료:",
+        isWeb()
+          ? "Web 환경 (File 객체)"
+          : "React Native 환경 (ReactNativeFile 객체)",
+      );
+
+      // 인증 토큰 가져오기
+      const { token } = await getSession();
+
       const { data } = await uploadFilesMutation({
         variables: { files },
         context: {
-          // Apollo-Upload-Client에서 필요한 헤더 추가
+          // 공통 헤더 설정
           headers: {
             "Apollo-Require-Preflight": "true",
+            Authorization: token ? `Bearer ${token}` : "",
           },
         },
       });
@@ -173,19 +230,58 @@ export function useUploadFiles() {
  * Base64 인코딩된 이미지를 업로드용 임시 파일로 변환합니다.
  * (React Native에서 base64 데이터를 파일처럼 처리)
  */
-export function base64ToReactNativeFile(
+export function base64ToFile(
   base64: string,
   fileName: string,
-): ReactNativeFile {
+): Promise<File | ReactNativeFile> {
   // Base64 문자열에서 MIME 타입 추출 (data:image/jpeg;base64,/9j/4AAQ... 형식)
   const mimeMatch = base64.match(/^data:([^;]+);base64,/);
   const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
 
-  // data: 접두사를 포함한 전체 데이터 URL을 ReactNativeFile의 uri로 사용
-  // (React Native에서는 이미지 표시 시 base64 데이터를 직접 사용할 수 있음)
+  if (isWeb()) {
+    // 웹 환경에서는 Base64를 Blob으로 변환 후 File 객체 생성
+    return new Promise((resolve) => {
+      const base64WithoutHeader = base64.replace(/^data:([^;]+);base64,/, "");
+      const binaryString = atob(base64WithoutHeader);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const blob = new Blob([bytes], { type: mimeType });
+      const file = new File(
+        [blob],
+        fileName || `image_${Date.now()}.${mimeType.split("/")[1]}`,
+        { type: mimeType },
+      );
+
+      resolve(file);
+    });
+  } else {
+    // React Native 환경에서는 ReactNativeFile 객체 생성
+    return Promise.resolve(
+      new ReactNativeFile({
+        uri: base64,
+        name: fileName || `image_${Date.now()}.${mimeType.split("/")[1]}`,
+        type: mimeType,
+      }),
+    );
+  }
+}
+
+// 하위 호환성을 위한 별칭 함수
+export function base64ToReactNativeFile(
+  base64: string,
+  fileName: string,
+): ReactNativeFile {
+  console.warn(
+    "base64ToReactNativeFile is deprecated, use base64ToFile instead",
+  );
   return new ReactNativeFile({
     uri: base64,
     name: fileName || `image_${Date.now()}.${mimeType.split("/")[1]}`,
-    type: mimeType,
+    type: mimeMatch ? mimeMatch[1] : "image/jpeg",
   });
 }

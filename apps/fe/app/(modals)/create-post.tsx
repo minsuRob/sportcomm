@@ -122,7 +122,7 @@ export default function CreatePostScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();
@@ -158,7 +158,7 @@ export default function CreatePostScreen() {
         {
           compress: 0.8, // 80% 품질
           format: ImageManipulator.SaveFormat.JPEG,
-        }
+        },
       );
 
       return {
@@ -186,7 +186,7 @@ export default function CreatePostScreen() {
         Alert.alert(
           "권한 필요",
           "이미지를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }]
+          [{ text: "확인" }],
         );
         return;
       }
@@ -299,9 +299,18 @@ export default function CreatePostScreen() {
       if (selectedImages.length > 0) {
         setUploadProgress("이미지 업로드 중...");
 
+        setUploadProgress("이미지 변환 중...");
         const imageUris = selectedImages.map((img) => img.uri);
-        const uploadedMedia = await uploadFiles(imageUris);
-        uploadedMediaIds = uploadedMedia.map((media) => media.id);
+
+        try {
+          console.log("이미지 업로드 시작:", imageUris.length, "개");
+          const uploadedMedia = await uploadFiles(imageUris);
+          uploadedMediaIds = uploadedMedia.map((media) => media.id);
+          console.log("이미지 업로드 완료:", uploadedMediaIds);
+        } catch (uploadError) {
+          console.error("이미지 업로드 중 오류 발생:", uploadError);
+          throw uploadError;
+        }
 
         showToast({
           type: "success",
@@ -319,7 +328,7 @@ export default function CreatePostScreen() {
         const { token } = await getSession();
         console.log(
           "게시물 생성 요청 전 토큰 확인:",
-          token ? "토큰 있음" : "토큰 없음"
+          token ? "토큰 있음" : "토큰 없음",
         );
 
         const { data } = await executeCreatePost({

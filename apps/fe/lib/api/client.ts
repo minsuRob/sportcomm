@@ -9,7 +9,8 @@ import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
 import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
-import { createReactNativeUploadLink } from "./reactNativeUploadLink";
+import { createHybridUploadLink } from "./hybridUploadLink";
+import { logPlatformInfo, getPlatformType } from "@/lib/platform";
 
 /**
  * API 기본 URL 설정
@@ -23,14 +24,15 @@ const API_URL = __DEV__
 
 /**
  * 파일 업로드를 지원하는 HTTP 링크 생성
- * React Native 환경에 맞게 최적화된 업로드 링크 사용
+ * Apollo Upload Client 사용
  */
-const uploadLink = createReactNativeUploadLink({
+const uploadLink = createHybridUploadLink({
   uri: API_URL,
   headers: {
-    "Apollo-Require-Preflight": "true", // CSRF 방지를 위한 헤더
+    "Apollo-Require-Preflight": "true", // CORS 방지를 위한 헤더
   },
-  includeExtensions: true,
+  credentials: "include", // 쿠키 포함
+  debug: true, // 디버그 로깅 활성화
 });
 
 /**
@@ -94,6 +96,10 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
  * Apollo Client 생성
  * urql 대체용 Apollo Client 설정
  */
+// 플랫폼 정보 로깅
+logPlatformInfo();
+console.log(`Apollo 클라이언트 초기화 (${getPlatformType()} 환경)`);
+
 export const client = new ApolloClient({
   link: from([authLink, errorLink, requestDebugLink, uploadLink]),
   cache: new InMemoryCache({

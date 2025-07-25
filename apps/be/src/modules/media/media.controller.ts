@@ -41,6 +41,7 @@ import 'multer';
  * 미디어 업로드 컨트롤러
  * REST API를 통한 파일 업로드 기능을 제공합니다.
  * GraphQL과 분리하여 파일 업로드만 처리합니다.
+ * 웹과 React Native 클라이언트 모두 지원합니다.
  */
 @Controller('api/upload')
 @UseGuards(GqlAuthGuard)
@@ -78,29 +79,68 @@ export class MediaController {
           'video/mp4',
           'video/avi',
           'video/mov',
+          'video/quicktime', // iOS에서 사용하는 MOV 타입
           'video/wmv',
+          'application/octet-stream', // React Native에서 때때로 이 타입으로 전송됨
         ];
 
-        if (!allowedMimeTypes.includes(file.mimetype)) {
+        // React Native에서 전송되는 파일은 때때로 다른 MIME 타입을 가질 수 있음
+        // 파일 확장자로 추가 검증
+        const allowedExtensions = [
+          'jpg',
+          'jpeg',
+          'png',
+          'gif',
+          'webp',
+          'mp4',
+          'avi',
+          'mov',
+          'wmv',
+        ];
+        const fileExt = file.originalname.split('.').pop()?.toLowerCase();
+
+        if (
+          !allowedMimeTypes.includes(file.mimetype) &&
+          (!fileExt || !allowedExtensions.includes(fileExt))
+        ) {
           return callback(
             new BadRequestException(
-              '지원되지 않는 파일 형식입니다. 이미지(jpg, png, gif, webp) 또는 비디오(mp4, avi, mov, wmv) 파일만 업로드 가능합니다.',
+              `지원되지 않는 파일 형식입니다(${file.mimetype}). 이미지(jpg, png, gif, webp) 또는 비디오(mp4, avi, mov, wmv) 파일만 업로드 가능합니다.`,
             ),
             false,
           );
         }
+
+        // React Native에서 전송된 application/octet-stream 타입 파일의 경우 확장자로 타입 추론
+        if (file.mimetype === 'application/octet-stream' && fileExt) {
+          if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
+            file.mimetype = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+          } else if (['mp4', 'avi', 'mov', 'wmv'].includes(fileExt)) {
+            file.mimetype = `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
+          }
+        }
+
         callback(null, true);
       },
       limits: {
         fileSize: 50 * 1024 * 1024, // 50MB 제한 (비디오 파일 고려)
         files: 4, // 최대 4개 파일
       },
+      // React Native와의 호환성을 위한 Multer 설정
+      preservePath: true,
     }),
   )
   async uploadFiles(
     @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: User,
+    @Body() body: any,
   ) {
+    console.log('파일 업로드 요청 받음:', {
+      fileCount: files?.length || 0,
+      userId: user?.id,
+      bodyParams: Object.keys(body || {}),
+    });
+
     if (!files || files.length === 0) {
       throw new BadRequestException('업로드할 파일이 없습니다.');
     }
@@ -110,11 +150,26 @@ export class MediaController {
     }
 
     try {
+      console.log(
+        '파일 정보:',
+        files.map((f) => ({
+          originalname: f.originalname,
+          mimetype: f.mimetype,
+          size: f.size,
+          path: f.path?.substring(0, 50) + '...',
+        })),
+      );
+
       // 미디어 엔티티 생성
       const uploadedMedia = await this.mediaService.createMediaFromFiles(
         files,
         user.id,
       );
+
+      console.log('업로드 완료:', {
+        mediaCount: uploadedMedia.length,
+        firstMediaId: uploadedMedia[0]?.id,
+      });
 
       // REST API 표준 응답 형식
       return {
@@ -173,17 +228,47 @@ export class MediaController {
           'video/mp4',
           'video/avi',
           'video/mov',
+          'video/quicktime', // iOS에서 사용하는 MOV 타입
           'video/wmv',
+          'application/octet-stream', // React Native에서 때때로 이 타입으로 전송됨
         ];
 
-        if (!allowedMimeTypes.includes(file.mimetype)) {
+        // React Native에서 전송되는 파일은 때때로 다른 MIME 타입을 가질 수 있음
+        // 파일 확장자로 추가 검증
+        const allowedExtensions = [
+          'jpg',
+          'jpeg',
+          'png',
+          'gif',
+          'webp',
+          'mp4',
+          'avi',
+          'mov',
+          'wmv',
+        ];
+        const fileExt = file.originalname.split('.').pop()?.toLowerCase();
+
+        if (
+          !allowedMimeTypes.includes(file.mimetype) &&
+          (!fileExt || !allowedExtensions.includes(fileExt))
+        ) {
           return callback(
             new BadRequestException(
-              '지원되지 않는 파일 형식입니다. 이미지 또는 비디오 파일만 업로드 가능합니다.',
+              `지원되지 않는 파일 형식입니다(${file.mimetype}). 이미지 또는 비디오 파일만 업로드 가능합니다.`,
             ),
             false,
           );
         }
+
+        // React Native에서 전송된 application/octet-stream 타입 파일의 경우 확장자로 타입 추론
+        if (file.mimetype === 'application/octet-stream' && fileExt) {
+          if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
+            file.mimetype = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+          } else if (['mp4', 'avi', 'mov', 'wmv'].includes(fileExt)) {
+            file.mimetype = `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
+          }
+        }
+
         callback(null, true);
       },
       limits: {
@@ -194,7 +279,13 @@ export class MediaController {
   async uploadSingleFile(
     @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: User,
+    @Body() body: any,
   ) {
+    console.log('단일 파일 업로드 요청 받음:', {
+      hasFiles: !!files?.length,
+      userId: user?.id,
+      bodyParams: Object.keys(body || {}),
+    });
     if (!files || files.length === 0) {
       throw new BadRequestException('업로드할 파일이 없습니다.');
     }

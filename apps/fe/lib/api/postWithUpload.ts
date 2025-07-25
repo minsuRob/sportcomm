@@ -1,4 +1,9 @@
-import { uploadFiles, uploadSingleFile, UploadError } from "./upload";
+import {
+  UploadedMedia,
+  UploadError,
+  uploadFilesWithProgress,
+  ProgressCallback,
+} from "./restUpload";
 import { client } from "./client";
 import { gql } from "@apollo/client";
 
@@ -55,6 +60,11 @@ export interface CreatePostWithFilesInput {
   type: "ANALYSIS" | "CHEERING" | "HIGHLIGHT";
   isPublic?: boolean;
   files?: File[] | any[]; // 웹 File 객체 또는 React Native 파일 객체
+  onProgress?: (progress: {
+    percentage: number;
+    loaded: number;
+    total: number;
+  }) => void; // 업로드 진행률 콜백
 }
 
 /**
@@ -93,7 +103,7 @@ export class PostCreationError extends Error {
   constructor(
     message: string,
     public phase: "upload" | "post_creation",
-    public originalError?: any
+    public originalError?: any,
   ) {
     super(message);
     this.name = "PostCreationError";
@@ -110,7 +120,7 @@ export class PostCreationError extends Error {
  * @returns 생성된 게시물 정보
  */
 export async function createPostWithFiles(
-  input: CreatePostWithFilesInput
+  input: CreatePostWithFilesInput,
 ): Promise<CreatePostResponse> {
   try {
     let mediaIds: string[] = [];
@@ -119,12 +129,20 @@ export async function createPostWithFiles(
     if (input.files && input.files.length > 0) {
       console.log(`${input.files.length}개의 파일 업로드 시작...`);
 
+      // 진행 상황 콜백 함수가 input에 있는 경우 사용
+      const progressCallback = (input as any).onProgress as
+        | ProgressCallback
+        | undefined;
+
       try {
-        const uploadResult = await uploadFiles(input.files);
-        mediaIds = uploadResult.data.files.map((file) => file.id);
+        const uploadedFiles = await uploadFilesWithProgress(
+          input.files,
+          progressCallback,
+        );
+        mediaIds = uploadedFiles.map((file) => file.id);
 
         console.log("파일 업로드 완료:", {
-          uploadedCount: uploadResult.data.totalCount,
+          uploadedCount: uploadedFiles.length,
           mediaIds,
         });
       } catch (uploadError) {
@@ -134,14 +152,14 @@ export async function createPostWithFiles(
           throw new PostCreationError(
             `파일 업로드 실패: ${uploadError.message}`,
             "upload",
-            uploadError
+            uploadError,
           );
         }
 
         throw new PostCreationError(
           "파일 업로드 중 알 수 없는 오류가 발생했습니다.",
           "upload",
-          uploadError
+          uploadError,
         );
       }
     }
@@ -192,7 +210,7 @@ export async function createPostWithFiles(
       throw new PostCreationError(
         `게시물 생성 실패: ${postError.message}`,
         "post_creation",
-        postError
+        postError,
       );
     }
   } catch (error) {
@@ -205,7 +223,7 @@ export async function createPostWithFiles(
     throw new PostCreationError(
       "게시물 생성 중 알 수 없는 오류가 발생했습니다.",
       "post_creation",
-      error
+      error,
     );
   }
 }
@@ -219,7 +237,7 @@ export async function createPostWithFiles(
  */
 export async function createPostWithSingleFile(
   input: Omit<CreatePostWithFilesInput, "files">,
-  file: File | any
+  file: File | any,
 ): Promise<CreatePostResponse> {
   try {
     let mediaIds: string[] = [];
@@ -227,13 +245,23 @@ export async function createPostWithSingleFile(
     // 1단계: 단일 파일 업로드
     console.log("단일 파일 업로드 시작...");
 
+    // 진행 상황 콜백 함수가 input에 있는 경우 사용
+    const progressCallback = (input as any).onProgress as
+      | ProgressCallback
+      | undefined;
+
     try {
-      const uploadResult = await uploadSingleFile(file);
-      mediaIds = [uploadResult.data.id];
+      const uploadedFiles = await uploadFilesWithProgress(
+        [file],
+        progressCallback,
+      );
+      if (uploadedFiles.length > 0) {
+        mediaIds = [uploadedFiles[0].id];
+      }
 
       console.log("단일 파일 업로드 완료:", {
-        mediaId: uploadResult.data.id,
-        originalName: uploadResult.data.originalName,
+        mediaId: uploadedFiles[0]?.id,
+        originalName: uploadedFiles[0]?.originalName,
       });
     } catch (uploadError) {
       console.error("단일 파일 업로드 실패:", uploadError);
@@ -242,14 +270,14 @@ export async function createPostWithSingleFile(
         throw new PostCreationError(
           `파일 업로드 실패: ${uploadError.message}`,
           "upload",
-          uploadError
+          uploadError,
         );
       }
 
       throw new PostCreationError(
         "파일 업로드 중 알 수 없는 오류가 발생했습니다.",
         "upload",
-        uploadError
+        uploadError,
       );
     }
 
@@ -298,7 +326,7 @@ export async function createPostWithSingleFile(
       throw new PostCreationError(
         `게시물 생성 실패: ${postError.message}`,
         "post_creation",
-        postError
+        postError,
       );
     }
   } catch (error) {
@@ -311,7 +339,7 @@ export async function createPostWithSingleFile(
     throw new PostCreationError(
       "게시물 생성 중 알 수 없는 오류가 발생했습니다.",
       "post_creation",
-      error
+      error,
     );
   }
 }
@@ -323,7 +351,7 @@ export async function createPostWithSingleFile(
  * @returns 생성된 게시물 정보
  */
 export async function createTextOnlyPost(
-  input: Omit<CreatePostWithFilesInput, "files">
+  input: Omit<CreatePostWithFilesInput, "files">,
 ): Promise<CreatePostResponse> {
   try {
     console.log("텍스트 전용 게시물 생성 시작...", {
@@ -366,7 +394,7 @@ export async function createTextOnlyPost(
     throw new PostCreationError(
       `게시물 생성 실패: ${error.message}`,
       "post_creation",
-      error
+      error,
     );
   }
 }

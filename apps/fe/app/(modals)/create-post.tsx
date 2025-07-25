@@ -15,7 +15,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Send, ImageIcon, X } from "lucide-react-native";
-import { useMutation } from "@apollo/client";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { showToast } from "@/components/CustomToast";
@@ -23,10 +22,15 @@ import Toast from "react-native-toast-message";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
-import { CREATE_POST } from "@/lib/graphql";
 import { PostType } from "@/components/PostCard";
 import { User, getSession } from "@/lib/auth";
-import { useUploadFiles, UploadedMedia } from "@/lib/api/media";
+import {
+  createPostWithFiles,
+  createTextOnlyPost,
+  PostCreationError,
+  CreatePostWithFilesInput,
+} from "@/lib/api/postWithUpload";
+import { createReactNativeFile, UploadError } from "@/lib/api/restUpload";
 
 // --- 타입 정의 ---
 interface PostTypeOption {
@@ -38,10 +42,19 @@ interface PostTypeOption {
 
 interface SelectedImage {
   uri: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   fileSize?: number;
+  path?: string;
   mimeType?: string;
+  source?: string;
+  name?: string;
+}
+
+interface UploadProgress {
+  percentage: number;
+  loaded: number;
+  total: number;
 }
 
 /**
@@ -60,10 +73,7 @@ export default function CreatePostScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
-
-  // GraphQL 뮤테이션 및 파일 업로드
-  const [executeCreatePost] = useMutation(CREATE_POST);
-  const { uploadFiles, loading: uploadLoading } = useUploadFiles();
+  const [uploadPercentage, setUploadPercentage] = useState<number>(0);
 
   // 사용자 세션 확인
   React.useEffect(() => {
@@ -248,7 +258,22 @@ export default function CreatePostScreen() {
   };
 
   /**
-   * 게시물 작성 핸들러
+   * React Native 파일 객체 생성 함수
+   */
+  const createReactNativeFile = (image: SelectedImage, index: number) => {
+    const timestamp = Date.now();
+    const extension = image.mimeType?.split("/")[1] || "jpg";
+
+    return {
+      uri: image.uri,
+      type: image.mimeType || "image/jpeg",
+      name: image.name || `image_${timestamp}_${index}.${extension}`,
+      size: image.fileSize,
+    };
+  };
+
+  /**
+   * 게시물 작성 핸들러 (새로운 하이브리드 방식)
    */
   const handleSubmit = async () => {
     if (!currentUser) {
@@ -292,157 +317,109 @@ export default function CreatePostScreen() {
     }
 
     setIsSubmitting(true);
-    let uploadedMediaIds: string[] = [];
+    setUploadProgress("");
+    setUploadPercentage(0);
+    setUploadError(null);
 
     try {
-      // 1단계: 이미지 업로드 (있는 경우)
+      // 게시물 생성 입력 데이터 준비
+      const postInput = {
+        title: title.trim(),
+        content: content.trim(),
+        type: selectedType as "ANALYSIS" | "CHEERING" | "HIGHLIGHT",
+        isPublic: true,
+      };
+
+      console.log("게시물 생성 시작:", {
+        title: postInput.title,
+        type: postInput.type,
+        hasFiles: selectedImages.length > 0,
+        fileCount: selectedImages.length,
+      });
+
+      let createdPost;
+
+      // 파일이 있는 경우 REST API로 업로드 후 GraphQL로 게시물 생성
       if (selectedImages.length > 0) {
         setUploadProgress("이미지 업로드 중...");
 
-        setUploadProgress("이미지 변환 중...");
-        const imageUris = selectedImages.map((img) => img.uri);
-
         try {
-          console.log("이미지 업로드 시작:", imageUris.length, "개");
-          console.log("이미지 URI 상세 정보:", imageUris);
-
-          // 이미지 업로드 전에 세션 확인
-          const { token } = await getSession();
-          console.log(
-            "이미지 업로드 전 토큰 상태:",
-            token ? "토큰 있음" : "토큰 없음",
-          );
-
-          const uploadedMedia = await uploadFiles(imageUris);
-          uploadedMediaIds = uploadedMedia.map((media) => media.id);
-          console.log("이미지 업로드 완료, 미디어 ID:", uploadedMediaIds);
-          console.log("업로드된 미디어 데이터:", uploadedMedia);
-        } catch (uploadError) {
-          console.error("이미지 업로드 중 오류 발생:", uploadError);
-          console.error("오류 상세 정보:", uploadError.message);
-          console.error("오류 스택:", uploadError.stack);
-          throw uploadError;
-        }
-
-        showToast({
-          type: "success",
-          title: "이미지 업로드 완료",
-          message: `${uploadedMedia.length}개의 이미지가 업로드되었습니다.`,
-          duration: 2000,
-        });
-      }
-
-      // 2단계: 게시물 생성
-      setUploadProgress("게시물 작성 중...");
-
-      try {
-        // 요청 직전에 세션 토큰 다시 확인
-        const { token } = await getSession();
-        console.log(
-          "게시물 생성 요청 전 토큰 확인:",
-          token ? "토큰 있음" : "토큰 없음",
-        );
-
-        const { data } = await executeCreatePost({
-          variables: {
-            input: {
-              title: title.trim(),
-              content: content.trim(),
-              type: selectedType,
-              mediaIds:
-                uploadedMediaIds.length > 0 ? uploadedMediaIds : undefined,
+          // REST API + GraphQL 하이브리드 방식으로 게시물 생성
+          createdPost = await createPostWithFiles({
+            ...postInput,
+            files: selectedImages.map((image, index) =>
+              createReactNativeFile(image, index),
+            ),
+            onProgress: (progress) => {
+              setUploadPercentage(progress.percentage);
+              setUploadProgress(`이미지 업로드 중... ${progress.percentage}%`);
             },
-          },
-          context: {
-            headers: {
-              authorization: token ? `Bearer ${token}` : "",
-            },
-          },
-        });
-
-        if (!data) {
-          showToast({
-            type: "error",
-            title: "게시물 작성 실패",
-            message: "서버에서 응답이 오지 않았습니다",
-            duration: 4000,
           });
-          return;
-        }
 
-        // 성공 시
-        showToast({
-          type: "success",
-          title: "게시물 작성 완료",
-          message: "게시물이 성공적으로 작성되었습니다!",
-          duration: 3000,
-        });
+          console.log("파일과 함께 게시물 생성 완료");
+        } catch (error) {
+          console.error("파일 업로드 및 게시물 생성 실패:", error);
 
-        // 피드로 돌아가기
-        router.back();
-        return;
-      } catch (apolloError: any) {
-        // GraphQL 에러에서 originalError 정보 추출
-        if (apolloError.graphQLErrors && apolloError.graphQLErrors.length > 0) {
-          const graphQLError = apolloError.graphQLErrors[0];
-          if (graphQLError?.extensions?.originalError) {
-            const { message, error, statusCode } = graphQLError.extensions
-              .originalError as {
-              message: string;
-              error: string;
-              statusCode: number;
-            };
-
-            showToast({
-              type: "error",
-              title: "게시물 작성 실패",
-              message: `${message} [${statusCode}: ${error}]`,
-              duration: 5000,
-            });
-          } else {
-            const errorMessage =
-              graphQLError?.message || "게시물 작성에 실패했습니다.";
-            showToast({
-              type: "error",
-              title: "게시물 작성 실패",
-              message: errorMessage,
-              duration: 4000,
-            });
+          if (error instanceof PostCreationError) {
+            if (error.phase === "upload") {
+              setUploadError(`이미지 업로드 실패: ${error.message}`);
+            } else {
+              setUploadError(`게시물 생성 실패: ${error.message}`);
+            }
+            throw error;
           }
-        } else {
-          showToast({
-            type: "error",
-            title: "게시물 작성 실패",
-            message: apolloError.message || "알 수 없는 오류가 발생했습니다",
-            duration: 4000,
-          });
+
+          throw new Error(`게시물 생성 중 오류: ${error.message}`);
         }
-        return;
+      } else {
+        // 텍스트만 있는 게시물 (REST API를 거치지 않고 바로 GraphQL 사용)
+        setUploadProgress("게시물 생성 중...");
+        setUploadPercentage(50); // 진행 상태 표시
+        createdPost = await createTextOnlyPost(postInput);
+        setUploadPercentage(100);
       }
 
-      // 이미 try/catch 블록 안에서 처리됨
+      console.log("게시물 생성 완료:", createdPost);
+
+      // 성공 메시지
+      showToast({
+        type: "success",
+        title: "게시물 작성 완료",
+        message: `게시물이 성공적으로 작성되었습니다! ${selectedImages.length > 0 ? "이미지 업로드 완료." : ""}`,
+        duration: 3000,
+      });
+
+      // 피드로 돌아가기
+      router.back();
     } catch (error) {
       console.error("게시물 작성 오류:", error);
 
-      let errorMessage = "게시물 작성 중 예상치 못한 오류가 발생했습니다.";
+      let errorTitle = "게시물 작성 실패";
+      setUploadPercentage(0);
+      let errorMessage = "알 수 없는 오류가 발생했습니다.";
 
-      if (error instanceof Error) {
-        if (error.message.includes("업로드")) {
-          errorMessage = `이미지 업로드 실패: ${error.message}`;
-        } else {
-          errorMessage = error.message;
+      if (error instanceof PostCreationError) {
+        errorMessage = error.message;
+        if (error.phase === "upload") {
+          errorTitle = "이미지 업로드 실패";
         }
+      } else if (error instanceof UploadError) {
+        errorTitle = "파일 업로드 실패";
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
 
       showToast({
         type: "error",
-        title: "게시물 작성 오류",
+        title: errorTitle,
         message: errorMessage,
-        duration: 4000,
+        duration: 5000,
       });
     } finally {
       setIsSubmitting(false);
       setUploadProgress("");
+      setUploadPercentage(0);
     }
   };
 
@@ -487,6 +464,9 @@ export default function CreatePostScreen() {
               ? uploadProgress || t(TRANSLATION_KEYS.CREATE_POST_PUBLISHING)
               : t(TRANSLATION_KEYS.CREATE_POST_PUBLISH)}
           </Text>
+          {isSubmitting && uploadPercentage > 0 && uploadPercentage < 100 && (
+            <Text style={themed($progressText)}>{uploadPercentage}%</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -586,9 +566,7 @@ export default function CreatePostScreen() {
           <TouchableOpacity
             style={themed($imageUploadButton)}
             onPress={handleImagePicker}
-            disabled={
-              isSubmitting || uploadLoading || selectedImages.length >= 4
-            }
+            disabled={isSubmitting || selectedImages.length >= 4}
           >
             <ImageIcon color={theme.colors.tint} size={20} />
             <Text style={themed($imageUploadText)}>

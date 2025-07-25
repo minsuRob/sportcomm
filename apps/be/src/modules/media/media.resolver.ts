@@ -1,6 +1,6 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { GraphQLUpload } from '../../common/scalars/upload.scalar';
+import { GraphQLUpload, FileUpload } from '../../common/scalars/upload.scalar';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
@@ -10,14 +10,6 @@ import { createWriteStream } from 'fs';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { ensureDir } from 'fs-extra';
-
-// FileUpload 타입 직접 정의
-interface FileUpload {
-  filename: string;
-  mimetype: string;
-  encoding: string;
-  createReadStream: () => NodeJS.ReadableStream;
-}
 
 /**
  * 미디어 GraphQL 리졸버
@@ -39,7 +31,8 @@ export class MediaResolver {
   @Mutation(() => [Media], { description: '파일 업로드' })
   async uploadFiles(
     @CurrentUser() user: User,
-    @Args({ name: 'files', type: () => [GraphQLUpload] }) files: FileUpload[],
+    @Args({ name: 'files', type: () => [GraphQLUpload] })
+    files: Promise<FileUpload>[],
   ): Promise<Media[]> {
     if (!files || files.length === 0) {
       throw new Error('업로드할 파일이 없습니다.');
@@ -127,7 +120,8 @@ export class MediaResolver {
   @Mutation(() => Media, { description: '단일 파일 업로드' })
   async uploadFile(
     @CurrentUser() user: User,
-    @Args({ name: 'file', type: () => GraphQLUpload }) file: FileUpload,
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    file: Promise<FileUpload>,
   ): Promise<Media> {
     const result = await this.uploadFiles(user, [file]);
     return result[0];

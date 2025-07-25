@@ -12,15 +12,11 @@ import { isWeb, isReactNative } from "@/lib/platform";
  * 파일 타입 정의
  * 웹과 React Native 환경에서 사용되는 파일 타입을 통합적으로 관리
  */
-export type UploadableFile =
-  | File
-  | Blob
-  | ReactNativeFile
-  | {
-      uri: string;
-      name: string;
-      type: string;
-    };
+export type UploadableFile = File | Blob | ReactNativeFile | {
+  uri: string;
+  name: string;
+  type: string;
+};
 
 /**
  * 파일 URI/객체를 적절한 업로드 가능한 형식으로 변환
@@ -30,7 +26,7 @@ export type UploadableFile =
  */
 export async function adaptFile(
   fileOrUri: File | Blob | string | { uri: string },
-  options?: { fileName?: string; mimeType?: string },
+  options?: { fileName?: string; mimeType?: string }
 ): Promise<UploadableFile> {
   try {
     // 웹 환경 처리
@@ -44,110 +40,100 @@ export async function adaptFile(
       if (fileOrUri instanceof Blob) {
         const fileName = options?.fileName || `file_${Date.now()}`;
         return new File([fileOrUri], fileName, {
-          type:
-            options?.mimeType || fileOrUri.type || "application/octet-stream",
+          type: options?.mimeType || fileOrUri.type || 'application/octet-stream'
         });
       }
 
       // 문자열 URI인 경우
-      if (typeof fileOrUri === "string") {
+      if (typeof fileOrUri === 'string') {
         // data: URI (base64)인 경우
-        if (fileOrUri.startsWith("data:")) {
+        if (fileOrUri.startsWith('data:')) {
           const response = await fetch(fileOrUri);
           const blob = await response.blob();
           const mimeMatch = fileOrUri.match(/^data:([^;]+);/);
-          const mimeType = mimeMatch
-            ? mimeMatch[1]
-            : "application/octet-stream";
-          const extension = mimeType.split("/")[1] || "bin";
-          const fileName =
-            options?.fileName || `file_${Date.now()}.${extension}`;
+          const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+          const extension = mimeType.split('/')[1] || 'bin';
+          const fileName = options?.fileName || `file_${Date.now()}.${extension}`;
 
           return new File([blob], fileName, { type: mimeType });
         }
 
         // http(s): 또는 blob: URI인 경우
-        if (fileOrUri.startsWith("http") || fileOrUri.startsWith("blob:")) {
+        if (fileOrUri.startsWith('http') || fileOrUri.startsWith('blob:')) {
           const response = await fetch(fileOrUri);
           const blob = await response.blob();
-          const urlParts = fileOrUri.split("/");
-          const fileName =
-            options?.fileName ||
-            urlParts[urlParts.length - 1] ||
-            `file_${Date.now()}`;
+          const urlParts = fileOrUri.split('/');
+          const fileName = options?.fileName || urlParts[urlParts.length - 1] || `file_${Date.now()}`;
 
           return new File([blob], fileName, {
-            type: options?.mimeType || blob.type || "application/octet-stream",
+            type: options?.mimeType || blob.type || 'application/octet-stream'
           });
         }
       }
 
       // URI 객체인 경우
-      if (typeof fileOrUri === "object" && "uri" in fileOrUri) {
+      if (typeof fileOrUri === 'object' && 'uri' in fileOrUri) {
         const uri = fileOrUri.uri;
-        if (typeof uri === "string") {
+        if (typeof uri === 'string') {
           return await adaptFile(uri, options);
         }
       }
 
-      throw new Error("지원하지 않는 파일 형식");
+      throw new Error('지원하지 않는 파일 형식');
     }
 
     // React Native 환경 처리
     if (isReactNative()) {
       // 이미 ReactNativeFile인 경우
       if (
-        typeof fileOrUri === "object" &&
-        "uri" in fileOrUri &&
-        "name" in fileOrUri &&
-        "type" in fileOrUri
+        typeof fileOrUri === 'object' &&
+        'uri' in fileOrUri &&
+        'name' in fileOrUri &&
+        'type' in fileOrUri
       ) {
         return fileOrUri as ReactNativeFile;
       }
 
       // 문자열 URI인 경우
-      if (typeof fileOrUri === "string") {
+      if (typeof fileOrUri === 'string') {
         const uri = fileOrUri;
-        const uriParts = uri.split("/");
-        const fileName =
-          options?.fileName ||
-          uriParts[uriParts.length - 1] ||
-          `file_${Date.now()}`;
+        const uriParts = uri.split('/');
+        const fileName = options?.fileName || uriParts[uriParts.length - 1] || `file_${Date.now()}`;
 
         // MIME 타입 결정
-        let mimeType = options?.mimeType || "application/octet-stream";
-        const extension = fileName.split(".").pop()?.toLowerCase();
+        let mimeType = options?.mimeType || 'application/octet-stream';
+        const extension = fileName.split('.').pop()?.toLowerCase();
 
         if (extension && !options?.mimeType) {
-          if (["jpg", "jpeg"].includes(extension)) mimeType = "image/jpeg";
-          else if (extension === "png") mimeType = "image/png";
-          else if (extension === "gif") mimeType = "image/gif";
-          else if (extension === "webp") mimeType = "image/webp";
-          else if (extension === "pdf") mimeType = "application/pdf";
+          if (['jpg', 'jpeg'].includes(extension)) mimeType = 'image/jpeg';
+          else if (extension === 'png') mimeType = 'image/png';
+          else if (extension === 'gif') mimeType = 'image/gif';
+          else if (extension === 'webp') mimeType = 'image/webp';
+          else if (extension === 'pdf') mimeType = 'application/pdf';
         }
 
         return new ReactNativeFile({
           uri,
           name: fileName,
-          type: mimeType,
+          type: mimeType
         });
       }
 
       // URI 객체인 경우
-      if (typeof fileOrUri === "object" && "uri" in fileOrUri) {
+      if (typeof fileOrUri === 'object' && 'uri' in fileOrUri) {
         const uri = fileOrUri.uri;
-        if (typeof uri === "string") {
+        if (typeof uri === 'string') {
           return await adaptFile(uri, options);
         }
       }
 
-      throw new Error("지원하지 않는 파일 형식");
+      throw new Error('지원하지 않는 파일 형식');
     }
 
     // 지원하지 않는 환경
-    throw new Error("지원하지 않는 환경");
+    throw new Error('지원하지 않는 환경');
   } catch (error) {
-    console.error("파일 형식 변환 실패:", error);
+    console.error('파일 형식 변환 실패:', error);
     throw error;
   }
 }
@@ -159,15 +145,15 @@ export async function adaptFile(
  */
 export async function adaptFiles(
   filesOrUris: Array<File | Blob | string | { uri: string }>,
-  options?: { fileNames?: string[]; mimeTypes?: string[] },
+  options?: { fileNames?: string[]; mimeTypes?: string[] }
 ): Promise<UploadableFile[]> {
   const adaptedFiles = await Promise.all(
     filesOrUris.map((fileOrUri, index) =>
       adaptFile(fileOrUri, {
         fileName: options?.fileNames?.[index],
-        mimeType: options?.mimeTypes?.[index],
-      }),
-    ),
+        mimeType: options?.mimeTypes?.[index]
+      })
+    )
   );
 
   return adaptedFiles;
@@ -181,20 +167,14 @@ export async function adaptFiles(
  * @returns FormData 객체
  */
 export function createUploadFormData(
-  operations: {
-    query: string;
-    variables: any;
-    operationName?: string;
-    extensions?: any;
-  },
-  filesMap: { [path: string]: UploadableFile },
+  operations: { query: string; variables: any; operationName?: string; extensions?: any },
+  filesMap: { [path: string]: UploadableFile }
 ): FormData {
   // FormData 생성
   const formData = new FormData();
 
   // operations 추가 (GraphQL 작업 정보)
-  // 주의: 반드시 JSON 객체여야 하고 정확한 키 값(query, variables 등)을 포함해야 함
-  formData.append("operations", JSON.stringify(operations));
+  formData.append('operations', JSON.stringify(operations));
 
   // map 객체 생성 (파일 경로 매핑)
   const map: { [key: string]: string[] } = {};
@@ -207,27 +187,12 @@ export function createUploadFormData(
   }
 
   // map 추가
-  formData.append("map", JSON.stringify(map));
+  formData.append('map', JSON.stringify(map));
 
-  // 파일 추가 - 웹과 React Native 환경에 맞게 처리
+  // 파일 추가
   i = 0;
-  for (const [_, file] of Object.entries(filesMap)) {
-    if (isWeb() && (file instanceof File || file instanceof Blob)) {
-      // 웹 환경: 파일 이름을 명시적으로 포함
-      const fileName = file instanceof File ? file.name : `blob_${Date.now()}`;
-      formData.append(i.toString(), file, fileName);
-    } else if (
-      isReactNative() &&
-      "uri" in file &&
-      "name" in file &&
-      "type" in file
-    ) {
-      // React Native 환경: 객체 그대로 전달
-      formData.append(i.toString(), file);
-    } else {
-      console.warn("알 수 없는 파일 형식:", file);
-      formData.append(i.toString(), file);
-    }
+  for (const file of Object.values(filesMap)) {
+    formData.append(i.toString(), file);
     i++;
   }
 
@@ -239,85 +204,27 @@ export function createUploadFormData(
  * @param formData 검사할 FormData 객체
  */
 export function debugFormData(formData: FormData): void {
-  console.log("===== FormData 디버깅 =====");
+  console.log('===== FormData 디버깅 =====');
 
   // FormData 항목 순회 (지원되는 브라우저에서만)
-  if (typeof formData.entries === "function") {
-    try {
-      for (const pair of formData.entries()) {
-        const key = pair[0];
-        const value = pair[1];
+  if (typeof formData.entries === 'function') {
+    for (const pair of formData.entries()) {
+      const key = pair[0];
+      const value = pair[1];
 
-        if (value instanceof File) {
-          console.log(
-            `${key}: File(이름: ${value.name}, 타입: ${value.type}, 크기: ${value.size} bytes)`,
-          );
-        } else if (value instanceof Blob) {
-          console.log(
-            `${key}: Blob(타입: ${value.type}, 크기: ${value.size} bytes)`,
-          );
-        } else if (typeof value === "object" && value !== null) {
-          // React Native 파일 객체 확인
-          if ("uri" in value && "name" in value && "type" in value) {
-            console.log(
-              `${key}: ReactNativeFile(이름: ${value.name}, 타입: ${value.type}, URI: ${value.uri.substring(0, 30)}...)`,
-            );
-          } else {
-            console.log(
-              `${key}: 객체`,
-              JSON.stringify(value).substring(0, 100) +
-                (JSON.stringify(value).length > 100 ? "..." : ""),
-            );
-          }
-        } else if (typeof value === "string") {
-          // operations와 map은 JSON 형태로 파싱하여 보여줌
-          if (key === "operations" || key === "map") {
-            try {
-              const parsed = JSON.parse(value);
-              console.log(
-                `${key}: ${JSON.stringify(parsed).substring(0, 100)}${JSON.stringify(parsed).length > 100 ? "..." : ""}`,
-              );
-            } catch {
-              console.log(
-                `${key}: ${value.substring(0, 100)}${value.length > 100 ? "..." : ""}`,
-              );
-            }
-          } else {
-            console.log(
-              `${key}: ${value.substring(0, 100)}${value.length > 100 ? "..." : ""}`,
-            );
-          }
-        } else {
-          console.log(`${key}:`, value);
-        }
+      if (value instanceof File) {
+        console.log(`${key}: File(이름: ${value.name}, 타입: ${value.type}, 크기: ${value.size} bytes)`);
+      } else if (typeof value === 'object' && value !== null) {
+        console.log(`${key}: 객체`, value);
+      } else {
+        console.log(`${key}:`, value);
       }
-    } catch (error) {
-      console.error("FormData 항목 로깅 중 오류 발생:", error);
     }
   } else {
-    console.log(
-      "FormData 항목을 나열할 수 없습니다 (entries 메서드 지원 안 함)",
-    );
+    console.log('FormData 항목을 나열할 수 없습니다 (entries 메서드 지원 안 함)');
   }
 
-  // Apollo Upload 스펙 준수 확인
-  let hasOperations = false;
-  let hasMap = false;
-
-  if (typeof formData.has === "function") {
-    hasOperations = formData.has("operations");
-    hasMap = formData.has("map");
-
-    console.log("Apollo Upload 스펙 준수 여부:");
-    console.log("- operations 필드 존재:", hasOperations);
-    console.log("- map 필드 존재:", hasMap);
-
-    if (!hasOperations || !hasMap) {
-      console.error("경고: Apollo Upload 스펙을 준수하지 않는 FormData입니다!");
-    }
-  }
-
-  console.log("===========================");
+  console.log('===========================');
 }
 
 /**
@@ -329,21 +236,19 @@ export function createWebFileSelector(): () => Promise<File[]> {
     return new Promise((resolve, reject) => {
       // 웹 환경인지 확인
       if (!isWeb()) {
-        reject(new Error("웹 환경에서만 사용 가능합니다"));
+        reject(new Error('웹 환경에서만 사용 가능합니다'));
         return;
       }
 
       // 파일 선택 input 생성
-      const input = document.createElement("input");
-      input.type = "file";
+      const input = document.createElement('input');
+      input.type = 'file';
       input.multiple = true;
-      input.accept = "image/*";
+      input.accept = 'image/*';
 
       // 파일 선택 이벤트 처리
       input.onchange = (event) => {
-        const files = Array.from(
-          (event.target as HTMLInputElement).files || [],
-        );
+        const files = Array.from((event.target as HTMLInputElement).files || []);
         resolve(files);
       };
 

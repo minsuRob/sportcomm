@@ -77,23 +77,6 @@ export async function uriToReactNativeFile(
     typeof uri === "string" ? uri : "File/Blob 객체",
   );
 
-  // 입력 객체 검사
-  if (uri instanceof File) {
-    console.log(
-      `File 객체: 이름=${uri.name}, 타입=${uri.type}, 크기=${uri.size}bytes`,
-    );
-  } else if (uri instanceof Blob) {
-    console.log(`Blob 객체: 타입=${uri.type}, 크기=${uri.size}bytes`);
-  } else if (typeof uri === "object" && uri !== null && "uri" in uri) {
-    console.log(
-      `ReactNative 파일 객체: uri=${(uri as any).uri.substring(0, 30)}...`,
-    );
-    if ("name" in uri) console.log(`- 이름: ${(uri as any).name}`);
-    if ("type" in uri) console.log(`- 타입: ${(uri as any).type}`);
-  } else if (typeof uri === "string") {
-    console.log(`문자열 URI: ${uri.substring(0, 30)}...`);
-  }
-
   // 새로운 어댑터 활용
   try {
     const adaptedFile = await adaptFile(uri, {
@@ -126,27 +109,6 @@ export async function urisToFiles(
   console.log(`${uris.length}개의 파일을 변환 시작`);
 
   try {
-    // 파일 타입 로깅 (디버깅용)
-    uris.forEach((uri, index) => {
-      if (uri instanceof File) {
-        console.log(
-          `파일[${index}] 타입: File, 이름: ${uri.name}, 타입: ${uri.type}`,
-        );
-      } else if (uri instanceof Blob) {
-        console.log(`파일[${index}] 타입: Blob, 타입: ${uri.type}`);
-      } else if (typeof uri === "object" && uri !== null && "uri" in uri) {
-        console.log(
-          `파일[${index}] 타입: ReactNative 파일 객체, uri: ${(uri as any).uri.substring(0, 30)}...`,
-        );
-      } else if (typeof uri === "string") {
-        console.log(
-          `파일[${index}] 타입: 문자열 URI, ${uri.substring(0, 30)}...`,
-        );
-      } else {
-        console.log(`파일[${index}] 타입: 알 수 없음, ${typeof uri}`);
-      }
-    });
-
     // 새로운 어댑터 활용
     const results = await adaptFiles(uris, {
       fileNames: uris.map((uri) =>
@@ -189,16 +151,6 @@ export function useUploadFile() {
       // 플랫폼에 맞는 파일 객체 생성
       const file = await uriToReactNativeFile(uri);
 
-      // 파일 객체 세부 정보 로깅
-      if (isWeb() && file instanceof File) {
-        console.log(
-          `웹 파일 정보: 이름=${file.name}, 타입=${file.type}, 크기=${file.size}bytes`,
-        );
-      } else if (isReactNative()) {
-        const rnFile = file as ReactNativeFile;
-        console.log(`RN 파일 정보: 이름=${rnFile.name}, 타입=${rnFile.type}`);
-      }
-
       // 인증 토큰 가져오기
       const { token } = await getSession();
 
@@ -209,10 +161,7 @@ export function useUploadFile() {
           headers: {
             "Apollo-Require-Preflight": "true",
             Authorization: token ? `Bearer ${token}` : "",
-            // Content-Type은 설정하지 않음 (브라우저가 자동으로 설정)
           },
-          // Apollo Upload에 필요한 설정
-          useMultipart: true, // 명시적으로 multipart 사용 설정
         },
       });
 
@@ -224,13 +173,6 @@ export function useUploadFile() {
       return data.uploadFile;
     } catch (error) {
       console.error("파일 업로드 실패:", error);
-      console.error("에러 상세 정보:", error.message);
-      if (error.networkError) {
-        console.error("네트워크 에러:", error.networkError);
-        if (error.networkError.result) {
-          console.error("응답 본문:", error.networkError.result);
-        }
-      }
       throw error;
     }
   };
@@ -279,8 +221,6 @@ export function useUploadFiles() {
       // 인증 토큰 가져오기
       const { token } = await getSession();
 
-      // Apollo Client에서 formData 구조를 올바르게 구성하도록 설정
-      // Content-Type 헤더를 설정하지 않도록 명시적으로 제거
       const { data } = await uploadFilesMutation({
         variables: { files },
         context: {
@@ -288,10 +228,7 @@ export function useUploadFiles() {
           headers: {
             "Apollo-Require-Preflight": "true",
             Authorization: token ? `Bearer ${token}` : "",
-            // Content-Type은 설정하지 않음 (브라우저가 자동으로 설정)
           },
-          // Apollo Upload에 필요한 설정
-          useMultipart: true, // 명시적으로 multipart 사용 설정
         },
       });
 
@@ -303,13 +240,6 @@ export function useUploadFiles() {
       return data.uploadFiles;
     } catch (error) {
       console.error("파일 업로드 실패:", error);
-      console.error("에러 상세 정보:", error.message);
-      if (error.networkError) {
-        console.error("네트워크 에러:", error.networkError);
-        if (error.networkError.result) {
-          console.error("응답 본문:", error.networkError.result);
-        }
-      }
       throw error;
     }
   };

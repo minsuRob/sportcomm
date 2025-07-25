@@ -9,7 +9,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { useMutation } from "urql";
+import { useMutation } from "@apollo/client";
 import { X } from "lucide-react-native";
 import { CREATE_REPORT } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
@@ -90,7 +90,7 @@ export default function ReportModal({
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [, executeCreateReport] = useMutation(CREATE_REPORT);
+  const [executeCreateReport, { loading }] = useMutation(CREATE_REPORT);
 
   const handleSubmit = async () => {
     if (!selectedType) {

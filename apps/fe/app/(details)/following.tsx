@@ -12,12 +12,12 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, UserMinus, UserPlus } from "lucide-react-native";
-import { useQuery, useMutation } from "urql";
+import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
 import { TOGGLE_FOLLOW } from "@/lib/graphql";
-import { gql } from "urql";
+import { gql } from "@apollo/client";
 
 // GraphQL Query
 const GET_FOLLOWING = gql`
@@ -70,20 +70,24 @@ export default function FollowingScreen() {
   const [following, setFollowing] = useState<FollowingUser[]>([]);
 
   // 팔로잉 목록 조회
-  const [followingResult, refetchFollowing] = useQuery<FollowingResponse>({
-    query: GET_FOLLOWING,
+  const {
+    data: followingData,
+    loading: followingLoading,
+    refetch: refetchFollowing,
+    error: followingError,
+  } = useQuery<FollowingResponse>(GET_FOLLOWING, {
     variables: { userId: userId },
-    pause: !userId,
-    requestPolicy: "network-only",
+    skip: !userId,
+    fetchPolicy: "network-only",
   });
 
   // 팔로우 토글 뮤테이션
-  const [, executeToggleFollow] = useMutation(TOGGLE_FOLLOW);
+  const [executeToggleFollow] = useMutation(TOGGLE_FOLLOW);
 
   useEffect(() => {
-    if (followingResult.data?.getUserById.following) {
+    if (followingData?.getUserById?.following) {
       try {
-        const followingUsers = followingResult.data.getUserById.following.map(
+        const followingUsers = followingData.getUserById.following.map(
           (relation) => relation.following,
         );
         setFollowing(followingUsers || []);
@@ -92,7 +96,7 @@ export default function FollowingScreen() {
         setFollowing([]);
       }
     }
-  }, [followingResult.data]);
+  }, [followingData]);
 
   const handleBack = () => {
     router.back();
@@ -197,11 +201,11 @@ export default function FollowingScreen() {
   };
 
   // 로딩 중이거나 에러 발생 시 표시할 화면
-  if (followingResult.fetching && !following.length) {
+  if (followingLoading && following.length === 0) {
     return (
       <View style={themed($container)}>
         <View style={themed($header)}>
-          <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
+          <TouchableOpacity onPress={handleBack}>
             <ArrowLeft color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>팔로잉</Text>
@@ -216,7 +220,7 @@ export default function FollowingScreen() {
   }
 
   // 에러 발생 시 표시할 화면
-  if (followingResult.error) {
+  if (followingError) {
     return (
       <View style={themed($container)}>
         <View style={themed($header)}>
@@ -231,7 +235,7 @@ export default function FollowingScreen() {
             팔로잉 목록을 불러오는 중 오류가 발생했습니다.
           </Text>
           <TouchableOpacity
-            onPress={() => refetchFollowing({ requestPolicy: "network-only" })}
+            onPress={() => refetchFollowing()}
             style={themed($followButton)}
           >
             <Text
@@ -272,8 +276,8 @@ export default function FollowingScreen() {
             </View>
           ) : null
         }
-        refreshing={followingResult.fetching}
-        onRefresh={() => refetchFollowing({ requestPolicy: "network-only" })}
+        refreshing={followingLoading}
+        onRefresh={() => refetchFollowing()}
       />
     </View>
   );

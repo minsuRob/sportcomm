@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "urql";
+import { useMutation } from "@apollo/client";
 import { Alert } from "react-native";
 import { BLOCK_USER } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
@@ -19,9 +19,9 @@ export interface ModerationTarget {
 export function useModerationActions() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTarget, setReportTarget] = useState<ModerationTarget | null>(
-    null
+    null,
   );
-  const [, executeBlockUser] = useMutation(BLOCK_USER);
+  const [executeBlockUser] = useMutation(BLOCK_USER);
 
   /**
    * 신고 모달 열기
@@ -79,12 +79,14 @@ export function useModerationActions() {
           style: "destructive",
           onPress: async () => {
             try {
-              const result = await executeBlockUser({
-                blockedUserId: userId,
+              const { data, errors } = await executeBlockUser({
+                variables: {
+                  blockedUserId: userId,
+                },
               });
 
-              if (result.error) {
-                throw new Error(result.error.message);
+              if (errors) {
+                throw new Error(errors[0].message);
               }
 
               showToast({
@@ -107,7 +109,7 @@ export function useModerationActions() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -143,7 +145,7 @@ export function useModerationActions() {
         text: option.text,
         onPress: option.onPress,
         style: option.style,
-      }))
+      })),
     );
   };
 

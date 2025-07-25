@@ -1,4 +1,5 @@
-import { client } from "@/lib/urql-client";
+import { client } from "@/lib/api/client";
+import { gql } from "@apollo/client";
 import { SearchTabType } from "@/components/search/SearchTabs";
 import { SearchResultItem } from "@/components/search/SearchResults";
 import { PostItemType } from "@/components/posts/PostItem";
@@ -10,7 +11,7 @@ import { UserItemType } from "@/components/users/UserItem";
  */
 
 // 검색 쿼리 정의
-const SEARCH_QUERY = `
+const SEARCH_QUERY = gql`
   query Search($input: SearchInput!) {
     search(input: $input) {
       posts {
@@ -55,7 +56,7 @@ const SEARCH_QUERY = `
 `;
 
 // 인기 검색어 쿼리 정의
-const POPULAR_SEARCH_TERMS_QUERY = `
+const POPULAR_SEARCH_TERMS_QUERY = gql`
   query PopularSearchTerms($limit: Float = 10) {
     popularSearchTerms(limit: $limit)
   }
@@ -79,7 +80,7 @@ export interface SearchParams {
  * @returns 정렬 방식
  */
 const getSortByFromTab = (
-  tab: SearchTabType
+  tab: SearchTabType,
 ): "POPULAR" | "RECENT" | "RELEVANCE" => {
   switch (tab) {
     case "popular":
@@ -102,7 +103,7 @@ const getSortByFromTab = (
  */
 export const searchApi = async (
   params: SearchParams,
-  tab: SearchTabType
+  tab: SearchTabType,
 ): Promise<{
   items: SearchResultItem[];
   metadata: {
@@ -126,24 +127,19 @@ export const searchApi = async (
     }
 
     // GraphQL 쿼리 실행
-    const { data } = await client
-      .query(
-        SEARCH_QUERY,
-        {
-          input: {
-            query: searchParams.query,
-            type: searchParams.type || "ALL",
-            sortBy: searchParams.sortBy,
-            page: searchParams.page,
-            pageSize: searchParams.pageSize,
-          },
+    const { data } = await client.query({
+      query: SEARCH_QUERY,
+      variables: {
+        input: {
+          query: searchParams.query,
+          type: searchParams.type || "ALL",
+          sortBy: searchParams.sortBy,
+          page: searchParams.page,
+          pageSize: searchParams.pageSize,
         },
-        {
-          requestPolicy: "network-only", // 항상 최신 데이터 가져오기
-          fetchOptions: { cache: "no-store" }, // 캐시 사용 안함
-        }
-      )
-      .toPromise();
+      },
+      fetchPolicy: "network-only", // 항상 최신 데이터 가져오기
+    });
 
     // 반환된 데이터를 프론트엔드 형식으로 변환
     const items: SearchResultItem[] = [];
@@ -204,13 +200,11 @@ export const searchApi = async (
  */
 export const getPopularSearchTerms = async (limit = 10): Promise<string[]> => {
   try {
-    const { data } = await client
-      .query(
-        POPULAR_SEARCH_TERMS_QUERY,
-        { limit },
-        { requestPolicy: "cache-first" } // 캐싱 활용
-      )
-      .toPromise();
+    const { data } = await client.query({
+      query: POPULAR_SEARCH_TERMS_QUERY,
+      variables: { limit },
+      fetchPolicy: "cache-first", // 캐싱 활용
+    });
     return data.popularSearchTerms;
   } catch (error) {
     console.error("인기 검색어 API 오류:", error);

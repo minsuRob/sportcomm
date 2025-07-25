@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery, RequestPolicy } from "urql";
+import { useQuery } from "@apollo/client";
 import { ArrowLeft, MoreHorizontal } from "lucide-react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -81,18 +81,16 @@ export default function PostDetailScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // GraphQL 쿼리 옵션을 useMemo로 생성하여 불필요한 재렌더링 방지
-  const queryOptions = React.useMemo(
-    () => ({
-      query: GET_POST_DETAIL,
-      variables: { id: postId },
-      requestPolicy: "cache-first" as RequestPolicy,
-    }),
-    [postId]
-  );
-
-  // GraphQL 쿼리
-  const [{ data, fetching, error }, refetchPost] =
-    useQuery<PostDetailResponse>(queryOptions);
+  // Apollo Client와 함께 GraphQL 쿼리 실행
+  const {
+    data,
+    loading: fetching,
+    error,
+    refetch: refetchPost,
+  } = useQuery<PostDetailResponse>(GET_POST_DETAIL, {
+    variables: { id: postId },
+    fetchPolicy: "cache-first",
+  });
 
   // 게시물 상호작용 훅 사용
   const {
@@ -136,7 +134,7 @@ export default function PostDetailScreen() {
    * 댓글 추가 후 새로고침 핸들러
    */
   const handleCommentAdded = useCallback(() => {
-    refetchPost({ requestPolicy: "network-only" as RequestPolicy });
+    refetchPost({ fetchPolicy: "network-only" });
   }, [refetchPost]);
 
   /**

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "urql";
+import { useMutation } from "@apollo/client";
 import { TOGGLE_LIKE, TOGGLE_FOLLOW } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { getSession } from "@/lib/auth";
@@ -38,8 +38,8 @@ export function usePostInteractions({
   const [isLikeError, setIsLikeError] = useState(false);
 
   // GraphQL 뮤테이션
-  const [likeResult, executeLike] = useMutation(TOGGLE_LIKE);
-  const [, toggleFollow] = useMutation(TOGGLE_FOLLOW);
+  const [executeLike, { loading: likeLoading }] = useMutation(TOGGLE_LIKE);
+  const [toggleFollow] = useMutation(TOGGLE_FOLLOW);
 
   // 신고/차단 기능
   const {
@@ -94,10 +94,10 @@ export function usePostInteractions({
     setIsLiked(newLikedStatus);
     setLikeCount(newLikeCount);
 
-    executeLike({ postId })
-      .then((result) => {
-        if (result.error) {
-          console.error("좋아요 처리 실패:", result.error);
+    executeLike({ variables: { postId } })
+      .then(({ data, errors }) => {
+        if (errors) {
+          console.error("좋아요 처리 실패:", errors);
           setIsLiked(originalLikedStatus);
           setLikeCount(originalLikeCount);
           setIsLikeError(true);
@@ -115,7 +115,7 @@ export function usePostInteractions({
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(
-            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
           );
         }
       })

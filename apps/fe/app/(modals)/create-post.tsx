@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Send, ImageIcon, X } from "lucide-react-native";
-import { useMutation } from "urql";
+import { useMutation } from "@apollo/client";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { showToast } from "@/components/CustomToast";
@@ -117,7 +117,7 @@ export default function CreatePostScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();
@@ -153,7 +153,7 @@ export default function CreatePostScreen() {
         {
           compress: 0.8, // 80% 품질
           format: ImageManipulator.SaveFormat.JPEG,
-        }
+        },
       );
 
       return {
@@ -181,7 +181,7 @@ export default function CreatePostScreen() {
         Alert.alert(
           "권한 필요",
           "이미지를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }]
+          [{ text: "확인" }],
         );
         return;
       }

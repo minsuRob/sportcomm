@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   Modal,
+  Text,
+  TouchableOpacity,
+  TextInput,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -13,111 +13,110 @@ import {
   Alert,
 } from "react-native";
 import { X, Send, Image, Camera, Mic, Hash } from "lucide-react-native";
-import { useMutation } from "urql";
+import { useMutation } from "@apollo/client";
 import { showToast } from "@/components/CustomToast";
-import Toast from "react-native-toast-message";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { CREATE_POST } from "@/lib/graphql";
 import { PostType } from "./PostCard";
 import { User } from "@/lib/auth";
 
-// --- 타입 정의 ---
+// 미디어 아이템 타입
+interface MediaItem {
+  id: string;
+  url: string;
+  type: "image" | "video" | "audio";
+}
+
+// 게시물 타입 옵션
+interface PostTypeOption {
+  value: PostType;
+  label: string;
+  icon: React.ReactNode;
+}
+
 interface CreatePostModalProps {
   visible: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   currentUser: User | null;
-  onPostCreated?: () => void;
-}
-
-interface PostTypeOption {
-  type: PostType;
-  label: string;
-  color: string;
-  icon: string;
 }
 
 /**
- * 글 작성 모달 컴포넌트
- * 확장 가능한 텍스트 에디터와 게시물 타입 선택 기능을 제공합니다
+ * 게시물 작성 모달 컴포넌트
+ * 사용자가 새 게시물을 작성할 수 있는 모달 폼을 제공합니다
  */
 export default function CreatePostModal({
   visible,
   onClose,
+  onSuccess,
   currentUser,
-  onPostCreated,
 }: CreatePostModalProps) {
+  // 상태 관리
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
-
-  // 상태 관리
-  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // GraphQL 뮤테이션
-  const [, executeCreatePost] = useMutation(CREATE_POST);
+  const [executeCreatePost, { loading }] = useMutation(CREATE_POST);
 
   // 게시물 타입 옵션
   const postTypeOptions: PostTypeOption[] = [
     {
-      type: PostType.ANALYSIS,
-      label: t(TRANSLATION_KEYS.POST_TYPE_ANALYSIS),
-      color: "#6366f1",
-      icon: "📊",
+      value: "general",
+      label: "일반",
+      icon: <Hash color={theme.colors.text} size={20} />,
     },
     {
-      type: PostType.HIGHLIGHT,
-      label: t(TRANSLATION_KEYS.POST_TYPE_HIGHLIGHT),
-      color: "#f59e0b",
-      icon: "⭐",
+      value: "photo",
+      label: "사진",
+      icon: <Image color={theme.colors.text} size={20} />,
     },
     {
-      type: PostType.CHEERING,
-      label: t(TRANSLATION_KEYS.POST_TYPE_CHEERING),
-      color: "#10b981",
-      icon: "📣",
+      value: "video",
+      label: "비디오",
+      icon: <Camera color={theme.colors.text} size={20} />,
+    },
+    {
+      value: "audio",
+      label: "오디오",
+      icon: <Mic color={theme.colors.text} size={20} />,
     },
   ];
 
   /**
-   * 모달 닫기 핸들러
+   * 닫기 확인 핸들러
    */
-  const handleClose = () => {
-    if (isSubmitting) return;
-
-    // 내용이 있으면 확인 후 닫기
-    if (title.trim() || content.trim() || selectedType) {
+  const handleCloseConfirm = () => {
+    if (content.trim() || selectedMedia) {
       Alert.alert(
         "작성 취소",
-        "작성 중인 내용이 있습니다. 정말 취소하시겠습니까?",
+        "작성 중인 게시물이 있습니다. 작성을 취소하시겠습니까?",
         [
-          { text: "계속 작성", style: "cancel" },
           {
-            text: "취소",
+            text: "계속 작성",
+            style: "cancel",
+          },
+          {
+            text: "작성 취소",
             style: "destructive",
             onPress: () => {
-              resetForm();
+              setContent("");
+              setSelectedMedia(null);
+              setSelectedType(null);
               onClose();
             },
           },
-        ]
+        ],
+        { cancelable: true },
       );
     } else {
       onClose();
     }
-  };
-
-  /**
-   * 폼 초기화
-   */
-  const resetForm = () => {
-    setTitle("");
-    setContent("");
-    setSelectedType(null);
-    setIsSubmitting(false);
   };
 
   /**
@@ -131,70 +130,11 @@ export default function CreatePostModal({
    * 게시물 작성 핸들러
    */
   const handleSubmit = async () => {
-    // 즉시 토스트 테스트
-    console.log("🚀 게시물 작성 시작 - 토스트 테스트");
-
-    // Alert와 Toast 둘 다 테스트
-    Alert.alert("테스트", "Alert는 작동합니다");
-
-    // 기본 Toast 테스트
-    Toast.show({
-      type: "info",
-      text1: "기본 Toast 테스트",
-      text2: "react-native-toast-message가 작동하는지 확인",
-      visibilityTime: 3000,
-    });
-
-    // CustomToast 테스트
-    showToast({
-      type: "info",
-      title: "CustomToast 테스트",
-      message: "커스텀 토스트가 작동하는지 확인",
-      duration: 5000,
-    });
-
-    // 추가 토스트 테스트
-    setTimeout(() => {
-      Toast.show({
-        type: "error",
-        text1: "지연된 기본 Toast",
-        text2: "1초 후에 나타나는 기본 토스트",
-        visibilityTime: 3000,
-      });
-
-      showToast({
-        type: "error",
-        title: "지연된 CustomToast",
-        message: "1초 후에 나타나는 커스텀 토스트",
-        duration: 5000,
-      });
-    }, 1000);
-
-    if (!currentUser) {
-      showToast({
-        type: "error",
-        title: "로그인 필요",
-        message: "로그인이 필요합니다.",
-        duration: 3000,
-      });
-      return;
-    }
-
-    if (!title.trim()) {
-      showToast({
-        type: "error",
-        title: "제목 필요",
-        message: "제목을 입력해주세요.",
-        duration: 3000,
-      });
-      return;
-    }
-
     if (!content.trim()) {
       showToast({
         type: "error",
         title: "내용 필요",
-        message: t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER),
+        message: "게시물 내용을 입력해주세요",
         duration: 3000,
       });
       return;
@@ -204,7 +144,7 @@ export default function CreatePostModal({
       showToast({
         type: "error",
         title: "타입 선택 필요",
-        message: t(TRANSLATION_KEYS.CREATE_POST_SELECT_TYPE),
+        message: "게시물 타입을 선택해주세요",
         duration: 3000,
       });
       return;
@@ -213,295 +153,131 @@ export default function CreatePostModal({
     setIsSubmitting(true);
 
     try {
-      const result = await executeCreatePost({
-        input: {
-          title: title.trim(),
-          content: content.trim(),
-          type: selectedType,
+      const { data, errors } = await executeCreatePost({
+        variables: {
+          input: {
+            content: content.trim(),
+            type: selectedType,
+            // 이미지가 있으면 포함
+            ...(selectedMedia && { mediaUrls: [selectedMedia.url] }),
+          },
         },
       });
 
-      if (result.error) {
-        console.error("게시물 작성 실패:", result.error);
-        console.log("전체 에러 객체:", JSON.stringify(result.error, null, 2));
-        console.log("에러 타입:", typeof result.error);
-        console.log("graphQLErrors 존재:", !!result.error.graphQLErrors);
-        console.log("networkError 존재:", !!result.error.networkError);
-
-        // 강제로 토스트 테스트
-        console.log("토스트 테스트 시작");
-        showToast({
-          type: "error",
-          title: "테스트 토스트",
-          message: "이 메시지가 보이면 토스트가 작동합니다",
-          duration: 3000,
-        });
-        console.log("토스트 테스트 완료");
-
-        // 에러 처리 함수
-        const handleError = (error: any) => {
-          // 1. GraphQL 에러 확인
-          if (error.graphQLErrors && error.graphQLErrors.length > 0) {
-            const graphQLError = error.graphQLErrors[0];
-            console.log("GraphQL 에러:", graphQLError);
-
-            // originalError가 있는 경우
-            if (graphQLError.extensions?.originalError) {
-              const {
-                message,
-                error: errorType,
-                statusCode,
-              } = graphQLError.extensions.originalError;
-              return {
-                title: "게시물 작성 실패",
-                message: `${message} [${statusCode}: ${errorType}]`,
-              };
-            }
-
-            // GraphQL 메시지만 있는 경우
-            return {
-              title: "게시물 작성 실패",
-              message: graphQLError.message || "GraphQL 에러가 발생했습니다.",
-            };
-          }
-
-          // 2. 네트워크 에러 확인
-          if (error.networkError) {
-            console.log("네트워크 에러:", error.networkError);
-
-            // HTTP 상태 코드가 있는 경우
-            if (error.networkError.statusCode) {
-              const statusCode = error.networkError.statusCode;
-              const statusText =
-                error.networkError.statusText || "Unknown Error";
-
-              if (statusCode === 401) {
-                return {
-                  title: "인증 실패",
-                  message: `로그인이 필요합니다 [${statusCode}: ${statusText}]`,
-                };
-              } else if (statusCode === 403) {
-                return {
-                  title: "권한 없음",
-                  message: `접근 권한이 없습니다 [${statusCode}: ${statusText}]`,
-                };
-              } else if (statusCode >= 500) {
-                return {
-                  title: "서버 오류",
-                  message: `서버에 문제가 발생했습니다 [${statusCode}: ${statusText}]`,
-                };
-              } else {
-                return {
-                  title: "네트워크 오류",
-                  message: `요청 처리 중 오류가 발생했습니다 [${statusCode}: ${statusText}]`,
-                };
-              }
-            }
-
-            // 네트워크 연결 문제
-            return {
-              title: "연결 오류",
-              message: "네트워크 연결을 확인해주세요",
-            };
-          }
-
-          // 3. 기타 에러
-          return {
-            title: "알 수 없는 오류",
-            message: error.message || "게시물 작성 중 오류가 발생했습니다",
-          };
-        };
-
-        const errorInfo = handleError(result.error);
-
-        showToast({
-          type: "error",
-          title: errorInfo.title,
-          message: errorInfo.message,
-          duration: 5000,
-        });
-
-        return;
+      if (errors) {
+        throw new Error(errors[0].message);
       }
 
-      // 성공
-      Alert.alert("성공", "게시물이 작성되었습니다!");
-      resetForm();
+      showToast({
+        type: "success",
+        title: "게시물 작성 완료",
+        message: "게시물이 성공적으로 작성되었습니다",
+        duration: 3000,
+      });
+
+      // 성공 후 초기화 및 닫기
+      setContent("");
+      setSelectedMedia(null);
+      setSelectedType(null);
+      onSuccess?.();
       onClose();
-      onPostCreated?.();
     } catch (error) {
-      console.error("게시물 작성 오류:", error);
+      console.error("게시물 작성 실패:", error);
       showToast({
         type: "error",
-        title: "게시물 작성 오류",
-        message: "게시물 작성 중 예상치 못한 오류가 발생했습니다.",
-        duration: 4000,
+        title: "게시물 작성 실패",
+        message:
+          error instanceof Error
+            ? error.message
+            : "알 수 없는 오류가 발생했습니다",
+        duration: 3000,
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!currentUser) {
-    return null;
-  }
-
-  const avatarUrl =
-    currentUser.profileImageUrl ||
-    `https://i.pravatar.cc/150?u=${currentUser.id}`;
-
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
+      transparent={false}
+      onRequestClose={handleCloseConfirm}
     >
-      <KeyboardAvoidingView
-        style={themed($container)}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <View style={themed($container)}>
         {/* 헤더 */}
         <View style={themed($header)}>
-          <TouchableOpacity onPress={handleClose} style={themed($closeButton)}>
+          <TouchableOpacity onPress={handleCloseConfirm}>
             <X color={theme.colors.text} size={24} />
           </TouchableOpacity>
-          <Text style={themed($headerTitle)}>
-            {t(TRANSLATION_KEYS.CREATE_POST_TITLE)}
-          </Text>
+          <Text style={themed($headerTitle)}>새 게시물 작성</Text>
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={
-              !title.trim() || !content.trim() || !selectedType || isSubmitting
-            }
+            disabled={isSubmitting || !content.trim() || !selectedType}
             style={[
-              themed($publishButton),
+              themed($submitButton),
               {
                 opacity:
-                  !title.trim() ||
-                  !content.trim() ||
-                  !selectedType ||
-                  isSubmitting
-                    ? 0.5
-                    : 1,
+                  isSubmitting || !content.trim() || !selectedType ? 0.5 : 1,
               },
             ]}
           >
-            <Text style={themed($publishButtonText)}>
-              {isSubmitting
-                ? t(TRANSLATION_KEYS.CREATE_POST_PUBLISHING)
-                : t(TRANSLATION_KEYS.CREATE_POST_PUBLISH)}
-            </Text>
+            <Send color="#fff" size={20} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          style={themed($scrollContainer)}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
         >
-          {/* 사용자 정보 */}
-          <View style={themed($userSection)}>
-            <View style={themed($userInfo)}>
-              <Text style={themed($username)}>{currentUser.nickname}</Text>
-              <Text style={themed($userHandle)}>
-                @{currentUser.nickname.toLowerCase()}
-              </Text>
-            </View>
-          </View>
-
-          {/* 게시물 타입 선택 */}
-          <View style={themed($typeSection)}>
-            <Text style={themed($sectionTitle)}>
-              {t(TRANSLATION_KEYS.CREATE_POST_SELECT_TYPE)}
-            </Text>
-            <View style={themed($typeOptions)}>
-              {postTypeOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.type}
-                  style={[
-                    themed($typeOption),
-                    {
-                      borderColor:
-                        selectedType === option.type
-                          ? option.color
-                          : theme.colors.border,
-                      backgroundColor:
-                        selectedType === option.type
-                          ? option.color + "20"
-                          : "transparent",
-                    },
-                  ]}
-                  onPress={() => handleTypeSelect(option.type)}
-                >
-                  <Text style={themed($typeIcon)}>{option.icon}</Text>
-                  <Text
-                    style={[
-                      themed($typeLabel),
-                      {
-                        color:
-                          selectedType === option.type
-                            ? option.color
-                            : theme.colors.text,
-                      },
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* 제목 입력 영역 */}
-          <View style={themed($titleSection)}>
+          <ScrollView
+            style={themed($scrollView)}
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* 게시물 내용 입력 */}
             <TextInput
-              style={themed($titleInput)}
-              placeholder="제목을 입력하세요"
-              placeholderTextColor={theme.colors.textDim}
-              value={title}
-              onChangeText={setTitle}
-              maxLength={200}
-              editable={!isSubmitting}
-            />
-          </View>
-
-          {/* 텍스트 입력 영역 */}
-          <View style={themed($contentSection)}>
-            <TextInput
-              style={themed($textInput)}
-              placeholder={t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER)}
+              style={themed($contentInput)}
+              placeholder="무슨 생각을 하고 계신가요?"
               placeholderTextColor={theme.colors.textDim}
               value={content}
               onChangeText={setContent}
               multiline
-              textAlignVertical="top"
-              maxLength={2000}
+              maxLength={500}
               editable={!isSubmitting}
             />
-            <View style={themed($characterCount)}>
-              <Text style={themed($characterCountText)}>
-                {content.length}/2000
-              </Text>
-            </View>
-          </View>
 
-          {/* 미디어 옵션 (향후 확장용) */}
-          <View style={themed($mediaSection)}>
-            <TouchableOpacity style={themed($mediaButton)} disabled>
-              <Image color={theme.colors.textDim} size={24} />
-            </TouchableOpacity>
-            <TouchableOpacity style={themed($mediaButton)} disabled>
-              <Camera color={theme.colors.textDim} size={24} />
-            </TouchableOpacity>
-            <TouchableOpacity style={themed($mediaButton)} disabled>
-              <Mic color={theme.colors.textDim} size={24} />
-            </TouchableOpacity>
-            <TouchableOpacity style={themed($mediaButton)} disabled>
-              <Hash color={theme.colors.textDim} size={24} />
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            {/* 게시물 타입 선택 */}
+            <View style={themed($typeSelector)}>
+              <Text style={themed($sectionTitle)}>게시물 타입</Text>
+              <View style={themed($typeOptions)}>
+                {postTypeOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      themed($typeOption),
+                      selectedType === option.value &&
+                        themed($selectedTypeOption),
+                    ]}
+                    onPress={() => handleTypeSelect(option.value)}
+                  >
+                    {option.icon}
+                    <Text
+                      style={[
+                        themed($typeLabel),
+                        selectedType === option.value &&
+                          themed($selectedTypeLabel),
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -516,63 +292,38 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.md,
+  padding: spacing.md,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
 });
 
-const $closeButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.xs,
-});
-
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
-  fontWeight: "bold",
-  color: colors.text,
-});
-
-const $publishButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.tint,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  borderRadius: 20,
-});
-
-const $publishButtonText: ThemedStyle<TextStyle> = () => ({
-  color: "white",
-  fontSize: 16,
   fontWeight: "600",
-});
-
-const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-});
-
-const $userSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-});
-
-const $userInfo: ThemedStyle<ViewStyle> = () => ({
-  flexDirection: "column",
-});
-
-const $username: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
-  fontWeight: "bold",
   color: colors.text,
 });
 
-const $userHandle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 14,
-  color: colors.textDim,
-  marginTop: spacing.xxxs,
+const $submitButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.tint,
+  padding: spacing.sm,
+  borderRadius: 8,
 });
 
-const $typeSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
+const $scrollView: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  padding: spacing.md,
+});
+
+const $contentInput: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 16,
+  lineHeight: 24,
+  minHeight: 120,
+  textAlignVertical: "top",
+});
+
+const $typeSelector: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.lg,
 });
 
 const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
@@ -584,76 +335,31 @@ const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
 
 const $typeOptions: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
-  gap: spacing.sm,
+  flexWrap: "wrap",
+  marginHorizontal: -spacing.xs,
 });
 
-const $typeOption: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flex: 1,
+const $typeOption: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
+  backgroundColor: colors.separator,
+  paddingVertical: spacing.xs,
   paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.sm,
-  borderWidth: 2,
-  borderRadius: 12,
+  borderRadius: 16,
+  marginHorizontal: spacing.xs,
+  marginBottom: spacing.sm,
 });
 
-const $typeIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  fontSize: 20,
-  marginRight: spacing.xs,
+const $selectedTypeOption: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.tint,
 });
 
-const $typeLabel: ThemedStyle<TextStyle> = () => ({
+const $typeLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.text,
+  marginLeft: spacing.xs,
   fontSize: 14,
-  fontWeight: "600",
 });
 
-const $contentSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-});
-
-const $textInput: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 18,
-  color: colors.text,
-  minHeight: 200,
-  textAlignVertical: "top",
-  paddingVertical: spacing.sm,
-});
-
-const $characterCount: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "flex-end",
-  marginTop: spacing.sm,
-});
-
-const $characterCountText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
-  color: colors.textDim,
-});
-
-const $mediaSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.lg,
-  borderTopWidth: 1,
-  borderTopColor: colors.border,
-  gap: spacing.lg,
-});
-
-const $mediaButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.sm,
-  opacity: 0.5, // 비활성화 상태
-});
-
-const $titleSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-});
-
-const $titleInput: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 20,
-  fontWeight: "600",
-  color: colors.text,
-  paddingVertical: spacing.sm,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
+const $selectedTypeLabel: ThemedStyle<TextStyle> = () => ({
+  color: "white",
 });

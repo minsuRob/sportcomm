@@ -319,7 +319,9 @@ export async function uploadFilesWithProgress(
           file instanceof File ? file.name : `file_${index}_${Date.now()}`;
         // 중요: 'files'는 서버의 FilesInterceptor('files')와 필드명이 일치해야 함
         formData.append("files", file, fileName);
-        console.log(`웹 환경 - 파일 추가 완료: ${fileName}`);
+        console.log(
+          `웹 환경 - 파일 추가 완료: ${fileName}, 크기: ${file.size}바이트, 타입: ${file.type || "알 수 없음"}`,
+        );
       } else if (
         isReactNative() &&
         "uri" in file &&
@@ -333,7 +335,18 @@ export async function uploadFilesWithProgress(
           : `file://${file.uri.replace(/^\//, "")}`;
 
         // 파일 이름 강제 지정 (확장자 포함)
-        const fileName = `image_${index}_${Date.now()}.jpg`;
+        // 확장자를 파일 타입에서 추출하거나 기본값으로 jpg 사용
+        const mimeToExt = {
+          "image/jpeg": "jpg",
+          "image/jpg": "jpg",
+          "image/png": "png",
+          "image/gif": "gif",
+          "image/webp": "webp",
+          "video/mp4": "mp4",
+          "video/quicktime": "mov",
+        };
+        const fileExt = mimeToExt[file.type] || "jpg";
+        const fileName = `image_${index}_${Date.now()}.${fileExt}`;
 
         const fileObj = {
           uri: uri,
@@ -350,16 +363,25 @@ export async function uploadFilesWithProgress(
           // iOS에서는 객체 형식으로 추가
           // @ts-ignore: iOS의 FormData는 객체 형식 지원
           formData.append("files", fileObj);
+          console.log(
+            `iOS - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
+          );
         } else if (Platform.OS === "android") {
           // Android에서는 URI로부터 파일 생성 시도
           // @ts-ignore: Android에서는 객체 형식 사용
           formData.append("files", fileObj);
+          console.log(
+            `Android - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
+          );
         } else {
           // 웹 또는 기타 환경에서 테스트할 경우
           console.warn("웹 환경에서 테스트 중 - 더미 이미지로 대체합니다");
-          formData.append(
-            "files",
-            new File(["dummy"], fileName, { type: "image/jpeg" }),
+          const dummyFile = new File(["dummy image content"], fileName, {
+            type: file.type || "image/jpeg",
+          });
+          formData.append("files", dummyFile);
+          console.log(
+            `웹(테스트) - 더미 파일 추가: ${fileName}, 타입: ${dummyFile.type}`,
           );
         }
       } else {
@@ -448,11 +470,20 @@ export async function uploadFilesWithProgress(
       if (isReactNative()) {
         xhr.setRequestHeader("Accept", "application/json");
         // Content-Type은 FormData가 자동으로 설정하므로 수동으로 설정하지 않음
-        // 단, React Native의 일부 버전에서는 올바르게 설정되지 않을 수 있음
+        console.log("React Native 환경 - FormData 전송 준비 완료");
 
-        // 요청 전 마지막 확인
-        console.log("FormData 전송 직전 - Content-Type 헤더:", "자동 설정됨");
+        // 단, React Native의 일부 버전에서는 올바르게 설정되지 않을 수 있음
       }
+
+      // 업로드 디버깅을 위해 요청 헤더 확인
+      console.log("업로드 요청 헤더:", {
+        contentType: "multipart/form-data (자동 설정)",
+        accept: "application/json",
+        authorization: token ? "Bearer 토큰 설정됨" : "설정되지 않음",
+      });
+
+      // 요청 전 마지막 확인
+      console.log("FormData 전송 직전 - Content-Type 헤더:", "자동 설정됨");
 
       // FormData 디버깅
       console.log(`FormData 전송 직전 내용 확인:`);

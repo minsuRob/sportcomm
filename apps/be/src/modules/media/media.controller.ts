@@ -15,8 +15,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
 import { MediaService } from './media.service';
-// multer v2에서는 diskStorage 사용 방식이 변경됨
-// import { diskStorage } from 'multer';
+import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { existsSync, mkdirSync } from 'fs';
@@ -64,14 +63,20 @@ export class MediaController {
    */
   @Post()
   @UseGuards(HttpAuthGuard)
+  // 파일 업로드 요청 수신 시 로깅
   @UseInterceptors(
     FilesInterceptor('files', 4, {
-      storage: {
+      // Multer 설정 시작 로깅
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB 제한 (비디오 파일 고려)
+        files: 4, // 최대 4개 파일
+      },
+      storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadPath = join(process.cwd(), 'uploads/images');
           // 파일 수신 시 디버그 정보 출력
           console.log(
-            `파일 수신 중: ${file.originalname}, 필드명: ${file.fieldname}`,
+            `파일 저장 경로 설정 중: ${file.originalname}, 필드명: ${file.fieldname}, 크기: ${file.size || '알 수 없음'}`,
           );
           // 디렉토리 존재 확인 및 생성
           try {
@@ -89,9 +94,13 @@ export class MediaController {
           const uniqueSuffix = uuidv4();
           const ext = extname(file.originalname);
           const timestamp = Date.now();
-          callback(null, `${timestamp}_${uniqueSuffix}${ext}`);
+          const filename = `${timestamp}_${uniqueSuffix}${ext}`;
+          console.log(
+            `파일 이름 생성: ${filename} (원본: ${file.originalname})`,
+          );
+          callback(null, filename);
         },
-      },
+      }),
       fileFilter: (req, file, callback) => {
         // 파일 필터링 시작 시 로깅
         console.log(
@@ -99,6 +108,10 @@ export class MediaController {
         );
 
         // 이미지 및 비디오 파일 허용
+        console.log(
+          `파일 타입 검사 시작: ${file.mimetype}, 파일명: ${file.originalname}`,
+        );
+
         const allowedMimeTypes = [
           'image/jpeg',
           'image/jpg',
@@ -133,6 +146,9 @@ export class MediaController {
           !allowedMimeTypes.includes(file.mimetype) &&
           (!fileExt || !allowedExtensions.includes(fileExt))
         ) {
+          console.log(
+            `파일 타입 거부: ${file.mimetype}, 확장자: ${fileExt || '없음'}`,
+          );
           return callback(
             new BadRequestException(
               `지원되지 않는 파일 형식입니다(${file.mimetype}). 이미지(jpg, png, gif, webp) 또는 비디오(mp4, avi, mov, wmv) 파일만 업로드 가능합니다.`,
@@ -142,20 +158,31 @@ export class MediaController {
         }
 
         // React Native에서 전송된 application/octet-stream 타입 파일의 경우 확장자로 타입 추론
-        if (file.mimetype === 'application/octet-stream' && fileExt) {
+        if (
+          (file.mimetype === 'application/octet-stream' ||
+            file.mimetype === 'binary/octet-stream') &&
+          fileExt
+        ) {
+          console.log(
+            `octet-stream 파일 타입 추론 시작: 확장자 ${fileExt} 분석`,
+          );
           if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
-            file.mimetype = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+            const newMimeType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+            console.log(`MIME 타입 변경: ${file.mimetype} -> ${newMimeType}`);
+            file.mimetype = newMimeType;
           } else if (['mp4', 'avi', 'mov', 'wmv'].includes(fileExt)) {
-            file.mimetype = `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
+            const newMimeType = `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
+            console.log(`MIME 타입 변경: ${file.mimetype} -> ${newMimeType}`);
+            file.mimetype = newMimeType;
           }
         }
 
+        console.log(
+          `파일 ${file.originalname} 승인됨, 최종 MIME 타입: ${file.mimetype}`,
+        );
         callback(null, true);
       },
-      limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB 제한 (비디오 파일 고려)
-        files: 4, // 최대 4개 파일
-      },
+
       // React Native와의 호환성을 위한 Multer 설정
       preservePath: true,
     }),
@@ -167,10 +194,11 @@ export class MediaController {
     @Req() req: Request,
   ) {
     // 요청 로깅 강화
-    console.log('======== 파일 업로드 요청 시작 ========');
+    console.log('\n======== 파일 업로드 요청 시작 ========');
     console.log(`요청 URL: ${req.url}`);
     console.log(`요청 메서드: ${req.method}`);
     console.log(`Content-Type: ${req.headers['content-type']}`);
+    console.log(`요청 ID: ${uuidv4().substring(0, 8)} (추적용)`);
 
     // 파일 정보 로깅
     console.log(`Content-Length: ${req.headers['content-length']}`);
@@ -324,7 +352,8 @@ export class MediaController {
   @UseGuards(HttpAuthGuard)
   @UseInterceptors(
     FilesInterceptor('file', 1, {
-      storage: {
+      // 단일 파일 업로드 설정
+      storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadPath = join(process.cwd(), 'uploads/images');
           // 디렉토리 존재 확인 및 생성
@@ -350,7 +379,7 @@ export class MediaController {
           const timestamp = Date.now();
           callback(null, `${timestamp}_${uniqueSuffix}${ext}`);
         },
-      },
+      }),
       fileFilter: (req, file, callback) => {
         const allowedMimeTypes = [
           'image/jpeg',

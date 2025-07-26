@@ -34,22 +34,10 @@ export default function PostMedia({
 }: PostMediaProps) {
   const { themed } = useAppTheme();
 
-  // 디버깅을 위한 로그
-  console.log("PostMedia 렌더링:", {
-    mediaCount: media.length,
-    mediaTypes: media.map((m) => m.type),
-    variant,
-  });
-
   const imageMedia = media.filter(
     (item) => item.type === "image" || item.type === "IMAGE"
   );
   const imageCount = imageMedia.length;
-
-  console.log("필터링된 이미지:", {
-    imageCount,
-    imageUrls: imageMedia.map((m) => m.url),
-  });
 
   if (imageCount === 0) {
     console.log("이미지가 없어서 null 반환");

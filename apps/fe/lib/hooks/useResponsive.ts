@@ -11,7 +11,7 @@ export const useResponsive = () => {
     return {
       width,
       height,
-      isDesktop: width >= 500, // 500px 이상을 데스크톱으로 간주
+      isDesktop: width >= 768, // 768px 이상을 데스크톱으로 간주 (태블릿 이상)
     };
   });
 
@@ -20,7 +20,7 @@ export const useResponsive = () => {
       setScreenData({
         width: window.width,
         height: window.height,
-        isDesktop: window.width >= 500,
+        isDesktop: window.width >= 768,
       });
     });
 

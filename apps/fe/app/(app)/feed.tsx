@@ -20,7 +20,7 @@ import { User, getSession, clearSession } from "@/lib/auth";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
-import WebCenteredLayout from "@/components/layout/WebCenteredLayout";
+// WebCenteredLayout 제거 - 전역 레이아웃 사용
 // CreatePostModal 제거 - 이제 별도 페이지로 이동
 import { Plus, MessageSquare } from "lucide-react-native";
 

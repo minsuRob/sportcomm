@@ -19,7 +19,7 @@ import { useRouter } from "expo-router";
 import { GET_USER_PROFILE, GET_USER_POSTS } from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
 import type { Post } from "@/components/PostCard";
-import WebCenteredLayout from "@/components/layout/WebCenteredLayout";
+// WebCenteredLayout 제거 - 전역 레이아웃 사용
 
 // 사용자 프로필 데이터 타입
 interface UserProfile {
@@ -147,52 +147,48 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 프로필 정보 - 웹에서 중앙 정렬 */}
-      <WebCenteredLayout scrollable={false}>
-        {/* 프로필 정보 */}
-        <View style={themed($profileSection)}>
-          <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
-          <Text style={themed($username)}>{userProfile.nickname}</Text>
+      {/* 프로필 정보 - 전역 레이아웃 적용됨 */}
+      {/* 프로필 정보 */}
+      <View style={themed($profileSection)}>
+        <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
+        <Text style={themed($username)}>{userProfile.nickname}</Text>
 
-          {/* 프로필 편집 버튼 */}
-          <TouchableOpacity
-            style={themed($editButton)}
-            onPress={handleEditProfile}
-          >
-            <Edit3 color={theme.colors.tint} size={16} />
-            <Text style={themed($editButtonText)}>프로필 편집</Text>
-          </TouchableOpacity>
-        </View>
+        {/* 프로필 편집 버튼 */}
+        <TouchableOpacity
+          style={themed($editButton)}
+          onPress={handleEditProfile}
+        >
+          <Edit3 color={theme.colors.tint} size={16} />
+          <Text style={themed($editButtonText)}>프로필 편집</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* 통계 정보 */}
-        <View style={themed($statsSection)}>
-          <View style={themed($statItem)}>
-            <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
-            <Text style={themed($statLabel)}>게시물</Text>
-          </View>
-          <TouchableOpacity
-            style={themed($statItem)}
-            onPress={handleFollowersPress}
-          >
-            <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
-            <Text style={themed($statLabel)}>팔로워</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={themed($statItem)}
-            onPress={handleFollowingPress}
-          >
-            <Text style={themed($statNumber)}>
-              {userProfile.followingCount}
-            </Text>
-            <Text style={themed($statLabel)}>팔로잉</Text>
-          </TouchableOpacity>
+      {/* 통계 정보 */}
+      <View style={themed($statsSection)}>
+        <View style={themed($statItem)}>
+          <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
+          <Text style={themed($statLabel)}>게시물</Text>
         </View>
+        <TouchableOpacity
+          style={themed($statItem)}
+          onPress={handleFollowersPress}
+        >
+          <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
+          <Text style={themed($statLabel)}>팔로워</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={themed($statItem)}
+          onPress={handleFollowingPress}
+        >
+          <Text style={themed($statNumber)}>{userProfile.followingCount}</Text>
+          <Text style={themed($statLabel)}>팔로잉</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* 내 게시물 섹션 제목 */}
-        <View style={themed($postsSection)}>
-          <Text style={themed($sectionTitle)}>내 게시물</Text>
-        </View>
-      </WebCenteredLayout>
+      {/* 내 게시물 섹션 제목 */}
+      <View style={themed($postsSection)}>
+        <Text style={themed($sectionTitle)}>내 게시물</Text>
+      </View>
 
       {/* 게시물 목록 - FeedList가 직접 스크롤 처리 */}
       {postsLoading ? (

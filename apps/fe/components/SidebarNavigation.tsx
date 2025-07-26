@@ -21,19 +21,19 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   {
     name: "feed",
-    label: "Feed",
+    label: "피드",
     icon: Home,
     route: "/(app)/feed",
   },
   {
     name: "search",
-    label: "Search",
+    label: "검색",
     icon: Search,
     route: "/(app)/search",
   },
   {
     name: "profile",
-    label: "Profile",
+    label: "프로필",
     icon: User,
     route: "/(app)/profile",
   },
@@ -90,53 +90,52 @@ export default function SidebarNavigation() {
 
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  width: 240,
+  width: 280, // 더 넓은 사이드바
   height: "100%",
   backgroundColor: colors.background,
   borderRightWidth: 1,
   borderRightColor: colors.border,
-  paddingVertical: spacing.lg,
+  paddingVertical: spacing.xl,
+  paddingHorizontal: spacing.lg,
 });
 
 const $logoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.lg,
   paddingBottom: spacing.xl,
-  borderBottomWidth: 1,
-  borderBottomColor: "rgba(0,0,0,0.1)",
-  marginBottom: spacing.lg,
+  marginBottom: spacing.xl,
 });
 
 const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 24,
+  fontSize: 28,
   fontWeight: "bold",
   color: colors.tint,
+  letterSpacing: -0.5,
 });
 
 const $menuContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
+  gap: spacing.xs,
 });
 
 const $menuItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  paddingVertical: spacing.md,
-  paddingHorizontal: spacing.md,
-  borderRadius: 8,
-  marginBottom: spacing.xs,
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.lg,
+  borderRadius: 12,
+  minHeight: 56, // 더 큰 터치 영역
 });
 
 const $activeMenuItem: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: colors.tint + "20", // 20% 투명도
+  backgroundColor: colors.tint + "15", // 15% 투명도로 더 부드럽게
 });
 
 const $menuText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  marginLeft: spacing.md,
-  fontSize: 16,
+  marginLeft: spacing.lg,
+  fontSize: 18,
   fontWeight: "500",
   color: colors.textDim,
 });
 
 const $activeMenuText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.tint,
-  fontWeight: "600",
+  fontWeight: "700", // 더 굵게
 });

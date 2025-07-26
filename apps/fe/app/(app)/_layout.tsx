@@ -2,7 +2,7 @@ import React from "react";
 import { View, ViewStyle } from "react-native";
 import { Tabs } from "expo-router";
 import { Slot } from "expo-router";
-import { FontAwesome } from "@expo/vector-icons";
+import { Home, Search, User } from "lucide-react-native";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -14,32 +14,35 @@ import SidebarNavigation from "@/components/SidebarNavigation";
  */
 function MobileTabLayout() {
   return (
-    <Tabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 60,
+        },
+      }}
+    >
       <Tabs.Screen
         name="feed"
         options={{
-          title: "Feed",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="home" color={color} />
-          ),
+          title: "피드",
+          tabBarIcon: ({ color }) => <Home size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: "Search",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="search" color={color} />
-          ),
+          title: "검색",
+          tabBarIcon: ({ color }) => <Search size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="user" color={color} />
-          ),
+          title: "프로필",
+          tabBarIcon: ({ color }) => <User size={24} color={color} />,
         }}
       />
     </Tabs>
@@ -57,7 +60,9 @@ function DesktopSidebarLayout() {
     <View style={themed($desktopContainer)}>
       <SidebarNavigation />
       <View style={themed($contentArea)}>
-        <Slot />
+        <View style={themed($contentWrapper)}>
+          <Slot />
+        </View>
       </View>
     </View>
   );
@@ -90,6 +95,16 @@ const $desktopContainer: ThemedStyle<ViewStyle> = () => ({
 });
 
 const $contentArea: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+  // 웹에서 콘텐츠 영역 중앙 정렬
+  alignItems: "center",
+  paddingHorizontal: 16,
+});
+
+const $contentWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: "100%",
+  maxWidth: 640, // 콘텐츠 최대 너비
   flex: 1,
   backgroundColor: colors.background,
 });

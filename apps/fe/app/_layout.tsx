@@ -5,11 +5,10 @@ import { PortalHost } from "@rn-primitives/portal";
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as React from "react";
-import { Platform, View, Text } from "react-native";
-import { setAndroidNavigationBar } from "../lib/android-navigation-bar";
 import Toast from "react-native-toast-message";
 import CustomToast from "@/components/CustomToast";
 import { ApolloProvider } from "@apollo/client";
+import GlobalWebLayout from "@/components/layout/GlobalWebLayout";
 import { client } from "@/lib/api/client";
 
 import {
@@ -30,10 +29,11 @@ function RootLayoutNav() {
   const { navigationTheme, themeContext } = useAppTheme();
 
   return (
-    ////
     <NavigationThemeProvider value={navigationTheme}>
       <StatusBar style={themeContext === "dark" ? "light" : "dark"} />
-      <Slot />
+      <GlobalWebLayout>
+        <Slot />
+      </GlobalWebLayout>
       <PortalHost />
     </NavigationThemeProvider>
   );

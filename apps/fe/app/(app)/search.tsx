@@ -18,7 +18,7 @@ import SearchResults, {
 } from "@/components/search/SearchResults";
 import { searchApi, getPopularSearchTerms } from "@/lib/api/search";
 import { debounce } from "lodash";
-import WebCenteredLayout from "@/components/layout/WebCenteredLayout";
+// WebCenteredLayout 제거 - 전역 레이아웃 사용
 
 /**
  * 검색 화면 컴포넌트
@@ -154,22 +154,20 @@ export default function SearchScreen() {
 
       {/* 검색 결과 영역 */}
       {!searchQuery.trim() && popularTerms.length > 0 ? (
-        <WebCenteredLayout scrollable={false}>
-          <View style={themed($popularTermsContainer)}>
-            <Text style={themed($sectionTitle)}>인기 검색어</Text>
-            <View style={themed($termsContainer)}>
-              {popularTerms.map((term, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={themed($termItem)}
-                  onPress={() => setSearchQuery(term)}
-                >
-                  <Text style={themed($termText)}>{term}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        <View style={themed($popularTermsContainer)}>
+          <Text style={themed($sectionTitle)}>인기 검색어</Text>
+          <View style={themed($termsContainer)}>
+            {popularTerms.map((term, index) => (
+              <TouchableOpacity
+                key={index}
+                style={themed($termItem)}
+                onPress={() => setSearchQuery(term)}
+              >
+                <Text style={themed($termText)}>{term}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </WebCenteredLayout>
+        </View>
       ) : (
         <SearchResults
           activeTab={activeTab}

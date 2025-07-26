@@ -12,3 +12,4 @@ apps/be/src/schema.gql
 apps/fe/.env
 .vscode
 .turbo
+apps/be/uploads/images

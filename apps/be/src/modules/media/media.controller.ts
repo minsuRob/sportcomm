@@ -65,6 +65,19 @@ export class MediaController {
           console.log(
             `파일 저장 경로 설정 중: ${file.originalname}, 필드명: ${file.fieldname}, 크기: ${file.size || '알 수 없음'}`,
           );
+
+          // 파일 데이터 확인 로깅
+          console.log('업로드된 파일 데이터 확인:', {
+            fieldname: file.fieldname,
+            originalname: file.originalname,
+            encoding: file.encoding,
+            mimetype: file.mimetype,
+            size: file.size,
+            stream: typeof file.stream,
+            buffer: file.buffer ? '버퍼 존재' : '버퍼 없음',
+            destination: file.destination || '미설정',
+          });
+
           // 디렉토리 존재 확인 및 생성
           try {
             if (!existsSync(uploadPath)) {
@@ -84,14 +97,32 @@ export class MediaController {
               Math.random() * 1e9,
             )}`;
             // 파일 확장자 가져오기 (소문자로 변환)
-            const fileExt = extname(file.originalname).toLowerCase();
+            let fileExt = extname(file.originalname).toLowerCase();
+
+            // 확장자가 없거나 비정상적인 경우 MIME 타입에서 유추
+            if (!fileExt || fileExt === '.') {
+              const mimeToExt = {
+                'image/jpeg': '.jpg',
+                'image/jpg': '.jpg',
+                'image/png': '.png',
+                'image/gif': '.gif',
+                'image/webp': '.webp',
+                'video/mp4': '.mp4',
+                'video/quicktime': '.mov',
+              };
+              fileExt = mimeToExt[file.mimetype] || '.jpg';
+              console.log(
+                `확장자 누락 감지 - MIME 타입(${file.mimetype})에서 확장자(${fileExt}) 유추`,
+              );
+            }
+
             // 최종 파일명 생성 (UUID-원본파일명.확장자)
             const safeName = `${uuidv4()}-${uniqueSuffix}${fileExt}`;
 
-            cb(null, safeName);
             console.log(
-              `파일명 생성 완료: ${file.originalname} -> ${safeName}`,
+              `파일명 생성 완료: ${file.originalname} -> ${safeName} (크기: ${file.size || '알 수 없음'})`,
             );
+            cb(null, safeName);
           } catch (error) {
             console.error(`파일명 생성 실패: ${error.message}`);
             cb(error as Error, '');
@@ -100,6 +131,13 @@ export class MediaController {
       }),
       fileFilter: (req, file, callback) => {
         try {
+          console.log(`파일 필터 검사 시작:`, {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size || '크기 알 수 없음',
+            fieldname: file.fieldname,
+          });
+
           // 지원되는 MIME 타입 확인
           const allowedMimeTypes = [
             // 이미지
@@ -111,6 +149,9 @@ export class MediaController {
             'video/mp4',
             'video/quicktime', // MOV
             'video/x-msvideo', // AVI
+            // React Native에서 전송될 수 있는 특별 타입들
+            'application/octet-stream',
+            'binary/octet-stream',
           ];
 
           // 파일 형식 유효성 검사
@@ -124,10 +165,27 @@ export class MediaController {
             );
           }
 
-          // 허용된 형식인지 확인
-          if (!allowedMimeTypes.includes(file.mimetype)) {
+          // MIME 타입이 허용 목록에 없는 경우 확장자 기반 확인
+          const fileExt = file.originalname.split('.').pop()?.toLowerCase();
+          const allowedExtensions = [
+            'jpg',
+            'jpeg',
+            'png',
+            'gif',
+            'webp',
+            'mp4',
+            'mov',
+            'avi',
+          ];
+
+          // MIME 타입 또는 확장자 중 하나라도 유효하면 허용
+          const hasValidMimeType = allowedMimeTypes.includes(file.mimetype);
+          const hasValidExtension =
+            fileExt && allowedExtensions.includes(fileExt);
+
+          if (!hasValidMimeType && !hasValidExtension) {
             console.error(
-              `파일 형식 오류: 허용되지 않은 MIME 타입 ${file.mimetype}`,
+              `파일 형식 오류: 허용되지 않은 형식 - MIME: ${file.mimetype}, 확장자: ${fileExt || '없음'}`,
             );
             return callback(
               new UnsupportedMediaTypeException(
@@ -149,16 +207,14 @@ export class MediaController {
           }
 
           // React Native에서 전송한 경우 MIME 타입 보정
-          const fileExt = file.originalname.split('.').pop()?.toLowerCase();
           if (
             fileExt &&
-            file.mimetype === 'application/octet-stream' &&
-            ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi'].includes(
-              fileExt,
-            )
+            (file.mimetype === 'application/octet-stream' ||
+              file.mimetype === 'binary/octet-stream') &&
+            allowedExtensions.includes(fileExt)
           ) {
             console.log(
-              `MIME 타입 보정: application/octet-stream -> ${fileExt}`,
+              `MIME 타입 보정: ${file.mimetype} -> ${fileExt} 기반으로 변경`,
             );
             // 올바른 MIME 타입으로 수정
             if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
@@ -168,6 +224,9 @@ export class MediaController {
             }
           }
 
+          console.log(
+            `파일 필터 검사 통과: ${file.originalname}, 최종 MIME 타입: ${file.mimetype}`,
+          );
           callback(null, true);
         } catch (error) {
           console.error(`파일 필터 처리 중 오류 발생: ${error.message}`);
@@ -185,6 +244,11 @@ export class MediaController {
     @Body() body: any,
     @Req() req: Request,
   ) {
+    // 업로드 디버그 정보 추가
+    console.log('요청 Content-Type:', req.headers['content-type']);
+    console.log('요청 Content-Length:', req.headers['content-length']);
+    console.log('요청 Origin:', req.headers['origin']);
+    console.log('요청 User-Agent:', req.headers['user-agent']);
     try {
       // 요청 로깅 강화
       const requestId = uuidv4().substring(0, 8);
@@ -413,8 +477,28 @@ export class MediaController {
         destination: './uploads/images',
         filename: (req, file, cb) => {
           const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-          const fileExt = extname(file.originalname);
-          cb(null, `${uniqueSuffix}${fileExt}`);
+          // 파일 확장자 가져오기 (소문자로 변환)
+          let fileExt = extname(file.originalname).toLowerCase();
+
+          // 확장자가 없는 경우 MIME 타입에서 유추
+          if (!fileExt || fileExt === '.') {
+            const mimeToExt = {
+              'image/jpeg': '.jpg',
+              'image/jpg': '.jpg',
+              'image/png': '.png',
+              'image/gif': '.gif',
+              'image/webp': '.webp',
+              'video/mp4': '.mp4',
+              'video/quicktime': '.mov',
+            };
+            fileExt = mimeToExt[file.mimetype] || '.jpg';
+          }
+
+          const fileName = `${uniqueSuffix}${fileExt}`;
+          console.log(
+            `단일 파일 업로드 - 파일명 생성: ${file.originalname} -> ${fileName} (크기: ${file.size || '알 수 없음'})`,
+          );
+          cb(null, fileName);
         },
       }),
       fileFilter: (req, file, callback) => {

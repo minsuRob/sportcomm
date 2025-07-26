@@ -18,6 +18,8 @@ import { useRouter } from "expo-router";
 import { ArrowLeft, Send, ImageIcon, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as FileSystem from "expo-file-system";
+import { isWeb, platformSelect } from "@/lib/platform";
 import { showToast } from "@/components/CustomToast";
 import Toast from "react-native-toast-message";
 /**
@@ -60,6 +62,7 @@ interface SelectedImage {
   mimeType?: string;
   source?: string;
   name?: string;
+  originalSize?: number; // 원본 파일 크기 저장
 }
 
 /**
@@ -161,6 +164,34 @@ export default function CreatePostScreen() {
       const maxWidth = Math.min(1920, screenWidth * 2);
       const maxHeight = 1080;
 
+      // 파일 크기 확인 (웹/네이티브 환경에 따라 처리)
+      let originalFileSize = 0;
+
+      if (isWeb()) {
+        // 웹 환경에서는 간단히 로그만 출력
+        console.log("웹 환경: 파일 크기 확인 생략");
+      } else {
+        // 네이티브 환경에서는 파일 정보 확인
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(uri);
+          originalFileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
+          console.log(
+            `원본 이미지 크기: ${originalFileSize} bytes (${(originalFileSize / (1024 * 1024)).toFixed(2)}MB)`,
+          );
+
+          // 파일이 너무 작으면 오류 발생
+          if (originalFileSize < 1000) {
+            console.error(
+              `이미지 파일이 너무 작습니다: ${originalFileSize} bytes`,
+            );
+            throw new Error("이미지 파일이 손상되었거나 너무 작습니다");
+          }
+        } catch (fileError) {
+          console.warn("파일 크기 확인 중 오류:", fileError);
+          // 오류 발생해도 계속 진행
+        }
+      }
+
       const manipulatedImage = await ImageManipulator.manipulateAsync(
         uri,
         [
@@ -177,12 +208,66 @@ export default function CreatePostScreen() {
         },
       );
 
+      // 압축 후 파일 크기 검증
+      let compressedSize = 0;
+
+      if (isWeb()) {
+        // 웹 환경에서는 크기 추정
+        console.log("웹 환경: 압축된 파일 크기 확인 생략");
+        // 웹에서는 이미지 크기를 추정할 수 없으므로 기본값 사용
+        compressedSize = manipulatedImage.width * manipulatedImage.height * 4; // RGBA 4바이트 기준 추정
+      } else {
+        // 네이티브 환경에서는 실제 파일 크기 확인
+        try {
+          const compressedFileInfo = await FileSystem.getInfoAsync(
+            manipulatedImage.uri,
+          );
+          const size = compressedFileInfo.exists
+            ? compressedFileInfo.size || 0
+            : 0;
+          console.log(
+            `압축된 이미지 크기: ${size} bytes (${(size / (1024 * 1024)).toFixed(2)}MB)`,
+          );
+
+          // 압축된 파일이 너무 작으면 오류 발생
+          if (size < 1000) {
+            console.error(
+              `압축된 이미지가 너무 작습니다: ${size} bytes. 원본 사용 시도`,
+            );
+            // 원본이 작지 않다면 원본 사용
+            if (originalFileSize > 1000) {
+              compressedSize = -1; // 특별 플래그: 원본 사용 신호
+            } else {
+              throw new Error("압축된 이미지 파일이 손상되었습니다");
+            }
+          } else {
+            compressedSize = size;
+          }
+        } catch (fileError) {
+          console.warn("압축 파일 크기 확인 중 오류:", fileError);
+          compressedSize = 0; // 오류 발생 시 기본값
+        }
+      }
+
+      // 네이티브 환경에서 원본 이미지를 사용해야 하는 경우
+      if (compressedSize === -1) {
+        return {
+          uri: uri,
+          width: manipulatedImage.width,
+          height: manipulatedImage.height,
+          fileSize: originalFileSize,
+          mimeType: "image/jpeg",
+          name: `image_${Date.now()}.jpg`,
+        };
+      }
+
       return {
         uri: manipulatedImage.uri,
         width: manipulatedImage.width,
         height: manipulatedImage.height,
-        fileSize: (manipulatedImage as any).fileSize,
+        fileSize: compressedSize,
         mimeType: "image/jpeg",
+        name: `image_${Date.now()}.jpg`,
       };
     } catch (error) {
       console.error("이미지 압축 실패:", error);
@@ -273,21 +358,71 @@ export default function CreatePostScreen() {
    * @param index 배열 내 이미지 인덱스 (파일명 생성 시 사용)
    * @returns 업로드 가능한 형식의 파일 객체
    */
-  const prepareImageForUpload = (image: SelectedImage, index: number) => {
+  const prepareImageForUpload = async (image: SelectedImage, index: number) => {
+    // 정확한 파일 정보 로깅
     console.log(`이미지 ${index} 준비 중:`, {
       uri: image.uri,
       name: image.name || `image_${index}.jpg`,
       type: image.mimeType,
       size: image.fileSize,
+      width: image.width,
+      height: image.height,
     });
+
+    // 파일 크기 검증 및 확인
+    if (isWeb()) {
+      // 웹 환경
+      console.log("웹 환경: 파일 크기 검증 생략");
+    } else {
+      // 네이티브 환경
+      try {
+        // 파일 정보 다시 확인
+        const fileInfo = await FileSystem.getInfoAsync(image.uri);
+        const actualFileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
+
+        console.log(
+          `실제 파일 크기 확인: ${actualFileSize} bytes (${(actualFileSize / 1024).toFixed(2)}KB)`,
+        );
+
+        // 파일 크기 불일치 확인
+        if (
+          image.fileSize &&
+          Math.abs(image.fileSize - actualFileSize) > 1000
+        ) {
+          console.warn(
+            `경고: 파일 크기 불일치! 메타데이터: ${image.fileSize} bytes, 실제: ${actualFileSize} bytes`,
+          );
+          // 실제 크기로 업데이트
+          image.fileSize = actualFileSize;
+        }
+
+        // 파일이 너무 작은 경우
+        if (actualFileSize < 1000) {
+          throw new Error(
+            `이미지 ${index}의 크기가 너무 작습니다: ${actualFileSize} bytes`,
+          );
+        }
+      } catch (error) {
+        console.error(`파일 크기 확인 오류:`, error);
+      }
+    }
+
+    // 파일 확장자 확인
+    const fileExt = image.uri?.split(".").pop()?.toLowerCase();
+    const mimeType =
+      image.mimeType ||
+      (fileExt
+        ? `image/${fileExt === "jpg" ? "jpeg" : fileExt}`
+        : "image/jpeg");
 
     return createReactNativeFile(
       {
         uri: image.uri,
-        mimeType: image.mimeType || "image/jpeg",
-        name: image.name || `image_${index}_${Date.now()}.jpg`,
+        mimeType: mimeType,
+        name: image.name || `image_${index}_${Date.now()}.${fileExt || "jpg"}`,
         width: image.width,
         height: image.height,
+        fileSize: image.fileSize, // 파일 크기 정보 추가
       },
       index,
     );
@@ -368,15 +503,32 @@ export default function CreatePostScreen() {
           console.log(`이미지 업로드 시작: ${selectedImages.length}개 파일`);
 
           // 이미지 데이터 변환 및 유효성 검증
-          const files = selectedImages.map((image, index) => {
-            if (!image || !image.uri) {
-              console.error(
-                `유효하지 않은 이미지 데이터 (인덱스: ${index})`,
-                image,
-              );
-            }
-            return prepareImageForUpload(image, index);
-          });
+          const files = await Promise.all(
+            selectedImages.map(async (image, index) => {
+              if (!image || !image.uri) {
+                console.error(
+                  `유효하지 않은 이미지 데이터 (인덱스: ${index})`,
+                  image,
+                );
+                throw new Error(
+                  `이미지 ${index}의 데이터가 유효하지 않습니다.`,
+                );
+              }
+
+              // 파일 크기가 너무 작은지 확인 (67바이트 등의 문제 방지)
+              // 네이티브 환경에서만 검사
+              if (!isWeb() && image.fileSize && image.fileSize < 1000) {
+                console.warn(
+                  `경고: 이미지 ${index}는 ${image.fileSize}바이트로 너무 작습니다. 업로드 시 문제가 발생할 수 있습니다.`,
+                );
+                throw new Error(
+                  `이미지 ${index}의 크기(${image.fileSize}바이트)가 너무 작습니다. 다른 이미지를 선택해주세요.`,
+                );
+              }
+
+              return await prepareImageForUpload(image, index);
+            }),
+          );
 
           console.log(`변환된 파일 데이터: ${files.length}개`);
 

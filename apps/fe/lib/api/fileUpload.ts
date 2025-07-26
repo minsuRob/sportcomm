@@ -177,6 +177,7 @@ export function createReactNativeFile(
     height?: number;
     mimeType?: string;
     name?: string;
+    fileSize?: number;
   },
   index: number = 0,
 ): ReactNativeFile {
@@ -190,8 +191,27 @@ export function createReactNativeFile(
   // MIME 타입 결정
   const fileType = image.mimeType || getMimeTypeFromUri(image.uri);
 
+  // 파일 생성 디버깅
+  console.log(`ReactNativeFile 생성:`, {
+    uri: image.uri.substring(0, 30) + "...",
+    name: fileName,
+    type: fileType,
+    width: image.width || "알 수 없음",
+    height: image.height || "알 수 없음",
+    fileSize: image.fileSize || "알 수 없음",
+  });
+
+  // URI 형식 확인 및 수정 (React Native 플랫폼에 따라)
+  let normalizedUri = image.uri;
+  if (Platform.OS === "ios" && !normalizedUri.startsWith("file://")) {
+    normalizedUri = `file://${normalizedUri}`;
+  } else if (Platform.OS === "android" && normalizedUri.startsWith("file://")) {
+    // Android에서는 필요에 따라 조정
+    normalizedUri = normalizedUri.substring(7);
+  }
+
   return new ReactNativeFile({
-    uri: image.uri,
+    uri: normalizedUri,
     name: fileName,
     type: fileType,
   });
@@ -220,8 +240,14 @@ export function getMimeTypeFromUri(uri: string): string {
       return "video/mp4";
     case "mov":
       return "video/quicktime";
+    case "heic":
+      return "image/heic";
+    case "heif":
+      return "image/heif";
     default:
-      return "application/octet-stream";
+      // URI에 확장자가 없거나 알 수 없는 경우 이미지로 가정
+      console.log(`알 수 없는 파일 확장자 '${extension}' - 기본값 사용`);
+      return "image/jpeg"; // 기본값으로 JPEG 사용
   }
 }
 
@@ -348,6 +374,7 @@ export async function uploadFilesWithProgress(
         const fileExt = mimeToExt[file.type] || "jpg";
         const fileName = `image_${index}_${Date.now()}.${fileExt}`;
 
+        // 실제 파일 데이터를 포함하는 객체 생성
         const fileObj = {
           uri: uri,
           name: fileName,
@@ -358,7 +385,7 @@ export async function uploadFilesWithProgress(
           `React Native 환경 - 파일 추가: ${JSON.stringify(fileObj)}`,
         );
 
-        // 테스트: 각 플랫폼에 맞는 방식으로 파일 추가
+        // 각 플랫폼에 맞는 방식으로 파일 추가
         if (Platform.OS === "ios") {
           // iOS에서는 객체 형식으로 추가
           // @ts-ignore: iOS의 FormData는 객체 형식 지원
@@ -367,28 +394,56 @@ export async function uploadFilesWithProgress(
             `iOS - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
           );
         } else if (Platform.OS === "android") {
-          // Android에서는 URI로부터 파일 생성 시도
+          // Android에서는 파일 객체를 직접 추가
+          // 객체로 전달하되 파일 데이터가 유실되지 않도록 명시적으로 설정
           // @ts-ignore: Android에서는 객체 형식 사용
-          formData.append("files", fileObj);
+          formData.append("files", {
+            uri: uri,
+            name: fileName,
+            type: file.type || "image/jpeg",
+          });
           console.log(
             `Android - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
           );
         } else {
-          // 웹 또는 기타 환경에서 테스트할 경우 - 실제 이미지 데이터 생성
-          console.warn("웹 환경에서 테스트 중 - 1x1 투명 PNG 이미지 사용");
+          // 웹 또는 기타 환경에서 테스트할 경우
+          console.warn("웹 환경에서 테스트 중 - 유효한 이미지 데이터 사용");
 
-          // 1x1 투명 PNG 픽셀 (유효한 이미지 데이터)
-          const transparentPixel = new Uint8Array([
+          // 100x100 투명 PNG 픽셀 (더 큰 유효한 이미지 데이터)
+          // 기존 1x1 픽셀보다 더 실제 파일과 비슷한 크기로 조정
+          const transparentPNG = new Uint8Array([
             0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00,
-            0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-            0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89,
-            0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63,
-            0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4,
-            0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60,
-            0x82,
+            0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00,
+            0x00, 0x64, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89,
+            0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0xed,
+            0xd0, 0x31, 0x01, 0x00, 0x00, 0x00, 0xc2, 0xa0, 0xf5, 0x4f, 0x6d,
+            0x0e, 0x37, 0xa0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xef, 0x03,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0xde, 0x01, 0x06, 0x00, 0x59, 0x00, 0x01, 0x70, 0xe8, 0x4f,
+            0xcd, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42,
+            0x60, 0x82,
           ]);
 
-          const dummyFile = new File([transparentPixel], fileName, {
+          // 더 현실적인 크기의 파일로 테스트
+          const dummyFile = new File([transparentPNG], fileName, {
             type: "image/png", // PNG 포맷으로 통일
           });
           formData.append("files", dummyFile);
@@ -497,17 +552,51 @@ export async function uploadFilesWithProgress(
       // 요청 전 마지막 확인
       console.log("FormData 전송 직전 - Content-Type 헤더:", "자동 설정됨");
 
-      // FormData 디버깅
-      console.log(`FormData 전송 직전 내용 확인:`);
-      if (isWeb()) {
+      // 추가 로깅: React Native에서 파일 업로드 디버깅
+      if (isReactNative()) {
+        console.log("React Native 환경에서 파일 업로드 수행:");
+        console.log(`- 파일 수: ${files.length}개`);
+        console.log(`- 플랫폼: ${Platform.OS}`);
+
+        files.forEach((file, idx) => {
+          if ("uri" in file) {
+            console.log(`- 파일 ${idx} 정보:`, {
+              uri: file.uri.substring(0, 30) + "...",
+              name: file.name,
+              type: file.type,
+            });
+          }
+        });
+
+        // React Native에서 FormData 구조 확인 시도
         try {
-          // 웹 환경에서만 작동
+          // @ts-ignore: RN의 FormData 구조 탐색
+          const partsCount = formData._parts?.length || "알 수 없음";
+          console.log(`- FormData 내부 항목 수: ${partsCount}`);
+
+          // @ts-ignore: 내부 구조 확인 시도
+          if (formData._parts) {
+            // @ts-ignore: RN의 FormData는 _parts 배열을 가짐
+            formData._parts.forEach((part, idx) => {
+              if (Array.isArray(part) && part.length >= 2) {
+                console.log(
+                  `  - 항목 ${idx}: 필드=${part[0]}, 값=${typeof part[1]}`,
+                );
+              }
+            });
+          }
+        } catch (e) {
+          console.log("FormData 내부 구조 검사 중 오류:", e);
+        }
+      } else if (isWeb()) {
+        // 웹 환경 디버깅
+        try {
           if (typeof formData.getAll === "function") {
             const files = formData.getAll("files");
             console.log(`- files 필드: ${files.length}개 항목`);
             files.forEach((file: any, idx: number) => {
               console.log(
-                `- files[${idx}] 타입: ${typeof file}, 이름: ${file.name || "N/A"}`,
+                `- files[${idx}] 타입: ${typeof file}, 이름: ${file.name || "N/A"}, 크기: ${file.size || "알 수 없음"}바이트`,
               );
             });
           } else {
@@ -515,15 +604,6 @@ export async function uploadFilesWithProgress(
           }
         } catch (e) {
           console.log("FormData 검사 중 오류:", e);
-        }
-      } else {
-        console.log("- React Native 환경: FormData 내용 검사 불가");
-        // React Native 환경에서 디버깅
-        if (isReactNative()) {
-          console.log(
-            "React Native FormData 구조:",
-            Object.getOwnPropertyNames(formData).filter((p) => p !== "__parts"),
-          );
         }
       }
 
@@ -586,12 +666,23 @@ export async function uploadFile(
       "type" in file
     ) {
       // React Native 환경
-      // @ts-ignore: React Native의 FormData는 객체를 직접 지원
-      formData.append("file", {
-        uri: file.uri,
-        name: file.name,
-        type: file.type,
-      });
+      if (Platform.OS === "ios") {
+        // iOS에서는 객체 형식으로 추가
+        // @ts-ignore: iOS의 FormData는 객체 형식 지원
+        formData.append("files", {
+          uri: file.uri,
+          name: file.name,
+          type: file.type,
+        });
+      } else {
+        // Android에서는 객체를 구체적으로 지정
+        // @ts-ignore: React Native의 FormData는 객체를 직접 지원
+        formData.append("files", {
+          uri: file.uri,
+          name: file.name,
+          type: file.type,
+        });
+      }
     } else {
       throw new UploadError(`지원하지 않는 파일 형식: ${typeof file}`, 400);
     }

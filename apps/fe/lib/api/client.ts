@@ -9,7 +9,7 @@ import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
 import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
-import { createHybridUploadLink } from "./fileUpload";
+// import { createHybridUploadLink } from "./fileUpload"; // 임시 비활성화
 import { logPlatformInfo, getPlatformType } from "@/lib/platform";
 
 /**
@@ -26,13 +26,13 @@ const API_URL = __DEV__
  * 파일 업로드를 지원하는 HTTP 링크 생성
  * Apollo Upload Client 사용
  */
-const uploadLink = createHybridUploadLink({
+// 임시로 기본 HTTP 링크 사용
+const uploadLink = new HttpLink({
   uri: API_URL,
   headers: {
     "Apollo-Require-Preflight": "true", // CORS 방지를 위한 헤더
   },
   credentials: "include", // 쿠키 포함
-  debug: true, // 항상 디버깅 활성화 (문제 해결 시까지)
 });
 
 /**
@@ -42,7 +42,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, locations, path }) => {
       console.error(
-        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`,
+        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`
       );
     });
   }
@@ -97,7 +97,7 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
             ? "File"
             : file.uri
               ? "ReactNativeFile"
-              : "알 수 없음",
+              : "알 수 없음"
         );
         console.log(`파일[${index}] 속성:`, Object.keys(file));
       });

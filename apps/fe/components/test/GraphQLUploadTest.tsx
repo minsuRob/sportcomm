@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { useUploadFiles } from "@/lib/api/fileUpload";
+import { useFileUpload } from "@/lib/api/fileUpload";
 
 /**
  * GraphQL 파일 업로드 테스트 컴포넌트
  */
 export default function GraphQLUploadTest() {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const { uploadFiles, loading, error } = useUploadFiles();
+  const { uploadFiles } = useFileUpload();
+  const loading = false;
+  const error = null;
 
   const handleImagePicker = async () => {
     try {

@@ -17,33 +17,21 @@ import {
 import { useRouter } from "expo-router";
 import { ArrowLeft, Send, ImageIcon, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
-import * as FileSystem from "expo-file-system";
-import { isWeb, platformSelect } from "@/lib/platform";
+import { isWeb } from "@/lib/platform";
 import { showToast } from "@/components/CustomToast";
-import Toast from "react-native-toast-message";
-/**
- * 통합된 fileUpload.ts 유틸리티에서 필요한 기능 가져오기
- * - createReactNativeFile: 선택된 이미지를 업로드 가능한 형식으로 변환
- * - UploadProgress: 파일 업로드 진행 상태 추적을 위한 타입
- * - UploadError: 업로드 중 발생 가능한 오류 타입
- */
-import {
-  createReactNativeFile,
-  UploadProgress,
-  UploadError,
-} from "@/lib/api/fileUpload";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { PostType } from "@/components/PostCard";
 import { User, getSession } from "@/lib/auth";
 import {
-  createPostWithFiles,
   createTextOnlyPost,
+  createPostWithFiles,
   PostCreationError,
-  CreatePostWithFilesInput,
-} from "@/lib/api/fileUpload";
+} from "@/lib/api/postCreation";
+import { compressImageWeb } from "@/lib/api/webUpload";
+import { compressImageMobile } from "@/lib/api/mobileUpload";
+import { UploadProgress } from "@/lib/api/common";
 
 // --- 타입 정의 ---
 interface PostTypeOption {
@@ -58,15 +46,14 @@ interface SelectedImage {
   width?: number;
   height?: number;
   fileSize?: number;
-  path?: string;
   mimeType?: string;
-  source?: string;
   name?: string;
-  originalSize?: number; // 원본 파일 크기 저장
 }
 
 /**
- * 게시물 작성 페이지
+ * 게시물 작성 페이지 (텍스트 전용)
+ *
+ * 이미지 업로드는 게시물 생성 성공 후 별도 처리됩니다.
  */
 export default function CreatePostScreen() {
   const router = useRouter();
@@ -82,7 +69,6 @@ export default function CreatePostScreen() {
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [uploadPercentage, setUploadPercentage] = useState<number>(0);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // 사용자 세션 확인
   React.useEffect(() => {
@@ -130,7 +116,12 @@ export default function CreatePostScreen() {
    * 뒤로 가기 핸들러
    */
   const handleGoBack = () => {
-    if (title.trim() || content.trim() || selectedType) {
+    if (
+      title.trim() ||
+      content.trim() ||
+      selectedType ||
+      selectedImages.length > 0
+    ) {
       Alert.alert(
         "작성 취소",
         "작성 중인 내용이 있습니다. 정말 취소하시겠습니까?",
@@ -141,7 +132,7 @@ export default function CreatePostScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ],
+        ]
       );
     } else {
       router.back();
@@ -156,126 +147,6 @@ export default function CreatePostScreen() {
   };
 
   /**
-   * 이미지 압축 함수
-   */
-  const compressImage = async (uri: string): Promise<SelectedImage> => {
-    try {
-      const { width: screenWidth } = Dimensions.get("window");
-      const maxWidth = Math.min(1920, screenWidth * 2);
-      const maxHeight = 1080;
-
-      // 파일 크기 확인 (웹/네이티브 환경에 따라 처리)
-      let originalFileSize = 0;
-
-      if (isWeb()) {
-        // 웹 환경에서는 간단히 로그만 출력
-        console.log("웹 환경: 파일 크기 확인 생략");
-      } else {
-        // 네이티브 환경에서는 파일 정보 확인
-        try {
-          const fileInfo = await FileSystem.getInfoAsync(uri);
-          originalFileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
-          console.log(
-            `원본 이미지 크기: ${originalFileSize} bytes (${(originalFileSize / (1024 * 1024)).toFixed(2)}MB)`,
-          );
-
-          // 파일이 너무 작으면 오류 발생
-          if (originalFileSize < 1000) {
-            console.error(
-              `이미지 파일이 너무 작습니다: ${originalFileSize} bytes`,
-            );
-            throw new Error("이미지 파일이 손상되었거나 너무 작습니다");
-          }
-        } catch (fileError) {
-          console.warn("파일 크기 확인 중 오류:", fileError);
-          // 오류 발생해도 계속 진행
-        }
-      }
-
-      const manipulatedImage = await ImageManipulator.manipulateAsync(
-        uri,
-        [
-          {
-            resize: {
-              width: maxWidth,
-              height: maxHeight,
-            },
-          },
-        ],
-        {
-          compress: 0.8, // 80% 품질
-          format: ImageManipulator.SaveFormat.JPEG,
-        },
-      );
-
-      // 압축 후 파일 크기 검증
-      let compressedSize = 0;
-
-      if (isWeb()) {
-        // 웹 환경에서는 크기 추정
-        console.log("웹 환경: 압축된 파일 크기 확인 생략");
-        // 웹에서는 이미지 크기를 추정할 수 없으므로 기본값 사용
-        compressedSize = manipulatedImage.width * manipulatedImage.height * 4; // RGBA 4바이트 기준 추정
-      } else {
-        // 네이티브 환경에서는 실제 파일 크기 확인
-        try {
-          const compressedFileInfo = await FileSystem.getInfoAsync(
-            manipulatedImage.uri,
-          );
-          const size = compressedFileInfo.exists
-            ? compressedFileInfo.size || 0
-            : 0;
-          console.log(
-            `압축된 이미지 크기: ${size} bytes (${(size / (1024 * 1024)).toFixed(2)}MB)`,
-          );
-
-          // 압축된 파일이 너무 작으면 오류 발생
-          if (size < 1000) {
-            console.error(
-              `압축된 이미지가 너무 작습니다: ${size} bytes. 원본 사용 시도`,
-            );
-            // 원본이 작지 않다면 원본 사용
-            if (originalFileSize > 1000) {
-              compressedSize = -1; // 특별 플래그: 원본 사용 신호
-            } else {
-              throw new Error("압축된 이미지 파일이 손상되었습니다");
-            }
-          } else {
-            compressedSize = size;
-          }
-        } catch (fileError) {
-          console.warn("압축 파일 크기 확인 중 오류:", fileError);
-          compressedSize = 0; // 오류 발생 시 기본값
-        }
-      }
-
-      // 네이티브 환경에서 원본 이미지를 사용해야 하는 경우
-      if (compressedSize === -1) {
-        return {
-          uri: uri,
-          width: manipulatedImage.width,
-          height: manipulatedImage.height,
-          fileSize: originalFileSize,
-          mimeType: "image/jpeg",
-          name: `image_${Date.now()}.jpg`,
-        };
-      }
-
-      return {
-        uri: manipulatedImage.uri,
-        width: manipulatedImage.width,
-        height: manipulatedImage.height,
-        fileSize: compressedSize,
-        mimeType: "image/jpeg",
-        name: `image_${Date.now()}.jpg`,
-      };
-    } catch (error) {
-      console.error("이미지 압축 실패:", error);
-      throw error;
-    }
-  };
-
-  /**
    * 이미지 선택 핸들러
    */
   const handleImagePicker = async () => {
@@ -287,7 +158,7 @@ export default function CreatePostScreen() {
         Alert.alert(
           "권한 필요",
           "이미지를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }],
+          [{ text: "확인" }]
         );
         return;
       }
@@ -302,11 +173,56 @@ export default function CreatePostScreen() {
       });
 
       if (!result.canceled && result.assets) {
+        console.log(`📷 이미지 선택 완료: ${result.assets.length}개`);
+
         const newImages: SelectedImage[] = [];
 
-        for (const asset of result.assets) {
+        for (const [index, asset] of result.assets.entries()) {
+          console.log(`📷 Asset ${index}:`, {
+            uri: asset.uri?.substring(0, 50) + "...",
+            width: asset.width,
+            height: asset.height,
+            type: asset.type,
+            fileSize: asset.fileSize,
+          });
+
           try {
-            const compressedImage = await compressImage(asset.uri);
+            let compressedImage: SelectedImage;
+
+            if (isWeb()) {
+              // 웹 환경에서 이미지 압축
+              const file = await compressImageWeb(asset.uri, {
+                maxWidth: 1920,
+                maxHeight: 1080,
+                quality: 0.8,
+                fileName: `image_${index}_${Date.now()}.jpg`,
+              });
+
+              // File 객체를 data URL로 변환
+              const reader = new FileReader();
+              const dataUrl = await new Promise<string>((resolve, reject) => {
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+              });
+
+              compressedImage = {
+                uri: dataUrl,
+                width: asset.width,
+                height: asset.height,
+                fileSize: file.size,
+                mimeType: "image/jpeg",
+                name: file.name,
+              };
+            } else {
+              // 모바일 환경에서 이미지 압축
+              compressedImage = await compressImageMobile(asset.uri, {
+                maxWidth: 1920,
+                maxHeight: 1080,
+                quality: 0.8,
+              });
+            }
+
             newImages.push(compressedImage);
           } catch (error) {
             console.error("이미지 처리 실패:", error);
@@ -349,87 +265,7 @@ export default function CreatePostScreen() {
   };
 
   /**
-   * 선택된 이미지를 업로드 가능한 형식으로 준비하는 함수
-   *
-   * fileUpload.ts의 createReactNativeFile 유틸리티 함수를 활용해
-   * expo-image-picker에서 선택한 이미지를 업로드에 적합한 형식으로 변환합니다.
-   *
-   * @param image 선택된 이미지 정보
-   * @param index 배열 내 이미지 인덱스 (파일명 생성 시 사용)
-   * @returns 업로드 가능한 형식의 파일 객체
-   */
-  const prepareImageForUpload = async (image: SelectedImage, index: number) => {
-    // 정확한 파일 정보 로깅
-    console.log(`이미지 ${index} 준비 중:`, {
-      uri: image.uri,
-      name: image.name || `image_${index}.jpg`,
-      type: image.mimeType,
-      size: image.fileSize,
-      width: image.width,
-      height: image.height,
-    });
-
-    // 파일 크기 검증 및 확인
-    if (isWeb()) {
-      // 웹 환경
-      console.log("웹 환경: 파일 크기 검증 생략");
-    } else {
-      // 네이티브 환경
-      try {
-        // 파일 정보 다시 확인
-        const fileInfo = await FileSystem.getInfoAsync(image.uri);
-        const actualFileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
-
-        console.log(
-          `실제 파일 크기 확인: ${actualFileSize} bytes (${(actualFileSize / 1024).toFixed(2)}KB)`,
-        );
-
-        // 파일 크기 불일치 확인
-        if (
-          image.fileSize &&
-          Math.abs(image.fileSize - actualFileSize) > 1000
-        ) {
-          console.warn(
-            `경고: 파일 크기 불일치! 메타데이터: ${image.fileSize} bytes, 실제: ${actualFileSize} bytes`,
-          );
-          // 실제 크기로 업데이트
-          image.fileSize = actualFileSize;
-        }
-
-        // 파일이 너무 작은 경우
-        if (actualFileSize < 1000) {
-          throw new Error(
-            `이미지 ${index}의 크기가 너무 작습니다: ${actualFileSize} bytes`,
-          );
-        }
-      } catch (error) {
-        console.error(`파일 크기 확인 오류:`, error);
-      }
-    }
-
-    // 파일 확장자 확인
-    const fileExt = image.uri?.split(".").pop()?.toLowerCase();
-    const mimeType =
-      image.mimeType ||
-      (fileExt
-        ? `image/${fileExt === "jpg" ? "jpeg" : fileExt}`
-        : "image/jpeg");
-
-    return createReactNativeFile(
-      {
-        uri: image.uri,
-        mimeType: mimeType,
-        name: image.name || `image_${index}_${Date.now()}.${fileExt || "jpg"}`,
-        width: image.width,
-        height: image.height,
-        fileSize: image.fileSize, // 파일 크기 정보 추가
-      },
-      index,
-    );
-  };
-
-  /**
-   * 게시물 작성 핸들러 (새로운 하이브리드 방식)
+   * 게시물 작성 핸들러 (이미지 포함)
    */
   const handleSubmit = async () => {
     if (!currentUser) {
@@ -475,7 +311,6 @@ export default function CreatePostScreen() {
     setIsSubmitting(true);
     setUploadProgress("");
     setUploadPercentage(0);
-    setUploadError(null);
 
     try {
       // 게시물 생성 입력 데이터 준비
@@ -489,82 +324,49 @@ export default function CreatePostScreen() {
       console.log("게시물 생성 시작:", {
         title: postInput.title,
         type: postInput.type,
-        hasFiles: selectedImages.length > 0,
-        fileCount: selectedImages.length,
+        hasImages: selectedImages.length > 0,
+        imageCount: selectedImages.length,
       });
 
       let createdPost;
 
-      // 파일이 있는 경우 REST API로 업로드 후 GraphQL로 게시물 생성
+      // 이미지가 있는 경우 파일과 함께 게시물 생성
       if (selectedImages.length > 0) {
         setUploadProgress("이미지 업로드 중...");
 
-        try {
-          console.log(`이미지 업로드 시작: ${selectedImages.length}개 파일`);
-
-          // 이미지 데이터 변환 및 유효성 검증
-          const files = await Promise.all(
-            selectedImages.map(async (image, index) => {
-              if (!image || !image.uri) {
-                console.error(
-                  `유효하지 않은 이미지 데이터 (인덱스: ${index})`,
-                  image,
-                );
-                throw new Error(
-                  `이미지 ${index}의 데이터가 유효하지 않습니다.`,
-                );
-              }
-
-              // 파일 크기가 너무 작은지 확인 (67바이트 등의 문제 방지)
-              // 네이티브 환경에서만 검사
-              if (!isWeb() && image.fileSize && image.fileSize < 1000) {
-                console.warn(
-                  `경고: 이미지 ${index}는 ${image.fileSize}바이트로 너무 작습니다. 업로드 시 문제가 발생할 수 있습니다.`,
-                );
-                throw new Error(
-                  `이미지 ${index}의 크기(${image.fileSize}바이트)가 너무 작습니다. 다른 이미지를 선택해주세요.`,
-                );
-              }
-
-              return await prepareImageForUpload(image, index);
-            }),
-          );
-
-          console.log(`변환된 파일 데이터: ${files.length}개`);
-
-          // fileUpload.ts를 사용한 REST API + GraphQL 하이브리드 방식 게시물 생성
-          createdPost = await createPostWithFiles({
-            ...postInput,
-            // 각 이미지를 업로드 가능한 형식으로 변환
-            files,
-            // 업로드 진행률 추적 콜백
-            onProgress: (progress: UploadProgress) => {
-              setUploadPercentage(progress.percentage);
-              setUploadProgress(`이미지 업로드 중... ${progress.percentage}%`);
-            },
-          });
-
-          console.log("파일과 함께 게시물 생성 완료");
-        } catch (error) {
-          console.error("파일 업로드 및 게시물 생성 실패:", error);
-
-          if (error instanceof PostCreationError) {
-            if (error.phase === "upload") {
-              setUploadError(`이미지 업로드 실패: ${error.message}`);
+        // 이미지를 업로드 가능한 형식으로 변환
+        const files = await Promise.all(
+          selectedImages.map(async (image, index) => {
+            if (isWeb()) {
+              // 웹 환경: data URL을 File 객체로 변환
+              const response = await fetch(image.uri);
+              const blob = await response.blob();
+              return new File([blob], image.name || `image_${index}.jpg`, {
+                type: "image/jpeg",
+              });
             } else {
-              setUploadError(`게시물 생성 실패: ${error.message}`);
+              // 모바일 환경: ReactNativeFile 형식으로 변환
+              return {
+                uri: image.uri,
+                name: image.name || `image_${index}.jpg`,
+                type: "image/jpeg",
+              };
             }
-            throw error;
-          }
+          })
+        );
 
-          throw new Error(`게시물 생성 중 오류: ${error.message}`);
-        }
+        createdPost = await createPostWithFiles({
+          ...postInput,
+          files,
+          onProgress: (progress: UploadProgress) => {
+            setUploadPercentage(progress.percentage);
+            setUploadProgress(`이미지 업로드 중... ${progress.percentage}%`);
+          },
+        });
       } else {
-        // 텍스트만 있는 게시물 (REST API를 거치지 않고 바로 GraphQL 사용)
+        // 텍스트 전용 게시물 생성
         setUploadProgress("게시물 생성 중...");
-        setUploadPercentage(50); // 진행 상태 표시
         createdPost = await createTextOnlyPost(postInput);
-        setUploadPercentage(100);
       }
 
       console.log("게시물 생성 완료:", createdPost);
@@ -573,7 +375,7 @@ export default function CreatePostScreen() {
       showToast({
         type: "success",
         title: "게시물 작성 완료",
-        message: `게시물이 성공적으로 작성되었습니다! ${selectedImages.length > 0 ? "이미지 업로드 완료." : ""}`,
+        message: `게시물이 성공적으로 작성되었습니다!${selectedImages.length > 0 ? ` (이미지 ${selectedImages.length}개 포함)` : ""}`,
         duration: 3000,
       });
 
@@ -581,40 +383,18 @@ export default function CreatePostScreen() {
       router.back();
     } catch (error) {
       console.error("게시물 작성 오류:", error);
-      console.error("오류 세부 정보:", {
-        errorType: error.constructor.name,
-        message: error.message,
-        stack: error.stack,
-      });
 
       let errorTitle = "게시물 작성 실패";
-      setUploadPercentage(0);
       let errorMessage = "알 수 없는 오류가 발생했습니다.";
 
       if (error instanceof PostCreationError) {
         errorMessage = error.message;
         if (error.phase === "upload") {
           errorTitle = "이미지 업로드 실패";
-          setUploadError(errorMessage);
-          // 업로드 실패 시 디버깅을 위한 추가 로그
-          console.log("업로드 단계에서 실패:", {
-            imageCount: selectedImages.length,
-            imageDetails: selectedImages.map((img) => ({
-              uri: img.uri?.substring(0, 30) + "...",
-              type: img.mimeType,
-              size: img.fileSize,
-            })),
-          });
         }
-      } else if (error instanceof UploadError) {
-        errorTitle = "파일 업로드 실패";
-        errorMessage = error.message;
-        setUploadError(error.message);
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-
-      setUploadError(errorMessage);
 
       showToast({
         type: "error",
@@ -667,7 +447,7 @@ export default function CreatePostScreen() {
           <Send color="white" size={20} />
           <Text style={themed($publishButtonText)}>
             {isSubmitting
-              ? uploadProgress || t(TRANSLATION_KEYS.CREATE_POST_PUBLISHING)
+              ? uploadProgress || "게시 중..."
               : t(TRANSLATION_KEYS.CREATE_POST_PUBLISH)}
           </Text>
           {isSubmitting && uploadPercentage > 0 && uploadPercentage < 100 && (
@@ -780,15 +560,6 @@ export default function CreatePostScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* 업로드 에러 표시 */}
-          {uploadError && (
-            <Text
-              style={{ color: "red", marginVertical: 8, paddingHorizontal: 16 }}
-            >
-              오류: {uploadError}
-            </Text>
-          )}
-
           {/* 선택된 이미지 미리보기 */}
           {selectedImages.length > 0 && (
             <View style={themed($imagePreviewContainer)}>
@@ -888,12 +659,6 @@ const $username: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
 });
 
-const $progressText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: "white",
-  fontSize: 12,
-  marginLeft: 8,
-});
-
 const $userHandle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 14,
   color: colors.textDim,
@@ -981,6 +746,12 @@ const $characterCountText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
 });
 
+const $progressText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 12,
+  marginLeft: 8,
+});
+
 // --- 이미지 관련 스타일 ---
 const $imageUploadButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
@@ -1034,7 +805,7 @@ const $imageRemoveButton: ThemedStyle<ViewStyle> = () => ({
   alignItems: "center",
 });
 
-const $imageSizeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $imageSizeText: ThemedStyle<TextStyle> = () => ({
   position: "absolute",
   bottom: 2,
   left: 2,

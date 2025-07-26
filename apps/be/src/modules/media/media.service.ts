@@ -1,8 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Media, MediaType, UploadStatus } from '../../entities/media.entity';
 import * as sharp from 'sharp';
+// Sharp 옵션 조정 - 애플리케이션 시작 시 한 번 설정
+sharp.cache(false); // 캐시 비활성화로 메모리 누수 방지
+sharp.concurrency(2); // 병렬 처리 제한
 import * as path from 'path';
 
 /**
@@ -11,10 +14,15 @@ import * as path from 'path';
  */
 @Injectable()
 export class MediaService {
+  private readonly logger = new Logger(MediaService.name);
+
   constructor(
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
-  ) {}
+  ) {
+    // 서비스 시작 시 Sharp 설정 로그
+    this.logger.log('Sharp 이미지 처리 라이브러리 초기화 완료');
+  }
 
   /**
    * 업로드된 파일들로부터 미디어 엔티티를 생성합니다.
@@ -42,7 +50,7 @@ export class MediaService {
           throw new Error(`파일 크기가 0 또는 음수입니다: ${file.size} bytes`);
         }
 
-        // 이미지 메타데이터 추출
+        // 이미지 메타데이터 추출 - extractImageMetadata 메서드가 항상 객체 반환
         const metadata = await this.extractImageMetadata(file.path);
 
         // 환경에 따른 기본 URL 설정
@@ -118,18 +126,56 @@ export class MediaService {
         throw new Error(`파일 크기가 0 또는 음수입니다: ${stats.size} bytes`);
       }
 
-      console.log(
+      this.logger.log(
         `이미지 메타데이터 추출 시작: ${filePath}, 크기: ${stats.size} bytes`,
       );
 
-      // 이미지 메타데이터 추출
-      const metadata = await sharp(filePath).metadata();
-
-      if (!metadata) {
-        throw new Error('메타데이터가 추출되지 않았습니다');
+      // 파일 내용 확인 (첫 몇 바이트)
+      try {
+        const fileHeader = fs.readFileSync(filePath, { length: 12 }); // 첫 12 바이트만 읽기
+        this.logger.log(`파일 헤더: ${fileHeader.toString('hex')}`);
+      } catch (e) {
+        this.logger.warn(`파일 헤더 읽기 실패: ${e.message}`);
       }
 
-      console.log(`메타데이터 추출 성공:`, {
+      // 이미지 메타데이터 추출 - 안전하게 처리
+      let metadata;
+      try {
+        // failOn: 'none'으로 설정하여 일부 오류를 무시
+        metadata = await sharp(filePath, {
+          failOn: 'none',
+          limitInputPixels: false, // 픽셀 수 제한 해제
+          sequentialRead: true, // 순차적 읽기
+        }).metadata();
+      } catch (sharpError) {
+        this.logger.error('Sharp 라이브러리 오류:', sharpError);
+
+        // 에러 상세 정보 기록
+        this.logger.error(
+          `Sharp 에러 세부 정보: ${JSON.stringify({
+            message: sharpError.message,
+            code: sharpError.code,
+            name: sharpError.name,
+            stack: sharpError.stack?.split('\n')[0],
+          })}`,
+        );
+
+        // 기본값 반환 (서버 중단 방지)
+        return {
+          width: 0,
+          height: 0,
+        };
+      }
+
+      if (!metadata) {
+        this.logger.warn('메타데이터가 추출되지 않았습니다 - 기본값 사용');
+        return {
+          width: 0,
+          height: 0,
+        };
+      }
+
+      this.logger.log(`메타데이터 추출 성공:`, {
         format: metadata.format,
         width: metadata.width,
         height: metadata.height,
@@ -140,8 +186,36 @@ export class MediaService {
         height: metadata.height || 0,
       };
     } catch (error) {
-      console.error(`이미지 메타데이터 추출 실패(${filePath}):`, error);
-      // 추출 실패 시 예외 전달하여 호출자가 적절히 처리하도록 함
+      this.logger.error(`이미지 메타데이터 추출 실패(${filePath}):`, error);
+
+      // 서버가 중단되지 않도록 기본값 반환
+      return {
+        width: 0,
+        height: 0,
+      };
+
+      // 특정 에러 유형에 대한 더 친숙한 메시지 제공
+      if (error.message && error.message.includes('unsupported image format')) {
+        throw new Error(
+          '지원되지 않는 이미지 형식입니다. JPG, PNG, GIF, WebP 형식만 지원합니다.',
+        );
+      } else if (
+        error.message &&
+        error.message.includes('Input file is missing')
+      ) {
+        throw new Error(
+          '파일을 찾을 수 없습니다. 업로드가 제대로 이루어지지 않았습니다.',
+        );
+      } else if (
+        error.message &&
+        error.message.includes('Input file contains truncated data')
+      ) {
+        throw new Error(
+          '손상된 이미지 파일입니다. 다른 이미지를 업로드해주세요.',
+        );
+      }
+
+      // 그 외 에러는 원본 에러 전달
       throw error;
     }
   }

@@ -59,7 +59,7 @@ export default function PostMedia({
   // URL 변환 함수 (localhost를 환경변수 URL로 변경)
   const transformImageUrl = (url: string) => {
     if (url.startsWith("http://localhost:3000")) {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+      const apiUrl = "http://localhost:3000";
       return url.replace("http://localhost:3000", apiUrl);
     }
     return url;

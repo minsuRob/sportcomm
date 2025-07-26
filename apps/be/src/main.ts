@@ -1,14 +1,16 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { initializeDatabase, printDatabaseInfo } from './database/datasource';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { HttpAdapterHost } from '@nestjs/core';
 import { join } from 'path';
 import { json } from 'express';
 import { ensureDir } from 'fs-extra';
 // morgan 패키지가 설치되지 않았으므로 임시로 제거
 // import * as morgan from 'morgan';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 /**
  * 스포츠 커뮤니티 백엔드 애플리케이션 진입점
@@ -23,7 +25,14 @@ async function bootstrap() {
     // NestJS 애플리케이션 생성
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger: ['error', 'warn', 'log'],
+      // 예기치 않은 오류에도 앱이 종료되지 않도록 설정
+      abortOnError: false,
     });
+
+    // 전역 예외 필터 등록
+    const httpAdapterHost = app.get(HttpAdapterHost);
+    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
+    Logger.log('전역 예외 필터가 등록되었습니다', 'Bootstrap');
 
     // 요청 로깅 미들웨어 설정 (morgan 패키지 설치 후 활성화)
     // app.use(morgan('dev'));
@@ -207,12 +216,49 @@ process.on('SIGTERM', async () => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ 처리되지 않은 Promise 거부:', reason);
   console.error('Promise:', promise);
-  process.exit(1);
+
+  // 심각한 오류가 아닌 경우 프로세스를 종료하지 않음
+  if (reason instanceof Error) {
+    // Sharp 라이브러리 관련 오류는 종료하지 않고 로깅만 함
+    if (
+      reason.stack?.includes('sharp') ||
+      reason.message?.includes('unsupported image format') ||
+      reason.message?.includes('Input file contains')
+    ) {
+      Logger.error(
+        `Sharp 라이브러리 오류 (무시됨): ${reason.message}`,
+        reason.stack,
+      );
+      return; // 프로세스 계속 실행
+    }
+  }
+
+  // 심각한 오류인 경우에만 프로세스 종료
+  Logger.fatal('치명적인 오류로 서버를 종료합니다', reason);
+  // 1초 후 종료하여 로그가 기록될 시간 확보
+  setTimeout(() => process.exit(1), 1000);
 });
 
 process.on('uncaughtException', (error) => {
   console.error('❌ 처리되지 않은 예외:', error);
-  process.exit(1);
+
+  // 특정 예외는 복구 가능한 것으로 처리
+  if (
+    error.stack?.includes('sharp') ||
+    error.message?.includes('unsupported image format') ||
+    error.message?.includes('Input file contains')
+  ) {
+    Logger.error(
+      `Sharp 라이브러리 예외 (무시됨): ${error.message}`,
+      error.stack,
+    );
+    return; // 프로세스 계속 실행
+  }
+
+  // 심각한 오류인 경우에만 프로세스 종료
+  Logger.fatal('치명적인 오류로 서버를 종료합니다', error);
+  // 1초 후 종료하여 로그가 기록될 시간 확보
+  setTimeout(() => process.exit(1), 1000);
 });
 
 // 애플리케이션 시작

@@ -9,6 +9,10 @@ import {
   BadRequestException,
   Res,
   Req,
+  Logger,
+  InternalServerErrorException,
+  PayloadTooLargeException,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -24,25 +28,6 @@ import { HttpAuthGuard } from 'src/common/guards/http-auth.guard';
 // Multer 타입 정의 추가
 import 'multer';
 
-// // Express에 Multer 타입 확장
-// declare global {
-//   namespace Express {
-//     namespace Multer {
-//       interface File {
-//         fieldname: string;
-//         originalname: string;
-//         encoding: string;
-//         mimetype: string;
-//         size: number;
-//         destination: string;
-//         filename: string;
-//         path: string;
-//         buffer: Buffer;
-//       }
-//     }
-//   }
-// }
-
 /**
  * 미디어 업로드 컨트롤러
  * REST API를 통한 파일 업로드 기능을 제공합니다.
@@ -51,6 +36,8 @@ import 'multer';
  */
 @Controller('upload')
 export class MediaController {
+  private readonly logger = new Logger(MediaController.name);
+
   constructor(private readonly mediaService: MediaService) {}
 
   /**
@@ -86,101 +73,106 @@ export class MediaController {
             }
             cb(null, uploadPath);
           } catch (error) {
-            console.error(`업로드 디렉토리 생성 오류: ${error.message}`, error);
-            cb(new Error(`디렉토리 생성 오류: ${error.message}`), '');
+            console.error(`업로드 디렉토리 생성 실패: ${error.message}`);
+            cb(error as Error, '');
           }
         },
-        filename: (req, file, callback) => {
-          const uniqueSuffix = uuidv4();
-          const ext = extname(file.originalname);
-          const timestamp = Date.now();
-          const filename = `${timestamp}_${uniqueSuffix}${ext}`;
-          console.log(
-            `파일 이름 생성: ${filename} (원본: ${file.originalname})`,
-          );
-          callback(null, filename);
+        filename: (req, file, cb) => {
+          try {
+            // 안전한 파일명 생성
+            const uniqueSuffix = `${Date.now()}-${Math.round(
+              Math.random() * 1e9,
+            )}`;
+            // 파일 확장자 가져오기 (소문자로 변환)
+            const fileExt = extname(file.originalname).toLowerCase();
+            // 최종 파일명 생성 (UUID-원본파일명.확장자)
+            const safeName = `${uuidv4()}-${uniqueSuffix}${fileExt}`;
+
+            cb(null, safeName);
+            console.log(
+              `파일명 생성 완료: ${file.originalname} -> ${safeName}`,
+            );
+          } catch (error) {
+            console.error(`파일명 생성 실패: ${error.message}`);
+            cb(error as Error, '');
+          }
         },
       }),
       fileFilter: (req, file, callback) => {
-        // 파일 필터링 시작 시 로깅
-        console.log(
-          `파일 필터링: ${file.originalname}, MIME 타입: ${file.mimetype}`,
-        );
+        try {
+          // 지원되는 MIME 타입 확인
+          const allowedMimeTypes = [
+            // 이미지
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            // 비디오
+            'video/mp4',
+            'video/quicktime', // MOV
+            'video/x-msvideo', // AVI
+          ];
 
-        // 이미지 및 비디오 파일 허용
-        console.log(
-          `파일 타입 검사 시작: ${file.mimetype}, 파일명: ${file.originalname}`,
-        );
-
-        const allowedMimeTypes = [
-          'image/jpeg',
-          'image/jpg',
-          'image/png',
-          'image/gif',
-          'image/webp',
-          'video/mp4',
-          'video/avi',
-          'video/mov',
-          'video/quicktime', // iOS에서 사용하는 MOV 타입
-          'video/wmv',
-          'application/octet-stream', // React Native에서 때때로 이 타입으로 전송됨
-          'binary/octet-stream', // 또 다른 가능한 타입
-        ];
-
-        // React Native에서 전송되는 파일은 때때로 다른 MIME 타입을 가질 수 있음
-        // 파일 확장자로 추가 검증
-        const allowedExtensions = [
-          'jpg',
-          'jpeg',
-          'png',
-          'gif',
-          'webp',
-          'mp4',
-          'avi',
-          'mov',
-          'wmv',
-        ];
-        const fileExt = file.originalname.split('.').pop()?.toLowerCase();
-
-        if (
-          !allowedMimeTypes.includes(file.mimetype) &&
-          (!fileExt || !allowedExtensions.includes(fileExt))
-        ) {
-          console.log(
-            `파일 타입 거부: ${file.mimetype}, 확장자: ${fileExt || '없음'}`,
-          );
-          return callback(
-            new BadRequestException(
-              `지원되지 않는 파일 형식입니다(${file.mimetype}). 이미지(jpg, png, gif, webp) 또는 비디오(mp4, avi, mov, wmv) 파일만 업로드 가능합니다.`,
-            ),
-            false,
-          );
-        }
-
-        // React Native에서 전송된 application/octet-stream 타입 파일의 경우 확장자로 타입 추론
-        if (
-          (file.mimetype === 'application/octet-stream' ||
-            file.mimetype === 'binary/octet-stream') &&
-          fileExt
-        ) {
-          console.log(
-            `octet-stream 파일 타입 추론 시작: 확장자 ${fileExt} 분석`,
-          );
-          if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
-            const newMimeType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-            console.log(`MIME 타입 변경: ${file.mimetype} -> ${newMimeType}`);
-            file.mimetype = newMimeType;
-          } else if (['mp4', 'avi', 'mov', 'wmv'].includes(fileExt)) {
-            const newMimeType = `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
-            console.log(`MIME 타입 변경: ${file.mimetype} -> ${newMimeType}`);
-            file.mimetype = newMimeType;
+          // 파일 형식 유효성 검사
+          if (!file || !file.mimetype) {
+            console.error('파일 형식 오류: MIME 타입이 없음');
+            return callback(
+              new UnsupportedMediaTypeException(
+                '지원되지 않는 파일 형식입니다.',
+              ),
+              false,
+            );
           }
-        }
 
-        console.log(
-          `파일 ${file.originalname} 승인됨, 최종 MIME 타입: ${file.mimetype}`,
-        );
-        callback(null, true);
+          // 허용된 형식인지 확인
+          if (!allowedMimeTypes.includes(file.mimetype)) {
+            console.error(
+              `파일 형식 오류: 허용되지 않은 MIME 타입 ${file.mimetype}`,
+            );
+            return callback(
+              new UnsupportedMediaTypeException(
+                '지원되지 않는 파일 형식입니다. 이미지(JPEG, PNG, GIF, WebP) 또는 비디오(MP4, MOV, AVI) 파일만 업로드할 수 있습니다.',
+              ),
+              false,
+            );
+          }
+
+          // 파일 크기 확인 (이미 Multer의 limits에서 처리하고 있지만 이중 검증)
+          if (file.size && file.size > 50 * 1024 * 1024) {
+            console.error(`파일 크기 오류: ${file.size}바이트 (최대 50MB)`);
+            return callback(
+              new PayloadTooLargeException(
+                '파일 크기가 너무 큽니다. 최대 50MB까지 업로드할 수 있습니다.',
+              ),
+              false,
+            );
+          }
+
+          // React Native에서 전송한 경우 MIME 타입 보정
+          const fileExt = file.originalname.split('.').pop()?.toLowerCase();
+          if (
+            fileExt &&
+            file.mimetype === 'application/octet-stream' &&
+            ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi'].includes(
+              fileExt,
+            )
+          ) {
+            console.log(
+              `MIME 타입 보정: application/octet-stream -> ${fileExt}`,
+            );
+            // 올바른 MIME 타입으로 수정
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
+              file.mimetype = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+            } else if (['mp4', 'avi', 'mov', 'wmv'].includes(fileExt)) {
+              file.mimetype = `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
+            }
+          }
+
+          callback(null, true);
+        } catch (error) {
+          console.error(`파일 필터 처리 중 오류 발생: ${error.message}`);
+          return callback(null, false);
+        }
       },
 
       // React Native와의 호환성을 위한 Multer 설정
@@ -193,118 +185,92 @@ export class MediaController {
     @Body() body: any,
     @Req() req: Request,
   ) {
-    // 요청 로깅 강화
-    const requestId = uuidv4().substring(0, 8);
-    console.log(`\n======== 파일 업로드 요청 시작 (ID: ${requestId}) ========`);
-    console.log(`요청 URL: ${req.url}`);
-    console.log(`요청 메서드: ${req.method}`);
-    console.log(`Content-Type: ${req.headers['content-type']}`);
-    console.log(`Content-Length: ${req.headers['content-length']}`);
-
-    // 파일 정보 로깅
-    console.log('Multer files:', files ? `${files.length}개` : '없음');
-
-    // 파일 세부 정보 로깅 (MIME 타입과 크기 확인)
-    if (files && files.length > 0) {
-      files.forEach((file, index) => {
-        console.log(
-          `파일 [${index}]: ${file.originalname}, 크기: ${file.size}바이트, 타입: ${file.mimetype}`,
-        );
-
-        // 0바이트 파일 경고
-        if (file.size <= 0) {
-          console.warn(
-            `⚠️ 경고: 파일 ${file.originalname}의 크기가 ${file.size}바이트입니다. 처리 실패 가능성 높음.`,
-          );
-        }
-
-        // 실제 파일 존재 여부 확인
-        try {
-          const fs = require('fs');
-          const exists = fs.existsSync(file.path);
-          const stats = exists ? fs.statSync(file.path) : null;
-          console.log(
-            `  - 파일시스템: 존재=${exists}, 크기=${stats ? stats.size : '알 수 없음'}바이트, 경로=${file.path}`,
-          );
-        } catch (e) {
-          console.error(`  - 파일시스템 확인 실패: ${e.message}`);
-        }
-      });
-    }
-
-    // 원본 요청 body를 콘솔에 출력
     try {
-      console.log('원본 요청 데이터:');
-      if (req.body && typeof req.body === 'object') {
-        for (const key in req.body) {
-          console.log(`[${key}]`, typeof req.body[key], req.body[key]);
-        }
-      }
-    } catch (e) {
-      console.error('요청 바디 로깅 중 오류:', e);
-    }
-
-    console.log('파일 업로드 요청 받음:', {
-      fileCount: files?.length || 0,
-      userId: user?.id,
-      bodyParams: Object.keys(body || {}),
-      bodyValues: body,
-      filesInfo: files
-        ? files.map((f) => ({
-            fieldname: f.fieldname,
-            originalname: f.originalname,
-            size: f.size,
-            mimetype: f.mimetype,
-          }))
-        : [],
-      hasFiles: !!files && files.length > 0,
-      reqHeaders: this.getHeadersInfo(req),
-      authHeader: user ? '인증 토큰 있음' : '인증 토큰 없음',
-    });
-
-    // 파일 데이터 유효성 검사 강화
-    console.log('업로드 파일 검증:');
-    console.log('- files 변수 타입:', typeof files);
-    console.log('- files 변수 존재:', !!files);
-    console.log('- files length:', files?.length);
-
-    // 파일 누락 처리
-    if (!files || files.length === 0) {
-      // multipart/form-data 요청인지 확인
-      const isMultipartRequest = req.headers['content-type']?.includes(
-        'multipart/form-data',
+      // 요청 로깅 강화
+      const requestId = uuidv4().substring(0, 8);
+      this.logger.log(
+        `\n======== 파일 업로드 요청 시작 (ID: ${requestId}) ========`,
       );
+      this.logger.log(`요청 URL: ${req.url}`);
+      this.logger.log(`요청 메서드: ${req.method}`);
+      this.logger.log(`Content-Type: ${req.headers['content-type']}`);
+      this.logger.log(`Content-Length: ${req.headers['content-length']}`);
 
-      // 원본 요청 분석을 위한 추가 로깅
-      console.error('파일 없음 오류 발생. 상세 분석:', {
-        bodyKeys: Object.keys(req.body || {}),
-        filesObject: req['files'] ? '존재함' : '없음',
-        filesCount: req['files']?.length,
-        contentType: req.headers['content-type'],
-        isMultipartRequest: isMultipartRequest,
-        hasFilesField: 'files' in req.body || 'files' in req,
-      });
+      // 파일 정보 로깅
+      this.logger.log('Multer files:', files ? `${files.length}개` : '없음');
 
-      // 폼데이터에 files 필드가 있지만 내용이 없는 경우 확인
-      if (req.body && 'files' in req.body) {
-        console.log(
-          'files 필드가 존재하지만 유효한 파일이 아님:',
-          req.body.files,
+      // 파일 세부 정보 로깅 (MIME 타입과 크기 확인)
+      if (files && files.length > 0) {
+        files.forEach((file, index) => {
+          console.log(
+            `파일 [${index}]: ${file.originalname}, 크기: ${file.size}바이트, 타입: ${file.mimetype}`,
+          );
+
+          // 0바이트 파일 경고
+          if (file.size <= 0) {
+            console.warn(
+              `⚠️ 경고: 파일 ${file.originalname}의 크기가 ${file.size}바이트입니다. 처리 실패 가능성 높음.`,
+            );
+          }
+
+          // 실제 파일 존재 여부 확인
+          try {
+            const fs = require('fs');
+            const exists = fs.existsSync(file.path);
+            const stats = exists ? fs.statSync(file.path) : null;
+            console.log(
+              `  - 파일시스템: 존재=${exists}, 크기=${stats ? stats.size : '알 수 없음'}바이트, 경로=${file.path}`,
+            );
+          } catch (err) {
+            console.error(`  - 파일시스템 확인 실패:`, err);
+          }
+        });
+      } else {
+        this.logger.warn('업로드된 파일이 없습니다.');
+
+        // 헤더 정보 로깅
+        const headerInfo = this.getHeadersInfo(req);
+        this.logger.log('헤더 정보:', headerInfo);
+
+        // 요청 본문 정보 로깅 (파일 필드 존재 여부 확인)
+        const bodyKeys = Object.keys(req.body || {});
+        this.logger.log('요청 본문 필드:', bodyKeys);
+
+        // multer 멀티파트 폼 데이터 분석 문제 진단
+        const isMultipartRequest =
+          req.headers['content-type']?.includes('multipart/form-data') || false;
+
+        console.error('파일 없음 오류 발생. 상세 분석:', {
+          bodyKeys: Object.keys(req.body || {}),
+          filesObject: req['files'] ? '존재함' : '없음',
+          filesCount: req['files']?.length,
+          contentType: req.headers['content-type'],
+          isMultipartRequest: isMultipartRequest,
+          hasFilesField: 'files' in req.body || 'files' in req,
+        });
+
+        // 폼데이터에 files 필드가 있지만 내용이 없는 경우 확인
+        if (req.body && 'files' in req.body) {
+          console.log(
+            'files 필드가 존재하지만 유효한 파일이 아님:',
+            req.body.files,
+          );
+        }
+
+        throw new BadRequestException({
+          message: '업로드할 파일이 없습니다.',
+          details:
+            '멀티파트 폼에 유효한 파일 필드가 포함되어 있는지 확인하세요.',
+          error: 'NO_FILES_UPLOADED',
+        });
+      }
+
+      if (files.length > 4) {
+        throw new BadRequestException(
+          '최대 4개의 파일만 업로드할 수 있습니다.',
         );
       }
 
-      throw new BadRequestException({
-        message: '업로드할 파일이 없습니다.',
-        details: '멀티파트 폼에 유효한 파일 필드가 포함되어 있는지 확인하세요.',
-        error: 'NO_FILES_UPLOADED',
-      });
-    }
-
-    if (files.length > 4) {
-      throw new BadRequestException('최대 4개의 파일만 업로드할 수 있습니다.');
-    }
-
-    try {
       console.log(
         '파일 정보:',
         files.map((f) => ({
@@ -315,17 +281,22 @@ export class MediaController {
         })),
       );
 
-      // 미디어 엔티티 생성
+      this.logger.log(
+        `파일 업로드 처리 시작: ${files.length}개 파일, 사용자 ID: ${user?.id}`,
+      );
+
       // 파일 유효성 검증
       let validFiles = files;
 
       // 크기가 너무 작은 파일(0바이트 또는 손상된 파일) 필터링
       if (validFiles.some((file) => file.size <= 0)) {
-        console.warn('파일 크기가 0인 파일이 발견되었습니다. 필터링합니다.');
+        this.logger.warn(
+          '파일 크기가 0인 파일이 발견되었습니다. 필터링합니다.',
+        );
         validFiles = validFiles.filter((file) => {
           const isValid = file.size > 0;
           if (!isValid) {
-            console.warn(
+            this.logger.warn(
               `유효하지 않은 파일 건너뜀: ${file.originalname}, 크기: ${file.size}바이트`,
             );
           }
@@ -333,20 +304,38 @@ export class MediaController {
         });
       }
 
+      // 유효한 파일이 없는 경우 처리
+      if (validFiles.length === 0) {
+        throw new BadRequestException(
+          '처리 가능한 유효한 파일이 없습니다. 파일이 손상되었거나 지원되지 않는 형식입니다.',
+        );
+      }
+
       // 파일 확장자 검사
       validFiles.forEach((file) => {
         const ext = file.originalname.split('.').pop()?.toLowerCase();
-        console.log(
+        this.logger.log(
           `파일 ${file.originalname} 검사: 확장자 ${ext}, 크기 ${file.size}바이트`,
         );
       });
 
-      const uploadedMedia = await this.mediaService.createMediaFromFiles(
-        validFiles,
-        user.id,
-      );
+      // 예외 처리를 포함하여 미디어 생성
+      const uploadedMedia = await this.mediaService
+        .createMediaFromFiles(validFiles, user.id)
+        .catch((error) => {
+          this.logger.error(`미디어 생성 실패: ${error.message}`, error.stack);
+          throw new BadRequestException(
+            `파일 처리 중 오류가 발생했습니다: ${error.message}`,
+          );
+        });
 
-      console.log('업로드 완료:', {
+      if (!uploadedMedia || uploadedMedia.length === 0) {
+        throw new BadRequestException(
+          '파일 업로드에 실패했습니다. 파일 형식을 확인해주세요.',
+        );
+      }
+
+      this.logger.log('업로드 완료:', {
         mediaCount: uploadedMedia.length,
         firstMediaId: uploadedMedia[0]?.id,
         mediaStatus: uploadedMedia.map((m) => m.status),
@@ -372,126 +361,77 @@ export class MediaController {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('파일 업로드 오류:', error);
-      console.error('오류 세부정보:', {
+      this.logger.error('파일 업로드 오류:', error);
+      this.logger.error('오류 세부정보:', {
         message: error.message,
         stack: error.stack,
         name: error.name,
         code: error.code,
       });
-      throw new BadRequestException({
-        message: `파일 업로드 중 오류가 발생했습니다: ${error.message}`,
-        error: error.name,
-        statusCode: 400,
-      });
+
+      // 오류 유형에 따른 적절한 예외 처리
+      if (error instanceof BadRequestException) {
+        throw error; // 이미 BadRequestException인 경우 그대로 전달
+      } else if (
+        error.message?.includes('unsupported image format') ||
+        error.message?.includes('지원되지 않는 이미지 형식')
+      ) {
+        throw new UnsupportedMediaTypeException(
+          '지원되지 않는 이미지 형식입니다. JPG, PNG, GIF, WebP 형식만 지원합니다.',
+        );
+      } else if (error.message?.includes('File too large')) {
+        throw new PayloadTooLargeException(
+          '파일 크기가 너무 큽니다. 최대 50MB까지 업로드 가능합니다.',
+        );
+      } else if (error.status === 413) {
+        throw new PayloadTooLargeException('파일 크기가 너무 큽니다.');
+      } else if (error.status === 415) {
+        throw new UnsupportedMediaTypeException(
+          '지원되지 않는 파일 형식입니다.',
+        );
+      } else {
+        throw new BadRequestException({
+          message: `파일 업로드 중 오류가 발생했습니다: ${error.message}`,
+          error: error.name || 'UPLOAD_ERROR',
+          statusCode: 400,
+        });
+      }
+    } finally {
+      this.logger.log(`파일 업로드 요청 처리 완료`);
     }
   }
 
   /**
    * 단일 파일 업로드 REST API
-   * 편의를 위한 단일 파일 업로드 엔드포인트
-   *
-   * @param file 업로드할 파일
-   * @param user 현재 인증된 사용자
-   * @returns 업로드된 파일의 ID와 URL 정보
+   * 하나의 이미지/비디오 파일을 업로드할 수 있습니다.
    */
   @Post('single')
   @UseGuards(HttpAuthGuard)
   @UseInterceptors(
-    FilesInterceptor('file', 1, {
-      // 단일 파일 업로드 설정
-
+    FilesInterceptor('files', 1, {
       storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = join(process.cwd(), 'uploads/images');
-          // 디렉토리 존재 확인 및 생성
-          try {
-            if (!existsSync(uploadPath)) {
-              mkdirSync(uploadPath, { recursive: true });
-              console.log(
-                `단일 파일 업로드 - 업로드 디렉토리 생성 완료: ${uploadPath}`,
-              );
-            }
-            cb(null, uploadPath);
-          } catch (error) {
-            console.error(
-              `단일 파일 업로드 - 디렉토리 생성 오류: ${error.message}`,
-              error,
-            );
-            cb(new Error(`디렉토리 생성 오류: ${error.message}`), '');
-          }
-        },
-        filename: (req, file, callback) => {
-          const uniqueSuffix = uuidv4();
-          const ext = extname(file.originalname);
-          const timestamp = Date.now();
-          callback(null, `${timestamp}_${uniqueSuffix}${ext}`);
+        destination: './uploads/images',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          const fileExt = extname(file.originalname);
+          cb(null, `${uniqueSuffix}${fileExt}`);
         },
       }),
       fileFilter: (req, file, callback) => {
-        console.log(
-          `단일 파일 필터링: ${file.originalname}, ${file.mimetype}, ${file.size || '크기 알 수 없음'}`,
-        );
-
-        // 0바이트 파일 거부
-        if (file.size === 0) {
-          return callback(
-            new BadRequestException('0바이트 파일은 업로드할 수 없습니다.'),
-            false,
-          );
-        }
-
         const allowedMimeTypes = [
           'image/jpeg',
-          'image/jpg',
           'image/png',
           'image/gif',
           'image/webp',
           'video/mp4',
-          'video/avi',
-          'video/mov',
-          'video/quicktime', // iOS에서 사용하는 MOV 타입
-          'video/wmv',
-          'application/octet-stream', // React Native에서 때때로 이 타입으로 전송됨
         ];
-
-        // React Native에서 전송되는 파일은 때때로 다른 MIME 타입을 가질 수 있음
-        // 파일 확장자로 추가 검증
-        const allowedExtensions = [
-          'jpg',
-          'jpeg',
-          'png',
-          'gif',
-          'webp',
-          'mp4',
-          'avi',
-          'mov',
-          'wmv',
-        ];
-        const fileExt = file.originalname.split('.').pop()?.toLowerCase();
-
-        if (
-          !allowedMimeTypes.includes(file.mimetype) &&
-          (!fileExt || !allowedExtensions.includes(fileExt))
-        ) {
+        if (!allowedMimeTypes.includes(file.mimetype)) {
           return callback(
-            new BadRequestException(
-              `지원되지 않는 파일 형식입니다(${file.mimetype}). 이미지 또는 비디오 파일만 업로드 가능합니다.`,
-            ),
+            new UnsupportedMediaTypeException('지원되지 않는 파일 형식입니다.'),
             false,
           );
         }
-
-        // React Native에서 전송된 application/octet-stream 타입 파일의 경우 확장자로 타입 추론
-        if (file.mimetype === 'application/octet-stream' && fileExt) {
-          if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
-            file.mimetype = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-          } else if (['mp4', 'avi', 'mov', 'wmv'].includes(fileExt)) {
-            file.mimetype = `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
-          }
-        }
-
-        callback(null, true);
+        return callback(null, true);
       },
       limits: {
         fileSize: 50 * 1024 * 1024, // 50MB 제한
@@ -508,6 +448,7 @@ export class MediaController {
       userId: user?.id,
       bodyParams: Object.keys(body || {}),
     });
+
     if (!files || files.length === 0) {
       throw new BadRequestException('업로드할 파일이 없습니다.');
     }
@@ -538,19 +479,49 @@ export class MediaController {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('단일 파일 업로드 오류:', error);
-      console.error('오류 세부정보:', {
+      this.logger.error('파일 업로드 오류:', error);
+      this.logger.error('오류 세부정보:', {
         message: error.message,
         stack: error.stack,
         name: error.name,
         code: error.code,
       });
-      throw new BadRequestException({
-        message: `파일 업로드 중 오류가 발생했습니다: ${error.message}`,
-        error: error.name,
-        statusCode: 400,
-        path: '/api/upload/single',
-      });
+
+      // 오류 유형에 따른 적절한 예외 처리
+      if (
+        error.message?.includes('unsupported image format') ||
+        error.message?.includes('지원되지 않는 이미지 형식')
+      ) {
+        throw new UnsupportedMediaTypeException(
+          '지원되지 않는 이미지 형식입니다. JPG, PNG, GIF, WebP 형식만 지원합니다.',
+        );
+      } else if (error.message?.includes('File too large')) {
+        throw new PayloadTooLargeException(
+          '파일 크기가 너무 큽니다. 최대 50MB까지 업로드 가능합니다.',
+        );
+      } else if (error instanceof BadRequestException) {
+        throw error; // 기존 BadRequestException은 그대로 전달
+      } else if (error.status === 413) {
+        throw new PayloadTooLargeException('파일 크기가 너무 큽니다.');
+      } else if (error.status === 415) {
+        throw new UnsupportedMediaTypeException(
+          '지원되지 않는 파일 형식입니다.',
+        );
+      } else if (error.name === 'Error' && error.message.includes('Sharp')) {
+        // Sharp 라이브러리 관련 오류
+        throw new BadRequestException(
+          '이미지 처리 중 오류가 발생했습니다. 다른 이미지를 사용해보세요.',
+        );
+      } else {
+        // 기타 모든 오류
+        throw new BadRequestException({
+          message: `파일 업로드 중 오류가 발생했습니다: ${error.message}`,
+          error: error.name,
+          statusCode: 400,
+        });
+      }
+    } finally {
+      this.logger.log(`파일 업로드 요청 처리 완료`);
     }
   }
 
@@ -560,7 +531,7 @@ export class MediaController {
    * @param res Express 응답 객체
    */
   @Get('test')
-  testUploadForm(@Res() res: Response) {
+  async testUploadForm(@Res() res: Response) {
     const html = `
       <!DOCTYPE html>
       <html>

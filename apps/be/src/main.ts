@@ -7,6 +7,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { json } from 'express';
 import { ensureDir } from 'fs-extra';
+// morgan 패키지가 설치되지 않았으므로 임시로 제거
+// import * as morgan from 'morgan';
 
 /**
  * 스포츠 커뮤니티 백엔드 애플리케이션 진입점
@@ -23,8 +25,38 @@ async function bootstrap() {
       logger: ['error', 'warn', 'log'],
     });
 
+    // 요청 로깅 미들웨어 설정 (morgan 패키지 설치 후 활성화)
+    // app.use(morgan('dev'));
+
+    // 간단한 로깅 미들웨어 구현
+    app.use((req, res, next) => {
+      console.log(`${req.method} ${req.originalUrl}`);
+      next();
+    });
+
+    // 파일 업로드 엔드포인트 디버깅을 위한 특별 로거
+    app.use('/api/upload', (req, res, next) => {
+      console.log('==== 파일 업로드 요청 ====');
+      console.log(`요청 메서드: ${req.method}`);
+      console.log(`요청 경로: ${req.originalUrl}`);
+      console.log(`헤더 정보: ${JSON.stringify(req.headers)}`);
+      console.log(`Content-Type: ${req.headers['content-type']}`);
+      console.log(
+        `Authorization: ${req.headers['authorization'] ? '있음' : '없음'}`,
+      );
+
+      // 요청이 끝났을 때 로깅
+      res.on('finish', () => {
+        console.log(`==== 응답 완료 ====`);
+        console.log(`상태 코드: ${res.statusCode}`);
+        console.log(`헤더: ${JSON.stringify(res.getHeaders())}`);
+      });
+
+      next();
+    });
+
     // multipart/form-data 요청을 처리하는 미들웨어 설정
-    app.use(json({ limit: '10mb' }));
+    app.use(json({ limit: '50mb' }));
 
     // 정적 파일 폴더가 존재하는지 확인하고 생성
     try {
@@ -48,6 +80,12 @@ async function bootstrap() {
       setHeaders: (res) => {
         res.set('Cross-Origin-Resource-Policy', 'cross-origin');
         res.set('Access-Control-Allow-Origin', '*');
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.set(
+          'Access-Control-Allow-Methods',
+          'GET, POST, PUT, DELETE, OPTIONS',
+        );
+        res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       },
     });
     console.log(`✅ 정적 파일 서빙 설정 완료: ${uploadsPath}`);
@@ -77,7 +115,7 @@ async function bootstrap() {
 
     // 전역 접두사 설정
     app.setGlobalPrefix('api', {
-      exclude: ['/graphql', '/health'],
+      exclude: ['/graphql', '/health', '/uploads'],
     });
 
     // CORS 설정
@@ -89,10 +127,12 @@ async function bootstrap() {
             'http://localhost:3001',
             'http://localhost:4000',
             'http://localhost:8081',
+            // 와일드카드 추가로 개발환경에서 모든 출처 허용
+            '*',
           ]
         : configService.get<string>('FRONTEND_URL', 'https://sportcomm.com'),
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
       allowedHeaders: [
         'Content-Type',
         'Authorization',
@@ -100,7 +140,19 @@ async function bootstrap() {
         'X-Requested-With',
         'Origin',
         'apollo-require-preflight',
+        'Access-Control-Allow-Origin',
+        'Access-Control-Allow-Methods',
+        'Access-Control-Allow-Headers',
+        'X-API-KEY',
+        'X-Requested-With',
       ],
+      exposedHeaders: [
+        'Content-Disposition',
+        'X-Total-Count',
+        'X-Pagination-Current-Page',
+        'X-Pagination-Total-Pages',
+      ],
+      maxAge: 3600,
     });
 
     // 데이터베이스 연결 확인

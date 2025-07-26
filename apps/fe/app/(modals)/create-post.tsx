@@ -274,11 +274,18 @@ export default function CreatePostScreen() {
    * @returns 업로드 가능한 형식의 파일 객체
    */
   const prepareImageForUpload = (image: SelectedImage, index: number) => {
+    console.log(`이미지 ${index} 준비 중:`, {
+      uri: image.uri,
+      name: image.name || `image_${index}.jpg`,
+      type: image.mimeType,
+      size: image.fileSize,
+    });
+
     return createReactNativeFile(
       {
         uri: image.uri,
         mimeType: image.mimeType || "image/jpeg",
-        name: image.name,
+        name: image.name || `image_${index}_${Date.now()}.jpg`,
         width: image.width,
         height: image.height,
       },
@@ -358,13 +365,26 @@ export default function CreatePostScreen() {
         setUploadProgress("이미지 업로드 중...");
 
         try {
+          console.log(`이미지 업로드 시작: ${selectedImages.length}개 파일`);
+
+          // 이미지 데이터 변환 및 유효성 검증
+          const files = selectedImages.map((image, index) => {
+            if (!image || !image.uri) {
+              console.error(
+                `유효하지 않은 이미지 데이터 (인덱스: ${index})`,
+                image,
+              );
+            }
+            return prepareImageForUpload(image, index);
+          });
+
+          console.log(`변환된 파일 데이터: ${files.length}개`);
+
           // fileUpload.ts를 사용한 REST API + GraphQL 하이브리드 방식 게시물 생성
           createdPost = await createPostWithFiles({
             ...postInput,
             // 각 이미지를 업로드 가능한 형식으로 변환
-            files: selectedImages.map((image, index) =>
-              prepareImageForUpload(image, index),
-            ),
+            files,
             // 업로드 진행률 추적 콜백
             onProgress: (progress: UploadProgress) => {
               setUploadPercentage(progress.percentage);
@@ -409,6 +429,11 @@ export default function CreatePostScreen() {
       router.back();
     } catch (error) {
       console.error("게시물 작성 오류:", error);
+      console.error("오류 세부 정보:", {
+        errorType: error.constructor.name,
+        message: error.message,
+        stack: error.stack,
+      });
 
       let errorTitle = "게시물 작성 실패";
       setUploadPercentage(0);
@@ -419,6 +444,15 @@ export default function CreatePostScreen() {
         if (error.phase === "upload") {
           errorTitle = "이미지 업로드 실패";
           setUploadError(errorMessage);
+          // 업로드 실패 시 디버깅을 위한 추가 로그
+          console.log("업로드 단계에서 실패:", {
+            imageCount: selectedImages.length,
+            imageDetails: selectedImages.map((img) => ({
+              uri: img.uri?.substring(0, 30) + "...",
+              type: img.mimeType,
+              size: img.fileSize,
+            })),
+          });
         }
       } else if (error instanceof UploadError) {
         errorTitle = "파일 업로드 실패";

@@ -317,7 +317,9 @@ export async function uploadFilesWithProgress(
         // 웹 환경: File/Blob 객체
         const fileName =
           file instanceof File ? file.name : `file_${index}_${Date.now()}`;
+        // 중요: 'files'는 서버의 FilesInterceptor('files')와 필드명이 일치해야 함
         formData.append("files", file, fileName);
+        console.log(`웹 환경 - 파일 추가 완료: ${fileName}`);
       } else if (
         isReactNative() &&
         "uri" in file &&
@@ -325,12 +327,41 @@ export async function uploadFilesWithProgress(
         "type" in file
       ) {
         // React Native 환경: uri, name, type 객체
-        // @ts-ignore: React Native의 FormData는 객체를 직접 지원
-        formData.append("files", {
-          uri: file.uri,
-          name: file.name || `file_${index}_${Date.now()}`,
+        // iOS에서는 file://로 시작하는 로컬 파일 경로만 사용 가능
+        const uri = file.uri.startsWith("file://")
+          ? file.uri
+          : `file://${file.uri.replace(/^\//, "")}`;
+
+        // 파일 이름 강제 지정 (확장자 포함)
+        const fileName = `image_${index}_${Date.now()}.jpg`;
+
+        const fileObj = {
+          uri: uri,
+          name: fileName,
           type: file.type || "image/jpeg",
-        });
+        };
+
+        console.log(
+          `React Native 환경 - 파일 추가: ${JSON.stringify(fileObj)}`,
+        );
+
+        // 테스트: 각 플랫폼에 맞는 방식으로 파일 추가
+        if (Platform.OS === "ios") {
+          // iOS에서는 객체 형식으로 추가
+          // @ts-ignore: iOS의 FormData는 객체 형식 지원
+          formData.append("files", fileObj);
+        } else if (Platform.OS === "android") {
+          // Android에서는 URI로부터 파일 생성 시도
+          // @ts-ignore: Android에서는 객체 형식 사용
+          formData.append("files", fileObj);
+        } else {
+          // 웹 또는 기타 환경에서 테스트할 경우
+          console.warn("웹 환경에서 테스트 중 - 더미 이미지로 대체합니다");
+          formData.append(
+            "files",
+            new File(["dummy"], fileName, { type: "image/jpeg" }),
+          );
+        }
       } else {
         throw new Error(`지원하지 않는 파일 형식: ${typeof file}`);
       }
@@ -411,6 +442,46 @@ export async function uploadFilesWithProgress(
       // 인증 헤더 설정
       if (token) {
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      }
+
+      // React Native에서 필요한 추가 헤더 설정
+      if (isReactNative()) {
+        xhr.setRequestHeader("Accept", "application/json");
+        // Content-Type은 FormData가 자동으로 설정하므로 수동으로 설정하지 않음
+        // 단, React Native의 일부 버전에서는 올바르게 설정되지 않을 수 있음
+
+        // 요청 전 마지막 확인
+        console.log("FormData 전송 직전 - Content-Type 헤더:", "자동 설정됨");
+      }
+
+      // FormData 디버깅
+      console.log(`FormData 전송 직전 내용 확인:`);
+      if (isWeb()) {
+        try {
+          // 웹 환경에서만 작동
+          if (typeof formData.getAll === "function") {
+            const files = formData.getAll("files");
+            console.log(`- files 필드: ${files.length}개 항목`);
+            files.forEach((file: any, idx: number) => {
+              console.log(
+                `- files[${idx}] 타입: ${typeof file}, 이름: ${file.name || "N/A"}`,
+              );
+            });
+          } else {
+            console.log("- FormData.getAll 메서드를 사용할 수 없음");
+          }
+        } catch (e) {
+          console.log("FormData 검사 중 오류:", e);
+        }
+      } else {
+        console.log("- React Native 환경: FormData 내용 검사 불가");
+        // React Native 환경에서 디버깅
+        if (isReactNative()) {
+          console.log(
+            "React Native FormData 구조:",
+            Object.getOwnPropertyNames(formData).filter((p) => p !== "__parts"),
+          );
+        }
       }
 
       // FormData는 자동으로 multipart/form-data 콘텐츠 타입 설정

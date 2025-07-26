@@ -34,7 +34,7 @@ export class MediaService {
         const metadata = await this.extractImageMetadata(file.path);
 
         // 환경에 따른 기본 URL 설정
-        const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+        const baseUrl = 'http://localhost:3000';
 
         // 파일 경로에서 '/uploads/images/' 이후 부분만 추출
         const relativePath =

@@ -14,7 +14,7 @@ import type { ThemedStyle } from "@/lib/theme/types";
 export interface Media {
   id: string;
   url: string;
-  type: "image" | "video";
+  type: "IMAGE" | "VIDEO" | "image" | "video"; // 서버와 클라이언트 타입 모두 지원
 }
 
 interface PostMediaProps {
@@ -34,10 +34,36 @@ export default function PostMedia({
 }: PostMediaProps) {
   const { themed } = useAppTheme();
 
-  const imageMedia = media.filter((item) => item.type === "image");
+  // 디버깅을 위한 로그
+  console.log("PostMedia 렌더링:", {
+    mediaCount: media.length,
+    mediaTypes: media.map((m) => m.type),
+    variant,
+  });
+
+  const imageMedia = media.filter(
+    (item) => item.type === "image" || item.type === "IMAGE"
+  );
   const imageCount = imageMedia.length;
 
-  if (imageCount === 0) return null;
+  console.log("필터링된 이미지:", {
+    imageCount,
+    imageUrls: imageMedia.map((m) => m.url),
+  });
+
+  if (imageCount === 0) {
+    console.log("이미지가 없어서 null 반환");
+    return null;
+  }
+
+  // URL 변환 함수 (localhost를 환경변수 URL로 변경)
+  const transformImageUrl = (url: string) => {
+    if (url.startsWith("http://localhost:3000")) {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+      return url.replace("http://localhost:3000", apiUrl);
+    }
+    return url;
+  };
 
   /**
    * 피드용 미디어 그리드 렌더링 (더보기 표시 포함)
@@ -46,7 +72,7 @@ export default function PostMedia({
     if (imageCount === 1) {
       return (
         <Image
-          source={{ uri: imageMedia[0].url }}
+          source={{ uri: transformImageUrl(imageMedia[0].url) }}
           style={themed($feedMediaImage)}
           resizeMode="cover"
         />
@@ -57,12 +83,12 @@ export default function PostMedia({
       return (
         <View style={themed($feedMediaGrid)}>
           <Image
-            source={{ uri: imageMedia[0].url }}
+            source={{ uri: transformImageUrl(imageMedia[0].url) }}
             style={themed($feedMediaImageHalf)}
             resizeMode="cover"
           />
           <Image
-            source={{ uri: imageMedia[1].url }}
+            source={{ uri: transformImageUrl(imageMedia[1].url) }}
             style={themed($feedMediaImageHalf)}
             resizeMode="cover"
           />
@@ -74,18 +100,18 @@ export default function PostMedia({
       return (
         <View style={themed($feedMediaGrid)}>
           <Image
-            source={{ uri: imageMedia[0].url }}
+            source={{ uri: transformImageUrl(imageMedia[0].url) }}
             style={themed($feedMediaImageHalf)}
             resizeMode="cover"
           />
           <View style={themed($feedMediaRightColumn)}>
             <Image
-              source={{ uri: imageMedia[1].url }}
+              source={{ uri: transformImageUrl(imageMedia[1].url) }}
               style={themed($feedMediaImageQuarter)}
               resizeMode="cover"
             />
             <Image
-              source={{ uri: imageMedia[2].url }}
+              source={{ uri: transformImageUrl(imageMedia[2].url) }}
               style={themed($feedMediaImageQuarter)}
               resizeMode="cover"
             />
@@ -99,25 +125,25 @@ export default function PostMedia({
       <View style={themed($feedMediaGrid)}>
         <View style={themed($feedMediaRow)}>
           <Image
-            source={{ uri: imageMedia[0].url }}
+            source={{ uri: transformImageUrl(imageMedia[0].url) }}
             style={themed($feedMediaImageQuarter)}
             resizeMode="cover"
           />
           <Image
-            source={{ uri: imageMedia[1].url }}
+            source={{ uri: transformImageUrl(imageMedia[1].url) }}
             style={themed($feedMediaImageQuarter)}
             resizeMode="cover"
           />
         </View>
         <View style={themed($feedMediaRow)}>
           <Image
-            source={{ uri: imageMedia[2].url }}
+            source={{ uri: transformImageUrl(imageMedia[2].url) }}
             style={themed($feedMediaImageQuarter)}
             resizeMode="cover"
           />
           <View style={themed($feedMediaImageQuarter)}>
             <Image
-              source={{ uri: imageMedia[3].url }}
+              source={{ uri: transformImageUrl(imageMedia[3].url) }}
               style={themed($feedMediaImageQuarter)}
               resizeMode="cover"
             />
@@ -139,7 +165,7 @@ export default function PostMedia({
     if (imageCount === 1) {
       return (
         <Image
-          source={{ uri: imageMedia[0].url }}
+          source={{ uri: transformImageUrl(imageMedia[0].url) }}
           style={themed($detailMediaImage)}
           resizeMode="cover"
         />
@@ -152,7 +178,7 @@ export default function PostMedia({
           {imageMedia.map((item) => (
             <Image
               key={item.id}
-              source={{ uri: item.url }}
+              source={{ uri: transformImageUrl(item.url) }}
               style={themed($detailMediaImageHalf)}
               resizeMode="cover"
             />
@@ -172,7 +198,7 @@ export default function PostMedia({
         {imageMedia.map((item, index) => (
           <Image
             key={item.id}
-            source={{ uri: item.url }}
+            source={{ uri: transformImageUrl(item.url) }}
             style={[
               themed($detailMediaImageScroll),
               index === imageMedia.length - 1 && { marginRight: 0 },

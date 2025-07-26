@@ -19,7 +19,7 @@ export const isWeb = (): boolean => {
       typeof window !== "undefined" &&
       typeof document !== "undefined" &&
       // @ts-ignore - global.expo는 Expo 환경에서만 존재
-      (typeof global === "undefined" || !("expo" in global)) &&
+      // (typeof global === "undefined" || !("expo" in global)) &&
       // @ts-ignore - navigator.product는 React Native에서 'ReactNative'
       typeof navigator !== "undefined" &&
       navigator.product !== "ReactNative"

@@ -18,6 +18,7 @@ import SearchResults, {
 } from "@/components/search/SearchResults";
 import { searchApi, getPopularSearchTerms } from "@/lib/api/search";
 import { debounce } from "lodash";
+import WebCenteredLayout from "@/components/layout/WebCenteredLayout";
 
 /**
  * 검색 화면 컴포넌트
@@ -53,7 +54,7 @@ export default function SearchScreen() {
             page,
             pageSize: 10,
           },
-          tab,
+          tab
         );
 
         const newResults =
@@ -67,7 +68,7 @@ export default function SearchScreen() {
         setIsLoading(false);
       }
     }, 300),
-    [results],
+    [results]
   );
 
   /**
@@ -125,12 +126,12 @@ export default function SearchScreen() {
 
   return (
     <View style={themed($container)}>
-      {/* 검색 헤더 */}
+      {/* 검색 헤더 - 전체 너비 사용 */}
       <View style={themed($header)}>
         <Text style={themed($headerTitle)}>검색</Text>
       </View>
 
-      {/* 검색 입력 영역 */}
+      {/* 검색 입력 영역 - 전체 너비 사용 */}
       <View style={themed($searchContainer)}>
         <View style={themed($searchInputContainer)}>
           <SearchIcon color={theme.colors.textDim} size={20} />
@@ -148,25 +149,27 @@ export default function SearchScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 검색 탭 */}
+      {/* 검색 탭 - 전체 너비 사용 */}
       <SearchTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* 검색 결과 영역 */}
       {!searchQuery.trim() && popularTerms.length > 0 ? (
-        <View style={themed($popularTermsContainer)}>
-          <Text style={themed($sectionTitle)}>인기 검색어</Text>
-          <View style={themed($termsContainer)}>
-            {popularTerms.map((term, index) => (
-              <TouchableOpacity
-                key={index}
-                style={themed($termItem)}
-                onPress={() => setSearchQuery(term)}
-              >
-                <Text style={themed($termText)}>{term}</Text>
-              </TouchableOpacity>
-            ))}
+        <WebCenteredLayout scrollable={false}>
+          <View style={themed($popularTermsContainer)}>
+            <Text style={themed($sectionTitle)}>인기 검색어</Text>
+            <View style={themed($termsContainer)}>
+              {popularTerms.map((term, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={themed($termItem)}
+                  onPress={() => setSearchQuery(term)}
+                >
+                  <Text style={themed($termText)}>{term}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        </WebCenteredLayout>
       ) : (
         <SearchResults
           activeTab={activeTab}

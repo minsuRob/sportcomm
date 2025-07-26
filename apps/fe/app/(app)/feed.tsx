@@ -20,6 +20,7 @@ import { User, getSession, clearSession } from "@/lib/auth";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import WebCenteredLayout from "@/components/layout/WebCenteredLayout";
 // CreatePostModal 제거 - 이제 별도 페이지로 이동
 import { Plus, MessageSquare } from "lucide-react-native";
 
@@ -77,7 +78,7 @@ export default function FeedScreen() {
     GET_BLOCKED_USERS,
     {
       skip: !currentUser, // 로그인하지 않은 경우 실행하지 않음
-    },
+    }
   );
 
   useEffect(() => {
@@ -114,7 +115,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         });
       }
@@ -224,6 +225,7 @@ export default function FeedScreen() {
         </View>
       </Modal>
 
+      {/* 헤더는 전체 너비 사용 */}
       <View style={themed($header)}>
         <Text style={themed($headerTitle)}>
           {t(TRANSLATION_KEYS.FEED_TITLE)}
@@ -264,6 +266,7 @@ export default function FeedScreen() {
         )}
       </View>
 
+      {/* 피드 콘텐츠는 FlatList가 직접 스크롤 처리 */}
       <FeedList
         posts={posts}
         refreshing={isRefreshing}

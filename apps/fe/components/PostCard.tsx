@@ -14,6 +14,8 @@ import PostHeader, { PostType } from "./shared/PostHeader";
 import PostMedia, { Media } from "./shared/PostMedia";
 import PostStats from "./shared/PostStats";
 import PostActions from "./shared/PostActions";
+import { getWebReadableTextStyle } from "./layout/WebCenteredLayout";
+import { isWeb } from "@/lib/platform";
 
 // --- Type Definitions ---
 export { PostType, Media };
@@ -104,7 +106,14 @@ export default function PostCard({ post }: PostCardProps) {
 
       {/* 콘텐츠 - 클릭 가능 */}
       <TouchableOpacity onPress={handlePostPress} activeOpacity={0.7}>
-        <Text style={themed($content)}>{post.content}</Text>
+        <Text
+          style={[
+            themed($content),
+            isWeb() ? themed(getWebReadableTextStyle()) : undefined,
+          ]}
+        >
+          {post.content}
+        </Text>
       </TouchableOpacity>
 
       {/* 미디어 */}
@@ -151,14 +160,20 @@ export default function PostCard({ post }: PostCardProps) {
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
   padding: spacing.md,
-  borderBottomWidth: 1,
+  borderBottomWidth: isWeb() ? 0 : 1, // 웹에서는 카드 스타일로 구분
   borderBottomColor: colors.border,
+  // 웹에서 추가 여백
+  ...(isWeb() && {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  }),
 });
 
 const $content: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginVertical: spacing.sm,
-  fontSize: 16,
+  fontSize: isWeb() ? 15 : 16, // 웹에서 약간 작은 폰트
   color: colors.text,
+  lineHeight: isWeb() ? 1.6 : undefined, // 웹에서 가독성 향상
 });
 
 const $commentPreview: ThemedStyle<ViewStyle> = ({ spacing }) => ({

@@ -19,6 +19,7 @@ import { useRouter } from "expo-router";
 import { GET_USER_PROFILE, GET_USER_POSTS } from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
 import type { Post } from "@/components/PostCard";
+import WebCenteredLayout from "@/components/layout/WebCenteredLayout";
 
 // 사용자 프로필 데이터 타입
 interface UserProfile {
@@ -137,8 +138,8 @@ export default function ProfileScreen() {
     `https://i.pravatar.cc/150?u=${userProfile.id}`;
 
   return (
-    <ScrollView style={themed($container)}>
-      {/* 헤더 */}
+    <View style={themed($container)}>
+      {/* 헤더 - 전체 너비 사용 */}
       <View style={themed($header)}>
         <Text style={themed($headerTitle)}>프로필</Text>
         <TouchableOpacity onPress={handleSettings}>
@@ -146,64 +147,71 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 프로필 정보 */}
-      <View style={themed($profileSection)}>
-        <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
-        <Text style={themed($username)}>{userProfile.nickname}</Text>
+      {/* 프로필 정보 - 웹에서 중앙 정렬 */}
+      <WebCenteredLayout scrollable={false}>
+        {/* 프로필 정보 */}
+        <View style={themed($profileSection)}>
+          <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
+          <Text style={themed($username)}>{userProfile.nickname}</Text>
 
-        {/* 프로필 편집 버튼 */}
-        <TouchableOpacity
-          style={themed($editButton)}
-          onPress={handleEditProfile}
-        >
-          <Edit3 color={theme.colors.tint} size={16} />
-          <Text style={themed($editButtonText)}>프로필 편집</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 통계 정보 */}
-      <View style={themed($statsSection)}>
-        <View style={themed($statItem)}>
-          <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
-          <Text style={themed($statLabel)}>게시물</Text>
+          {/* 프로필 편집 버튼 */}
+          <TouchableOpacity
+            style={themed($editButton)}
+            onPress={handleEditProfile}
+          >
+            <Edit3 color={theme.colors.tint} size={16} />
+            <Text style={themed($editButtonText)}>프로필 편집</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={themed($statItem)}
-          onPress={handleFollowersPress}
-        >
-          <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
-          <Text style={themed($statLabel)}>팔로워</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={themed($statItem)}
-          onPress={handleFollowingPress}
-        >
-          <Text style={themed($statNumber)}>{userProfile.followingCount}</Text>
-          <Text style={themed($statLabel)}>팔로잉</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* 내 게시물 섹션 */}
-      <View style={themed($postsSection)}>
-        <Text style={themed($sectionTitle)}>내 게시물</Text>
-        {postsLoading ? (
-          <View style={themed($loadingContainer)}>
-            <ActivityIndicator size="large" color={theme.colors.tint} />
+        {/* 통계 정보 */}
+        <View style={themed($statsSection)}>
+          <View style={themed($statItem)}>
+            <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
+            <Text style={themed($statLabel)}>게시물</Text>
           </View>
-        ) : (
-          <FeedList
-            posts={userPosts}
-            ListEmptyComponent={
-              <View style={themed($emptyState)}>
-                <Text style={themed($emptyStateText)}>
-                  아직 작성한 게시물이 없습니다
-                </Text>
-              </View>
-            }
-          />
-        )}
-      </View>
-    </ScrollView>
+          <TouchableOpacity
+            style={themed($statItem)}
+            onPress={handleFollowersPress}
+          >
+            <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
+            <Text style={themed($statLabel)}>팔로워</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={themed($statItem)}
+            onPress={handleFollowingPress}
+          >
+            <Text style={themed($statNumber)}>
+              {userProfile.followingCount}
+            </Text>
+            <Text style={themed($statLabel)}>팔로잉</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 내 게시물 섹션 제목 */}
+        <View style={themed($postsSection)}>
+          <Text style={themed($sectionTitle)}>내 게시물</Text>
+        </View>
+      </WebCenteredLayout>
+
+      {/* 게시물 목록 - FeedList가 직접 스크롤 처리 */}
+      {postsLoading ? (
+        <View style={themed($loadingContainer)}>
+          <ActivityIndicator size="large" color={theme.colors.tint} />
+        </View>
+      ) : (
+        <FeedList
+          posts={userPosts}
+          ListEmptyComponent={
+            <View style={themed($emptyState)}>
+              <Text style={themed($emptyStateText)}>
+                아직 작성한 게시물이 없습니다
+              </Text>
+            </View>
+          }
+        />
+      )}
+    </View>
   );
 }
 

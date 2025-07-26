@@ -30,6 +30,18 @@ export class MediaService {
 
     for (const file of files) {
       try {
+        console.log(`파일 정보:`, {
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          path: file.path,
+        });
+
+        // 파일 유효성 검사
+        if (file.size <= 0) {
+          throw new Error(`파일 크기가 0 또는 음수입니다: ${file.size} bytes`);
+        }
+
         // 이미지 메타데이터 추출
         const metadata = await this.extractImageMetadata(file.path);
 
@@ -57,7 +69,25 @@ export class MediaService {
         mediaEntities.push(savedMedia);
       } catch (error) {
         console.error(`파일 처리 실패: ${file.originalname}`, error);
-        // 실패한 파일은 건너뛰고 계속 진행
+        // 실패해도 DB에 기록하여 클라이언트에서 처리할 수 있게 함
+        try {
+          const media = this.mediaRepository.create({
+            originalName: file.originalname,
+            url: file.path,
+            type: MediaType.IMAGE,
+            status: UploadStatus.FAILED,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            extension: path.extname(file.originalname).substring(1),
+            width: 0,
+            height: 0,
+            failureReason: error.message || '이미지 처리 오류',
+          });
+          const savedMedia = await this.mediaRepository.save(media);
+          mediaEntities.push(savedMedia);
+        } catch (saveError) {
+          console.error('실패한 미디어 저장 중 오류:', saveError);
+        }
       }
     }
 
@@ -68,20 +98,51 @@ export class MediaService {
    * 이미지 메타데이터를 추출합니다.
    * @param filePath 파일 경로
    * @returns 이미지 메타데이터
+   * @throws Error 메타데이터 추출 실패 시
    */
   private async extractImageMetadata(filePath: string): Promise<{
     width: number;
     height: number;
   }> {
     try {
+      // 파일이 존재하는지 확인
+      const fs = require('fs');
+      const fileExists = fs.existsSync(filePath);
+      if (!fileExists) {
+        throw new Error(`파일이 존재하지 않습니다: ${filePath}`);
+      }
+
+      // 파일 크기 확인
+      const stats = fs.statSync(filePath);
+      if (stats.size <= 0) {
+        throw new Error(`파일 크기가 0 또는 음수입니다: ${stats.size} bytes`);
+      }
+
+      console.log(
+        `이미지 메타데이터 추출 시작: ${filePath}, 크기: ${stats.size} bytes`,
+      );
+
+      // 이미지 메타데이터 추출
       const metadata = await sharp(filePath).metadata();
+
+      if (!metadata) {
+        throw new Error('메타데이터가 추출되지 않았습니다');
+      }
+
+      console.log(`메타데이터 추출 성공:`, {
+        format: metadata.format,
+        width: metadata.width,
+        height: metadata.height,
+      });
+
       return {
         width: metadata.width || 0,
         height: metadata.height || 0,
       };
     } catch (error) {
-      console.error('이미지 메타데이터 추출 실패:', error);
-      return { width: 0, height: 0 };
+      console.error(`이미지 메타데이터 추출 실패(${filePath}):`, error);
+      // 추출 실패 시 예외 전달하여 호출자가 적절히 처리하도록 함
+      throw error;
     }
   }
 

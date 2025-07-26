@@ -194,20 +194,41 @@ export class MediaController {
     @Req() req: Request,
   ) {
     // 요청 로깅 강화
-    console.log('\n======== 파일 업로드 요청 시작 ========');
+    const requestId = uuidv4().substring(0, 8);
+    console.log(`\n======== 파일 업로드 요청 시작 (ID: ${requestId}) ========`);
     console.log(`요청 URL: ${req.url}`);
     console.log(`요청 메서드: ${req.method}`);
     console.log(`Content-Type: ${req.headers['content-type']}`);
-    console.log(`요청 ID: ${uuidv4().substring(0, 8)} (추적용)`);
+    console.log(`Content-Length: ${req.headers['content-length']}`);
 
     // 파일 정보 로깅
-    console.log(`Content-Length: ${req.headers['content-length']}`);
     console.log('Multer files:', files ? `${files.length}개` : '없음');
+
+    // 파일 세부 정보 로깅 (MIME 타입과 크기 확인)
     if (files && files.length > 0) {
       files.forEach((file, index) => {
         console.log(
-          `파일 [${index}]: ${file.originalname}, 크기: ${file.size}, 타입: ${file.mimetype}`,
+          `파일 [${index}]: ${file.originalname}, 크기: ${file.size}바이트, 타입: ${file.mimetype}`,
         );
+
+        // 0바이트 파일 경고
+        if (file.size <= 0) {
+          console.warn(
+            `⚠️ 경고: 파일 ${file.originalname}의 크기가 ${file.size}바이트입니다. 처리 실패 가능성 높음.`,
+          );
+        }
+
+        // 실제 파일 존재 여부 확인
+        try {
+          const fs = require('fs');
+          const exists = fs.existsSync(file.path);
+          const stats = exists ? fs.statSync(file.path) : null;
+          console.log(
+            `  - 파일시스템: 존재=${exists}, 크기=${stats ? stats.size : '알 수 없음'}바이트, 경로=${file.path}`,
+          );
+        } catch (e) {
+          console.error(`  - 파일시스템 확인 실패: ${e.message}`);
+        }
       });
     }
 
@@ -295,14 +316,40 @@ export class MediaController {
       );
 
       // 미디어 엔티티 생성
+      // 파일 유효성 검증
+      let validFiles = files;
+
+      // 크기가 너무 작은 파일(0바이트 또는 손상된 파일) 필터링
+      if (validFiles.some((file) => file.size <= 0)) {
+        console.warn('파일 크기가 0인 파일이 발견되었습니다. 필터링합니다.');
+        validFiles = validFiles.filter((file) => {
+          const isValid = file.size > 0;
+          if (!isValid) {
+            console.warn(
+              `유효하지 않은 파일 건너뜀: ${file.originalname}, 크기: ${file.size}바이트`,
+            );
+          }
+          return isValid;
+        });
+      }
+
+      // 파일 확장자 검사
+      validFiles.forEach((file) => {
+        const ext = file.originalname.split('.').pop()?.toLowerCase();
+        console.log(
+          `파일 ${file.originalname} 검사: 확장자 ${ext}, 크기 ${file.size}바이트`,
+        );
+      });
+
       const uploadedMedia = await this.mediaService.createMediaFromFiles(
-        files,
+        validFiles,
         user.id,
       );
 
       console.log('업로드 완료:', {
         mediaCount: uploadedMedia.length,
         firstMediaId: uploadedMedia[0]?.id,
+        mediaStatus: uploadedMedia.map((m) => m.status),
       });
 
       // REST API 표준 응답 형식
@@ -353,6 +400,7 @@ export class MediaController {
   @UseInterceptors(
     FilesInterceptor('file', 1, {
       // 단일 파일 업로드 설정
+
       storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadPath = join(process.cwd(), 'uploads/images');
@@ -381,6 +429,18 @@ export class MediaController {
         },
       }),
       fileFilter: (req, file, callback) => {
+        console.log(
+          `단일 파일 필터링: ${file.originalname}, ${file.mimetype}, ${file.size || '크기 알 수 없음'}`,
+        );
+
+        // 0바이트 파일 거부
+        if (file.size === 0) {
+          return callback(
+            new BadRequestException('0바이트 파일은 업로드할 수 없습니다.'),
+            false,
+          );
+        }
+
         const allowedMimeTypes = [
           'image/jpeg',
           'image/jpg',

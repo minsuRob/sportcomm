@@ -374,14 +374,26 @@ export async function uploadFilesWithProgress(
             `Android - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
           );
         } else {
-          // 웹 또는 기타 환경에서 테스트할 경우
-          console.warn("웹 환경에서 테스트 중 - 더미 이미지로 대체합니다");
-          const dummyFile = new File(["dummy image content"], fileName, {
-            type: file.type || "image/jpeg",
+          // 웹 또는 기타 환경에서 테스트할 경우 - 실제 이미지 데이터 생성
+          console.warn("웹 환경에서 테스트 중 - 1x1 투명 PNG 이미지 사용");
+
+          // 1x1 투명 PNG 픽셀 (유효한 이미지 데이터)
+          const transparentPixel = new Uint8Array([
+            0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00,
+            0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+            0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89,
+            0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63,
+            0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4,
+            0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60,
+            0x82,
+          ]);
+
+          const dummyFile = new File([transparentPixel], fileName, {
+            type: "image/png", // PNG 포맷으로 통일
           });
           formData.append("files", dummyFile);
           console.log(
-            `웹(테스트) - 더미 파일 추가: ${fileName}, 타입: ${dummyFile.type}`,
+            `웹(테스트) - 유효한 PNG 파일 추가: ${fileName}, 타입: ${dummyFile.type}, 크기: ${dummyFile.size}바이트`,
           );
         }
       } else {

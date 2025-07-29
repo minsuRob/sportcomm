@@ -1,5 +1,5 @@
-import { Sun } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { iconWithClassName } from "./iconWithClassName";
 
-iconWithClassName(Sun);
-export { Sun };
+iconWithClassName(Ionicons);
+export const Sun = (props: any) => <Ionicons name="sunny" {...props} />;

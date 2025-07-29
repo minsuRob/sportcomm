@@ -1,5 +1,5 @@
-import { Heart } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { iconWithClassName } from "./iconWithClassName";
 
-iconWithClassName(Heart);
-export { Heart };
+iconWithClassName(Ionicons);
+export const Heart = (props: any) => <Ionicons name="heart" {...props} />;

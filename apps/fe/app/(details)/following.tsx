@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, UserMinus, UserPlus } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -88,7 +88,7 @@ export default function FollowingScreen() {
     if (followingData?.getUserById?.following) {
       try {
         const followingUsers = followingData.getUserById.following.map(
-          (relation) => relation.following,
+          (relation) => relation.following
         );
         setFollowing(followingUsers || []);
       } catch (error) {
@@ -104,7 +104,7 @@ export default function FollowingScreen() {
 
   const handleFollowToggle = async (
     targetUserId: string,
-    isCurrentlyFollowing: boolean,
+    isCurrentlyFollowing: boolean
   ) => {
     try {
       const { error } = await executeToggleFollow({
@@ -134,8 +134,8 @@ export default function FollowingScreen() {
                   ? user.followerCount - 1
                   : user.followerCount + 1,
               }
-            : user,
-        ),
+            : user
+        )
       );
 
       showToast({

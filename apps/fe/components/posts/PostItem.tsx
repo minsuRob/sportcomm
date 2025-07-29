@@ -9,7 +9,7 @@ import {
   TextStyle,
   ImageStyle,
 } from "react-native";
-import { Heart, MessageCircle, Eye } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
@@ -69,18 +69,19 @@ export default function PostItem({ post, onPress }: PostItemProps) {
   /**
    * 작성 날짜 포맷팅
    */
-  const formattedDate = new Date(post.createdAt).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  const formattedDate = new Date(post.createdAt).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 
   /**
    * 게시물 내용 요약
    */
-  const contentSummary = post.content.length > 100
-    ? `${post.content.substring(0, 100)}...`
-    : post.content;
+  const contentSummary =
+    post.content.length > 100
+      ? `${post.content.substring(0, 100)}...`
+      : post.content;
 
   return (
     <TouchableOpacity
@@ -92,7 +93,8 @@ export default function PostItem({ post, onPress }: PostItemProps) {
         {/* 작성자 프로필 이미지 */}
         <Image
           source={{
-            uri: post.author.profileImageUrl || 'https://via.placeholder.com/40'
+            uri:
+              post.author.profileImageUrl || "https://via.placeholder.com/40",
           }}
           style={themed($profileImage)}
         />
@@ -107,8 +109,11 @@ export default function PostItem({ post, onPress }: PostItemProps) {
         {/* 게시물 유형 */}
         <View style={themed($typeTag)}>
           <Text style={themed($typeText)}>
-            {post.type === 'ANALYSIS' ? '분석' :
-             post.type === 'CHEERING' ? '응원' : '하이라이트'}
+            {post.type === "ANALYSIS"
+              ? "분석"
+              : post.type === "CHEERING"
+                ? "응원"
+                : "하이라이트"}
           </Text>
         </View>
       </View>
@@ -117,9 +122,7 @@ export default function PostItem({ post, onPress }: PostItemProps) {
       <Text style={themed($title)}>{post.title}</Text>
 
       {/* 게시물 내용 (요약) */}
-      <Text style={themed($content)}>
-        {contentSummary}
-      </Text>
+      <Text style={themed($content)}>{contentSummary}</Text>
 
       {/* 게시물 미디어 (있는 경우) */}
       {post.mediaUrl && (
@@ -133,21 +136,25 @@ export default function PostItem({ post, onPress }: PostItemProps) {
       {/* 게시물 통계 (좋아요, 댓글, 조회수) */}
       <View style={themed($stats)}>
         <View style={styles.statItem}>
-          <Heart
+          <Ionicons
+            name={post.isLiked ? "heart" : "heart-outline"}
             size={16}
             color={post.isLiked ? theme.colors.tint : theme.colors.textDim}
-            fill={post.isLiked ? theme.colors.tint : 'transparent'}
           />
           <Text style={themed($statText)}>{post.likeCount}</Text>
         </View>
 
         <View style={styles.statItem}>
-          <MessageCircle size={16} color={theme.colors.textDim} />
+          <Ionicons
+            name="chatbubble-outline"
+            size={16}
+            color={theme.colors.textDim}
+          />
           <Text style={themed($statText)}>{post.commentCount}</Text>
         </View>
 
         <View style={styles.statItem}>
-          <Eye size={16} color={theme.colors.textDim} />
+          <Ionicons name="eye-outline" size={16} color={theme.colors.textDim} />
           <Text style={themed($statText)}>{post.viewCount}</Text>
         </View>
       </View>
@@ -169,8 +176,8 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $header: ThemedStyle<ViewStyle> = () => ({
-  flexDirection: 'row',
-  alignItems: 'center',
+  flexDirection: "row",
+  alignItems: "center",
   marginBottom: 10,
 });
 
@@ -182,7 +189,7 @@ const $profileImage: ThemedStyle<ImageStyle> = () => ({
 });
 
 const $authorName: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontWeight: '600',
+  fontWeight: "600",
   color: colors.text,
   fontSize: 14,
 });
@@ -198,18 +205,18 @@ const $typeTag: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.xs,
   borderRadius: 4,
-  marginLeft: 'auto',
+  marginLeft: "auto",
 });
 
 const $typeText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.tint,
   fontSize: 12,
-  fontWeight: '500',
+  fontWeight: "500",
 });
 
 const $title: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
-  fontWeight: 'bold',
+  fontWeight: "bold",
   color: colors.text,
   marginBottom: spacing.sm,
 });
@@ -222,14 +229,14 @@ const $content: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 const $media: ThemedStyle<ImageStyle> = () => ({
-  width: '100%',
+  width: "100%",
   height: 180,
   borderRadius: 6,
   marginVertical: 10,
 });
 
 const $stats: ThemedStyle<ViewStyle> = () => ({
-  flexDirection: 'row',
+  flexDirection: "row",
   marginTop: 10,
 });
 
@@ -245,8 +252,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginRight: 16,
   },
 });

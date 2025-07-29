@@ -1,5 +1,5 @@
-import { MoonStar } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { iconWithClassName } from "./iconWithClassName";
 
-iconWithClassName(MoonStar);
-export { MoonStar };
+iconWithClassName(Ionicons);
+export const MoonStar = (props: any) => <Ionicons name="moon" {...props} />;

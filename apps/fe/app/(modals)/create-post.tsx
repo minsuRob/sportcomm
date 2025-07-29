@@ -15,7 +15,7 @@ import {
   ImageStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Send, ImageIcon, X } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { isWeb } from "@/lib/platform";
 import { showToast } from "@/components/CustomToast";

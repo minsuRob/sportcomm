@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useMutation } from "@apollo/client";
 import { Button } from "./ui/button";
-import { Eye, EyeOff, AlertCircle } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { saveSession, getSession, User } from "../lib/auth";
 import { LOGIN_MUTATION, REGISTER_MUTATION } from "../lib/graphql";
 
@@ -189,7 +189,7 @@ export default function AuthForm({
         />
         {emailError ? (
           <View className="flex-row items-center mt-2">
-            <AlertCircle color="#ef4444" size={16} />
+            <Ionicons name="alert-circle" color="#ef4444" size={16} />
             <Text className="text-red-500 text-sm ml-2">{emailError}</Text>
           </View>
         ) : null}
@@ -216,7 +216,7 @@ export default function AuthForm({
           />
           {nicknameError ? (
             <View className="flex-row items-center mt-2">
-              <AlertCircle color="#ef4444" size={16} />
+              <Ionicons name="alert-circle" color="#ef4444" size={16} />
               <Text className="text-red-500 text-sm ml-2">{nicknameError}</Text>
             </View>
           ) : null}
@@ -247,15 +247,23 @@ export default function AuthForm({
             className="absolute right-4 top-3.5"
           >
             {isPasswordVisible ? (
-              <EyeOff color="hsl(var(--muted-foreground))" size={20} />
+              <Ionicons
+                name="eye-off"
+                color="hsl(var(--muted-foreground))"
+                size={20}
+              />
             ) : (
-              <Eye color="hsl(var(--muted-foreground))" size={20} />
+              <Ionicons
+                name="eye"
+                color="hsl(var(--muted-foreground))"
+                size={20}
+              />
             )}
           </TouchableOpacity>
         </View>
         {passwordError ? (
           <View className="flex-row items-center mt-2">
-            <AlertCircle color="#ef4444" size={16} />
+            <Ionicons name="alert-circle" color="#ef4444" size={16} />
             <Text className="text-red-500 text-sm ml-2">{passwordError}</Text>
           </View>
         ) : null}
@@ -264,7 +272,7 @@ export default function AuthForm({
       {/* 일반 에러 메시지 */}
       {generalError ? (
         <View className="flex-row items-center mb-4">
-          <AlertCircle color="#ef4444" size={16} />
+          <Ionicons name="alert-circle" color="#ef4444" size={16} />
           <Text className="text-red-500 text-sm ml-2">{generalError}</Text>
         </View>
       ) : null}

@@ -2,7 +2,7 @@ import React from "react";
 import { View, ViewStyle } from "react-native";
 import { Tabs } from "expo-router";
 import { Slot } from "expo-router";
-import { Home, Search, User } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -28,21 +28,27 @@ function MobileTabLayout() {
         name="feed"
         options={{
           title: "피드",
-          tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="home" size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: "검색",
-          tabBarIcon: ({ color }) => <Search size={24} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="search" size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "프로필",
-          tabBarIcon: ({ color }) => <User size={24} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person" size={24} color={color} />
+          ),
         }}
       />
     </Tabs>

@@ -7,14 +7,14 @@ import {
   TextStyle,
 } from "react-native";
 import { useRouter, usePathname } from "expo-router";
-import { Home, Search, User } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
 interface NavigationItem {
   name: string;
   label: string;
-  icon: React.ComponentType<{ color: string; size: number }>;
+  icon: (props: { color: string; size: number }) => React.ReactElement;
   route: string;
 }
 
@@ -22,19 +22,19 @@ const navigationItems: NavigationItem[] = [
   {
     name: "feed",
     label: "피드",
-    icon: Home,
+    icon: (props) => <Ionicons name="home" {...props} />,
     route: "/(app)/feed",
   },
   {
     name: "search",
     label: "검색",
-    icon: Search,
+    icon: (props) => <Ionicons name="search" {...props} />,
     route: "/(app)/search",
   },
   {
     name: "profile",
     label: "프로필",
-    icon: User,
+    icon: (props) => <Ionicons name="person" {...props} />,
     route: "/(app)/profile",
   },
 ];

@@ -10,7 +10,7 @@ import {
   Keyboard,
   Text,
 } from "react-native";
-import { Send, Paperclip, X, Plus } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
@@ -156,7 +156,7 @@ export default function ChatInput({
             style={themed($cancelReplyButton)}
             onPress={onCancelReply}
           >
-            <X size={18} color={theme.colors.textDim} />
+            <Ionicons name="close" size={18} color={theme.colors.textDim} />
           </TouchableOpacity>
         </View>
       )}
@@ -168,7 +168,8 @@ export default function ChatInput({
           onPress={onAddOption}
           disabled={disabled}
         >
-          <Plus
+          <Ionicons
+            name="add"
             size={22}
             color={
               disabled ? theme.colors.textDim + "80" : theme.colors.textDim
@@ -183,7 +184,8 @@ export default function ChatInput({
             onPress={onAttachment}
             disabled={disabled}
           >
-            <Paperclip
+            <Ionicons
+              name="attach"
               size={22}
               color={
                 disabled ? theme.colors.textDim + "80" : theme.colors.textDim
@@ -243,7 +245,8 @@ export default function ChatInput({
           onPress={handleSend}
           disabled={!message.trim() || disabled}
         >
-          <Send
+          <Ionicons
+            name="send"
             size={20}
             color={
               !message.trim() || disabled

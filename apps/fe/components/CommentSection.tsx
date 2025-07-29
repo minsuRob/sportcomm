@@ -9,7 +9,7 @@ import {
   TextStyle,
   ImageStyle,
 } from "react-native";
-import { Send } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -180,7 +180,7 @@ export default function CommentSection({
             onPress={handleSubmitComment}
             disabled={!commentText.trim() || isSubmitting}
           >
-            <Send color={theme.colors.tint} size={20} />
+            <Ionicons name="send" color={theme.colors.tint} size={20} />
           </TouchableOpacity>
         </View>
       )}

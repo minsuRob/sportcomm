@@ -1,5 +1,5 @@
-import { Eye } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { iconWithClassName } from "./iconWithClassName";
 
-iconWithClassName(Eye);
-export { Eye };
+iconWithClassName(Ionicons);
+export const Eye = (props: any) => <Ionicons name="eye" {...props} />;

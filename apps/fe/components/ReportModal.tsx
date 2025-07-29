@@ -10,7 +10,7 @@ import {
   TextStyle,
 } from "react-native";
 import { useMutation } from "@apollo/client";
-import { X } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { CREATE_REPORT } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { useAppTheme } from "@/lib/theme/context";
@@ -180,7 +180,7 @@ export default function ReportModal({
               onPress={handleClose}
               style={themed($closeButton)}
             >
-              <X color={theme.colors.text} size={24} />
+              <Ionicons name="close" color={theme.colors.text} size={24} />
             </TouchableOpacity>
           </View>
 

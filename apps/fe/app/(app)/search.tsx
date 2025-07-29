@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from "react-native";
-import { Search as SearchIcon } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import SearchTabs, { SearchTabType } from "@/components/search/SearchTabs";
@@ -134,7 +134,7 @@ export default function SearchScreen() {
       {/* 검색 입력 영역 - 전체 너비 사용 */}
       <View style={themed($searchContainer)}>
         <View style={themed($searchInputContainer)}>
-          <SearchIcon color={theme.colors.textDim} size={20} />
+          <Ionicons name="search" color={theme.colors.textDim} size={20} />
           <TextInput
             style={themed($searchInput)}
             placeholder="게시물이나 사용자를 검색하세요"

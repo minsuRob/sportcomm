@@ -14,7 +14,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { ArrowLeft, MoreVertical, Users } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { getSession } from "@/lib/auth";
 import { chatService } from "@/lib/chat/chatService";
 import ChatList from "@/components/chat/ChatList";
@@ -49,7 +49,7 @@ export default function ChatDetailScreen() {
     GET_BLOCKED_USERS,
     {
       skip: !currentUser, // 로그인하지 않은 경우 실행하지 않음
-    },
+    }
   );
 
   // 실시간 메시지 수신 구독 참조
@@ -100,8 +100,8 @@ export default function ChatDetailScreen() {
       // 기존 메시지에서 차단된 사용자 메시지 제거
       setMessages((prevMessages) =>
         prevMessages.filter(
-          (message) => !newBlockedUserIds.includes(message.user_id),
-        ),
+          (message) => !newBlockedUserIds.includes(message.user_id)
+        )
       );
     }
   }, [blockedUsersData]);
@@ -118,7 +118,7 @@ export default function ChatDetailScreen() {
 
       // 차단된 사용자 메시지 필터링
       const filteredMessages = messageData.filter(
-        (message) => !blockedUserIds.includes(message.user_id),
+        (message) => !blockedUserIds.includes(message.user_id)
       );
 
       setMessages(filteredMessages);
@@ -145,12 +145,12 @@ export default function ChatDetailScreen() {
       let moreMessages = await chatService.getMessages(
         channelId,
         50,
-        oldestMessage.created_at,
+        oldestMessage.created_at
       );
 
       // 차단된 사용자 메시지 필터링
       const filteredMoreMessages = moreMessages.filter(
-        (message) => !blockedUserIds.includes(message.user_id),
+        (message) => !blockedUserIds.includes(message.user_id)
       );
 
       if (filteredMoreMessages.length > 0) {
@@ -242,7 +242,7 @@ export default function ChatDetailScreen() {
           style: "cancel",
         },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 
@@ -259,7 +259,7 @@ export default function ChatDetailScreen() {
         { text: "위치 공유", onPress: () => console.log("위치 공유") },
         { text: "취소", style: "cancel" },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 

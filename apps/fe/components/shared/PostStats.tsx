@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, ViewStyle, TextStyle } from "react-native";
-import { Heart, MessageCircle, Eye } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -45,15 +45,27 @@ export default function PostStats({
 
   return (
     <View style={themed($feedStats)}>
-      <Heart color={theme.colors.textDim} size={iconSize} />
+      <Ionicons
+        name="heart-outline"
+        color={theme.colors.textDim}
+        size={iconSize}
+      />
       <Text style={themed($feedStatText)}>
         {t(TRANSLATION_KEYS.POST_LIKE_COUNT, { count: likeCount })}
       </Text>
-      <MessageCircle color={theme.colors.textDim} size={iconSize} />
+      <Ionicons
+        name="chatbubble-outline"
+        color={theme.colors.textDim}
+        size={iconSize}
+      />
       <Text style={themed($feedStatText)}>
         {t(TRANSLATION_KEYS.POST_COMMENT_COUNT, { count: commentCount })}
       </Text>
-      <Eye color={theme.colors.textDim} size={iconSize} />
+      <Ionicons
+        name="eye-outline"
+        color={theme.colors.textDim}
+        size={iconSize}
+      />
       <Text style={themed($feedStatText)}>
         {t(TRANSLATION_KEYS.POST_VIEW_COUNT, { count: viewCount })}
       </Text>

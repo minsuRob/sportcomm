@@ -1,5 +1,7 @@
-import { MessageCircle } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { iconWithClassName } from "./iconWithClassName";
 
-iconWithClassName(MessageCircle);
-export { MessageCircle };
+iconWithClassName(Ionicons);
+export const MessageCircle = (props: any) => (
+  <Ionicons name="chatbubble" {...props} />
+);

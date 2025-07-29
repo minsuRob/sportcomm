@@ -6,7 +6,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { Heart, MessageCircle, Share, Repeat } from "lucide-react-native";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -58,10 +58,10 @@ export default function PostActions({
         {isLikeProcessing ? (
           <>
             <View style={themed($loadingIndicator)}>
-              <Heart
+              <Ionicons
+                name={isLiked ? "heart" : "heart-outline"}
                 size={iconSize}
                 color={isLiked ? theme.colors.error : theme.colors.textDim}
-                fill={isLiked ? theme.colors.error : "transparent"}
               />
             </View>
             <Text
@@ -79,10 +79,10 @@ export default function PostActions({
           </>
         ) : (
           <>
-            <Heart
+            <Ionicons
+              name={isLiked ? "heart" : "heart-outline"}
               size={iconSize}
               color={isLiked ? theme.colors.error : theme.colors.textDim}
-              fill={isLiked ? theme.colors.error : "transparent"}
             />
             <Text
               style={[
@@ -100,7 +100,11 @@ export default function PostActions({
 
       {/* 댓글 버튼 */}
       <TouchableOpacity style={themed($actionButton)} onPress={onComment}>
-        <MessageCircle size={iconSize} color={theme.colors.textDim} />
+        <Ionicons
+          name="chatbubble-outline"
+          size={iconSize}
+          color={theme.colors.textDim}
+        />
         <Text style={themed($actionText)}>
           {t(TRANSLATION_KEYS.POST_COMMENT)}
         </Text>
@@ -109,14 +113,22 @@ export default function PostActions({
       {/* 피드에서는 리포스트, 상세에서는 공유 */}
       {variant === "feed" ? (
         <TouchableOpacity style={themed($actionButton)} onPress={onRepost}>
-          <Repeat size={iconSize} color={theme.colors.textDim} />
+          <MaterialIcons
+            name="repeat"
+            size={iconSize}
+            color={theme.colors.textDim}
+          />
           <Text style={themed($actionText)}>
             {t(TRANSLATION_KEYS.POST_REPOST)}
           </Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity style={themed($actionButton)} onPress={onShare}>
-          <Share size={iconSize} color={theme.colors.textDim} />
+          <Ionicons
+            name="share-outline"
+            size={iconSize}
+            color={theme.colors.textDim}
+          />
           <Text style={themed($actionText)}>
             {t(TRANSLATION_KEYS.POST_SHARE)}
           </Text>

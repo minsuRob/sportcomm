@@ -1,5 +1,7 @@
-import { MoreHorizontal } from "lucide-react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { iconWithClassName } from "./iconWithClassName";
 
-iconWithClassName(MoreHorizontal);
-export { MoreHorizontal };
+iconWithClassName(MaterialIcons);
+export const MoreHorizontal = (props: any) => (
+  <MaterialIcons name="more-horiz" {...props} />
+);

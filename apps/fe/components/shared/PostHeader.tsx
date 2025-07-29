@@ -8,7 +8,7 @@ import {
   TextStyle,
   ImageStyle,
 } from "react-native";
-import { MoreHorizontal } from "lucide-react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -171,7 +171,11 @@ export default function PostHeader({
 
         {/* 더보기 버튼 */}
         <TouchableOpacity style={themed($moreButton)} onPress={handleMorePress}>
-          <MoreHorizontal color={theme.colors.textDim} size={24} />
+          <MaterialIcons
+            name="more-horiz"
+            color={theme.colors.textDim}
+            size={24}
+          />
         </TouchableOpacity>
       </View>
 

@@ -12,7 +12,7 @@ import {
 import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { MessageSquare, Plus, ChevronRight } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { getSession } from "@/lib/auth";
 import { chatService, ChatChannel } from "@/lib/chat/chatService";
 import dayjs from "dayjs";

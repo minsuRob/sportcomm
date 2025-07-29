@@ -7,7 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { X } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
@@ -65,7 +65,7 @@ export default function ActionSheet({
               {title && <Text style={themed($title)}>{title}</Text>}
               {message && <Text style={themed($message)}>{message}</Text>}
               <TouchableOpacity onPress={onClose} style={themed($closeButton)}>
-                <X color={theme.colors.textDim} size={20} />
+                <Ionicons name="close" color={theme.colors.textDim} size={20} />
               </TouchableOpacity>
             </View>
           )}

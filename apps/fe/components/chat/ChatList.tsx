@@ -9,7 +9,7 @@ import {
   Text,
   TouchableOpacity,
 } from "react-native";
-import { ArrowLeft } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import ChatMessage, { Message, MessageWithIsMe } from "./ChatMessage";
@@ -226,7 +226,7 @@ export default function ChatList({
       {onBack && (
         <View style={themed($header)}>
           <TouchableOpacity style={themed($backButton)} onPress={onBack}>
-            <ArrowLeft size={24} color={theme.colors.text} />
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>{title}</Text>
           <View style={{ width: 24 }} />

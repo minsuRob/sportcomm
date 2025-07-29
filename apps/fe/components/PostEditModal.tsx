@@ -11,7 +11,7 @@ import {
   TextStyle,
   Alert,
 } from "react-native";
-import { X, Save } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@apollo/client";
 import { showToast } from "@/components/CustomToast";
 import { useAppTheme } from "@/lib/theme/context";
@@ -224,7 +224,7 @@ export default function PostEditModal({
         {/* 헤더 */}
         <View style={themed($header)}>
           <TouchableOpacity onPress={handleClose} style={themed($closeButton)}>
-            <X color={theme.colors.text} size={24} />
+            <Ionicons name="close" color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>게시물 수정</Text>
           <TouchableOpacity
@@ -237,7 +237,7 @@ export default function PostEditModal({
               },
             ]}
           >
-            <Save color="white" size={20} />
+            <Ionicons name="save" color="white" size={20} />
             <Text style={themed($saveButtonText)}>
               {isSubmitting ? "저장 중..." : "저장"}
             </Text>

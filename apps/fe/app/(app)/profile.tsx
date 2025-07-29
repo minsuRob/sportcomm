@@ -10,7 +10,7 @@ import {
   ImageStyle,
   ActivityIndicator,
 } from "react-native";
-import { Settings, Edit3, Users, UserPlus } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -143,7 +143,11 @@ export default function ProfileScreen() {
       <View style={themed($header)}>
         <Text style={themed($headerTitle)}>프로필</Text>
         <TouchableOpacity onPress={handleSettings}>
-          <Settings color={theme.colors.text} size={24} />
+          <Ionicons
+            name="settings-outline"
+            color={theme.colors.text}
+            size={24}
+          />
         </TouchableOpacity>
       </View>
 
@@ -158,7 +162,7 @@ export default function ProfileScreen() {
           style={themed($editButton)}
           onPress={handleEditProfile}
         >
-          <Edit3 color={theme.colors.tint} size={16} />
+          <Ionicons name="create-outline" color={theme.colors.tint} size={16} />
           <Text style={themed($editButtonText)}>프로필 편집</Text>
         </TouchableOpacity>
       </View>

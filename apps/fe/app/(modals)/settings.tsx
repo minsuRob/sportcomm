@@ -9,14 +9,7 @@ import {
 } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import {
-  ChevronRight,
-  LogOut,
-  HelpCircle,
-  Sun,
-  Moon,
-  Globe,
-} from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -81,24 +74,40 @@ export default function SettingsScreen() {
       <View style={themed($menuContainer)}>
         {/* 로그아웃 */}
         <TouchableOpacity style={themed($menuItem)} onPress={handleLogout}>
-          <LogOut color={theme.colors.text} size={24} />
+          <Ionicons
+            name="log-out-outline"
+            color={theme.colors.text}
+            size={24}
+          />
           <Text style={themed($menuItemText)}>로그아웃</Text>
-          <ChevronRight color={theme.colors.textDim} size={20} />
+          <Ionicons
+            name="chevron-forward"
+            color={theme.colors.textDim}
+            size={20}
+          />
         </TouchableOpacity>
 
         {/* 도움말 */}
         <TouchableOpacity style={themed($menuItem)} onPress={handleHelp}>
-          <HelpCircle color={theme.colors.text} size={24} />
+          <Ionicons
+            name="help-circle-outline"
+            color={theme.colors.text}
+            size={24}
+          />
           <Text style={themed($menuItemText)}>도움말</Text>
-          <ChevronRight color={theme.colors.textDim} size={20} />
+          <Ionicons
+            name="chevron-forward"
+            color={theme.colors.textDim}
+            size={20}
+          />
         </TouchableOpacity>
 
         {/* 테마 변경 */}
         <TouchableOpacity style={themed($menuItem)} onPress={toggleTheme}>
           {theme.isDark ? (
-            <Sun color={theme.colors.text} size={24} />
+            <Ionicons name="sunny" color={theme.colors.text} size={24} />
           ) : (
-            <Moon color={theme.colors.text} size={24} />
+            <Ionicons name="moon" color={theme.colors.text} size={24} />
           )}
           <Text style={themed($menuItemText)}>테마</Text>
           <Text style={themed($menuItemValue)}>
@@ -108,7 +117,7 @@ export default function SettingsScreen() {
 
         {/* 언어 설정 */}
         <TouchableOpacity style={themed($menuItem)} onPress={handleLanguage}>
-          <Globe color={theme.colors.text} size={24} />
+          <Ionicons name="globe" color={theme.colors.text} size={24} />
           <Text style={themed($menuItemText)}>언어</Text>
           <Text style={themed($menuItemValue)}>
             {currentLanguage === "ko" ? "한국어" : "English"}

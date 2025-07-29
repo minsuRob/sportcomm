@@ -10,7 +10,7 @@ import {
   ImageStyle,
 } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
-import { UserCircle, Users } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import type { ThemedStyle } from "@/lib/theme/types";
 
 /**
@@ -21,7 +21,7 @@ export interface UserItemType {
   nickname: string;
   profileImageUrl?: string;
   bio?: string;
-  role: 'USER' | 'INFLUENCER' | 'ADMIN';
+  role: "USER" | "INFLUENCER" | "ADMIN";
   followersCount?: number;
   followingCount?: number;
   isFollowing?: boolean;
@@ -61,11 +61,12 @@ export default function UserItem({ user, onPress }: UserItemProps) {
   /**
    * 사용자 역할 표시 텍스트
    */
-  const roleText = {
-    USER: '사용자',
-    INFLUENCER: '인플루언서',
-    ADMIN: '관리자',
-  }[user.role] || '사용자';
+  const roleText =
+    {
+      USER: "사용자",
+      INFLUENCER: "인플루언서",
+      ADMIN: "관리자",
+    }[user.role] || "사용자";
 
   /**
    * 자기소개 요약
@@ -74,7 +75,7 @@ export default function UserItem({ user, onPress }: UserItemProps) {
     ? user.bio.length > 100
       ? `${user.bio.substring(0, 100)}...`
       : user.bio
-    : '자기소개가 없습니다';
+    : "자기소개가 없습니다";
 
   return (
     <TouchableOpacity
@@ -91,7 +92,11 @@ export default function UserItem({ user, onPress }: UserItemProps) {
           />
         ) : (
           <View style={themed($profileFallback)}>
-            <UserCircle size={30} color={theme.colors.textDim} />
+            <Ionicons
+              name="person-circle"
+              size={30}
+              color={theme.colors.textDim}
+            />
           </View>
         )}
 
@@ -101,7 +106,7 @@ export default function UserItem({ user, onPress }: UserItemProps) {
             <Text style={themed($nickname)}>{user.nickname}</Text>
 
             {/* 역할 표시 태그 */}
-            {user.role !== 'USER' && (
+            {user.role !== "USER" && (
               <View style={themed($roleTag)}>
                 <Text style={themed($roleText)}>{roleText}</Text>
               </View>
@@ -118,13 +123,13 @@ export default function UserItem({ user, onPress }: UserItemProps) {
       {/* 팔로워/팔로잉 정보 */}
       <View style={themed($statsContainer)}>
         <View style={styles.stat}>
-          <Users size={14} color={theme.colors.textDim} />
+          <Ionicons name="people" size={14} color={theme.colors.textDim} />
           <Text style={themed($statText)}>
             팔로워 {user.followersCount || 0}
           </Text>
         </View>
         <View style={styles.stat}>
-          <Users size={14} color={theme.colors.textDim} />
+          <Ionicons name="people" size={14} color={theme.colors.textDim} />
           <Text style={themed($statText)}>
             팔로잉 {user.followingCount || 0}
           </Text>
@@ -138,11 +143,13 @@ export default function UserItem({ user, onPress }: UserItemProps) {
           user.isFollowing && themed($followingButton),
         ]}
       >
-        <Text style={[
-          themed($followButtonText),
-          user.isFollowing && themed($followingButtonText),
-        ]}>
-          {user.isFollowing ? '팔로잉' : '팔로우'}
+        <Text
+          style={[
+            themed($followButtonText),
+            user.isFollowing && themed($followingButtonText),
+          ]}
+        >
+          {user.isFollowing ? "팔로잉" : "팔로우"}
         </Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -163,8 +170,8 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $header: ThemedStyle<ViewStyle> = () => ({
-  flexDirection: 'row',
-  alignItems: 'flex-start',
+  flexDirection: "row",
+  alignItems: "flex-start",
 });
 
 const $profileImage: ThemedStyle<ImageStyle> = () => ({
@@ -179,13 +186,13 @@ const $profileFallback: ThemedStyle<ViewStyle> = ({ colors }) => ({
   height: 50,
   borderRadius: 25,
   backgroundColor: colors.separator,
-  alignItems: 'center',
-  justifyContent: 'center',
+  alignItems: "center",
+  justifyContent: "center",
   marginRight: 12,
 });
 
 const $nickname: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontWeight: '600',
+  fontWeight: "600",
   fontSize: 16,
   color: colors.text,
 });
@@ -201,7 +208,7 @@ const $roleTag: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $roleText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.tint,
   fontSize: 10,
-  fontWeight: '500',
+  fontWeight: "500",
 });
 
 const $bio: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -212,7 +219,7 @@ const $bio: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 const $statsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: 'row',
+  flexDirection: "row",
   marginTop: spacing.md,
   marginBottom: spacing.md,
 });
@@ -228,19 +235,19 @@ const $followButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingVertical: spacing.sm,
   paddingHorizontal: spacing.md,
   borderRadius: 20,
-  alignItems: 'center',
-  alignSelf: 'flex-start',
+  alignItems: "center",
+  alignSelf: "flex-start",
 });
 
 const $followingButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: 'transparent',
+  backgroundColor: "transparent",
   borderWidth: 1,
   borderColor: colors.tint,
 });
 
 const $followButtonText: ThemedStyle<TextStyle> = () => ({
-  color: 'white',
-  fontWeight: '600',
+  color: "white",
+  fontWeight: "600",
   fontSize: 12,
 });
 
@@ -254,12 +261,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nicknameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   stat: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginRight: 16,
   },
 });

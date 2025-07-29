@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Flag, UserX, Share, Bookmark, Edit3 } from "lucide-react-native";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import ActionSheet, { ActionSheetOption } from "@/components/ActionSheet";
 import ReportModal from "@/components/ReportModal";
 import PostEditModal from "@/components/PostEditModal";
@@ -111,12 +111,16 @@ export default function PostContextMenu({
     {
       text: "공유하기",
       onPress: handleShare,
-      icon: <Share color={theme.colors.text} size={20} />,
+      icon: (
+        <Ionicons name="share-outline" color={theme.colors.text} size={20} />
+      ),
     },
     {
       text: "북마크",
       onPress: handleBookmark,
-      icon: <Bookmark color={theme.colors.text} size={20} />,
+      icon: (
+        <Ionicons name="bookmark-outline" color={theme.colors.text} size={20} />
+      ),
     },
   ];
 
@@ -125,7 +129,9 @@ export default function PostContextMenu({
     options.push({
       text: "수정하기",
       onPress: handleEdit,
-      icon: <Edit3 color={theme.colors.text} size={20} />,
+      icon: (
+        <Ionicons name="create-outline" color={theme.colors.text} size={20} />
+      ),
     });
   } else {
     // 다른 사용자의 게시물인 경우 신고/차단 옵션 추가
@@ -134,13 +140,21 @@ export default function PostContextMenu({
         text: "신고하기",
         onPress: handleReport,
         style: "destructive",
-        icon: <Flag color={theme.colors.error} size={20} />,
+        icon: (
+          <Ionicons name="flag-outline" color={theme.colors.error} size={20} />
+        ),
       },
       {
         text: `${post.author.nickname}님 차단하기`,
         onPress: handleBlock,
         style: "destructive",
-        icon: <UserX color={theme.colors.error} size={20} />,
+        icon: (
+          <Ionicons
+            name="person-remove-outline"
+            color={theme.colors.error}
+            size={20}
+          />
+        ),
       }
     );
   }

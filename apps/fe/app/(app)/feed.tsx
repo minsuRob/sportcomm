@@ -22,7 +22,7 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 // WebCenteredLayout 제거 - 전역 레이아웃 사용
 // CreatePostModal 제거 - 이제 별도 페이지로 이동
-import { Plus, MessageSquare } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 // --- Type Definitions ---
 interface GqlPost {
@@ -236,7 +236,7 @@ export default function FeedScreen() {
               style={themed($createPostButton)}
               onPress={() => router.push("/(modals)/create-post")}
             >
-              <Plus color="white" size={20} />
+              <Ionicons name="add" color="white" size={20} />
               <Text style={themed($createPostButtonText)}>
                 {t(TRANSLATION_KEYS.FEED_CREATE_POST)}
               </Text>
@@ -245,7 +245,7 @@ export default function FeedScreen() {
               style={themed($chatButton)}
               onPress={() => router.push("/chat")}
             >
-              <MessageSquare color="white" size={20} />
+              <Ionicons name="chatbubbles" color="white" size={20} />
               <Text style={themed($chatButtonText)}>
                 {t(TRANSLATION_KEYS.FEED_CHAT)}
               </Text>

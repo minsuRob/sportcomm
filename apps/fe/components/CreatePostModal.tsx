@@ -12,7 +12,7 @@ import {
   TextStyle,
   Alert,
 } from "react-native";
-import { X, Send, Image, Camera, Mic, Hash } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@apollo/client";
 import { showToast } from "@/components/CustomToast";
 import { useAppTheme } from "@/lib/theme/context";
@@ -65,17 +65,17 @@ export default function CreatePostModal({
     {
       value: PostType.ANALYSIS,
       label: "분석",
-      icon: <Hash color={theme.colors.text} size={20} />,
+      icon: <Ionicons name="analytics" color={theme.colors.text} size={20} />,
     },
     {
       value: PostType.HIGHLIGHT,
       label: "하이라이트",
-      icon: <Image color={theme.colors.text} size={20} />,
+      icon: <Ionicons name="image" color={theme.colors.text} size={20} />,
     },
     {
       value: PostType.CHEERING,
       label: "응원",
-      icon: <Camera color={theme.colors.text} size={20} />,
+      icon: <Ionicons name="megaphone" color={theme.colors.text} size={20} />,
     },
   ];
 
@@ -103,7 +103,7 @@ export default function CreatePostModal({
             },
           },
         ],
-        { cancelable: true },
+        { cancelable: true }
       );
     } else {
       onClose();
@@ -199,7 +199,7 @@ export default function CreatePostModal({
         {/* 헤더 */}
         <View style={themed($header)}>
           <TouchableOpacity onPress={handleCloseConfirm}>
-            <X color={theme.colors.text} size={24} />
+            <Ionicons name="close" color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>새 게시물 작성</Text>
           <TouchableOpacity
@@ -213,7 +213,7 @@ export default function CreatePostModal({
               },
             ]}
           >
-            <Send color="#fff" size={20} />
+            <Ionicons name="send" color="#fff" size={20} />
           </TouchableOpacity>
         </View>
 

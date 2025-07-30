@@ -6,20 +6,35 @@ const USER_KEY = "sportcomm-auth-user";
 export interface User {
   id: string;
   nickname: string;
+  email?: string;
   profileImageUrl?: string;
+  bio?: string;
+  team?: string;
+  isPrivate?: boolean;
+  role?: string;
 }
 
-export const saveSession = async (token: string, user: User): Promise<void> => {
+export const saveSession = async (
+  tokenOrUser: string | User,
+  user?: User
+): Promise<void> => {
   try {
-    if (!token || !user) {
-      console.error("Failed to save session: token or user is missing.", {
-        token,
-        user,
-      });
-      return;
+    // 두 개의 매개변수가 전달된 경우 (기존 방식)
+    if (typeof tokenOrUser === "string" && user) {
+      if (!tokenOrUser || !user) {
+        console.error("Failed to save session: token or user is missing.", {
+          token: tokenOrUser,
+          user,
+        });
+        return;
+      }
+      await setItem(TOKEN_KEY, tokenOrUser);
+      await setItem(USER_KEY, JSON.stringify(user));
     }
-    await setItem(TOKEN_KEY, token);
-    await setItem(USER_KEY, JSON.stringify(user));
+    // 사용자 정보만 업데이트하는 경우
+    else if (typeof tokenOrUser === "object") {
+      await setItem(USER_KEY, JSON.stringify(tokenOrUser));
+    }
   } catch (error) {
     console.error("Failed to save session", error);
     // Optionally, re-throw or handle the error as needed

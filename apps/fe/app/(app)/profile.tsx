@@ -91,8 +91,7 @@ export default function ProfileScreen() {
   }, [postsData]);
 
   const handleEditProfile = () => {
-    // TODO: 프로필 편집 로직 구현
-    console.log("프로필 편집");
+    router.push("/(modals)/edit-profile");
   };
 
   const handleSettings = () => {

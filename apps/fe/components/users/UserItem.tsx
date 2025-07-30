@@ -158,11 +158,11 @@ export default function UserItem({ user, onPress }: UserItemProps) {
 
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.card,
+  backgroundColor: colors.background,
   borderRadius: 8,
   padding: spacing.md,
   marginBottom: spacing.md,
-  shadowColor: colors.shadow,
+  shadowColor: colors.textDim,
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
   shadowRadius: 3,
@@ -198,7 +198,7 @@ const $nickname: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 const $roleTag: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.tintLight,
+  backgroundColor: colors.tintInactive,
   paddingHorizontal: spacing.xs,
   paddingVertical: 2,
   borderRadius: 4,

@@ -107,11 +107,11 @@ export default function FollowingScreen() {
     isCurrentlyFollowing: boolean,
   ) => {
     try {
-      const { error } = await executeToggleFollow({
+      const { errors } = await executeToggleFollow({
         variables: { userId: targetUserId },
       });
 
-      if (error) {
+      if (errors) {
         showToast({
           type: "error",
           title: "오류",

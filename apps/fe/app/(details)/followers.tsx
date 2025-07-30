@@ -111,7 +111,7 @@ export default function FollowersScreen() {
         variables: { userId: targetUserId },
       });
 
-      if (result.error) {
+      if (result.errors) {
         showToast({
           type: "error",
           title: "오류",

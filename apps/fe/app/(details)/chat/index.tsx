@@ -106,7 +106,7 @@ export default function ChatListScreen() {
       onPress={() => navigateToChat(item.id, item.name)}
     >
       <View style={themed($channelIcon)}>
-        <Ionicons name="chatbubbles" size={24} color={theme.colors.primary} />
+        <Ionicons name="chatbubbles" size={24} color={theme.colors.tint} />
       </View>
 
       <View style={themed($channelInfo)}>
@@ -149,7 +149,7 @@ export default function ChatListScreen() {
       {/* 채팅방 목록 */}
       {isLoading ? (
         <View style={themed($loadingContainer)}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={theme.colors.tint} />
           <Text style={themed($loadingText)}>채팅방 목록을 불러오는 중...</Text>
         </View>
       ) : (
@@ -309,7 +309,7 @@ const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $createChatButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingVertical: spacing?.md || 16,
   paddingHorizontal: spacing?.lg || 24,
-  backgroundColor: colors.primary,
+  backgroundColor: colors.tint,
   borderRadius: 8,
 });
 

@@ -148,8 +148,8 @@ const $webItemContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
 });
 
 const $separator: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  height: isWeb() ? spacing.sm : spacing.xs, // 웹에서 더 넓은 간격
-  backgroundColor: isWeb() ? "transparent" : colors.separator, // 웹에서는 투명
+  height: 0, // PostCard에서 marginBottom으로 간격 처리
+  backgroundColor: "transparent",
 });
 
 const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

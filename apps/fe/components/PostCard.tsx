@@ -5,15 +5,16 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  Image,
+  ImageStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { usePostInteractions } from "../hooks/usePostInteractions";
 import PostHeader, { PostType } from "./shared/PostHeader";
-import PostMedia, { Media } from "./shared/PostMedia";
+import { Media } from "./shared/PostMedia";
 import PostActions from "./shared/PostActions";
-import { getWebReadableTextStyle } from "./layout/WebCenteredLayout";
 import { isWeb } from "@/lib/platform";
 
 // --- Type Definitions ---
@@ -86,17 +87,34 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     });
   };
 
+  // 이미지 미디어만 필터링
+  const imageMedia = post.media.filter(
+    (item) => item.type === "image" || item.type === "IMAGE"
+  );
+
   return (
     <View style={themed($container)}>
       {/* 미디어가 있는 경우 - 이미지 위에 콘텐츠 오버레이 */}
-      {post.media.length > 0 ? (
+      {imageMedia.length > 0 ? (
         <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
           <View style={themed($mediaContainer)}>
-            <PostMedia
-              media={post.media}
-              onPress={handlePostPress}
-              variant="feed"
+            {/* 첫 번째 이미지만 표시 */}
+            <Image
+              source={{
+                uri:
+                  imageMedia[0]?.url ||
+                  "https://lh3.googleusercontent.com/aida-public/AB6AXuBAs31Z9e7tE4MEe4qOvL8tmInV3OnopXRbbPUHDNNX03bqTEq8OptDvE69aED3dCTsdjrOwx-hh1WXCjmg5AYjZlUdYzfIIRgWjRUH-M9jwhugMxisjA2Z2Hd4ajK0GpMA-fJeZFJtEKyQiIn9dx72icpJF4oCeubT-vK2wYemuAfrGCJ7rPocUTEmkQX8nHZi448NpsOXSVMbeBOH4dfm6DlSZyuaL0ft8FIXoRor76NK0vugaMl5-BtfZCvuB-ZAfsCo_NUYfJ3k",
+              }}
+              style={themed($mediaImage)}
+              resizeMode="cover"
+              onLoad={() =>
+                console.log("이미지 로드 성공:", imageMedia[0]?.url)
+              }
+              onError={(error) =>
+                console.log("이미지 로드 실패:", error.nativeEvent.error)
+              }
             />
+
             {/* 그라데이션 오버레이 */}
             <View style={themed($gradientOverlay)} />
 
@@ -111,7 +129,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                   const now = new Date();
                   const postDate = new Date(post.createdAt);
                   const diffHours = Math.floor(
-                    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
+                    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
                   );
 
                   if (diffHours < 1) return "방금 전";
@@ -124,7 +142,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         </TouchableOpacity>
       ) : (
         /* 미디어가 없는 경우 - 기존 레이아웃 */
-        <View>
+        <View style={themed($textOnlyContainer)}>
           <PostHeader
             post={{
               id: post.id,
@@ -142,14 +160,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           />
 
           <TouchableOpacity onPress={handlePostPress} activeOpacity={0.7}>
-            <Text
-              style={[
-                themed($content),
-                isWeb() ? themed(getWebReadableTextStyle()) : undefined,
-              ]}
-            >
-              {post.content}
-            </Text>
+            <Text style={themed($content)}>{post.content}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -179,20 +190,27 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
-  marginBottom: spacing.sm,
+  marginBottom: spacing.md,
+  marginHorizontal: spacing.md,
   borderRadius: 12,
   overflow: "hidden",
   // 웹에서 추가 여백
   ...(isWeb() && {
-    marginHorizontal: spacing.md,
+    marginHorizontal: spacing.lg,
   }),
 });
 
 const $mediaContainer: ThemedStyle<ViewStyle> = () => ({
   position: "relative",
-  aspectRatio: 16 / 9,
+  width: "100%",
+  height: 200,
   borderRadius: 12,
   overflow: "hidden",
+});
+
+const $mediaImage: ThemedStyle<ImageStyle> = () => ({
+  width: "100%",
+  height: "100%",
 });
 
 const $gradientOverlay: ThemedStyle<ViewStyle> = () => ({
@@ -236,10 +254,13 @@ const $timestamp: ThemedStyle<TextStyle> = () => ({
   opacity: 0.9,
 });
 
+const $textOnlyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.md,
+});
+
 const $content: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginVertical: spacing.sm,
   fontSize: isWeb() ? 15 : 16,
   color: colors.text,
   lineHeight: isWeb() ? 1.6 : undefined,
-  paddingHorizontal: spacing.md,
 });

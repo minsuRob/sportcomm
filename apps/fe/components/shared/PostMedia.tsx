@@ -35,7 +35,7 @@ export default function PostMedia({
   const { themed } = useAppTheme();
 
   const imageMedia = media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
+    (item) => item.type === "image" || item.type === "IMAGE"
   );
   const imageCount = imageMedia.length;
 
@@ -54,95 +54,23 @@ export default function PostMedia({
   };
 
   /**
-   * 피드용 미디어 그리드 렌더링 (더보기 표시 포함)
+   * 피드용 미디어 렌더링 - 첫 번째 이미지만 표시
    */
   const renderFeedMediaGrid = () => {
-    if (imageCount === 1) {
-      return (
-        <Image
-          source={{ uri: transformImageUrl(imageMedia[0].url) }}
-          style={themed($feedMediaImage)}
-          resizeMode="cover"
-        />
-      );
-    }
+    const imageUrl = transformImageUrl(imageMedia[0].url);
+    console.log("렌더링할 이미지 URL:", imageUrl);
 
-    if (imageCount === 2) {
-      return (
-        <View style={themed($feedMediaGrid)}>
-          <Image
-            source={{ uri: transformImageUrl(imageMedia[0].url) }}
-            style={themed($feedMediaImageHalf)}
-            resizeMode="cover"
-          />
-          <Image
-            source={{ uri: transformImageUrl(imageMedia[1].url) }}
-            style={themed($feedMediaImageHalf)}
-            resizeMode="cover"
-          />
-        </View>
-      );
-    }
-
-    if (imageCount === 3) {
-      return (
-        <View style={themed($feedMediaGrid)}>
-          <Image
-            source={{ uri: transformImageUrl(imageMedia[0].url) }}
-            style={themed($feedMediaImageHalf)}
-            resizeMode="cover"
-          />
-          <View style={themed($feedMediaRightColumn)}>
-            <Image
-              source={{ uri: transformImageUrl(imageMedia[1].url) }}
-              style={themed($feedMediaImageQuarter)}
-              resizeMode="cover"
-            />
-            <Image
-              source={{ uri: transformImageUrl(imageMedia[2].url) }}
-              style={themed($feedMediaImageQuarter)}
-              resizeMode="cover"
-            />
-          </View>
-        </View>
-      );
-    }
-
-    // 4개 이상 이미지 - 2x2 그리드 + 더보기 표시
+    // 피드에서는 항상 첫 번째 이미지만 표시
     return (
-      <View style={themed($feedMediaGrid)}>
-        <View style={themed($feedMediaRow)}>
-          <Image
-            source={{ uri: transformImageUrl(imageMedia[0].url) }}
-            style={themed($feedMediaImageQuarter)}
-            resizeMode="cover"
-          />
-          <Image
-            source={{ uri: transformImageUrl(imageMedia[1].url) }}
-            style={themed($feedMediaImageQuarter)}
-            resizeMode="cover"
-          />
-        </View>
-        <View style={themed($feedMediaRow)}>
-          <Image
-            source={{ uri: transformImageUrl(imageMedia[2].url) }}
-            style={themed($feedMediaImageQuarter)}
-            resizeMode="cover"
-          />
-          <View style={themed($feedMediaImageQuarter)}>
-            <Image
-              source={{ uri: transformImageUrl(imageMedia[3].url) }}
-              style={themed($feedMediaImageQuarter)}
-              resizeMode="cover"
-            />
-            {imageCount > 4 && (
-              <View style={themed($moreImagesOverlay)}>
-                <Text style={themed($moreImagesText)}>+{imageCount - 4}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </View>
+      <Image
+        source={{ uri: imageUrl }}
+        style={themed($feedMediaImage)}
+        resizeMode="cover"
+        onLoad={() => console.log("이미지 로드 성공:", imageUrl)}
+        onError={(error) =>
+          console.log("이미지 로드 실패:", error.nativeEvent.error)
+        }
+      />
     );
   };
 
@@ -217,13 +145,14 @@ export default function PostMedia({
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = () => ({
   position: "relative",
+  width: "100%",
+  height: 200,
 });
 
 // 피드용 스타일
 const $feedMediaImage: ThemedStyle<ImageStyle> = ({ colors }) => ({
   width: "100%",
-  height: 224,
-  borderRadius: 8,
+  height: 200,
   backgroundColor: colors.separator,
 });
 

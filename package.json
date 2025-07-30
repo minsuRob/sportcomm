@@ -8,7 +8,6 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
-    "@types/apollo-upload-client": "^17.0.5",
     "eslint": "^9.18.0",
     "prettier": "^3.4.2",
     "turbo": "^2.0.9"
@@ -19,13 +18,7 @@
     "packages/*"
   ],
   "dependencies": {
-    "@apollo/client": "^3.13.8",
-    "@nestjs/cache-manager": "^3.0.1",
-    "@supabase/supabase-js": "^2.52.1",
     "@types/sharp": "^0.31.1",
-    "apollo-upload-client": "^17.0.0",
-    "cache-manager": "^7.0.1",
-    "graphql": "^16.11.0",
     "sharp": "^0.34.3"
   }
 }

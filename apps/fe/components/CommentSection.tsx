@@ -30,7 +30,7 @@ interface Comment {
 
 interface CommentSectionProps {
   postId: string;
-  comments: Comment[];
+  comments: Comment[] | null | undefined;
   currentUser: User | null;
   onCommentAdded?: () => void;
 }
@@ -48,6 +48,9 @@ export default function CommentSection({
   const { themed, theme } = useAppTheme();
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // comments가 null이나 undefined인 경우 빈 배열로 처리
+  const safeComments = comments || [];
 
   const [executeCreateComment, { loading }] = useMutation(CREATE_COMMENT);
 
@@ -110,40 +113,40 @@ export default function CommentSection({
   return (
     <View style={themed($container)}>
       {/* 댓글 제목 */}
-      <Text style={themed($title)}>댓글 {comments.length}개</Text>
+      <Text style={themed($title)}>댓글 {safeComments.length}개</Text>
 
       {/* 댓글 목록 */}
-      {comments.map((comment) => (
-        <View key={comment.id} style={themed($commentItem)}>
-          <Image
-            source={{
-              uri:
-                comment.author.profileImageUrl ||
-                `https://i.pravatar.cc/150?u=${comment.author.id}`,
-            }}
-            style={themed($commentAvatar)}
-          />
-          <View style={themed($commentContent)}>
-            <View style={themed($commentHeader)}>
-              <Text style={themed($commentAuthor)}>
-                {comment.author.nickname}
-              </Text>
-              <Text style={themed($commentDate)}>
-                {new Date(comment.createdAt).toLocaleDateString("ko-KR", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
+      {safeComments.length > 0 ? (
+        safeComments.map((comment) => (
+          <View key={comment.id} style={themed($commentItem)}>
+            <Image
+              source={{
+                uri:
+                  comment.author.profileImageUrl ||
+                  `https://i.pravatar.cc/150?u=${comment.author.id}`,
+              }}
+              style={themed($commentAvatar)}
+            />
+            <View style={themed($commentContent)}>
+              <View style={themed($commentHeader)}>
+                <Text style={themed($commentAuthor)}>
+                  {comment.author.nickname}
+                </Text>
+                <Text style={themed($commentDate)}>
+                  {new Date(comment.createdAt).toLocaleDateString("ko-KR", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              </View>
+              <Text style={themed($commentText)}>{comment.content}</Text>
             </View>
-            <Text style={themed($commentText)}>{comment.content}</Text>
           </View>
-        </View>
-      ))}
-
-      {/* 댓글이 없을 때 */}
-      {comments.length === 0 && (
+        ))
+      ) : (
+        /* 댓글이 없을 때 */
         <View style={themed($emptyState)}>
           <Text style={themed($emptyText)}>
             아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!

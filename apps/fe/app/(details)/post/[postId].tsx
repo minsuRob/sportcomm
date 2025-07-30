@@ -60,7 +60,7 @@ interface DetailedPost {
     url: string;
     type: "image" | "video";
   }>;
-  comments: DetailedComment[];
+  comments: DetailedComment[] | null;
 }
 
 interface PostDetailResponse {
@@ -89,7 +89,9 @@ export default function PostDetailScreen() {
     refetch: refetchPost,
   } = useQuery<PostDetailResponse>(GET_POST_DETAIL, {
     variables: { id: postId },
-    fetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network", // 캐시와 네트워크 모두 사용하여 데이터 일관성 보장
+    errorPolicy: "all", // 부분적 오류도 허용
+    notifyOnNetworkStatusChange: true, // 네트워크 상태 변경 시 알림
   });
 
   // 게시물 상호작용 훅 사용
@@ -156,10 +158,11 @@ export default function PostDetailScreen() {
 
   // 에러 상태
   if (error || !data?.post) {
+    console.error("Post detail error:", error);
     return (
       <View style={themed($errorContainer)}>
         <Text style={themed($errorText)}>
-          {t(TRANSLATION_KEYS.POST_NOT_FOUND)}
+          {error?.message || t(TRANSLATION_KEYS.POST_NOT_FOUND)}
         </Text>
         <TouchableOpacity style={themed($retryButton)} onPress={handleGoBack}>
           <Text style={themed($retryButtonText)}>
@@ -245,7 +248,7 @@ export default function PostDetailScreen() {
         {/* 댓글 섹션 */}
         <CommentSection
           postId={post.id}
-          comments={post.comments}
+          comments={post.comments || []}
           currentUser={currentUser}
           onCommentAdded={handleCommentAdded}
         />

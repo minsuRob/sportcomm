@@ -212,26 +212,24 @@ export default function EditProfileScreen() {
                 <Text style={themed($imageButtonText)}>사진 수정</Text>
               </TouchableOpacity>
 
-              {profileImage && (
-                <TouchableOpacity
-                  style={themed($imageButton)}
-                  onPress={handleDeleteImage}
+              <TouchableOpacity
+                style={themed($imageButton)}
+                onPress={handleDeleteImage}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={16}
+                  color={theme.colors.error}
+                />
+                <Text
+                  style={[
+                    themed($imageButtonText),
+                    { color: theme.colors.error },
+                  ]}
                 >
-                  <Ionicons
-                    name="trash-outline"
-                    size={16}
-                    color={theme.colors.error}
-                  />
-                  <Text
-                    style={[
-                      themed($imageButtonText),
-                      { color: theme.colors.error },
-                    ]}
-                  >
-                    현재 사진 삭제
-                  </Text>
-                </TouchableOpacity>
-              )}
+                  사진 삭제
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>

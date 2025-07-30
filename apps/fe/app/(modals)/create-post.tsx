@@ -15,7 +15,7 @@ import {
   ImageStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { isWeb } from "@/lib/platform";
 import { showToast } from "@/components/CustomToast";
@@ -421,7 +421,7 @@ export default function CreatePostScreen() {
       {/* 헤더 */}
       <View style={themed($header)}>
         <TouchableOpacity onPress={handleGoBack} style={themed($backButton)}>
-          <ArrowLeft color={theme.colors.text} size={24} />
+          <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>
           {t(TRANSLATION_KEYS.CREATE_POST_TITLE)}
@@ -444,7 +444,7 @@ export default function CreatePostScreen() {
             },
           ]}
         >
-          <Send color="white" size={20} />
+          <Ionicons name="paper-plane" color="white" size={20} />
           <Text style={themed($publishButtonText)}>
             {isSubmitting
               ? uploadProgress || "게시 중..."
@@ -554,7 +554,7 @@ export default function CreatePostScreen() {
             onPress={handleImagePicker}
             disabled={isSubmitting || selectedImages.length >= 4}
           >
-            <ImageIcon color={theme.colors.tint} size={20} />
+            <Ionicons name="image" color={theme.colors.tint} size={20} />
             <Text style={themed($imageUploadText)}>
               이미지 추가 ({selectedImages.length}/4)
             </Text>
@@ -580,7 +580,7 @@ export default function CreatePostScreen() {
                       style={themed($imageRemoveButton)}
                       onPress={() => handleRemoveImage(index)}
                     >
-                      <X color="white" size={16} />
+                      <Ionicons name="close" color="white" size={16} />
                     </TouchableOpacity>
                     {image.fileSize && (
                       <Text style={themed($imageSizeText)}>

@@ -180,7 +180,7 @@ export default function PostDetailScreen() {
       {/* 헤더 */}
       <View style={themed($header)}>
         <TouchableOpacity onPress={handleGoBack} style={themed($backButton)}>
-          <ArrowLeft color={theme.colors.text} size={24} />
+          <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>
           {t(TRANSLATION_KEYS.POST_TITLE)}

@@ -88,7 +88,7 @@ export default function FollowingScreen() {
     if (followingData?.getUserById?.following) {
       try {
         const followingUsers = followingData.getUserById.following.map(
-          (relation) => relation.following
+          (relation) => relation.following,
         );
         setFollowing(followingUsers || []);
       } catch (error) {
@@ -104,7 +104,7 @@ export default function FollowingScreen() {
 
   const handleFollowToggle = async (
     targetUserId: string,
-    isCurrentlyFollowing: boolean
+    isCurrentlyFollowing: boolean,
   ) => {
     try {
       const { error } = await executeToggleFollow({
@@ -134,8 +134,8 @@ export default function FollowingScreen() {
                   ? user.followerCount - 1
                   : user.followerCount + 1,
               }
-            : user
-        )
+            : user,
+        ),
       );
 
       showToast({
@@ -185,9 +185,13 @@ export default function FollowingScreen() {
           onPress={() => handleFollowToggle(item.id, item.isFollowing)}
         >
           {item.isFollowing ? (
-            <UserMinus color={theme.colors.text} size={16} />
+            <Ionicons
+              name="person-remove"
+              color={theme.colors.text}
+              size={16}
+            />
           ) : (
-            <UserPlus color="white" size={16} />
+            <Ionicons name="person-add" color="white" size={16} />
           )}
           <Text
             style={[
@@ -208,7 +212,7 @@ export default function FollowingScreen() {
       <View style={themed($container)}>
         <View style={themed($header)}>
           <TouchableOpacity onPress={handleBack}>
-            <ArrowLeft color={theme.colors.text} size={24} />
+            <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>팔로잉</Text>
           <View style={{ width: 24 }} />
@@ -227,7 +231,7 @@ export default function FollowingScreen() {
       <View style={themed($container)}>
         <View style={themed($header)}>
           <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
-            <ArrowLeft color={theme.colors.text} size={24} />
+            <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>팔로잉</Text>
           <View style={{ width: 24 }} />
@@ -256,7 +260,7 @@ export default function FollowingScreen() {
       {/* 헤더 */}
       <View style={themed($header)}>
         <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
-          <ArrowLeft color={theme.colors.text} size={24} />
+          <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>팔로잉 {following.length || 0}</Text>
         <View style={{ width: 24 }} />

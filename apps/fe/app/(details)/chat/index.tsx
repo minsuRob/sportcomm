@@ -106,7 +106,7 @@ export default function ChatListScreen() {
       onPress={() => navigateToChat(item.id, item.name)}
     >
       <View style={themed($channelIcon)}>
-        <MessageSquare size={24} color={theme.colors.primary} />
+        <Ionicons name="chatbubbles" size={24} color={theme.colors.primary} />
       </View>
 
       <View style={themed($channelInfo)}>
@@ -123,7 +123,11 @@ export default function ChatListScreen() {
           <Text style={themed($lastMessage)} numberOfLines={1}>
             {item.last_message || item.description || "새로운 채팅방입니다."}
           </Text>
-          <ChevronRight size={16} color={theme.colors.textDim} />
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={theme.colors.textDim}
+          />
         </View>
       </View>
     </TouchableOpacity>
@@ -138,7 +142,7 @@ export default function ChatListScreen() {
           style={themed($createButton)}
           onPress={navigateToCreateChannel}
         >
-          <Plus size={24} color={theme.colors.primary} />
+          <Ionicons name="add" color="white" size={20} />
         </TouchableOpacity>
       </View>
 
@@ -156,7 +160,11 @@ export default function ChatListScreen() {
           contentContainerStyle={themed($listContainer)}
           ListEmptyComponent={
             <View style={themed($emptyContainer)}>
-              <MessageSquare size={40} color={theme.colors.textDim} />
+              <Ionicons
+                name="chatbubbles"
+                size={40}
+                color={theme.colors.textDim}
+              />
               <Text style={themed($emptyTitle)}>채팅방이 없습니다</Text>
               <Text style={themed($emptyText)}>
                 새로운 채팅방을 만들어 대화를 시작해보세요.

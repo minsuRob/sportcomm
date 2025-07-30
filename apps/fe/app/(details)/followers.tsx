@@ -88,7 +88,7 @@ export default function FollowersScreen() {
     if (followersData?.getUserById.followers) {
       try {
         const followerUsers = followersData.getUserById.followers.map(
-          (relation) => relation.follower
+          (relation) => relation.follower,
         );
         setFollowers(followerUsers || []);
       } catch (error) {
@@ -104,7 +104,7 @@ export default function FollowersScreen() {
 
   const handleFollowToggle = async (
     targetUserId: string,
-    isCurrentlyFollowing: boolean
+    isCurrentlyFollowing: boolean,
   ) => {
     try {
       const result = await executeToggleFollow({
@@ -134,8 +134,8 @@ export default function FollowersScreen() {
                   ? user.followerCount - 1
                   : user.followerCount + 1,
               }
-            : user
-        )
+            : user,
+        ),
       );
 
       showToast({
@@ -185,9 +185,13 @@ export default function FollowersScreen() {
           onPress={() => handleFollowToggle(item.id, item.isFollowing)}
         >
           {item.isFollowing ? (
-            <UserMinus color={theme.colors.text} size={16} />
+            <Ionicons
+              name="person-remove"
+              color={theme.colors.text}
+              size={16}
+            />
           ) : (
-            <UserPlus color="white" size={16} />
+            <Ionicons name="person-add" color="white" size={16} />
           )}
           <Text
             style={[
@@ -208,7 +212,7 @@ export default function FollowersScreen() {
       <View style={themed($container)}>
         <View style={themed($header)}>
           <TouchableOpacity onPress={handleBack}>
-            <ArrowLeft color={theme.colors.text} size={24} />
+            <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>팔로워</Text>
           <View style={{ width: 24 }} />
@@ -226,7 +230,7 @@ export default function FollowersScreen() {
       <View style={themed($container)}>
         <View style={themed($header)}>
           <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
-            <ArrowLeft color={theme.colors.text} size={24} />
+            <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>팔로워</Text>
           <View style={{ width: 24 }} />
@@ -255,7 +259,7 @@ export default function FollowersScreen() {
       {/* 헤더 */}
       <View style={themed($header)}>
         <TouchableOpacity onPress={handleBack} style={themed($backButton)}>
-          <ArrowLeft color={theme.colors.text} size={24} />
+          <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>팔로워 {followers.length || 0}</Text>
         <View style={{ width: 24 }} />
@@ -269,7 +273,7 @@ export default function FollowersScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={themed($listContainer)}
         ListEmptyComponent={
-          !followingLoading ? (
+          !followersLoading ? (
             <View style={themed($loadingContainer)}>
               <Text style={themed($loadingText)}>팔로워가 없습니다.</Text>
             </View>

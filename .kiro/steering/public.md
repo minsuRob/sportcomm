@@ -1,5 +1,5 @@
 <!------------------------------------------------------------------------------------
-   Add Rules to this file or a short description and have Kiro refine them for you:   
+   Add Rules to this file or a short description and have Kiro refine them for you:
 ------------------------------------------------------------------------------------->
 
 - 맨 마지막에 git에 적을 커밋 메세지도 한줄로 요약해줘.

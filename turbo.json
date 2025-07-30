@@ -1,19 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [
-    "**/.env.*",
-    "**/package-lock.json"
-  ],
-  "pipeline": {
+  "globalDependencies": ["**/.env.*", "**/package-lock.json"],
+  "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "dist/**",
-        ".next/**",
-        "build/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "build/**"]
     },
     "dev": {
       "cache": false,
@@ -21,12 +12,8 @@
     },
     "lint": {},
     "test": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "coverage/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
     },
     "clean": {
       "cache": false

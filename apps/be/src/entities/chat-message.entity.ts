@@ -1,6 +1,12 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
-import { IsString, IsEnum, MaxLength, MinLength, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  MaxLength,
+  MinLength,
+  IsOptional,
+} from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { ChatRoom } from './chat-room.entity';
@@ -184,7 +190,10 @@ export class ChatMessage extends BaseEntity {
    * 첨부 파일 크기
    * 첨부 파일의 크기(바이트)입니다.
    */
-  @Field(() => Number, { nullable: true, description: '첨부 파일 크기 (바이트)' })
+  @Field(() => Number, {
+    nullable: true,
+    description: '첨부 파일 크기 (바이트)',
+  })
   @Column({
     type: 'bigint',
     nullable: true,
@@ -399,8 +408,12 @@ export class ChatMessage extends BaseEntity {
     }
 
     if (this.hasAttachment()) {
-      const fileType = this.type === ChatMessageType.IMAGE ? '이미지' :
-                      this.type === ChatMessageType.VIDEO ? '비디오' : '파일';
+      const fileType =
+        this.type === ChatMessageType.IMAGE
+          ? '이미지'
+          : this.type === ChatMessageType.VIDEO
+            ? '비디오'
+            : '파일';
       return `[${fileType}] ${this.attachmentName || 'Untitled'}`;
     }
 

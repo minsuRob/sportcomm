@@ -45,7 +45,7 @@ const getStoredLanguage = async (): Promise<SupportedLanguage> => {
  * 언어 설정을 저장하는 함수
  */
 export const saveLanguage = async (
-  language: SupportedLanguage
+  language: SupportedLanguage,
 ): Promise<void> => {
   try {
     await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language);
@@ -101,7 +101,7 @@ export const initializeI18n = async (): Promise<void> => {
  * 언어 변경 함수
  */
 export const changeLanguage = async (
-  language: SupportedLanguage
+  language: SupportedLanguage,
 ): Promise<void> => {
   await i18n.changeLanguage(language);
   await saveLanguage(language);

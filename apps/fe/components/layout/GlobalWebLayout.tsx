@@ -88,7 +88,7 @@ const $webContent: ThemedStyle<ViewStyle> = ({ colors }) => ({
  * 특정 화면에서 웹 레이아웃을 비활성화하기 위한 HOC
  */
 export function withoutWebLayout<T extends object>(
-  Component: React.ComponentType<T>
+  Component: React.ComponentType<T>,
 ): React.ComponentType<T> {
   return function WrappedComponent(props: T) {
     return (

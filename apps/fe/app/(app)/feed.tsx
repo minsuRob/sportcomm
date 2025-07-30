@@ -78,7 +78,7 @@ export default function FeedScreen() {
     GET_BLOCKED_USERS,
     {
       skip: !currentUser, // 로그인하지 않은 경우 실행하지 않음
-    }
+    },
   );
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
       }

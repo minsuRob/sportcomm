@@ -87,7 +87,7 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
         await storage.remove("ignite.themeScheme");
       }
     },
-    []
+    [],
   );
 
   /**
@@ -141,7 +141,7 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
       // Flatten the array of styles into a single object
       return Object.assign({}, ...stylesArray) as T;
     },
-    [theme]
+    [theme],
   );
 
   const toggleTheme = useCallback(() => {

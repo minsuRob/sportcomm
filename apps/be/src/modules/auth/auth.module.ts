@@ -48,7 +48,7 @@ import { User } from '../../entities/user.entity';
         // 개발 환경에서 약한 시크릿 키 경고
         if (process.env.NODE_ENV === 'development' && secret.length < 32) {
           console.warn(
-            '⚠️  JWT_SECRET이 너무 짧습니다. 운영 환경에서는 최소 32자 이상의 강력한 시크릿 키를 사용하세요.'
+            '⚠️  JWT_SECRET이 너무 짧습니다. 운영 환경에서는 최소 32자 이상의 강력한 시크릿 키를 사용하세요.',
           );
         }
 
@@ -74,19 +74,10 @@ import { User } from '../../entities/user.entity';
   ],
 
   // 서비스 및 전략 제공
-  providers: [
-    AuthService,
-    AuthResolver,
-    JwtStrategy,
-  ],
+  providers: [AuthService, AuthResolver, JwtStrategy],
 
   // 다른 모듈에서 사용할 수 있도록 내보내기
-  exports: [
-    AuthService,
-    JwtStrategy,
-    PassportModule,
-    JwtModule,
-  ],
+  exports: [AuthService, JwtStrategy, PassportModule, JwtModule],
 })
 export class AuthModule {
   constructor(private readonly configService: ConfigService) {
@@ -98,25 +89,24 @@ export class AuthModule {
    * 인증 모듈에 필요한 환경 변수들을 검증합니다.
    */
   private validateEnvironmentVariables(): void {
-    const requiredEnvVars = [
-      'JWT_SECRET',
-      'JWT_EXPIRES_IN',
-    ];
+    const requiredEnvVars = ['JWT_SECRET', 'JWT_EXPIRES_IN'];
 
     const missingEnvVars = requiredEnvVars.filter(
-      (envVar) => !this.configService.get<string>(envVar)
+      (envVar) => !this.configService.get<string>(envVar),
     );
 
     if (missingEnvVars.length > 0) {
       throw new Error(
-        `다음 환경 변수들이 설정되지 않았습니다: ${missingEnvVars.join(', ')}`
+        `다음 환경 변수들이 설정되지 않았습니다: ${missingEnvVars.join(', ')}`,
       );
     }
 
     // JWT 설정 정보 출력 (개발 환경에서만)
     if (process.env.NODE_ENV === 'development') {
       console.log('🔐 JWT 인증 모듈이 성공적으로 초기화되었습니다.');
-      console.log(`   - 토큰 만료 시간: ${this.configService.get<string>('JWT_EXPIRES_IN')}`);
+      console.log(
+        `   - 토큰 만료 시간: ${this.configService.get<string>('JWT_EXPIRES_IN')}`,
+      );
       console.log(`   - 알고리즘: HS256`);
       console.log(`   - 발급자: sportcomm`);
       console.log(`   - 대상: sportcomm-users`);

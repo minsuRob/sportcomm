@@ -18,7 +18,7 @@ import type { ThemedStyle } from "@/lib/theme/types";
  */
 export type SearchResultItem = {
   id: string;
-  type: 'post' | 'user';
+  type: "post" | "user";
   // 실제 데이터는 타입에 따라 다름
   data: any;
 };
@@ -87,7 +87,10 @@ export default function SearchResults({
   if (isLoading && results.length === 0) {
     return (
       <View style={themed($loadingContainer)}>
-        <ActivityIndicator size="large" color={themed($loadingIndicator).color} />
+        <ActivityIndicator
+          size="large"
+          color={themed($loadingIndicator).color}
+        />
         <Text style={themed($loadingText)}>검색 중...</Text>
       </View>
     );
@@ -135,7 +138,10 @@ export default function SearchResults({
     if (!isLoading) return null;
     return (
       <View style={themed($footerContainer)}>
-        <ActivityIndicator size="small" color={themed($loadingIndicator).color} />
+        <ActivityIndicator
+          size="small"
+          color={themed($loadingIndicator).color}
+        />
       </View>
     );
   };

@@ -11,31 +11,31 @@ module.exports = {
     splash: {
       image: "./assets/images/splash.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff"
+      backgroundColor: "#ffffff",
     },
     assetBundlePatterns: ["**/*"],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.releaseteamginger2.sportcommfernr"
+      bundleIdentifier: "com.releaseteamginger2.sportcommfernr",
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
-        backgroundColor: "#ffffff"
+        backgroundColor: "#ffffff",
       },
-      package: "com.releaseteamginger2.sportcommfernr"
+      package: "com.releaseteamginger2.sportcommfernr",
     },
     web: {
       bundler: "metro",
       output: "static",
-      favicon: "./assets/images/favicon.png"
+      favicon: "./assets/images/favicon.png",
     },
     plugins: ["expo-router"],
     experiments: {
-      typedRoutes: true
+      typedRoutes: true,
     },
     extra: {
-      GRAPHQL_URL: process.env.GRAPHQL_URL || "http://localhost:4000/graphql"
-    }
-  }
+      GRAPHQL_URL: process.env.GRAPHQL_URL || "http://localhost:4000/graphql",
+    },
+  },
 };

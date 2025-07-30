@@ -19,7 +19,7 @@ export interface ModerationTarget {
 export function useModerationActions() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTarget, setReportTarget] = useState<ModerationTarget | null>(
-    null
+    null,
   );
   const [executeBlockUser] = useMutation(BLOCK_USER);
 
@@ -109,7 +109,7 @@ export function useModerationActions() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -145,7 +145,7 @@ export function useModerationActions() {
         text: option.text,
         onPress: option.onPress,
         style: option.style,
-      }))
+      })),
     );
   };
 

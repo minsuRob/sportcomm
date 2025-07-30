@@ -29,7 +29,7 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 const buttonTextVariants = cva(
@@ -56,7 +56,7 @@ const buttonTextVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 interface ButtonProps
@@ -78,7 +78,7 @@ const Button = React.forwardRef<
       <Pressable
         className={cn(
           props.disabled && "web:pointer-events-none opacity-50",
-          buttonVariants({ variant, size, className })
+          buttonVariants({ variant, size, className }),
         )}
         ref={ref}
         role="button"

@@ -12,9 +12,7 @@ import { Post } from '../../entities/post.entity';
  * 댓글 생성, 조회, 수정, 삭제 등의 기능이 포함됩니다.
  */
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Comment, Post]),
-  ],
+  imports: [TypeOrmModule.forFeature([Comment, Post])],
   providers: [CommentsResolver, CommentsService],
   exports: [CommentsService],
 })

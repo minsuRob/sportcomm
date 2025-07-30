@@ -32,14 +32,14 @@ import { UploadedMedia, ProgressCallback } from "./common";
  */
 export async function uploadFiles(
   files: Array<File | Blob | any>,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<UploadedMedia[]> {
   if (isWeb()) {
     return uploadFilesWeb(files as (File | Blob)[], onProgress);
   } else {
     return uploadFilesMobile(
       files as { uri: string; name: string; type: string }[],
-      onProgress
+      onProgress,
     );
   }
 }
@@ -50,7 +50,7 @@ export async function uploadFiles(
  */
 export async function uploadFile(
   file: File | Blob | any,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<UploadedMedia> {
   const result = await uploadFiles([file], onProgress);
   if (result.length === 0) {

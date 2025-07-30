@@ -19,7 +19,7 @@ const Text = React.forwardRef<
       className={cn(
         "text-base text-foreground web:select-text",
         textClass,
-        className
+        className,
       )}
       {...props}
     />

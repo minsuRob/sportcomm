@@ -1,7 +1,14 @@
 import { Resolver, Mutation, Query, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { ObjectType, Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  MaxLength,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
 import { AuthService, AuthResponse } from './auth.service';
 import { User, UserRole } from '../../entities/user.entity';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
@@ -31,7 +38,7 @@ export class RegisterInput {
   @Field(() => UserRole, {
     nullable: true,
     description: '사용자 역할 (기본값: USER)',
-    defaultValue: UserRole.USER
+    defaultValue: UserRole.USER,
   })
   @IsOptional()
   @IsEnum(UserRole, { message: '올바른 사용자 역할을 선택해주세요.' })
@@ -300,9 +307,7 @@ export class AuthResolver {
    * @returns 사용자 목록
    */
   @Query(() => [User], { description: '사용자 검색 (닉네임 기준)' })
-  async searchUsers(
-    @Args('nickname') nickname: string,
-  ): Promise<User[]> {
+  async searchUsers(@Args('nickname') nickname: string): Promise<User[]> {
     // 실제 구현에서는 AuthService에 검색 메서드를 추가해야 합니다.
     // 현재는 빈 배열을 반환합니다.
     return [];

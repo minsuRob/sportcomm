@@ -34,7 +34,10 @@ interface SearchTabsProps {
  * 검색 탭 컴포넌트
  * 인기, 최근, 프로필 탭을 표시하고 전환 기능을 제공합니다.
  */
-export default function SearchTabs({ activeTab, onTabChange }: SearchTabsProps) {
+export default function SearchTabs({
+  activeTab,
+  onTabChange,
+}: SearchTabsProps) {
   const { themed, theme } = useAppTheme();
 
   /**

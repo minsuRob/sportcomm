@@ -59,7 +59,7 @@ export default function SettingsScreen() {
           style: "cancel",
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 

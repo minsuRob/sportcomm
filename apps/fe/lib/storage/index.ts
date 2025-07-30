@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage"
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 /**
  * Loads a string from storage.
@@ -7,10 +7,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
  */
 export async function loadString(key: string): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem(key)
+    return await AsyncStorage.getItem(key);
   } catch {
     // not sure why this would fail... even reading the RN docs I'm unclear
-    return null
+    return null;
   }
 }
 
@@ -22,10 +22,10 @@ export async function loadString(key: string): Promise<string | null> {
  */
 export async function saveString(key: string, value: string): Promise<boolean> {
   try {
-    await AsyncStorage.setItem(key, value)
-    return true
+    await AsyncStorage.setItem(key, value);
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -36,11 +36,11 @@ export async function saveString(key: string, value: string): Promise<boolean> {
  */
 export async function load<T>(key: string): Promise<T | null> {
   try {
-    const almostThere = await AsyncStorage.getItem(key)
-    if (almostThere === null) return null
-    return JSON.parse(almostThere) as T
+    const almostThere = await AsyncStorage.getItem(key);
+    if (almostThere === null) return null;
+    return JSON.parse(almostThere) as T;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -52,10 +52,10 @@ export async function load<T>(key: string): Promise<T | null> {
  */
 export async function save(key: string, value: unknown): Promise<boolean> {
   try {
-    await AsyncStorage.setItem(key, JSON.stringify(value))
-    return true
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -66,7 +66,7 @@ export async function save(key: string, value: unknown): Promise<boolean> {
  */
 export async function remove(key: string): Promise<void> {
   try {
-    await AsyncStorage.removeItem(key)
+    await AsyncStorage.removeItem(key);
   } catch {}
 }
 
@@ -75,6 +75,6 @@ export async function remove(key: string): Promise<void> {
  */
 export async function clear(): Promise<void> {
   try {
-    await AsyncStorage.clear()
+    await AsyncStorage.clear();
   } catch {}
 }

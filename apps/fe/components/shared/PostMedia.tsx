@@ -35,7 +35,7 @@ export default function PostMedia({
   const { themed } = useAppTheme();
 
   const imageMedia = media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE"
+    (item) => item.type === "image" || item.type === "IMAGE",
   );
   const imageCount = imageMedia.length;
 

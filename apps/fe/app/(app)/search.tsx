@@ -54,7 +54,7 @@ export default function SearchScreen() {
             page,
             pageSize: 10,
           },
-          tab
+          tab,
         );
 
         const newResults =
@@ -68,7 +68,7 @@ export default function SearchScreen() {
         setIsLoading(false);
       }
     }, 300),
-    [results]
+    [results],
   );
 
   /**

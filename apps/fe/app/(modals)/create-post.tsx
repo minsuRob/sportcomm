@@ -132,7 +132,7 @@ export default function CreatePostScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();
@@ -158,7 +158,7 @@ export default function CreatePostScreen() {
         Alert.alert(
           "권한 필요",
           "이미지를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }]
+          [{ text: "확인" }],
         );
         return;
       }
@@ -352,7 +352,7 @@ export default function CreatePostScreen() {
                 type: "image/jpeg",
               };
             }
-          })
+          }),
         );
 
         createdPost = await createPostWithFiles({

@@ -50,7 +50,7 @@ export interface WebSingleUploadResponse {
  */
 export async function uploadFilesWeb(
   files: Array<File | Blob>,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<UploadedMedia[]> {
   if (!isWeb()) {
     throw new UploadError("이 함수는 웹 환경에서만 사용할 수 있습니다.", 400);
@@ -64,13 +64,13 @@ export async function uploadFilesWeb(
     }
 
     const validFiles = files.filter(
-      (file) => (file instanceof File || file instanceof Blob) && file.size > 0
+      (file) => (file instanceof File || file instanceof Blob) && file.size > 0,
     );
 
     if (validFiles.length === 0) {
       throw new UploadError(
         "업로드할 유효한 파일이 없습니다. 모든 파일이 비어있거나 손상되었습니다.",
-        400
+        400,
       );
     }
 
@@ -97,7 +97,7 @@ export async function uploadFilesWeb(
       formData.append("files", file, fileName);
 
       console.log(
-        `웹 환경 - 파일 추가: ${fileName}, 크기: ${file.size}바이트, 타입: ${file.type || "알 수 없음"}`
+        `웹 환경 - 파일 추가: ${fileName}, 크기: ${file.size}바이트, 타입: ${file.type || "알 수 없음"}`,
       );
     });
 
@@ -130,7 +130,7 @@ export async function uploadFilesWeb(
               console.log(
                 "웹 파일 업로드 성공:",
                 response.data.totalCount,
-                "개 파일"
+                "개 파일",
               );
               resolve(response.data.files);
             } else {
@@ -138,16 +138,16 @@ export async function uploadFilesWeb(
                 new UploadError(
                   response.message || "업로드 실패",
                   xhr.status,
-                  response
-                )
+                  response,
+                ),
               );
             }
           } catch (parseError) {
             reject(
               new UploadError(
                 `응답 파싱 오류: ${parseError.message || "알 수 없는 오류"}`,
-                xhr.status
-              )
+                xhr.status,
+              ),
             );
           }
         } else {
@@ -200,7 +200,7 @@ export async function uploadFilesWeb(
  */
 export async function uploadFileWeb(
   file: File | Blob,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<UploadedMedia> {
   if (!isWeb()) {
     throw new UploadError("이 함수는 웹 환경에서만 사용할 수 있습니다.", 400);
@@ -223,7 +223,7 @@ export async function uploadFileWeb(
     formData.append("file", file, fileName);
 
     console.log(
-      `웹 환경 - 단일 파일 업로드: ${fileName}, 크기: ${file.size}바이트`
+      `웹 환경 - 단일 파일 업로드: ${fileName}, 크기: ${file.size}바이트`,
     );
 
     const endpoints = getUploadEndpoints();
@@ -251,7 +251,7 @@ export async function uploadFileWeb(
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const response = JSON.parse(
-              xhr.responseText
+              xhr.responseText,
             ) as WebSingleUploadResponse;
             if (response.success) {
               console.log("웹 단일 파일 업로드 성공:", response.data.id);
@@ -261,16 +261,16 @@ export async function uploadFileWeb(
                 new UploadError(
                   response.message || "업로드 실패",
                   xhr.status,
-                  response
-                )
+                  response,
+                ),
               );
             }
           } catch (parseError) {
             reject(
               new UploadError(
                 `응답 파싱 오류: ${parseError.message || "알 수 없는 오류"}`,
-                xhr.status
-              )
+                xhr.status,
+              ),
             );
           }
         } else {
@@ -334,7 +334,7 @@ export function createWebFileSelector(): () => Promise<File[]> {
       // 파일 선택 이벤트 처리
       input.onchange = (event) => {
         const files = Array.from(
-          (event.target as HTMLInputElement).files || []
+          (event.target as HTMLInputElement).files || [],
         );
         resolve(files);
       };
@@ -368,7 +368,7 @@ export async function compressImageWeb(
     maxHeight?: number;
     quality?: number;
     fileName?: string;
-  } = {}
+  } = {},
 ): Promise<File> {
   if (!isWeb()) {
     throw new Error("이 함수는 웹 환경에서만 사용할 수 있습니다.");
@@ -425,7 +425,7 @@ export async function compressImageWeb(
             }
           },
           "image/jpeg",
-          quality
+          quality,
         );
       };
 

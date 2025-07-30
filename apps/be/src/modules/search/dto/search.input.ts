@@ -47,7 +47,7 @@ export class SearchInput {
    */
   @Field(() => String, {
     description: '검색 유형 (ALL, POSTS, USERS)',
-    defaultValue: SearchType.ALL
+    defaultValue: SearchType.ALL,
   })
   @IsEnum(SearchType, { message: '올바른 검색 유형을 선택해주세요.' })
   @IsOptional()
@@ -59,7 +59,7 @@ export class SearchInput {
    */
   @Field(() => String, {
     description: '정렬 방식 (POPULAR, RECENT, RELEVANCE)',
-    defaultValue: SearchSortBy.RELEVANCE
+    defaultValue: SearchSortBy.RELEVANCE,
   })
   @IsEnum(SearchSortBy, { message: '올바른 정렬 방식을 선택해주세요.' })
   @IsOptional()
@@ -69,7 +69,10 @@ export class SearchInput {
    * 페이지 번호
    * 기본값: 0
    */
-  @Field(() => Int, { description: '페이지 번호 (0부터 시작)', defaultValue: 0 })
+  @Field(() => Int, {
+    description: '페이지 번호 (0부터 시작)',
+    defaultValue: 0,
+  })
   @Min(0, { message: '페이지 번호는 0 이상이어야 합니다.' })
   @IsOptional()
   page?: number;

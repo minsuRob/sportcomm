@@ -155,7 +155,7 @@ export default function PostContextMenu({
             size={20}
           />
         ),
-      }
+      },
     );
   }
 

@@ -118,7 +118,7 @@ const CREATE_POST_MUTATION = gql`
  * @returns 생성된 게시물 정보
  */
 export async function createTextOnlyPost(
-  input: Omit<CreatePostWithFilesInput, "files">
+  input: Omit<CreatePostWithFilesInput, "files">,
 ): Promise<CreatePostResponse> {
   try {
     console.log("텍스트 전용 게시물 생성 시작...", {
@@ -161,7 +161,7 @@ export async function createTextOnlyPost(
     throw new PostCreationError(
       `게시물 생성 실패: ${error.message}`,
       "post_creation",
-      error
+      error,
     );
   }
 }
@@ -176,7 +176,7 @@ export async function createTextOnlyPost(
  * @returns 생성된 게시물 정보
  */
 export async function createPostWithFiles(
-  input: CreatePostWithFilesInput
+  input: CreatePostWithFilesInput,
 ): Promise<CreatePostResponse> {
   try {
     let mediaIds: string[] = [];
@@ -198,7 +198,7 @@ export async function createPostWithFiles(
         console.error("유효한 파일이 없습니다:", input.files);
         throw new PostCreationError(
           "파일 업로드 실패: 업로드할 유효한 파일이 없습니다.",
-          "upload"
+          "upload",
         );
       }
 
@@ -214,12 +214,12 @@ export async function createPostWithFiles(
         if (isWeb()) {
           uploadedFiles = await uploadFilesWeb(
             validFiles as (File | Blob)[],
-            progressCallback
+            progressCallback,
           );
         } else {
           uploadedFiles = await uploadFilesMobile(
             validFiles as { uri: string; name: string; type: string }[],
-            progressCallback
+            progressCallback,
           );
         }
 
@@ -235,7 +235,7 @@ export async function createPostWithFiles(
         throw new PostCreationError(
           `파일 업로드 실패: ${uploadError.message}`,
           "upload",
-          uploadError
+          uploadError,
         );
       }
     }
@@ -286,7 +286,7 @@ export async function createPostWithFiles(
       throw new PostCreationError(
         `게시물 생성 실패: ${postError.message}`,
         "post_creation",
-        postError
+        postError,
       );
     }
   } catch (error) {
@@ -299,7 +299,7 @@ export async function createPostWithFiles(
     throw new PostCreationError(
       "게시물 생성 중 알 수 없는 오류가 발생했습니다.",
       "post_creation",
-      error
+      error,
     );
   }
 }
@@ -313,7 +313,7 @@ export async function createPostWithFiles(
  */
 export async function createPostWithSingleFile(
   input: Omit<CreatePostWithFilesInput, "files">,
-  file: File | any
+  file: File | any,
 ): Promise<CreatePostResponse> {
   return createPostWithFiles({
     ...input,

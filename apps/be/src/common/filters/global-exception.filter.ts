@@ -58,7 +58,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // 개발 환경에서만 스택 트레이스 포함
       if (process.env.NODE_ENV === 'development') {
         errorDetails = {
-          stack: exception.stack?.split('\n').map(line => line.trim())
+          stack: exception.stack?.split('\n').map((line) => line.trim()),
         };
       }
     }
@@ -74,19 +74,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
 
     // 오류 로깅
-    this.logger.error(
-      `예외 발생: ${errorMessage}`,
-      {
-        exception: exception instanceof Error ? exception.stack : String(exception),
-        request: requestInfo,
-        statusCode: httpStatus,
-      },
-    );
+    this.logger.error(`예외 발생: ${errorMessage}`, {
+      exception:
+        exception instanceof Error ? exception.stack : String(exception),
+      request: requestInfo,
+      statusCode: httpStatus,
+    });
 
     // Sharp 라이브러리 관련 특정 오류 메시지 사용자 친화적으로 변환
-    if (errorMessage.includes('unsupported image format') ||
-        (exception instanceof Error && exception.stack?.includes('sharp'))) {
-      errorMessage = '지원되지 않는 이미지 형식입니다. JPG, PNG, GIF, WebP 형식만 지원합니다.';
+    if (
+      errorMessage.includes('unsupported image format') ||
+      (exception instanceof Error && exception.stack?.includes('sharp'))
+    ) {
+      errorMessage =
+        '지원되지 않는 이미지 형식입니다. JPG, PNG, GIF, WebP 형식만 지원합니다.';
     }
 
     // 응답 객체 구성
@@ -96,8 +97,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       path: request.url,
       method: request.method,
       message: errorMessage,
-      ...(errorDetails && process.env.NODE_ENV === 'development' ? { details: errorDetails } : {}),
-      ...(httpStatus === HttpStatus.INTERNAL_SERVER_ERROR ? { code: 'INTERNAL_SERVER_ERROR' } : {}),
+      ...(errorDetails && process.env.NODE_ENV === 'development'
+        ? { details: errorDetails }
+        : {}),
+      ...(httpStatus === HttpStatus.INTERNAL_SERVER_ERROR
+        ? { code: 'INTERNAL_SERVER_ERROR' }
+        : {}),
     };
 
     // 응답 전송
@@ -113,8 +118,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const sanitized = { ...body };
 
     // 민감한 필드 마스킹
-    const sensitiveFields = ['password', 'passwordConfirm', 'token', 'secret', 'authorization'];
-    sensitiveFields.forEach(field => {
+    const sensitiveFields = [
+      'password',
+      'passwordConfirm',
+      'token',
+      'secret',
+      'authorization',
+    ];
+    sensitiveFields.forEach((field) => {
       if (field in sanitized) {
         sanitized[field] = '[REDACTED]';
       }
@@ -133,7 +144,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     // 민감한 헤더 마스킹
     const sensitiveHeaders = ['authorization', 'cookie', 'set-cookie'];
-    sensitiveHeaders.forEach(header => {
+    sensitiveHeaders.forEach((header) => {
       if (header in sanitized) {
         sanitized[header] = '[REDACTED]';
       }

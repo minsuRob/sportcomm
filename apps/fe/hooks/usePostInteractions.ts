@@ -105,7 +105,7 @@ export function usePostInteractions({
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(
-            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
           );
         }
       })

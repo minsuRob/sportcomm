@@ -42,7 +42,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, locations, path }) => {
       console.error(
-        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`
+        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`,
       );
     });
   }
@@ -97,7 +97,7 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
             ? "File"
             : file.uri
               ? "ReactNativeFile"
-              : "알 수 없음"
+              : "알 수 없음",
         );
         console.log(`파일[${index}] 속성:`, Object.keys(file));
       });

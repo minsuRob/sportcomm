@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Alert } from "react-native";
+import { useMutation } from "@apollo/client";
 import ActionSheet, { ActionSheetOption } from "@/components/ActionSheet";
 import ReportModal from "@/components/ReportModal";
 import PostEditModal from "@/components/PostEditModal";
 import { useModerationActions } from "../../hooks/useModerationActions";
 import { useAppTheme } from "@/lib/theme/context";
 import { PostType } from "./PostHeader";
+import { DELETE_POST } from "@/lib/graphql";
+import { showToast } from "@/components/CustomToast";
 
 interface PostContextMenuProps {
   visible: boolean;
@@ -37,6 +41,7 @@ export default function PostContextMenu({
 }: PostContextMenuProps) {
   const { theme } = useAppTheme();
   const [showEditModal, setShowEditModal] = useState(false);
+  const [deletePost, { loading: deleteLoading }] = useMutation(DELETE_POST);
   const {
     showReportModal,
     reportTarget,
@@ -89,6 +94,58 @@ export default function PostContextMenu({
   };
 
   /**
+   * 삭제하기 핸들러
+   * 게시물 삭제 전 확인 대화상자를 표시하고, 확인 시 삭제 처리
+   */
+  const handleDelete = () => {
+    Alert.alert(
+      "게시물 삭제",
+      "이 게시물을 정말 삭제하시겠습니까?\n삭제된 게시물은 복구할 수 없습니다.",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "삭제",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // 게시물 삭제 뮤테이션 실행
+              const { data } = await deletePost({
+                variables: { id: post.id },
+              });
+
+              if (data?.deletePost) {
+                showToast({
+                  type: "success",
+                  title: "삭제 완료",
+                  message: "게시물이 성공적으로 삭제되었습니다.",
+                  duration: 3000,
+                });
+
+                // 목록 화면으로 돌아가기 (onClose 콜백 실행)
+                onClose();
+
+                // 부모 컴포넌트에 삭제 알림 (onPostUpdated 콜백을 통해)
+                if (onPostUpdated) {
+                  onPostUpdated({ id: post.id, deleted: true });
+                }
+              }
+            } catch (error) {
+              console.error("게시물 삭제 오류:", error);
+              showToast({
+                type: "error",
+                title: "오류",
+                message:
+                  "게시물 삭제 중 문제가 발생했습니다. 다시 시도해주세요.",
+                duration: 4000,
+              });
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  /**
    * 수정 모달 닫기 핸들러
    */
   const handleCloseEditModal = () => {
@@ -124,15 +181,25 @@ export default function PostContextMenu({
     },
   ];
 
-  // 본인 게시물인 경우 수정 옵션 추가
+  // 본인 게시물인 경우 수정 및 삭제 옵션 추가
   if (isOwnPost) {
-    options.push({
-      text: "수정하기",
-      onPress: handleEdit,
-      icon: (
-        <Ionicons name="create-outline" color={theme.colors.text} size={20} />
-      ),
-    });
+    options.push(
+      {
+        text: "수정하기",
+        onPress: handleEdit,
+        icon: (
+          <Ionicons name="create-outline" color={theme.colors.text} size={20} />
+        ),
+      },
+      {
+        text: "삭제하기",
+        onPress: handleDelete,
+        style: "destructive",
+        icon: (
+          <Ionicons name="trash-outline" color={theme.colors.error} size={20} />
+        ),
+      },
+    );
   } else {
     // 다른 사용자의 게시물인 경우 신고/차단 옵션 추가
     options.push(
@@ -165,7 +232,11 @@ export default function PostContextMenu({
         visible={visible}
         onClose={onClose}
         title="게시물 옵션"
-        options={options}
+        options={
+          deleteLoading
+            ? options.map((opt) => ({ ...opt, disabled: true }))
+            : options
+        }
       />
 
       {/* 신고 모달 */}

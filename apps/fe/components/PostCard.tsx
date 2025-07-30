@@ -49,10 +49,11 @@ export interface Post {
 
 interface PostCardProps {
   post: Post;
+  onPostUpdated?: (updatedPost: any) => void;
 }
 
 // --- The Component ---
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { themed } = useAppTheme();
   const router = useRouter();
 
@@ -110,7 +111,7 @@ export default function PostCard({ post }: PostCardProps) {
                   const now = new Date();
                   const postDate = new Date(post.createdAt);
                   const diffHours = Math.floor(
-                    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
+                    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
                   );
 
                   if (diffHours < 1) return "방금 전";
@@ -137,6 +138,7 @@ export default function PostCard({ post }: PostCardProps) {
             isFollowing={isFollowing}
             onFollowToggle={handleFollowToggle}
             onPress={handlePostPress}
+            onPostUpdated={onPostUpdated}
           />
 
           <TouchableOpacity onPress={handlePostPress} activeOpacity={0.7}>

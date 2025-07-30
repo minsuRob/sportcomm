@@ -14,6 +14,7 @@ interface FeedListProps {
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListEmptyComponent?: React.ComponentType<any> | React.ReactElement | null;
   onEndReached?: () => void;
+  onPostUpdated?: (updatedPost: any) => void;
 }
 
 /**
@@ -28,6 +29,7 @@ export default function FeedList({
   ListFooterComponent,
   ListEmptyComponent,
   onEndReached,
+  onPostUpdated,
 }: FeedListProps) {
   const { themed } = useAppTheme();
   const { t } = useTranslation();
@@ -43,7 +45,7 @@ export default function FeedList({
 
   const renderItem = ({ item }: { item: Post }) => (
     <View style={isWeb() ? themed($webItemContainer) : undefined}>
-      <PostCard post={item} />
+      <PostCard post={item} onPostUpdated={onPostUpdated} />
     </View>
   );
 

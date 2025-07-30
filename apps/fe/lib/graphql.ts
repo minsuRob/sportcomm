@@ -440,3 +440,14 @@ export const UPDATE_USER_PROFILE = gql`
     }
   }
 `;
+
+/**
+ * 게시물 삭제 뮤테이션
+ * postId를 인자로 받아 해당 게시물을 삭제합니다.
+ * 성공 시 boolean 값을 반환합니다.
+ */
+export const DELETE_POST = gql`
+  mutation DeletePost($id: String!) {
+    deletePost(id: $id)
+  }
+`;

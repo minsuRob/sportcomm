@@ -80,7 +80,7 @@ export default function FeedScreen() {
     GET_BLOCKED_USERS,
     {
       skip: !currentUser, // 로그인하지 않은 경우 실행하지 않음
-    }
+    },
   );
 
   useEffect(() => {
@@ -117,7 +117,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
       }
@@ -238,9 +238,16 @@ export default function FeedScreen() {
         <View style={themed($headerLeft)} />
         <Text style={themed($headerTitle)}>Home</Text>
         <View style={themed($headerRight)}>
-          <TouchableOpacity style={themed($settingsButton)}>
+          <TouchableOpacity
+            style={themed($settingsButton)}
+            onPress={() =>
+              currentUser
+                ? router.push("/(app)/profile")
+                : setAuthModalVisible(true)
+            }
+          >
             <Ionicons
-              name="settings-outline"
+              name={currentUser ? "person" : "person-outline"}
               size={24}
               color={theme.colors.text}
             />
@@ -442,4 +449,5 @@ const $trendingButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $settingsButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.xs,
+  borderRadius: 20,
 });

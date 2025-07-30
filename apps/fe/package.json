@@ -43,7 +43,6 @@
     "extract-files": "^11.0.0",
     "graphql": "^16.11.0",
     "i18next": "^25.3.2",
-    "lucide-react-native": "^0.511.0",
     "nativewind": "^4.1.23",
     "react": "19.0.0",
     "react-dom": "19.0.0",

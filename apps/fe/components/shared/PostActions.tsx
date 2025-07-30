@@ -21,6 +21,9 @@ interface PostActionsProps {
   onRepost?: () => void;
   variant?: "feed" | "detail";
   disabled?: boolean;
+  likeCount?: number;
+  commentCount?: number;
+  shareCount?: number;
 }
 
 /**
@@ -37,6 +40,9 @@ export default function PostActions({
   onRepost,
   variant = "feed",
   disabled = false,
+  likeCount = 0,
+  commentCount = 0,
+  shareCount = 0,
 }: PostActionsProps) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
@@ -46,56 +52,21 @@ export default function PostActions({
   return (
     <View
       style={themed(
-        variant === "detail" ? $detailActionSection : $feedActionBar,
+        variant === "detail" ? $detailActionSection : $feedActionBar
       )}
     >
       {/* 좋아요 버튼 */}
       <TouchableOpacity
         onPress={onLike}
         disabled={isLikeProcessing || disabled}
-        style={[themed($actionButton), isLikeError && { opacity: 0.7 }]}
+        style={themed($actionButton)}
       >
-        {isLikeProcessing ? (
-          <>
-            <View style={themed($loadingIndicator)}>
-              <Ionicons
-                name={isLiked ? "heart" : "heart-outline"}
-                size={iconSize}
-                color={isLiked ? theme.colors.error : theme.colors.textDim}
-              />
-            </View>
-            <Text
-              style={[
-                themed($actionText),
-                {
-                  color: isLiked ? theme.colors.error : theme.colors.textDim,
-                },
-              ]}
-            >
-              {isLiked
-                ? t(TRANSLATION_KEYS.POST_UNLIKING)
-                : t(TRANSLATION_KEYS.POST_LIKING)}
-            </Text>
-          </>
-        ) : (
-          <>
-            <Ionicons
-              name={isLiked ? "heart" : "heart-outline"}
-              size={iconSize}
-              color={isLiked ? theme.colors.error : theme.colors.textDim}
-            />
-            <Text
-              style={[
-                themed($actionText),
-                {
-                  color: isLiked ? theme.colors.error : theme.colors.textDim,
-                },
-              ]}
-            >
-              {t(TRANSLATION_KEYS.POST_LIKE)}
-            </Text>
-          </>
-        )}
+        <Ionicons
+          name={isLiked ? "heart" : "heart-outline"}
+          size={iconSize}
+          color={isLiked ? theme.colors.error : theme.colors.textDim}
+        />
+        <Text style={themed($actionCount)}>{likeCount}</Text>
       </TouchableOpacity>
 
       {/* 댓글 버튼 */}
@@ -105,48 +76,29 @@ export default function PostActions({
           size={iconSize}
           color={theme.colors.textDim}
         />
-        <Text style={themed($actionText)}>
-          {t(TRANSLATION_KEYS.POST_COMMENT)}
-        </Text>
+        <Text style={themed($actionCount)}>{commentCount}</Text>
       </TouchableOpacity>
 
-      {/* 피드에서는 리포스트, 상세에서는 공유 */}
-      {variant === "feed" ? (
-        <TouchableOpacity style={themed($actionButton)} onPress={onRepost}>
-          <MaterialIcons
-            name="repeat"
-            size={iconSize}
-            color={theme.colors.textDim}
-          />
-          <Text style={themed($actionText)}>
-            {t(TRANSLATION_KEYS.POST_REPOST)}
-          </Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity style={themed($actionButton)} onPress={onShare}>
-          <Ionicons
-            name="share-outline"
-            size={iconSize}
-            color={theme.colors.textDim}
-          />
-          <Text style={themed($actionText)}>
-            {t(TRANSLATION_KEYS.POST_SHARE)}
-          </Text>
-        </TouchableOpacity>
-      )}
+      {/* 리포스트 버튼 */}
+      <TouchableOpacity style={themed($actionButton)} onPress={onRepost}>
+        <MaterialIcons
+          name="repeat"
+          size={iconSize}
+          color={theme.colors.textDim}
+        />
+        <Text style={themed($actionCount)}>{shareCount}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 // --- 스타일 정의 ---
-const $feedActionBar: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $feedActionBar: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
-  justifyContent: "space-around",
+  justifyContent: "space-between",
   alignItems: "center",
-  marginTop: spacing.sm,
-  paddingTop: spacing.sm,
-  borderTopWidth: 1,
-  borderTopColor: colors.border,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
 });
 
 const $detailActionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -156,15 +108,19 @@ const $detailActionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
 });
 
-const $actionButton: ThemedStyle<ViewStyle> = () => ({
+const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  minWidth: 70, // 최소 너비 설정으로 버튼 크기 안정화
+  justifyContent: "center",
+  gap: spacing.xs,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
 });
 
-const $loadingIndicator: ThemedStyle<ViewStyle> = () => ({
-  opacity: 0.7,
-  transform: [{ scale: 1.1 }],
+const $actionCount: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 13,
+  fontWeight: "bold",
+  color: colors.textDim,
 });
 
 const $actionText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({

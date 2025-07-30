@@ -12,6 +12,7 @@ interface FeedListProps {
   onRefresh?: () => void;
   refreshing?: boolean;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
+  ListEmptyComponent?: React.ComponentType<any> | React.ReactElement | null;
   onEndReached?: () => void;
 }
 
@@ -25,6 +26,7 @@ export default function FeedList({
   onRefresh,
   refreshing,
   ListFooterComponent,
+  ListEmptyComponent,
   onEndReached,
 }: FeedListProps) {
   const { themed } = useAppTheme();
@@ -71,7 +73,7 @@ export default function FeedList({
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           ItemSeparatorComponent={ItemSeparator}
-          ListEmptyComponent={EmptyComponent}
+          ListEmptyComponent={ListEmptyComponent || EmptyComponent}
           onRefresh={onRefresh}
           refreshing={refreshing}
           onEndReached={onEndReached}
@@ -91,7 +93,7 @@ export default function FeedList({
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       ItemSeparatorComponent={ItemSeparator}
-      ListEmptyComponent={EmptyComponent}
+      ListEmptyComponent={ListEmptyComponent || EmptyComponent}
       onRefresh={onRefresh}
       refreshing={refreshing}
       onEndReached={onEndReached}

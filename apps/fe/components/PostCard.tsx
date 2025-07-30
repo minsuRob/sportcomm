@@ -12,7 +12,6 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { usePostInteractions } from "../hooks/usePostInteractions";
 import PostHeader, { PostType } from "./shared/PostHeader";
 import PostMedia, { Media } from "./shared/PostMedia";
-import PostStats from "./shared/PostStats";
 import PostActions from "./shared/PostActions";
 import { getWebReadableTextStyle } from "./layout/WebCenteredLayout";
 import { isWeb } from "@/lib/platform";
@@ -88,70 +87,89 @@ export default function PostCard({ post }: PostCardProps) {
 
   return (
     <View style={themed($container)}>
-      {/* 헤더 */}
-      <PostHeader
-        post={{
-          id: post.id,
-          title: undefined, // PostCard에서는 title이 없을 수 있음
-          content: post.content,
-          author: post.author,
-          createdAt: post.createdAt,
-          type: post.type,
-        }}
-        currentUserId={currentUserId}
-        isFollowing={isFollowing}
-        onFollowToggle={handleFollowToggle}
-        onPress={handlePostPress}
-      />
+      {/* 미디어가 있는 경우 - 이미지 위에 콘텐츠 오버레이 */}
+      {post.media.length > 0 ? (
+        <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
+          <View style={themed($mediaContainer)}>
+            <PostMedia
+              media={post.media}
+              onPress={handlePostPress}
+              variant="feed"
+            />
+            {/* 그라데이션 오버레이 */}
+            <View style={themed($gradientOverlay)} />
 
-      {/* 콘텐츠 - 클릭 가능 */}
-      <TouchableOpacity onPress={handlePostPress} activeOpacity={0.7}>
-        <Text
-          style={[
-            themed($content),
-            isWeb() ? themed(getWebReadableTextStyle()) : undefined,
-          ]}
-        >
-          {post.content}
-        </Text>
-      </TouchableOpacity>
+            {/* 콘텐츠 오버레이 */}
+            <View style={themed($contentOverlay)}>
+              <Text style={themed($authorName)}>{post.author.nickname}</Text>
+              <Text style={themed($overlayContent)} numberOfLines={3}>
+                {post.content}
+              </Text>
+              <Text style={themed($timestamp)}>
+                {(() => {
+                  const now = new Date();
+                  const postDate = new Date(post.createdAt);
+                  const diffHours = Math.floor(
+                    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
+                  );
 
-      {/* 미디어 */}
-      {post.media.length > 0 && (
-        <PostMedia
-          media={post.media}
-          onPress={handlePostPress}
-          variant="feed"
-        />
+                  if (diffHours < 1) return "방금 전";
+                  if (diffHours < 24) return `${diffHours}h`;
+                  return postDate.toLocaleDateString("ko-KR");
+                })()}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      ) : (
+        /* 미디어가 없는 경우 - 기존 레이아웃 */
+        <View>
+          <PostHeader
+            post={{
+              id: post.id,
+              title: undefined,
+              content: post.content,
+              author: post.author,
+              createdAt: post.createdAt,
+              type: post.type,
+            }}
+            currentUserId={currentUserId}
+            isFollowing={isFollowing}
+            onFollowToggle={handleFollowToggle}
+            onPress={handlePostPress}
+          />
+
+          <TouchableOpacity onPress={handlePostPress} activeOpacity={0.7}>
+            <Text
+              style={[
+                themed($content),
+                isWeb() ? themed(getWebReadableTextStyle()) : undefined,
+              ]}
+            >
+              {post.content}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
 
-      {/* 통계 */}
-      <PostStats
-        likeCount={likeCount}
-        commentCount={post.commentCount}
-        viewCount={post.viewCount}
-        variant="feed"
-      />
-
-      {/* 액션 버튼 */}
+      {/* 액션 버튼 - 좋아요, 댓글, 리포스트만 */}
       <PostActions
         isLiked={isLiked}
         isLikeProcessing={isLikeProcessing}
         isLikeError={isLikeError}
         onLike={handleLike}
+        onComment={() =>
+          router.push({
+            pathname: "/post/[postId]",
+            params: { postId: post.id },
+          })
+        }
+        onRepost={() => {}}
         variant="feed"
+        likeCount={likeCount}
+        commentCount={post.commentCount}
+        shareCount={67} // 임시 값
       />
-
-      {/* 댓글 미리보기 */}
-      {post.commentCount > 0 && (
-        <View style={themed($commentPreview)}>
-          <TouchableOpacity onPress={handlePostPress}>
-            <Text style={themed($commentPreviewText)}>
-              댓글 {post.commentCount}개 모두 보기
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 }
@@ -159,28 +177,67 @@ export default function PostCard({ post }: PostCardProps) {
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
-  padding: spacing.md,
-  borderBottomWidth: isWeb() ? 0 : 1, // 웹에서는 카드 스타일로 구분
-  borderBottomColor: colors.border,
+  marginBottom: spacing.sm,
+  borderRadius: 12,
+  overflow: "hidden",
   // 웹에서 추가 여백
   ...(isWeb() && {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    marginHorizontal: spacing.md,
   }),
+});
+
+const $mediaContainer: ThemedStyle<ViewStyle> = () => ({
+  position: "relative",
+  aspectRatio: 16 / 9,
+  borderRadius: 12,
+  overflow: "hidden",
+});
+
+const $gradientOverlay: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0, 0, 0, 0.4)",
+  zIndex: 1,
+});
+
+const $contentOverlay: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  padding: spacing.md,
+  zIndex: 2,
+});
+
+const $authorName: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 14,
+  fontWeight: "500",
+  marginBottom: 4,
+});
+
+const $overlayContent: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 20,
+  fontWeight: "bold",
+  lineHeight: 26,
+  marginBottom: 8,
+});
+
+const $timestamp: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 14,
+  fontWeight: "500",
+  opacity: 0.9,
 });
 
 const $content: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginVertical: spacing.sm,
-  fontSize: isWeb() ? 15 : 16, // 웹에서 약간 작은 폰트
+  fontSize: isWeb() ? 15 : 16,
   color: colors.text,
-  lineHeight: isWeb() ? 1.6 : undefined, // 웹에서 가독성 향상
-});
-
-const $commentPreview: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginTop: spacing.xs,
-});
-
-const $commentPreviewText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
-  color: colors.textDim,
+  lineHeight: isWeb() ? 1.6 : undefined,
+  paddingHorizontal: spacing.md,
 });

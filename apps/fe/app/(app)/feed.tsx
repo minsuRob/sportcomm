@@ -20,9 +20,10 @@ import { User, getSession, clearSession } from "@/lib/auth";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
-// WebCenteredLayout 제거 - 전역 레이아웃 사용
-// CreatePostModal 제거 - 이제 별도 페이지로 이동
 import { Ionicons } from "@expo/vector-icons";
+import StorySection from "@/components/StorySection";
+import TabSlider from "@/components/TabSlider";
+import ChatList from "@/components/chat/ChatList";
 
 // --- Type Definitions ---
 interface GqlPost {
@@ -61,6 +62,7 @@ export default function FeedScreen() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("feed");
 
   const {
     data,
@@ -78,7 +80,7 @@ export default function FeedScreen() {
     GET_BLOCKED_USERS,
     {
       skip: !currentUser, // 로그인하지 않은 경우 실행하지 않음
-    },
+    }
   );
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         });
       }
@@ -202,6 +204,12 @@ export default function FeedScreen() {
     );
   };
 
+  // 탭 데이터
+  const tabs = [
+    { key: "feed", title: "Feed" },
+    { key: "chat", title: "Chat" },
+  ];
+
   return (
     <View style={themed($container)}>
       <Modal
@@ -225,55 +233,70 @@ export default function FeedScreen() {
         </View>
       </Modal>
 
-      {/* 헤더는 전체 너비 사용 */}
+      {/* 헤더 */}
       <View style={themed($header)}>
-        <Text style={themed($headerTitle)}>
-          {t(TRANSLATION_KEYS.FEED_TITLE)}
-        </Text>
-        {currentUser ? (
-          <View style={themed($userContainer)}>
-            <TouchableOpacity
-              style={themed($createPostButton)}
-              onPress={() => router.push("/(modals)/create-post")}
-            >
-              <Ionicons name="add" color="white" size={20} />
-              <Text style={themed($createPostButtonText)}>
-                {t(TRANSLATION_KEYS.FEED_CREATE_POST)}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($chatButton)}
-              onPress={() => router.push("/chat")}
-            >
-              <Ionicons name="chatbubbles" color="white" size={20} />
-              <Text style={themed($chatButtonText)}>
-                {t(TRANSLATION_KEYS.FEED_CHAT)}
-              </Text>
-            </TouchableOpacity>
-            <Text style={themed($userNickname)}>{currentUser.nickname}</Text>
-            <Button
-              title={t(TRANSLATION_KEYS.AUTH_LOGOUT)}
-              onPress={handleLogout}
-              color={theme.colors.tint}
+        <View style={themed($headerLeft)} />
+        <Text style={themed($headerTitle)}>Home</Text>
+        <View style={themed($headerRight)}>
+          <TouchableOpacity style={themed($settingsButton)}>
+            <Ionicons
+              name="settings-outline"
+              size={24}
+              color={theme.colors.text}
             />
-          </View>
-        ) : (
-          <TouchableOpacity onPress={() => setAuthModalVisible(true)}>
-            <Text style={themed($loginText)}>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* 액션 버튼 섹션 */}
+      {currentUser ? (
+        <View style={themed($actionButtonsContainer)}>
+          <TouchableOpacity
+            style={themed($createPostButton)}
+            onPress={() => router.push("/(modals)/create-post")}
+          >
+            <Text style={themed($createPostButtonText)}>Create Post</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={themed($trendingButton)} onPress={() => {}}>
+            <Text style={themed($trendingButtonText)}>Trending</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={themed($actionButtonsContainer)}>
+          <TouchableOpacity
+            style={themed($loginButton)}
+            onPress={() => setAuthModalVisible(true)}
+          >
+            <Text style={themed($loginButtonText)}>
               {t(TRANSLATION_KEYS.AUTH_SIGNUP_LOGIN)}
             </Text>
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
 
-      {/* 피드 콘텐츠는 FlatList가 직접 스크롤 처리 */}
-      <FeedList
-        posts={posts}
-        refreshing={isRefreshing}
-        onRefresh={handleRefresh}
-        onEndReached={handleLoadMore}
-        ListFooterComponent={ListFooter}
-      />
+      {/* 탭 슬라이더 */}
+      <TabSlider tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* 스토리 섹션 (Feed 탭에서만 표시) */}
+      {activeTab === "feed" && <StorySection />}
+
+      {/* 탭 콘텐츠 */}
+      {activeTab === "feed" ? (
+        <FeedList
+          posts={posts}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          onEndReached={handleLoadMore}
+          ListFooterComponent={ListFooter}
+        />
+      ) : (
+        <ChatList
+          messages={[]}
+          currentUser={currentUser}
+          isLoading={false}
+          title="채팅"
+        />
+      )}
     </View>
   );
 }
@@ -310,26 +333,48 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: spacing.md,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
   backgroundColor: colors.background,
 });
 
+const $headerLeft: ThemedStyle<ViewStyle> = () => ({
+  width: 48,
+});
+
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 20,
+  fontSize: 18,
   fontWeight: "bold",
   color: colors.text,
+  flex: 1,
+  textAlign: "center",
 });
 
-const $userNickname: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  color: colors.text,
-  fontWeight: "600",
-  marginRight: spacing.md,
+const $headerRight: ThemedStyle<ViewStyle> = () => ({
+  width: 48,
+  alignItems: "flex-end",
 });
 
-const $loginText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.tint,
+const $actionButtonsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "center",
+  gap: spacing.sm,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+});
+
+const $loginButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  borderRadius: 20,
+  flex: 1,
+  alignItems: "center",
+});
+
+const $loginButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 14,
   fontWeight: "600",
 });
 
@@ -361,45 +406,40 @@ const $closeButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
 });
 
-const $userContainer: ThemedStyle<ViewStyle> = () => ({
-  flexDirection: "row",
-  alignItems: "center",
-});
-
 const $listFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.md,
 });
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
   backgroundColor: colors.tint,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
   borderRadius: 20,
-  marginRight: spacing.md,
+  flex: 1,
+  alignItems: "center",
 });
 
-const $createPostButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
+const $createPostButtonText: ThemedStyle<TextStyle> = () => ({
   color: "white",
   fontSize: 14,
   fontWeight: "600",
-  marginLeft: spacing.xs,
 });
 
-const $chatButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: colors.tint,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
+const $trendingButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.border + "50",
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
   borderRadius: 20,
-  marginRight: spacing.md,
+  flex: 1,
+  alignItems: "center",
 });
 
-const $chatButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  color: "white",
+const $trendingButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
   fontSize: 14,
   fontWeight: "600",
-  marginLeft: spacing.xs,
+});
+
+const $settingsButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
 });

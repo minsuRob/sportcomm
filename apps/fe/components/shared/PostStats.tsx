@@ -45,30 +45,30 @@ export default function PostStats({
 
   return (
     <View style={themed($feedStats)}>
-      <Ionicons
-        name="heart-outline"
-        color={theme.colors.textDim}
-        size={iconSize}
-      />
-      <Text style={themed($feedStatText)}>
-        {t(TRANSLATION_KEYS.POST_LIKE_COUNT, { count: likeCount })}
-      </Text>
-      <Ionicons
-        name="chatbubble-outline"
-        color={theme.colors.textDim}
-        size={iconSize}
-      />
-      <Text style={themed($feedStatText)}>
-        {t(TRANSLATION_KEYS.POST_COMMENT_COUNT, { count: commentCount })}
-      </Text>
-      <Ionicons
-        name="eye-outline"
-        color={theme.colors.textDim}
-        size={iconSize}
-      />
-      <Text style={themed($feedStatText)}>
-        {t(TRANSLATION_KEYS.POST_VIEW_COUNT, { count: viewCount })}
-      </Text>
+      <View style={themed($statItem)}>
+        <Ionicons
+          name="heart-outline"
+          color={theme.colors.textDim}
+          size={iconSize}
+        />
+        <Text style={themed($feedStatText)}>{likeCount}</Text>
+      </View>
+      <View style={themed($statItem)}>
+        <Ionicons
+          name="chatbubble-outline"
+          color={theme.colors.textDim}
+          size={iconSize}
+        />
+        <Text style={themed($feedStatText)}>{commentCount}</Text>
+      </View>
+      <View style={themed($statItem)}>
+        <Ionicons
+          name="paper-plane-outline"
+          color={theme.colors.textDim}
+          size={iconSize}
+        />
+        <Text style={themed($feedStatText)}>{viewCount}</Text>
+      </View>
     </View>
   );
 }
@@ -76,15 +76,22 @@ export default function PostStats({
 // --- 스타일 정의 ---
 const $feedStats: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
+  justifyContent: "space-between",
   alignItems: "center",
-  marginTop: spacing.sm,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs,
 });
 
-const $feedStatText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  marginLeft: spacing.xxxs,
-  fontSize: 14,
+const $statItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+});
+
+const $feedStatText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 13,
   color: colors.textDim,
-  marginRight: spacing.md,
+  fontWeight: "600",
 });
 
 const $detailStatsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

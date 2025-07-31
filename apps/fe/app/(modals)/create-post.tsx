@@ -132,7 +132,7 @@ export default function CreatePostScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ],
+        ]
       );
     } else {
       router.back();
@@ -158,7 +158,7 @@ export default function CreatePostScreen() {
         Alert.alert(
           "권한 필요",
           "이미지를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }],
+          [{ text: "확인" }]
         );
         return;
       }
@@ -211,7 +211,7 @@ export default function CreatePostScreen() {
                 width: asset.width,
                 height: asset.height,
                 fileSize: file.size,
-                mimeType: "image/jpeg",
+                mimeType: file.type, // 압축된 파일의 실제 MIME 타입 사용 (GIF 원본 유지)
                 name: file.name,
               };
             } else {
@@ -341,18 +341,42 @@ export default function CreatePostScreen() {
               // 웹 환경: data URL을 File 객체로 변환
               const response = await fetch(image.uri);
               const blob = await response.blob();
-              return new File([blob], image.name || `image_${index}.jpg`, {
-                type: "image/jpeg",
+              // 원본 MIME 타입 유지 (GIF 등)
+              const fileExtension = (image.name || "")
+                .split(".")
+                .pop()
+                ?.toLowerCase();
+              const mimeType =
+                image.mimeType ||
+                (fileExtension === "gif" ? "image/gif" : "image/jpeg");
+              const fileName =
+                image.name ||
+                `image_${index}.${fileExtension === "gif" ? "gif" : "jpg"}`;
+
+              return new File([blob], fileName, {
+                type: mimeType,
               });
             } else {
               // 모바일 환경: ReactNativeFile 형식으로 변환
+              // 원본 MIME 타입 유지 (GIF 등)
+              const fileExtension = (image.name || "")
+                .split(".")
+                .pop()
+                ?.toLowerCase();
+              const mimeType =
+                image.mimeType ||
+                (fileExtension === "gif" ? "image/gif" : "image/jpeg");
+              const fileName =
+                image.name ||
+                `image_${index}.${fileExtension === "gif" ? "gif" : "jpg"}`;
+
               return {
                 uri: image.uri,
-                name: image.name || `image_${index}.jpg`,
-                type: "image/jpeg",
+                name: fileName,
+                type: mimeType,
               };
             }
-          }),
+          })
         );
 
         createdPost = await createPostWithFiles({

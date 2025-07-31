@@ -130,11 +130,29 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   return (
     <View style={themed($outerContainer)}>
+      {/* 외부 글로우 효과 */}
+      <View
+        style={[
+          themed($outerGlow),
+          { backgroundColor: categoryInfo.colors.glow + "08" },
+        ]}
+      />
+
       {/* 네온 글로우 효과를 위한 배경 */}
       <View
         style={[
           themed($glowBackground),
-          { backgroundColor: categoryInfo.colors.glow + "15" },
+          { backgroundColor: categoryInfo.colors.glow + "12" },
+        ]}
+      />
+
+      {/* 은은한 테두리 효과를 위한 추가 레이어 */}
+      <View
+        style={[
+          themed($borderLayer),
+          {
+            borderColor: categoryInfo.colors.border + "08",
+          },
         ]}
       />
 
@@ -143,6 +161,9 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           themed($container),
           {
             borderLeftColor: categoryInfo.colors.border,
+            borderTopColor: categoryInfo.colors.border + "15",
+            borderRightColor: categoryInfo.colors.border + "15",
+            borderBottomColor: categoryInfo.colors.border + "15",
             shadowColor: categoryInfo.colors.glow,
           },
         ]}
@@ -318,6 +339,16 @@ const $outerContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   }),
 });
 
+const $outerGlow: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  top: -4,
+  left: -4,
+  right: 4,
+  bottom: 4,
+  borderRadius: 20,
+  zIndex: -2,
+});
+
 const $glowBackground: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
   top: -2,
@@ -328,27 +359,37 @@ const $glowBackground: ThemedStyle<ViewStyle> = () => ({
   zIndex: -1,
 });
 
+const $borderLayer: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  top: -1,
+  left: -1,
+  right: 1,
+  bottom: 1,
+  borderRadius: 17,
+  borderWidth: 1,
+  zIndex: 0,
+});
+
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
   borderRadius: 16,
   overflow: "hidden",
-  // 왼쪽에만 네온 테두리 효과
-  borderLeftWidth: 4,
-  borderTopWidth: 1,
-  borderRightWidth: 1,
-  borderBottomWidth: 1,
-  borderTopColor: colors.border + "30",
-  borderRightColor: colors.border + "30",
-  borderBottomColor: colors.border + "30",
-  // 그림자 효과
+  position: "relative",
+  zIndex: 1,
+  // 세밀한 테두리 효과
+  borderLeftWidth: 4, // 왼쪽은 두껍게
+  borderTopWidth: 0.8,
+  borderRightWidth: 0.8,
+  borderBottomWidth: 0.8,
+  // 그림자 효과 개선
   shadowColor: "#000",
   shadowOffset: {
-    width: -2,
-    height: 4,
+    width: -1,
+    height: 3,
   },
-  shadowOpacity: 0.2,
+  shadowOpacity: 0.12,
   shadowRadius: 8,
-  elevation: 6,
+  elevation: 5,
 });
 
 const $mediaContainer: ThemedStyle<ViewStyle> = () => ({

@@ -18,6 +18,7 @@ import { PostType } from "./shared/PostHeader";
 import { Media } from "./shared/PostMedia";
 import PostActions from "./shared/PostActions";
 import { isWeb } from "@/lib/platform";
+import { usePostImageDimensions, IMAGE_CONSTANTS } from "@/lib/image";
 
 // --- Type Definitions ---
 export { PostType, Media };
@@ -197,11 +198,6 @@ const renderContentText = ({
 };
 
 // --- The Component ---
-// 이미지 관련 상수 정의
-const MIN_IMAGE_HEIGHT = 300; // 최소 이미지 높이
-const DEFAULT_ASPECT_RATIO = 16 / 9; // 기본 가로세로 비율
-const MAX_IMAGE_HEIGHT_RATIO = 0.6; // 화면 대비 최대 높이 비율
-
 export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { themed } = useAppTheme();
   const router = useRouter();
@@ -210,10 +206,14 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   // __DEV__ 상수 선언 (React Native에서는 기본 제공되지만 웹에서는 아닐 수 있음)
   const __DEV__ = process.env.NODE_ENV === "development";
 
-  // 이미지 비율, 높이, 로딩 상태 관리
-  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null); // 이미지 가로/세로 비율
-  const [imageHeight, setImageHeight] = useState<number | null>(null); // 원본 이미지 높이(px)
-  const [imageLoading, setImageLoading] = useState<boolean>(true); // 이미지 로딩 상태
+  // 이미지 미디어만 필터링
+  const imageMedia = post.media.filter(
+    (item) => item.type === "image" || item.type === "IMAGE",
+  );
+
+  // 공통 이미지 최적화 훅 사용
+  const { imageAspectRatio, imageHeight, imageLoading, error } =
+    usePostImageDimensions(imageMedia.length > 0 ? imageMedia[0]?.url : null);
 
   // 게시물 상호작용 훅 사용
   const { isLiked, likeCount, isLikeProcessing, isLikeError, handleLike } =
@@ -234,10 +234,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     });
   };
 
-  // 이미지 미디어만 필터링
-  const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
-  );
+  // 이미지 미디어는 위에서 이미 필터링되었음
 
   // 불필요한 코드 제거
 
@@ -252,38 +249,9 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     }
   }, [post.id]);
 
-  // 이미지 비율과 높이 계산을 위한 효과
-  useEffect(() => {
-    if (imageMedia.length > 0 && imageMedia[0]?.url) {
-      setImageLoading(true);
-
-      // Image.getSize API를 사용하여 이미지의 원본 크기를 가져옴
-      Image.getSize(
-        imageMedia[0].url,
-        (width, height) => {
-          if (height > 0) {
-            // 원본 이미지 비율 및 높이 저장
-            setImageAspectRatio(width / height);
-            setImageHeight(height);
-          } else {
-            // 높이가 0이거나 비정상적일 경우 기본값 설정
-            setImageAspectRatio(DEFAULT_ASPECT_RATIO);
-            setImageHeight(MIN_IMAGE_HEIGHT);
-          }
-          setImageLoading(false);
-        },
-        () => {
-          // 이미지 로드 실패 시 기본값 사용
-          console.warn("Failed to load image dimensions");
-          setImageAspectRatio(DEFAULT_ASPECT_RATIO);
-          setImageHeight(MIN_IMAGE_HEIGHT);
-          setImageLoading(false);
-        },
-      );
-    } else {
-      setImageLoading(false);
-    }
-  }, [imageMedia.length > 0 ? imageMedia[0]?.url : null]);
+  // usePostImageDimensions 훅을 사용하여 이미지 비율과 높이 계산
+  // 이 훅에서 이미지 로딩, 크기 계산, 오류 처리 등을 자동으로 수행합니다.
+  // 해당 로직이 위에 이미 구현되어 있으므로 중복 코드 제거
 
   // 카테고리별 색상 및 텍스트 매핑
   const getCategoryInfo = (type: PostType) => {
@@ -371,9 +339,10 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                 // 이미지가 있고 로딩 완료된 상태
                 <View
                   style={{
-                    aspectRatio: imageAspectRatio || DEFAULT_ASPECT_RATIO, // 원본 이미지 비율 유지
-                    maxHeight: screenHeight * MAX_IMAGE_HEIGHT_RATIO, // 화면 높이의 60%로 최대 높이 제한
-                    minHeight: MIN_IMAGE_HEIGHT, // 최소 높이 300px로 설정
+                    aspectRatio:
+                      imageAspectRatio || IMAGE_CONSTANTS.DEFAULT_ASPECT_RATIO, // 원본 이미지 비율 유지
+                    maxHeight: screenHeight * IMAGE_CONSTANTS.MAX_HEIGHT_RATIO, // 화면 높이의 60%로 최대 높이 제한
+                    minHeight: IMAGE_CONSTANTS.MIN_HEIGHT, // 최소 높이 300px로 설정
                     backgroundColor: themed($mediaContainer).backgroundColor, // 배경색 설정
                     position: "relative",
                     overflow: "hidden", // 이미지가 컨테이너를 넘어가지 않도록 설정
@@ -384,20 +353,22 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                   <Image
                     source={{ uri: imageMedia[0]?.url }}
                     style={{
-                      ...(imageHeight && imageHeight < MIN_IMAGE_HEIGHT
+                      ...(imageHeight &&
+                      imageHeight < IMAGE_CONSTANTS.MIN_HEIGHT
                         ? // 이미지 높이가 300px 이하인 경우: 원본 크기로 표시 (가운데 정렬)
                           {
                             height: imageHeight,
                             width:
                               imageHeight *
-                              (imageAspectRatio || DEFAULT_ASPECT_RATIO),
+                              (imageAspectRatio ||
+                                IMAGE_CONSTANTS.DEFAULT_ASPECT_RATIO),
                             alignSelf: "center", // 가로 중앙 정렬
                           }
                         : // 이미지 높이가 300px 초과인 경우: 전체 채움
                           { height: "100%", width: "100%" }),
                     }}
                     resizeMode={
-                      imageHeight && imageHeight < MIN_IMAGE_HEIGHT
+                      imageHeight && imageHeight < IMAGE_CONSTANTS.MIN_HEIGHT
                         ? "contain"
                         : "cover"
                     }

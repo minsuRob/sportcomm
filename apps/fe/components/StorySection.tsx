@@ -8,9 +8,11 @@ import {
   ViewStyle,
   TextStyle,
   ImageStyle,
+  ActivityIndicator,
 } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { useStoryImageDimensions } from "@/lib/image";
 
 /**
  * 스토리 데이터 타입
@@ -25,6 +27,51 @@ interface Story {
 interface StorySectionProps {
   stories?: Story[];
 }
+
+/**
+ * 개별 스토리 아이템 컴포넌트 (이미지 최적화 적용)
+ */
+const StoryItem = ({ story }: { story: Story }) => {
+  const { themed } = useAppTheme();
+
+  // 이미지 최적화 훅 사용
+  const { imageAspectRatio, imageHeight, imageLoading, error } =
+    useStoryImageDimensions(story.avatar);
+
+  return (
+    <TouchableOpacity style={themed($storyItem)}>
+      <View style={themed($storyImageContainer)}>
+        {imageLoading ? (
+          <View style={themed($storyImageLoading)}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: story.avatar }}
+            style={[
+              themed($storyImage),
+              imageAspectRatio ? { aspectRatio: imageAspectRatio } : null,
+            ]}
+            onError={() =>
+              console.warn(`Failed to load story image: ${story.avatar}`)
+            }
+          />
+        )}
+        {story.timestamp === "Live" && (
+          <View style={themed($liveIndicator)}>
+            <Text style={themed($liveText)}>LIVE</Text>
+          </View>
+        )}
+      </View>
+      <View style={themed($storyInfo)}>
+        <Text style={themed($storyUsername)} numberOfLines={1}>
+          {story.username}
+        </Text>
+        <Text style={themed($storyTimestamp)}>{story.timestamp}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 /**
  * 스토리 섹션 컴포넌트
@@ -67,28 +114,6 @@ export default function StorySection({ stories }: StorySectionProps) {
 
   const displayStories = stories || defaultStories;
 
-  /**
-   * 스토리 아이템 렌더링
-   */
-  const renderStoryItem = (story: Story) => (
-    <TouchableOpacity key={story.id} style={themed($storyItem)}>
-      <View style={themed($storyImageContainer)}>
-        <Image source={{ uri: story.avatar }} style={themed($storyImage)} />
-        {story.timestamp === "Live" && (
-          <View style={themed($liveIndicator)}>
-            <Text style={themed($liveText)}>LIVE</Text>
-          </View>
-        )}
-      </View>
-      <View style={themed($storyInfo)}>
-        <Text style={themed($storyUsername)} numberOfLines={1}>
-          {story.username}
-        </Text>
-        <Text style={themed($storyTimestamp)}>{story.timestamp}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
   return (
     <View style={themed($container)}>
       <ScrollView
@@ -96,7 +121,9 @@ export default function StorySection({ stories }: StorySectionProps) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={themed($scrollContent)}
       >
-        {displayStories.map(renderStoryItem)}
+        {displayStories.map((story) => (
+          <StoryItem key={story.id} story={story} />
+        ))}
       </ScrollView>
     </View>
   );
@@ -161,6 +188,14 @@ const $storyImage: ThemedStyle<ImageStyle> = () => ({
   width: "100%",
   height: "100%",
   opacity: 0.9,
+});
+
+const $storyImageLoading: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: "100%",
+  height: "100%",
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: colors.backgroundDim,
 });
 
 const $storyInfo: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({

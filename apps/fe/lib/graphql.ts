@@ -17,6 +17,7 @@ export const GET_POSTS = gql`
     posts(input: $input) {
       posts {
         id
+        title
         content
         createdAt
         type
@@ -136,6 +137,7 @@ export const GET_POST_DETAIL = gql`
   query GetPostDetail($id: String!) {
     post(id: $id) {
       id
+      title
       content
       createdAt
       type
@@ -269,6 +271,7 @@ export const GET_USER_POSTS = gql`
     posts(input: $input) {
       posts {
         id
+        title
         content
         createdAt
         type

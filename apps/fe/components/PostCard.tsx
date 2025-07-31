@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -35,6 +35,7 @@ export interface Comment {
 
 export interface Post {
   id: string;
+  title?: string; // 기존 데이터와의 호환성을 위해 선택적 필드로 유지
   content: string;
   author: User;
   media: Media[];
@@ -76,34 +77,89 @@ const formatTimeAgo = (dateString: string) => {
 const StrokedText = ({
   content,
   themed,
+  style,
+  numberOfLines = 4,
+  fontSize,
+  lineHeight,
 }: {
   content: string;
   themed: (style: ThemedStyle<TextStyle>) => TextStyle;
-}) => (
-  <>
-    <Text style={themed($contentTextStroke)} numberOfLines={4} aria-hidden>
-      {content}
-    </Text>
-    <Text style={themed($contentTextStroke2)} numberOfLines={4} aria-hidden>
-      {content}
-    </Text>
-    <Text style={themed($contentTextStroke3)} numberOfLines={4} aria-hidden>
-      {content}
-    </Text>
-    <Text style={themed($contentTextStroke4)} numberOfLines={4} aria-hidden>
-      {content}
-    </Text>
-    <Text style={themed($contentTextStroke5)} numberOfLines={4} aria-hidden>
-      {content}
-    </Text>
-    <Text style={themed($contentTextStroke6)} numberOfLines={4} aria-hidden>
-      {content}
-    </Text>
-    <Text style={themed($contentText)} numberOfLines={4}>
-      {content}
-    </Text>
-  </>
-);
+  style?: TextStyle;
+  numberOfLines?: number;
+  fontSize?: number;
+  lineHeight?: number;
+}) => {
+  // 기본 스타일 또는 오버라이드된 스타일 적용
+  const getStrokeStyle = (baseStyle: ThemedStyle<TextStyle>) => {
+    return themed((theme) => {
+      const base = baseStyle(theme);
+      return {
+        ...base,
+        ...(fontSize ? { fontSize } : {}),
+        ...(lineHeight ? { lineHeight } : {}),
+        ...(style || {}),
+      };
+    });
+  };
+
+  return (
+    <>
+      <Text
+        style={getStrokeStyle($contentTextStroke)}
+        numberOfLines={numberOfLines}
+        aria-hidden
+      >
+        {content}
+      </Text>
+      <Text
+        style={getStrokeStyle($contentTextStroke2)}
+        numberOfLines={numberOfLines}
+        aria-hidden
+      >
+        {content}
+      </Text>
+      <Text
+        style={getStrokeStyle($contentTextStroke3)}
+        numberOfLines={numberOfLines}
+        aria-hidden
+      >
+        {content}
+      </Text>
+      <Text
+        style={getStrokeStyle($contentTextStroke4)}
+        numberOfLines={numberOfLines}
+        aria-hidden
+      >
+        {content}
+      </Text>
+      <Text
+        style={getStrokeStyle($contentTextStroke5)}
+        numberOfLines={numberOfLines}
+        aria-hidden
+      >
+        {content}
+      </Text>
+      <Text
+        style={getStrokeStyle($contentTextStroke6)}
+        numberOfLines={numberOfLines}
+        aria-hidden
+      >
+        {content}
+      </Text>
+      <Text
+        style={[
+          themed($contentText),
+          style,
+          fontSize ? { fontSize } : null,
+          lineHeight ? { lineHeight } : null,
+        ]}
+        numberOfLines={numberOfLines}
+      >
+        {content}
+      </Text>
+    </>
+  );
+};
 
 // --- The Component ---
 // 이미지 관련 상수 정의
@@ -115,6 +171,9 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { themed } = useAppTheme();
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  // __DEV__ 상수 선언 (React Native에서는 기본 제공되지만 웹에서는 아닐 수 있음)
+  const __DEV__ = process.env.NODE_ENV === "development";
 
   // 이미지 비율, 높이, 로딩 상태 관리
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null); // 이미지 가로/세로 비율
@@ -144,6 +203,19 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const imageMedia = post.media.filter(
     (item) => item.type === "image" || item.type === "IMAGE",
   );
+
+  // 불필요한 코드 제거
+
+  // 디버깅용 - post 데이터 구조 확인 (개발 중에만 사용)
+  useEffect(() => {
+    if (__DEV__) {
+      console.log(`PostCard - post.id: ${post.id}`);
+      console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
+      console.log(
+        `PostCard - post.content: ${post.content.substring(0, 20)}...`,
+      );
+    }
+  }, [post.id]);
 
   // 이미지 비율과 높이 계산을 위한 효과
   useEffect(() => {
@@ -345,8 +417,30 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
               <Text style={themed($categoryText)}>{categoryInfo.text}</Text>
             </View>
 
-            <View style={themed($contentContainer)}>
-              <StrokedText content={post.content} themed={themed} />
+            {/* title이 있으면 표시 */}
+            {post.title && post.title.trim() ? (
+              <View style={themed($titleContainer)}>
+                <StrokedText
+                  content={post.title}
+                  themed={themed}
+                  fontSize={36}
+                  lineHeight={42}
+                  numberOfLines={2}
+                />
+              </View>
+            ) : null}
+            <View
+              style={[
+                themed($contentContainer),
+                post.title && post.title.trim() ? { bottom: 35 } : {},
+              ]}
+            >
+              <StrokedText
+                content={post.content}
+                themed={themed}
+                fontSize={24}
+                lineHeight={32}
+              />
             </View>
           </View>
         </TouchableOpacity>
@@ -535,6 +629,15 @@ const $categoryText: ThemedStyle<TextStyle> = () => ({
   fontWeight: "bold",
 });
 
+// 제목 텍스트 - 하단에서 위쪽
+const $titleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  bottom: spacing.md + 90, // content 위에 배치
+  left: spacing.md,
+  right: 80,
+  zIndex: 3,
+});
+
 // 콘텐츠 텍스트 - 하단
 const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
@@ -607,9 +710,9 @@ const $contentTextStroke6: ThemedStyle<TextStyle> = () => ({
 
 const $contentText: ThemedStyle<TextStyle> = () => ({
   color: "white",
-  fontSize: 24,
+  fontSize: 24, // StrokedText 컴포넌트에서 오버라이드됨
   fontWeight: "bold",
-  lineHeight: 32,
+  lineHeight: 32, // StrokedText 컴포넌트에서 오버라이드됨
   position: "relative",
   zIndex: 1,
 });

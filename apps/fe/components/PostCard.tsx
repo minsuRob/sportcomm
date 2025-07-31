@@ -74,7 +74,17 @@ const formatTimeAgo = (dateString: string) => {
 /**
  * 텍스트 테두리 효과를 위한 컴포넌트
  */
-const StrokedText = ({
+/**
+ * 테두리 효과가 있는 텍스트를 렌더링하는 함수
+ * @param content 표시할 텍스트 내용
+ * @param themed 테마 적용 함수
+ * @param style 추가 스타일 (선택)
+ * @param numberOfLines 최대 표시 줄 수 (기본값: 4)
+ * @param fontSize 폰트 크기 (선택)
+ * @param lineHeight 줄 간격 (선택)
+ * @returns JSX 엘리먼트
+ */
+const renderStrokedText = ({
   content,
   themed,
   style,
@@ -89,6 +99,16 @@ const StrokedText = ({
   fontSize?: number;
   lineHeight?: number;
 }) => {
+  // 스트로크 스타일 배열 정의
+  const strokeStyles = [
+    $contentTextStroke,
+    $contentTextStroke2,
+    $contentTextStroke3,
+    $contentTextStroke4,
+    $contentTextStroke5,
+    $contentTextStroke6,
+  ];
+
   // 기본 스타일 또는 오버라이드된 스타일 적용
   const getStrokeStyle = (baseStyle: ThemedStyle<TextStyle>) => {
     return themed((theme) => {
@@ -104,48 +124,19 @@ const StrokedText = ({
 
   return (
     <>
-      <Text
-        style={getStrokeStyle($contentTextStroke)}
-        numberOfLines={numberOfLines}
-        aria-hidden
-      >
-        {content}
-      </Text>
-      <Text
-        style={getStrokeStyle($contentTextStroke2)}
-        numberOfLines={numberOfLines}
-        aria-hidden
-      >
-        {content}
-      </Text>
-      <Text
-        style={getStrokeStyle($contentTextStroke3)}
-        numberOfLines={numberOfLines}
-        aria-hidden
-      >
-        {content}
-      </Text>
-      <Text
-        style={getStrokeStyle($contentTextStroke4)}
-        numberOfLines={numberOfLines}
-        aria-hidden
-      >
-        {content}
-      </Text>
-      <Text
-        style={getStrokeStyle($contentTextStroke5)}
-        numberOfLines={numberOfLines}
-        aria-hidden
-      >
-        {content}
-      </Text>
-      <Text
-        style={getStrokeStyle($contentTextStroke6)}
-        numberOfLines={numberOfLines}
-        aria-hidden
-      >
-        {content}
-      </Text>
+      {/* 테두리 효과를 위한 여러 레이어의 텍스트 */}
+      {strokeStyles.map((strokeStyle, index) => (
+        <Text
+          key={`stroke-${index}`}
+          style={getStrokeStyle(strokeStyle)}
+          numberOfLines={numberOfLines}
+          aria-hidden
+        >
+          {content}
+        </Text>
+      ))}
+
+      {/* 메인 텍스트 (최상위에 표시) */}
       <Text
         style={[
           themed($contentText),
@@ -158,6 +149,50 @@ const StrokedText = ({
         {content}
       </Text>
     </>
+  );
+};
+
+// 이전 StrokedText 컴포넌트를 새 함수로 대체하기 위한 호환성 래퍼
+const StrokedText = (props: Parameters<typeof renderStrokedText>[0]) => {
+  return renderStrokedText(props);
+};
+
+/**
+ * 컨텐츠 텍스트와 테두리 효과 렌더링 함수
+ * @param content 표시할 텍스트 내용
+ * @param themed 테마 적용 함수
+ * @param containerStyle 컨테이너 추가 스타일
+ * @param fontSize 폰트 크기
+ * @param lineHeight 줄 간격
+ * @param numberOfLines 최대 표시 줄 수 (기본값: 4)
+ * @returns JSX 엘리먼트
+ */
+const renderContentText = ({
+  content,
+  themed,
+  containerStyle,
+  fontSize = 24,
+  lineHeight = 32,
+  numberOfLines = 4,
+}: {
+  content: string;
+  themed: <T>(style: ThemedStyle<T>) => T;
+  containerStyle?: ViewStyle;
+  fontSize?: number;
+  lineHeight?: number;
+  numberOfLines?: number;
+}) => {
+  return (
+    <View style={[themed($contentContainer), containerStyle]}>
+      {/* 스트로크 효과가 있는 텍스트 렌더링 */}
+      {renderStrokedText({
+        content,
+        themed,
+        fontSize,
+        lineHeight,
+        numberOfLines,
+      })}
+    </View>
   );
 };
 
@@ -420,28 +455,26 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
             {/* title이 있으면 표시 */}
             {post.title && post.title.trim() ? (
               <View style={themed($titleContainer)}>
-                <StrokedText
-                  content={post.title}
-                  themed={themed}
-                  fontSize={36}
-                  lineHeight={42}
-                  numberOfLines={2}
-                />
+                {renderStrokedText({
+                  content: post.title,
+                  themed: themed,
+                  fontSize: 24,
+                  lineHeight: 42,
+                  numberOfLines: 2,
+                })}
               </View>
             ) : null}
-            <View
-              style={[
-                themed($contentContainer),
-                post.title && post.title.trim() ? { bottom: 35 } : {},
-              ]}
-            >
-              <StrokedText
-                content={post.content}
-                themed={themed}
-                fontSize={24}
-                lineHeight={32}
-              />
-            </View>
+            {renderContentText({
+              content: post.content,
+              themed: themed,
+              containerStyle:
+                post.title && post.title.trim()
+                  ? { bottom: 35 }
+                  : ({} as ViewStyle),
+              fontSize: 14,
+              lineHeight: 32,
+              numberOfLines: 2,
+            })}
           </View>
         </TouchableOpacity>
 

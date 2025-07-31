@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   TextStyle,
   Image,
   ImageStyle,
+  ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { usePostInteractions } from "../hooks/usePostInteractions";
-import PostHeader, { PostType } from "./shared/PostHeader";
+import { PostType } from "./shared/PostHeader";
 import { Media } from "./shared/PostMedia";
 import PostActions from "./shared/PostActions";
 import { isWeb } from "@/lib/platform";
@@ -31,8 +33,6 @@ export interface Comment {
   id: string;
 }
 
-// This is the canonical Post type used throughout the frontend.
-// It matches the backend GraphQL schema.
 export interface Post {
   id: string;
   content: string;
@@ -42,8 +42,8 @@ export interface Post {
   createdAt: string;
   type: PostType;
   viewCount: number;
-  likeCount: number; // Changed from likesCount
-  commentCount: number; // Changed from commentsCount
+  likeCount: number;
+  commentCount: number;
   isLiked: boolean;
   isMock?: boolean;
 }
@@ -56,13 +56,13 @@ interface PostCardProps {
 // --- Helper Functions & Components ---
 
 /**
- * 날짜 문자열을 "방금 전", "N시간 전", "YYYY.MM.DD" 형식으로 변환합니다.
+ * 날짜 문자열을 "방금 전", "N시간 전", "YYYY.MM.DD" 형식으로 변환
  */
 const formatTimeAgo = (dateString: string) => {
   const now = new Date();
   const postDate = new Date(dateString);
   const diffHours = Math.floor(
-    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
+    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
   );
 
   if (diffHours < 1) return "방금 전";
@@ -71,8 +71,7 @@ const formatTimeAgo = (dateString: string) => {
 };
 
 /**
- * 텍스트에 테두리 효과를 적용하는 컴포넌트입니다.
- * accessibility를 위해 실제 텍스트는 한 번만 렌더링하고, 나머지는 숨김 처리합니다.
+ * 텍스트 테두리 효과를 위한 컴포넌트
  */
 const StrokedText = ({
   content,
@@ -82,7 +81,6 @@ const StrokedText = ({
   themed: (style: ThemedStyle<TextStyle>) => TextStyle;
 }) => (
   <>
-    {/* 텍스트 테두리 효과를 위한 배경 텍스트들 */}
     <Text style={themed($contentTextStroke)} numberOfLines={4} aria-hidden>
       {content}
     </Text>
@@ -101,7 +99,6 @@ const StrokedText = ({
     <Text style={themed($contentTextStroke6)} numberOfLines={4} aria-hidden>
       {content}
     </Text>
-    {/* 메인 텍스트 */}
     <Text style={themed($contentText)} numberOfLines={4}>
       {content}
     </Text>
@@ -112,29 +109,24 @@ const StrokedText = ({
 export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { themed } = useAppTheme();
   const router = useRouter();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  // 이미지 비율과 로딩 상태 관리
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
+  const [imageLoading, setImageLoading] = useState<boolean>(true);
 
   // 게시물 상호작용 훅 사용
-  const {
-    currentUserId,
-    isLiked,
-    likeCount,
-    isFollowing,
-    isLikeProcessing,
-    isLikeError,
-    handleLike,
-    handleFollowToggle,
-  } = usePostInteractions({
-    postId: post.id,
-    authorId: post.author.id,
-    authorName: post.author.nickname,
-    initialLikeCount: post.likeCount,
-    initialIsLiked: post.isLiked,
-    initialIsFollowing: post.author.isFollowing || false,
-  });
+  const { isLiked, likeCount, isLikeProcessing, isLikeError, handleLike } =
+    usePostInteractions({
+      postId: post.id,
+      authorId: post.author.id,
+      authorName: post.author.nickname,
+      initialLikeCount: post.likeCount,
+      initialIsLiked: post.isLiked,
+      initialIsFollowing: post.author.isFollowing || false,
+    });
 
-  /**
-   * 게시물 상세 페이지로 이동하는 함수
-   */
+  // 게시물 상세 페이지로 이동하는 함수
   const handlePostPress = () => {
     router.push({
       pathname: "/post/[postId]",
@@ -144,8 +136,36 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 이미지 미디어만 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE"
+    (item) => item.type === "image" || item.type === "IMAGE",
   );
+
+  // 이미지 비율 계산을 위한 효과
+  useEffect(() => {
+    if (imageMedia.length > 0 && imageMedia[0]?.url) {
+      setImageLoading(true);
+
+      Image.getSize(
+        imageMedia[0].url,
+        (width, height) => {
+          if (height > 0) {
+            setImageAspectRatio(width / height);
+          } else {
+            // 높이가 0이거나 비정상적일 경우 기본 비율 설정
+            setImageAspectRatio(16 / 9);
+          }
+          setImageLoading(false);
+        },
+        () => {
+          // 이미지 로드 실패 시 기본값 사용
+          console.warn("Failed to load image dimensions");
+          setImageAspectRatio(16 / 9);
+          setImageLoading(false);
+        },
+      );
+    } else {
+      setImageLoading(false);
+    }
+  }, [imageMedia.length > 0 ? imageMedia[0]?.url : null]);
 
   // 카테고리별 색상 및 텍스트 매핑
   const getCategoryInfo = (type: PostType) => {
@@ -154,7 +174,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         return {
           text: "ANALYSIS",
           colors: {
-            border: "#8B5CF6", // 보라색
+            border: "#8B5CF6",
             glow: "#8B5CF6",
             badge: "#8B5CF6",
           },
@@ -163,7 +183,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         return {
           text: "HIGHLIGHT",
           colors: {
-            border: "#F59E0B", // 주황색
+            border: "#F59E0B",
             glow: "#F59E0B",
             badge: "#F59E0B",
           },
@@ -173,7 +193,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         return {
           text: "CHEERING",
           colors: {
-            border: "#10B981", // 청록색
+            border: "#10B981",
             glow: "#10B981",
             badge: "#10B981",
           },
@@ -205,9 +225,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       <View
         style={[
           themed($borderLayer),
-          {
-            borderColor: categoryInfo.colors.border + "20",
-          },
+          { borderColor: categoryInfo.colors.border + "20" },
         ]}
       />
 
@@ -225,21 +243,30 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       >
         <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
           <View style={themed($mediaContainer)}>
-            {/* 배경: 이미지 또는 빈 컨테이너 */}
             {imageMedia.length > 0 ? (
-              <>
-                <Image
-                  source={{
-                    uri:
-                      imageMedia[0]?.url ||
-                      "https://lh3.googleusercontent.com/aida-public/AB6AXuBAs31Z9e7tE4MEe4qOvL8tmInV3OnopXRbbPUHDNNX03bqTEq8OptDvE69aED3dCTsdjrOwx-hh1WXCjmg5AYjZlUdYzfIIRgWjRUH-M9jwhugMxisjA2Z2Hd4ajK0GpMA-fJeZFJtEKyQiIn9dx72icpJF4oCeubT-vK2wYemuAfrGCJ7rPocUTEmkQX8nHZi448NpsOXSVMbeBOH4dfm6DlSZyuaL0ft8FIXoRor76NK0vugaMl5-BtfZCvuB-ZAfsCo_NUYfJ3k",
+              imageLoading ? (
+                // 로딩 중 인디케이터
+                <View style={themed($loadingContainer)}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                </View>
+              ) : (
+                // 이미지가 있고 로딩 완료된 상태
+                <View
+                  style={{
+                    aspectRatio: imageAspectRatio || 16 / 9,
+                    maxHeight: screenHeight * 0.6, // 화면 높이의 60%로 제한
                   }}
-                  style={themed($mediaImage)}
-                  resizeMode="cover"
-                />
-                <View style={themed($gradientOverlay)} />
-              </>
+                >
+                  <Image
+                    source={{ uri: imageMedia[0]?.url }}
+                    style={themed($mediaImage)}
+                    resizeMode="cover"
+                  />
+                  <View style={themed($gradientOverlay)} />
+                </View>
+              )
             ) : (
+              // 이미지가 없는 경우
               <View style={themed($emptyMediaContainer)} />
             )}
 
@@ -306,7 +333,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           variant="feed"
           likeCount={likeCount}
           commentCount={post.commentCount}
-          shareCount={67} // 임시 값
+          shareCount={67}
         />
       </View>
     </View>
@@ -361,15 +388,13 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   overflow: "hidden",
   position: "relative",
   zIndex: 1,
-  // 세밀한 테두리 효과
-  borderLeftWidth: 4, // 왼쪽 테두리
+  borderLeftWidth: 4,
   borderTopWidth: 0.8,
-  borderRightWidth: 4, // 오른쪽 테두리
+  borderRightWidth: 4,
   borderBottomWidth: 0.8,
-  // 그림자 효과 개선
   shadowColor: "#000",
   shadowOffset: {
-    width: 0, // 그림자를 중앙으로 조정
+    width: 0,
     height: 3,
   },
   shadowOpacity: 0.15,
@@ -377,12 +402,18 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   elevation: 6,
 });
 
-const $mediaContainer: ThemedStyle<ViewStyle> = () => ({
+const $mediaContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   position: "relative",
   width: "100%",
-  height: 320,
   borderRadius: 16,
   overflow: "hidden",
+  backgroundColor: colors.backgroundDim,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
+  height: 300,
+  justifyContent: "center",
+  alignItems: "center",
 });
 
 const $mediaImage: ThemedStyle<ImageStyle> = () => ({
@@ -549,65 +580,7 @@ const $contentText: ThemedStyle<TextStyle> = () => ({
   zIndex: 1,
 });
 
-const $textOnlyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.md,
-});
-
-// 텍스트 전용 레이아웃 스타일들
-const $textProfileContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  marginBottom: spacing.md,
-});
-
-const $textProfileImage: ThemedStyle<ImageStyle> = () => ({
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  marginRight: 12,
-});
-
-const $textProfileInfo: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-});
-
-const $textProfileName: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
-  fontWeight: "600",
-  color: colors.text,
-});
-
-const $textProfileTime: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
-  color: colors.textDim,
-  marginTop: 2,
-});
-
-const $textCategoryBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
-  borderRadius: 12,
-});
-
-const $textCategoryText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 12,
-  fontWeight: "bold",
-});
-
-const $textContent: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 16,
-  color: colors.text,
-  lineHeight: 24,
-  marginBottom: spacing.md,
-});
-
-const $emptyMediaContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  height: 250, // 이미지와 동일한 높이
-  backgroundColor: colors.backgroundDim, // 약간 어두운 배경
+const $emptyMediaContainer: ThemedStyle<ViewStyle> = () => ({
+  height: 300,
   width: "100%",
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
 });

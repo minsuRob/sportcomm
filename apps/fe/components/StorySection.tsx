@@ -8,11 +8,9 @@ import {
   ViewStyle,
   TextStyle,
   ImageStyle,
-  ActivityIndicator,
 } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { useStoryImageDimensions } from "@/lib/image";
 
 /**
  * 스토리 데이터 타입
@@ -29,34 +27,27 @@ interface StorySectionProps {
 }
 
 /**
- * 개별 스토리 아이템 컴포넌트 (이미지 최적화 적용)
+ * 개별 스토리 아이템 컴포넌트 (고정 크기 적용)
  */
 const StoryItem = ({ story }: { story: Story }) => {
   const { themed } = useAppTheme();
 
-  // 이미지 최적화 훅 사용
-  const { imageAspectRatio, imageHeight, imageLoading, error } =
-    useStoryImageDimensions(story.avatar);
-
   return (
     <TouchableOpacity style={themed($storyItem)}>
       <View style={themed($storyImageContainer)}>
-        {imageLoading ? (
-          <View style={themed($storyImageLoading)}>
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          </View>
-        ) : (
-          <Image
-            source={{ uri: story.avatar }}
-            style={[
-              themed($storyImage),
-              imageAspectRatio ? { aspectRatio: imageAspectRatio } : null,
-            ]}
-            onError={() =>
-              console.warn(`Failed to load story image: ${story.avatar}`)
-            }
-          />
-        )}
+        <Image
+          source={{ uri: story.avatar }}
+          style={themed($storyImage)}
+          resizeMode="cover"
+          onError={() =>
+            console.warn(`Failed to load story image: ${story.avatar}`)
+          }
+          // iOS 성능 최적화
+          fadeDuration={200}
+          loadingIndicatorSource={{
+            uri: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+          }}
+        />
         {story.timestamp === "Live" && (
           <View style={themed($liveIndicator)}>
             <Text style={themed($liveText)}>LIVE</Text>
@@ -141,7 +132,7 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $scrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.lg,
   paddingVertical: spacing.sm,
-  gap: spacing.md,
+  // gap 제거 - marginRight로 간격 조정
 });
 
 const $liveIndicator: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -163,8 +154,9 @@ const $liveText: ThemedStyle<TextStyle> = () => ({
 
 const $storyItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   alignItems: "flex-start",
-  minWidth: 140,
-  marginRight: spacing.md,
+  width: 140, // 고정 너비
+  height: 120, // 고정 높이
+  marginRight: spacing.md, // 아이템 간 간격
   borderRadius: 12,
   overflow: "hidden",
   backgroundColor: colors.card,
@@ -173,11 +165,14 @@ const $storyItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   shadowOpacity: 0.2,
   shadowRadius: 5,
   elevation: 4,
+  // iOS에서 더 나은 성능을 위한 추가 속성
+  shouldRasterizeIOS: true,
+  rasterizationScale: 2,
 });
 
 const $storyImageContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   width: "100%",
-  aspectRatio: 16 / 9,
+  height: 80, // 고정 높이로 변경
   overflow: "hidden",
   position: "relative",
   borderBottomWidth: 2,
@@ -190,29 +185,23 @@ const $storyImage: ThemedStyle<ImageStyle> = () => ({
   opacity: 0.9,
 });
 
-const $storyImageLoading: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  width: "100%",
-  height: "100%",
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: colors.backgroundDim,
-});
-
 const $storyInfo: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   width: "100%",
+  flex: 1, // 남은 공간 차지
   padding: spacing.sm,
   backgroundColor: colors.card,
+  justifyContent: "center", // 세로 중앙 정렬
 });
 
 const $storyUsername: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
+  fontSize: 12, // 폰트 크기 축소
   fontWeight: "700",
   color: colors.text,
   letterSpacing: 0.2,
 });
 
 const $storyTimestamp: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
+  fontSize: 10, // 폰트 크기 축소
   color: colors.accent,
   marginTop: 2,
   fontWeight: "500",

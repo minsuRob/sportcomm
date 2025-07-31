@@ -191,8 +191,8 @@ export const useImageDimensions = (
  */
 export const useStoryImageDimensions = (imageUrl: string | null) => {
   return useImageDimensions(imageUrl, {
-    minHeight: 80, // 스토리는 더 작은 최소 높이
-    maxHeightRatio: 0.3, // 화면의 30%까지만
+    minHeight: 60, // 스토리는 더 작은 최소 높이
+    maxHeightRatio: 0.15, // 화면의 15%까지만 (더 작게 제한)
     defaultAspectRatio: IMAGE_CONSTANTS.STORY_ASPECT_RATIO,
   });
 };

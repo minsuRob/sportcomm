@@ -21,6 +21,7 @@ import { setImperativeTheming } from "./context.utils";
 import { darkTheme, lightTheme } from "./theme";
 import type {
   AllowedStylesT,
+  AppColorT,
   ImmutableThemeContextModeT,
   Theme,
   ThemeContextModeT,
@@ -35,6 +36,8 @@ export type ThemeContextType = {
   themeContext: ImmutableThemeContextModeT;
   themed: ThemedFnT;
   toggleTheme: () => void;
+  appColor: AppColorT;
+  setAppColor: (color: AppColorT) => void;
 };
 
 export const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -60,6 +63,7 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
   const systemColorScheme = useColorScheme();
   // Our saved theme context: can be "light", "dark", or undefined (system theme)
   const [themeScheme, setThemeSchemeState] = useState<ThemeContextModeT>();
+  const [appColor, setAppColorState] = useState<AppColorT>("blue");
 
   useEffect(() => {
     // Load auth state from storage
@@ -67,6 +71,11 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
       const storedTheme = await storage.loadString("ignite.themeScheme");
       if (storedTheme) {
         setThemeSchemeState(storedTheme as ThemeContextModeT);
+      }
+
+      const storedColor = await storage.loadString("app.appColor");
+      if (storedColor) {
+        setAppColorState(storedColor as AppColorT);
       }
     }
     loadTheme();
@@ -89,6 +98,11 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
     },
     [],
   );
+
+  const setAppColor = useCallback(async (newColor: AppColorT) => {
+    setAppColorState(newColor);
+    await storage.saveString("app.appColor", newColor);
+  }, []);
 
   /**
    * initialContext is the theme context passed in from the app.tsx file and always takes precedence.
@@ -113,13 +127,25 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
   }, [themeContext]);
 
   const theme: Theme = useMemo(() => {
-    switch (themeContext) {
-      case "dark":
-        return darkTheme;
-      default:
-        return lightTheme;
-    }
-  }, [themeContext]);
+    // 테마 기본 설정에 앱 색상 정보 추가
+    const baseTheme = themeContext === "dark" ? darkTheme : lightTheme;
+
+    // 앱 색상 정보 추가
+    return {
+      ...baseTheme,
+      appColor,
+      // 앱 색상에 따라 tint, accent 등의 색상 업데이트
+      colors: {
+        ...baseTheme.colors,
+        tint:
+          appColor === "blue"
+            ? baseTheme.colors.palette.primary500
+            : appColor === "red"
+              ? baseTheme.colors.palette.red500
+              : baseTheme.colors.palette.orange500,
+      },
+    };
+  }, [themeContext, appColor]);
 
   useEffect(() => {
     setImperativeTheming(theme);
@@ -156,6 +182,8 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
     setThemeContextOverride,
     themed,
     toggleTheme,
+    appColor,
+    setAppColor,
   };
 
   return (

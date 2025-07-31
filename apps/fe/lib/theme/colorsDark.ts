@@ -16,6 +16,22 @@ const palette = {
   primary500: "#7DD3FC",
   primary600: "#BAE6FD",
 
+  // 빨간색 계열 (다크모드)
+  red100: "#7F1D1D",
+  red200: "#991B1B",
+  red300: "#DC2626",
+  red400: "#F87171",
+  red500: "#FCA5A5",
+  red600: "#FECACA",
+
+  // 주황색 계열 (다크모드)
+  orange100: "#7C2D12",
+  orange200: "#9A3412",
+  orange300: "#EA580C",
+  orange400: "#FB923C",
+  orange500: "#FDBA74",
+  orange600: "#FED7AA",
+
   secondary100: "#0C4A6E",
   secondary200: "#075985",
   secondary300: "#0EA5E9",

@@ -7,6 +7,9 @@ import { spacing as spacingDark } from "./spacingDark";
 import { timing } from "./timing";
 import { typography } from "./typography";
 
+// 앱의 아이덴티티 색상 타입
+export type AppColorT = "blue" | "red" | "orange";
+
 // This supports "light" and "dark" themes by default. If undefined, it'll use the system theme
 export type ImmutableThemeContextModeT = "light" | "dark";
 export type ThemeContextModeT = ImmutableThemeContextModeT | undefined;
@@ -28,6 +31,7 @@ export interface Theme {
   typography: Typography;
   timing: Timing;
   isDark: boolean;
+  appColor?: AppColorT;
 }
 
 /**

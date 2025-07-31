@@ -9,12 +9,29 @@ const palette = {
   neutral800: "#1E293B",
   neutral900: "#0F172A",
 
+  // 기본 파란색 계열
   primary100: "#E0F2FE",
   primary200: "#BAE6FD",
   primary300: "#7DD3FC",
   primary400: "#38BDF8",
   primary500: "#0EA5E9",
   primary600: "#0284C7",
+
+  // 빨간색 계열
+  red100: "#FEE2E2",
+  red200: "#FECACA",
+  red300: "#FCA5A5",
+  red400: "#F87171",
+  red500: "#EF4444",
+  red600: "#DC2626",
+
+  // 주황색 계열
+  orange100: "#FFEDD5",
+  orange200: "#FED7AA",
+  orange300: "#FDBA74",
+  orange400: "#FB923C",
+  orange500: "#F97316",
+  orange600: "#EA580C",
 
   secondary100: "#F0F9FF",
   secondary200: "#E0F2FE",

@@ -235,11 +235,13 @@ export default function FeedScreen() {
 
       {/* 헤더 */}
       <View style={themed($header)}>
-        <View style={themed($headerLeft)} />
+        <View style={themed($headerLeft)}>
+          <Text style={themed($logoText)}>SportComm</Text>
+        </View>
         <Text style={themed($headerTitle)}>Home</Text>
         <View style={themed($headerRight)}>
           <TouchableOpacity
-            style={themed($settingsButton)}
+            style={themed($profileButton)}
             onPress={() =>
               currentUser
                 ? router.push("/(app)/profile")
@@ -249,7 +251,7 @@ export default function FeedScreen() {
             <Ionicons
               name={currentUser ? "person" : "person-outline"}
               size={24}
-              color={theme.colors.text}
+              color={theme.colors.tint}
             />
           </TouchableOpacity>
         </View>
@@ -262,9 +264,11 @@ export default function FeedScreen() {
             style={themed($createPostButton)}
             onPress={() => router.push("/(modals)/create-post")}
           >
+            <Ionicons name="add-circle" size={18} color="#fff" />
             <Text style={themed($createPostButtonText)}>Create Post</Text>
           </TouchableOpacity>
           <TouchableOpacity style={themed($trendingButton)} onPress={() => {}}>
+            <Ionicons name="trending-up" size={18} color={theme.colors.text} />
             <Text style={themed($trendingButtonText)}>Trending</Text>
           </TouchableOpacity>
         </View>
@@ -274,6 +278,7 @@ export default function FeedScreen() {
             style={themed($loginButton)}
             onPress={() => setAuthModalVisible(true)}
           >
+            <Ionicons name="log-in-outline" size={18} color="#fff" />
             <Text style={themed($loginButtonText)}>
               {t(TRANSLATION_KEYS.AUTH_SIGNUP_LOGIN)}
             </Text>
@@ -341,12 +346,20 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   alignItems: "center",
   justifyContent: "space-between",
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  backgroundColor: colors.background,
+  paddingVertical: spacing.lg,
+  backgroundColor: colors.card,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.shadowLight,
+  shadowColor: colors.shadowLight,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.8,
+  shadowRadius: 2,
+  elevation: 3,
 });
 
 const $headerLeft: ThemedStyle<ViewStyle> = () => ({
-  width: 48,
+  width: 100,
+  justifyContent: "center",
 });
 
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -357,32 +370,53 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   textAlign: "center",
 });
 
+const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "900",
+  color: colors.tint,
+  fontStyle: "italic",
+});
+
 const $headerRight: ThemedStyle<ViewStyle> = () => ({
-  width: 48,
+  width: 100,
   alignItems: "flex-end",
 });
 
-const $actionButtonsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $actionButtonsContainer: ThemedStyle<ViewStyle> = ({
+  spacing,
+  colors,
+}) => ({
   flexDirection: "row",
   justifyContent: "center",
-  gap: spacing.sm,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
+  gap: spacing.md,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.md,
+  backgroundColor: colors.backgroundAlt,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
 });
 
 const $loginButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.tint,
   paddingHorizontal: spacing.lg,
   paddingVertical: spacing.sm,
-  borderRadius: 20,
+  borderRadius: 12,
   flex: 1,
+  flexDirection: "row",
   alignItems: "center",
+  justifyContent: "center",
+  gap: spacing.sm,
+  shadowColor: colors.tint,
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 5,
 });
 
 const $loginButtonText: ThemedStyle<TextStyle> = () => ({
   color: "white",
-  fontSize: 14,
-  fontWeight: "600",
+  fontSize: 16,
+  fontWeight: "700",
 });
 
 const $modalOverlay: ThemedStyle<ViewStyle> = () => ({
@@ -421,33 +455,57 @@ const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.tint,
   paddingHorizontal: spacing.lg,
   paddingVertical: spacing.sm,
-  borderRadius: 20,
+  borderRadius: 12,
   flex: 1,
+  flexDirection: "row",
+  justifyContent: "center",
   alignItems: "center",
+  gap: spacing.sm,
+  shadowColor: colors.tint,
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 5,
 });
 
 const $createPostButtonText: ThemedStyle<TextStyle> = () => ({
   color: "white",
-  fontSize: 14,
-  fontWeight: "600",
+  fontSize: 16,
+  fontWeight: "700",
 });
 
 const $trendingButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.border + "50",
+  backgroundColor: colors.card,
   paddingHorizontal: spacing.lg,
   paddingVertical: spacing.sm,
-  borderRadius: 20,
+  borderRadius: 12,
   flex: 1,
+  flexDirection: "row",
+  justifyContent: "center",
   alignItems: "center",
+  gap: spacing.sm,
+  borderWidth: 1,
+  borderColor: colors.border,
+  shadowColor: colors.shadowLight,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 3,
+  elevation: 2,
 });
 
 const $trendingButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
-  fontSize: 14,
+  fontSize: 16,
   fontWeight: "600",
 });
 
-const $settingsButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.xs,
-  borderRadius: 20,
+const $profileButton: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+  padding: spacing.sm,
+  borderRadius: 999,
+  backgroundColor: colors.card,
+  shadowColor: colors.shadowLight,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.5,
+  shadowRadius: 3,
+  elevation: 2,
 });

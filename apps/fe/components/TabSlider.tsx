@@ -65,7 +65,7 @@ export default function TabSlider({
                 {
                   color:
                     activeTab === tab.key
-                      ? theme.colors.text
+                      ? theme.colors.tint
                       : theme.colors.textDim,
                   fontWeight: activeTab === tab.key ? "700" : "500",
                 },
@@ -95,10 +95,12 @@ export default function TabSlider({
 
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.background,
-  paddingHorizontal: spacing.md,
+  backgroundColor: colors.backgroundAlt,
+  paddingHorizontal: spacing.lg,
   paddingTop: spacing.sm,
   position: "relative",
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
 });
 
 const $tabContainer: ThemedStyle<ViewStyle> = () => ({
@@ -106,22 +108,29 @@ const $tabContainer: ThemedStyle<ViewStyle> = () => ({
   justifyContent: "space-around",
 });
 
-const $tab: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $tab: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   flex: 1,
   alignItems: "center",
-  paddingVertical: spacing.md,
+  paddingVertical: spacing.lg,
+  position: "relative",
 });
 
 const $tabText: ThemedStyle<TextStyle> = () => ({
   fontSize: 16,
   textAlign: "center",
+  letterSpacing: 0.5,
 });
 
 const $indicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
   position: "absolute",
   bottom: 0,
   width: "50%",
-  height: 3,
-  backgroundColor: colors.text,
+  height: 4,
+  backgroundColor: colors.tint,
   borderRadius: 2,
+  shadowColor: colors.tint,
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.4,
+  shadowRadius: 2,
+  elevation: 2,
 });

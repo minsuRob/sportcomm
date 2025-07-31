@@ -27,27 +27,41 @@ interface StorySectionProps {
 }
 
 /**
- * 상단 스토리 섹션 컴포넌트
- * 가로 스크롤로 사용자 스토리를 표시
+ * 스토리 섹션 컴포넌트
+ * 가로 스크롤로 스포츠/e스포츠 주요 소식 및 사용자 스토리를 표시
  */
 export default function StorySection({ stories }: StorySectionProps) {
   const { themed } = useAppTheme();
 
-  // 기본 스토리 데이터 (Liam Carter, Olivia Bennett)
+  // 기본 스토리 데이터 (스포츠/e스포츠 주요 소식)
   const defaultStories: Story[] = [
     {
       id: "1",
-      username: "Liam Carter",
+      username: "World Cup 2023",
       avatar:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBAs31Z9e7tE4MEe4qOvL8tmInV3OnopXRbbPUHDNNX03bqTEq8OptDvE69aED3dCTsdjrOwx-hh1WXCjmg5AYjZlUdYzfIIRgWjRUH-M9jwhugMxisjA2Z2Hd4ajK0GpMA-fJeZFJtEKyQiIn9dx72icpJF4oCeubT-vK2wYemuAfrGCJ7rPocUTEmkQX8nHZi448NpsOXSVMbeBOH4dfm6DlSZyuaL0ft8FIXoRor76NK0vugaMl5-BtfZCvuB-ZAfsCo_NUYfJ3k",
-      timestamp: "2h",
+        "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=735&auto=format&fit=crop",
+      timestamp: "Live",
     },
     {
       id: "2",
-      username: "Olivia Bennett",
+      username: "NBA Finals",
       avatar:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDbZAUqiC4EuK-5kdExi0PpejzCUG3G89OwPLNFJ1mxN3M3bNOuduF4ANYhDPJsskNLf2HImBjTtrWjn0u13cWpSdzCLk-wcFqeIEgOlOa3TEPIrIm5fPTpNvGTA2yEZaI9OKliF5pN5UjidJO5mfGJIaAOlsIe-nwxrf2QcWP4L9eMura7Cs0ke5uqixuWYP6NgIZDClGPedAB5drBTgNRqVkGMdnaLXPV9xsR97aWRW_e2Hc1sWnzJEq0GcfI5g4TFywqcHShauI_",
+        "https://images.unsplash.com/photo-1518406432532-9cbef5697723?q=80&w=735&auto=format&fit=crop",
+      timestamp: "2h",
+    },
+    {
+      id: "3",
+      username: "League of Legends",
+      avatar:
+        "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1470&auto=format&fit=crop",
       timestamp: "4h",
+    },
+    {
+      id: "4",
+      username: "Premier League",
+      avatar:
+        "https://images.unsplash.com/photo-1590761799834-6e87176323df?q=80&w=1473&auto=format&fit=crop",
+      timestamp: "Today",
     },
   ];
 
@@ -60,6 +74,11 @@ export default function StorySection({ stories }: StorySectionProps) {
     <TouchableOpacity key={story.id} style={themed($storyItem)}>
       <View style={themed($storyImageContainer)}>
         <Image source={{ uri: story.avatar }} style={themed($storyImage)} />
+        {story.timestamp === "Live" && (
+          <View style={themed($liveIndicator)}>
+            <Text style={themed($liveText)}>LIVE</Text>
+          </View>
+        )}
       </View>
       <View style={themed($storyInfo)}>
         <Text style={themed($storyUsername)} numberOfLines={1}>
@@ -85,49 +104,81 @@ export default function StorySection({ stories }: StorySectionProps) {
 
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.background,
-  paddingVertical: spacing.sm,
+  backgroundColor: colors.backgroundAlt,
+  paddingVertical: spacing.md,
   borderBottomWidth: 1,
-  borderBottomColor: colors.border + "30",
+  borderBottomColor: colors.border,
+  marginBottom: spacing.sm,
 });
 
 const $scrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  gap: spacing.sm,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  gap: spacing.md,
 });
 
-const $storyItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $liveIndicator: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  position: "absolute",
+  top: spacing.xs,
+  right: spacing.xs,
+  backgroundColor: colors.energy,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xxxs,
+  borderRadius: 4,
+});
+
+const $liveText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 10,
+  fontWeight: "800",
+  letterSpacing: 0.5,
+});
+
+const $storyItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   alignItems: "flex-start",
-  minWidth: 120,
-  marginRight: spacing.sm,
+  minWidth: 140,
+  marginRight: spacing.md,
+  borderRadius: 12,
+  overflow: "hidden",
+  backgroundColor: colors.card,
+  shadowColor: colors.shadowLight,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.2,
+  shadowRadius: 5,
+  elevation: 4,
 });
 
 const $storyImageContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   width: "100%",
   aspectRatio: 16 / 9,
-  borderRadius: 12,
   overflow: "hidden",
   position: "relative",
+  borderBottomWidth: 2,
+  borderBottomColor: colors.tint,
 });
 
 const $storyImage: ThemedStyle<ImageStyle> = () => ({
   width: "100%",
   height: "100%",
+  opacity: 0.9,
 });
 
-const $storyInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginTop: spacing.xs,
+const $storyInfo: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   width: "100%",
+  padding: spacing.sm,
+  backgroundColor: colors.card,
 });
 
 const $storyUsername: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
-  fontWeight: "600",
+  fontWeight: "700",
   color: colors.text,
+  letterSpacing: 0.2,
 });
 
 const $storyTimestamp: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
-  color: colors.textDim,
+  color: colors.accent,
   marginTop: 2,
+  fontWeight: "500",
 });

@@ -89,7 +89,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 이미지 미디어만 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
+    (item) => item.type === "image" || item.type === "IMAGE"
   );
 
   // 카테고리별 색상 및 텍스트 매핑
@@ -205,7 +205,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                       const now = new Date();
                       const postDate = new Date(post.createdAt);
                       const diffHours = Math.floor(
-                        (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
+                        (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
                       );
 
                       if (diffHours < 1) return "방금 전";
@@ -242,6 +242,20 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
               {/* 콘텐츠 텍스트 - 하단 */}
               <View style={themed($contentContainer)}>
+                {/* 텍스트 테두리 효과를 위한 배경 텍스트들 */}
+                <Text style={themed($contentTextStroke)} numberOfLines={3}>
+                  {post.content}
+                </Text>
+                <Text style={themed($contentTextStroke2)} numberOfLines={3}>
+                  {post.content}
+                </Text>
+                <Text style={themed($contentTextStroke3)} numberOfLines={3}>
+                  {post.content}
+                </Text>
+                <Text style={themed($contentTextStroke4)} numberOfLines={3}>
+                  {post.content}
+                </Text>
+                {/* 메인 텍스트 */}
                 <Text style={themed($contentText)} numberOfLines={3}>
                   {post.content}
                 </Text>
@@ -270,7 +284,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                     const now = new Date();
                     const postDate = new Date(post.createdAt);
                     const diffHours = Math.floor(
-                      (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
+                      (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
                     );
 
                     if (diffHours < 1) return "방금 전";
@@ -491,17 +505,57 @@ const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   bottom: spacing.md,
   left: spacing.md,
   right: 80,
-  backgroundColor: "rgba(0, 0, 0, 0.4)",
-  borderRadius: 12,
-  padding: spacing.md,
   zIndex: 3,
+});
+
+// 텍스트 테두리 효과를 위한 스타일들
+const $contentTextStroke: ThemedStyle<TextStyle> = () => ({
+  position: "absolute",
+  color: "black",
+  fontSize: 24,
+  fontWeight: "bold",
+  lineHeight: 32,
+  left: -1,
+  top: -1,
+});
+
+const $contentTextStroke2: ThemedStyle<TextStyle> = () => ({
+  position: "absolute",
+  color: "black",
+  fontSize: 24,
+  fontWeight: "bold",
+  lineHeight: 32,
+  left: 1,
+  top: -1,
+});
+
+const $contentTextStroke3: ThemedStyle<TextStyle> = () => ({
+  position: "absolute",
+  color: "black",
+  fontSize: 24,
+  fontWeight: "bold",
+  lineHeight: 32,
+  left: -1,
+  top: 1,
+});
+
+const $contentTextStroke4: ThemedStyle<TextStyle> = () => ({
+  position: "absolute",
+  color: "black",
+  fontSize: 24,
+  fontWeight: "bold",
+  lineHeight: 32,
+  left: 1,
+  top: 1,
 });
 
 const $contentText: ThemedStyle<TextStyle> = () => ({
   color: "white",
-  fontSize: 14,
-  fontWeight: "500",
-  lineHeight: 20,
+  fontSize: 24,
+  fontWeight: "bold",
+  lineHeight: 32,
+  position: "relative",
+  zIndex: 1,
 });
 
 const $textOnlyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

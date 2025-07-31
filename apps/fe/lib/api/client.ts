@@ -11,16 +11,17 @@ import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
 // import { createHybridUploadLink } from "./fileUpload"; // 임시 비활성화
 import { logPlatformInfo, getPlatformType } from "@/lib/platform";
-
+import { GRAPHQL_URL } from "@env";
 /**
  * API 기본 URL 설정
  * 개발 환경에서는 로컬 서버, 프로덕션 환경에서는 실제 API 서버 URL 사용
  */
-const API_URL = __DEV__
-  ? Platform.OS === "android"
-    ? "http://10.0.2.2:3000/graphql" // Android 에뮬레이터용
-    : "http://localhost:3000/graphql" // iOS 에뮬레이터용
-  : "https://api.sportcomm.com/graphql"; // 프로덕션 URL
+const API_URL = GRAPHQL_URL;
+// const API_URL = __DEV__
+//   ? Platform.OS === "android"
+//     ? "http://10.0.2.2:3000/graphql" // Android 에뮬레이터용
+//     : "http://localhost:3000/graphql" // iOS 에뮬레이터용
+//   : "https://api.sportcomm.com/graphql"; // 프로덕션 URL
 
 /**
  * 파일 업로드를 지원하는 HTTP 링크 생성
@@ -42,7 +43,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, locations, path }) => {
       console.error(
-        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`,
+        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`
       );
     });
   }
@@ -97,7 +98,7 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
             ? "File"
             : file.uri
               ? "ReactNativeFile"
-              : "알 수 없음",
+              : "알 수 없음"
         );
         console.log(`파일[${index}] 속성:`, Object.keys(file));
       });

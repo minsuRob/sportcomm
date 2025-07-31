@@ -243,20 +243,26 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
               {/* 콘텐츠 텍스트 - 하단 */}
               <View style={themed($contentContainer)}>
                 {/* 텍스트 테두리 효과를 위한 배경 텍스트들 */}
-                <Text style={themed($contentTextStroke)} numberOfLines={3}>
+                <Text style={themed($contentTextStroke)} numberOfLines={4}>
                   {post.content}
                 </Text>
-                <Text style={themed($contentTextStroke2)} numberOfLines={3}>
+                <Text style={themed($contentTextStroke2)} numberOfLines={4}>
                   {post.content}
                 </Text>
-                <Text style={themed($contentTextStroke3)} numberOfLines={3}>
+                <Text style={themed($contentTextStroke3)} numberOfLines={4}>
                   {post.content}
                 </Text>
-                <Text style={themed($contentTextStroke4)} numberOfLines={3}>
+                <Text style={themed($contentTextStroke4)} numberOfLines={4}>
+                  {post.content}
+                </Text>
+                <Text style={themed($contentTextStroke5)} numberOfLines={4}>
+                  {post.content}
+                </Text>
+                <Text style={themed($contentTextStroke6)} numberOfLines={4}>
                   {post.content}
                 </Text>
                 {/* 메인 텍스트 */}
-                <Text style={themed($contentText)} numberOfLines={3}>
+                <Text style={themed($contentText)} numberOfLines={4}>
                   {post.content}
                 </Text>
               </View>
@@ -547,6 +553,26 @@ const $contentTextStroke4: ThemedStyle<TextStyle> = () => ({
   lineHeight: 32,
   left: 1,
   top: 1,
+});
+
+const $contentTextStroke5: ThemedStyle<TextStyle> = () => ({
+  position: "absolute",
+  color: "black",
+  fontSize: 24,
+  fontWeight: "bold",
+  lineHeight: 32,
+  left: -2,
+  top: 0,
+});
+
+const $contentTextStroke6: ThemedStyle<TextStyle> = () => ({
+  position: "absolute",
+  color: "black",
+  fontSize: 24,
+  fontWeight: "bold",
+  lineHeight: 32,
+  left: 2,
+  top: 0,
 });
 
 const $contentText: ThemedStyle<TextStyle> = () => ({

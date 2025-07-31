@@ -53,6 +53,61 @@ interface PostCardProps {
   onPostUpdated?: (updatedPost: any) => void;
 }
 
+// --- Helper Functions & Components ---
+
+/**
+ * 날짜 문자열을 "방금 전", "N시간 전", "YYYY.MM.DD" 형식으로 변환합니다.
+ */
+const formatTimeAgo = (dateString: string) => {
+  const now = new Date();
+  const postDate = new Date(dateString);
+  const diffHours = Math.floor(
+    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
+  );
+
+  if (diffHours < 1) return "방금 전";
+  if (diffHours < 24) return `${diffHours}h`;
+  return postDate.toLocaleDateString("ko-KR");
+};
+
+/**
+ * 텍스트에 테두리 효과를 적용하는 컴포넌트입니다.
+ * accessibility를 위해 실제 텍스트는 한 번만 렌더링하고, 나머지는 숨김 처리합니다.
+ */
+const StrokedText = ({
+  content,
+  themed,
+}: {
+  content: string;
+  themed: (style: ThemedStyle<TextStyle>) => TextStyle;
+}) => (
+  <>
+    {/* 텍스트 테두리 효과를 위한 배경 텍스트들 */}
+    <Text style={themed($contentTextStroke)} numberOfLines={4} aria-hidden>
+      {content}
+    </Text>
+    <Text style={themed($contentTextStroke2)} numberOfLines={4} aria-hidden>
+      {content}
+    </Text>
+    <Text style={themed($contentTextStroke3)} numberOfLines={4} aria-hidden>
+      {content}
+    </Text>
+    <Text style={themed($contentTextStroke4)} numberOfLines={4} aria-hidden>
+      {content}
+    </Text>
+    <Text style={themed($contentTextStroke5)} numberOfLines={4} aria-hidden>
+      {content}
+    </Text>
+    <Text style={themed($contentTextStroke6)} numberOfLines={4} aria-hidden>
+      {content}
+    </Text>
+    {/* 메인 텍스트 */}
+    <Text style={themed($contentText)} numberOfLines={4}>
+      {content}
+    </Text>
+  </>
+);
+
 // --- The Component ---
 export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { themed } = useAppTheme();
@@ -89,7 +144,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 이미지 미디어만 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
+    (item) => item.type === "image" || item.type === "IMAGE"
   );
 
   // 카테고리별 색상 및 텍스트 매핑
@@ -168,196 +223,72 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           },
         ]}
       >
-        {/* 미디어가 있는 경우 - 이미지 위에 콘텐츠 오버레이 */}
-        {imageMedia.length > 0 ? (
-          <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
-            <View style={themed($mediaContainer)}>
-              {/* 첫 번째 이미지만 표시 */}
+        <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
+          <View style={themed($mediaContainer)}>
+            {/* 배경: 이미지 또는 빈 컨테이너 */}
+            {imageMedia.length > 0 ? (
+              <>
+                <Image
+                  source={{
+                    uri:
+                      imageMedia[0]?.url ||
+                      "https://lh3.googleusercontent.com/aida-public/AB6AXuBAs31Z9e7tE4MEe4qOvL8tmInV3OnopXRbbPUHDNNX03bqTEq8OptDvE69aED3dCTsdjrOwx-hh1WXCjmg5AYjZlUdYzfIIRgWjRUH-M9jwhugMxisjA2Z2Hd4ajK0GpMA-fJeZFJtEKyQiIn9dx72icpJF4oCeubT-vK2wYemuAfrGCJ7rPocUTEmkQX8nHZi448NpsOXSVMbeBOH4dfm6DlSZyuaL0ft8FIXoRor76NK0vugaMl5-BtfZCvuB-ZAfsCo_NUYfJ3k",
+                  }}
+                  style={themed($mediaImage)}
+                  resizeMode="cover"
+                />
+                <View style={themed($gradientOverlay)} />
+              </>
+            ) : (
+              <View style={themed($emptyMediaContainer)} />
+            )}
+
+            {/* 공통 오버레이 UI */}
+            <View style={themed($profileContainer)}>
               <Image
                 source={{
                   uri:
-                    imageMedia[0]?.url ||
-                    "https://lh3.googleusercontent.com/aida-public/AB6AXuBAs31Z9e7tE4MEe4qOvL8tmInV3OnopXRbbPUHDNNX03bqTEq8OptDvE69aED3dCTsdjrOwx-hh1WXCjmg5AYjZlUdYzfIIRgWjRUH-M9jwhugMxisjA2Z2Hd4ajK0GpMA-fJeZFJtEKyQiIn9dx72icpJF4oCeubT-vK2wYemuAfrGCJ7rPocUTEmkQX8nHZi448NpsOXSVMbeBOH4dfm6DlSZyuaL0ft8FIXoRor76NK0vugaMl5-BtfZCvuB-ZAfsCo_NUYfJ3k",
+                    post.author.profileImageUrl ||
+                    `https://i.pravatar.cc/150?u=${post.author.id}`,
                 }}
-                style={themed($mediaImage)}
-                resizeMode="cover"
+                style={themed($profileImage)}
               />
-
-              {/* 그라데이션 오버레이 */}
-              <View style={themed($gradientOverlay)} />
-
-              {/* 프로필 정보 - 왼쪽 위 */}
-              <View style={themed($profileContainer)}>
-                <Image
-                  source={{
-                    uri:
-                      post.author.profileImageUrl ||
-                      `https://i.pravatar.cc/150?u=${post.author.id}`,
-                  }}
-                  style={themed($profileImage)}
-                />
-                <View style={themed($profileInfo)}>
-                  <Text style={themed($profileName)}>
-                    {post.author.nickname}
-                  </Text>
-                  <Text style={themed($profileTime)}>
-                    {(() => {
-                      const now = new Date();
-                      const postDate = new Date(post.createdAt);
-                      const diffHours = Math.floor(
-                        (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
-                      );
-
-                      if (diffHours < 1) return "방금 전";
-                      if (diffHours < 24) return `${diffHours}h`;
-                      return postDate.toLocaleDateString("ko-KR");
-                    })()}
-                  </Text>
-                </View>
-              </View>
-
-              {/* 카테고리 배지 - 오른쪽 위 */}
-              <View
-                style={[
-                  themed($categoryBadge),
-                  { backgroundColor: categoryInfo.colors.badge + "40" },
-                ]}
-              >
-                <View
-                  style={[
-                    themed($categoryIcon),
-                    { backgroundColor: categoryInfo.colors.badge + "60" },
-                  ]}
-                >
-                  <Text style={themed($categoryIconText)}>
-                    {post.type === PostType.ANALYSIS
-                      ? "📊"
-                      : post.type === PostType.HIGHLIGHT
-                        ? "⚡"
-                        : "📣"}
-                  </Text>
-                </View>
-                <Text style={themed($categoryText)}>{categoryInfo.text}</Text>
-              </View>
-
-              {/* 콘텐츠 텍스트 - 하단 */}
-              <View style={themed($contentContainer)}>
-                {/* 텍스트 테두리 효과를 위한 배경 텍스트들 */}
-                <Text style={themed($contentTextStroke)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke2)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke3)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke4)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke5)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke6)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                {/* 메인 텍스트 */}
-                <Text style={themed($contentText)} numberOfLines={4}>
-                  {post.content}
+              <View style={themed($profileInfo)}>
+                <Text style={themed($profileName)}>{post.author.nickname}</Text>
+                <Text style={themed($profileTime)}>
+                  {formatTimeAgo(post.createdAt)}
                 </Text>
               </View>
             </View>
-          </TouchableOpacity>
-        ) : (
-          /* 미디어가 없는 경우 - 이미지와 동일한 레이아웃 유지 */
-          <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
-            <View style={themed($mediaContainer)}>
-              {/* 이미지 대신 빈 컨테이너 */}
-              <View style={themed($emptyMediaContainer)} />
 
-              {/* 프로필 정보 - 왼쪽 위 */}
-              <View style={themed($profileContainer)}>
-                <Image
-                  source={{
-                    uri:
-                      post.author.profileImageUrl ||
-                      `https://i.pravatar.cc/150?u=${post.author.id}`,
-                  }}
-                  style={themed($profileImage)}
-                />
-                <View style={themed($profileInfo)}>
-                  <Text style={themed($profileName)}>
-                    {post.author.nickname}
-                  </Text>
-                  <Text style={themed($profileTime)}>
-                    {(() => {
-                      const now = new Date();
-                      const postDate = new Date(post.createdAt);
-                      const diffHours = Math.floor(
-                        (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
-                      );
-
-                      if (diffHours < 1) return "방금 전";
-                      if (diffHours < 24) return `${diffHours}h`;
-                      return postDate.toLocaleDateString("ko-KR");
-                    })()}
-                  </Text>
-                </View>
-              </View>
-
-              {/* 카테고리 배지 - 오른쪽 위 */}
+            <View
+              style={[
+                themed($categoryBadge),
+                { backgroundColor: categoryInfo.colors.badge + "40" },
+              ]}
+            >
               <View
                 style={[
-                  themed($categoryBadge),
-                  { backgroundColor: categoryInfo.colors.badge + "40" },
+                  themed($categoryIcon),
+                  { backgroundColor: categoryInfo.colors.badge + "60" },
                 ]}
               >
-                <View
-                  style={[
-                    themed($categoryIcon),
-                    { backgroundColor: categoryInfo.colors.badge + "60" },
-                  ]}
-                >
-                  <Text style={themed($categoryIconText)}>
-                    {post.type === PostType.ANALYSIS
-                      ? "📊"
-                      : post.type === PostType.HIGHLIGHT
-                        ? "⚡"
-                        : "📣"}
-                  </Text>
-                </View>
-                <Text style={themed($categoryText)}>{categoryInfo.text}</Text>
-              </View>
-
-              {/* 콘텐츠 텍스트 - 하단 */}
-              <View style={themed($contentContainer)}>
-                {/* 텍스트 테두리 효과를 위한 배경 텍스트들 */}
-                <Text style={themed($contentTextStroke)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke2)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke3)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke4)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke5)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                <Text style={themed($contentTextStroke6)} numberOfLines={4}>
-                  {post.content}
-                </Text>
-                {/* 메인 텍스트 */}
-                <Text style={themed($contentText)} numberOfLines={4}>
-                  {post.content}
+                <Text style={themed($categoryIconText)}>
+                  {post.type === PostType.ANALYSIS
+                    ? "📊"
+                    : post.type === PostType.HIGHLIGHT
+                      ? "⚡"
+                      : "📣"}
                 </Text>
               </View>
+              <Text style={themed($categoryText)}>{categoryInfo.text}</Text>
             </View>
-          </TouchableOpacity>
-        )}
+
+            <View style={themed($contentContainer)}>
+              <StrokedText content={post.content} themed={themed} />
+            </View>
+          </View>
+        </TouchableOpacity>
 
         {/* 액션 버튼 - 좋아요, 댓글, 리포스트 */}
         <PostActions

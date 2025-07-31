@@ -89,7 +89,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 이미지 미디어만 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE"
+    (item) => item.type === "image" || item.type === "IMAGE",
   );
 
   // 카테고리별 색상 및 텍스트 매핑
@@ -134,7 +134,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       <View
         style={[
           themed($outerGlow),
-          { backgroundColor: categoryInfo.colors.glow + "08" },
+          { backgroundColor: categoryInfo.colors.glow + "10" },
         ]}
       />
 
@@ -142,7 +142,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       <View
         style={[
           themed($glowBackground),
-          { backgroundColor: categoryInfo.colors.glow + "12" },
+          { backgroundColor: categoryInfo.colors.glow + "15" },
         ]}
       />
 
@@ -151,7 +151,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         style={[
           themed($borderLayer),
           {
-            borderColor: categoryInfo.colors.border + "08",
+            borderColor: categoryInfo.colors.border + "20",
           },
         ]}
       />
@@ -162,7 +162,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           {
             borderLeftColor: categoryInfo.colors.border,
             borderTopColor: categoryInfo.colors.border + "15",
-            borderRightColor: categoryInfo.colors.border + "15",
+            borderRightColor: categoryInfo.colors.border,
             borderBottomColor: categoryInfo.colors.border + "15",
             shadowColor: categoryInfo.colors.glow,
           },
@@ -205,7 +205,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                       const now = new Date();
                       const postDate = new Date(post.createdAt);
                       const diffHours = Math.floor(
-                        (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
+                        (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
                       );
 
                       if (diffHours < 1) return "방금 전";
@@ -270,7 +270,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                     const now = new Date();
                     const postDate = new Date(post.createdAt);
                     const diffHours = Math.floor(
-                      (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
+                      (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
                     );
 
                     if (diffHours < 1) return "방금 전";
@@ -343,7 +343,7 @@ const $outerGlow: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
   top: -4,
   left: -4,
-  right: 4,
+  right: -4,
   bottom: 4,
   borderRadius: 20,
   zIndex: -2,
@@ -353,7 +353,7 @@ const $glowBackground: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
   top: -2,
   left: -2,
-  right: 2,
+  right: -2,
   bottom: 2,
   borderRadius: 18,
   zIndex: -1,
@@ -363,7 +363,7 @@ const $borderLayer: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
   top: -1,
   left: -1,
-  right: 1,
+  right: -1,
   bottom: 1,
   borderRadius: 17,
   borderWidth: 1,
@@ -377,19 +377,19 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   position: "relative",
   zIndex: 1,
   // 세밀한 테두리 효과
-  borderLeftWidth: 4, // 왼쪽은 두껍게
+  borderLeftWidth: 4, // 왼쪽 테두리
   borderTopWidth: 0.8,
-  borderRightWidth: 0.8,
+  borderRightWidth: 4, // 오른쪽 테두리
   borderBottomWidth: 0.8,
   // 그림자 효과 개선
   shadowColor: "#000",
   shadowOffset: {
-    width: -1,
+    width: 0, // 그림자를 중앙으로 조정
     height: 3,
   },
-  shadowOpacity: 0.12,
-  shadowRadius: 8,
-  elevation: 5,
+  shadowOpacity: 0.15,
+  shadowRadius: 10,
+  elevation: 6,
 });
 
 const $mediaContainer: ThemedStyle<ViewStyle> = () => ({

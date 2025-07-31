@@ -240,6 +240,18 @@ export default function FeedScreen() {
         </View>
         <Text style={themed($headerTitle)}>Home</Text>
         <View style={themed($headerRight)}>
+          {currentUser && (
+            <TouchableOpacity
+              style={themed($createButton)}
+              onPress={() => router.push("/(modals)/create-post")}
+            >
+              <Ionicons
+                name="add-outline"
+                size={22}
+                color={theme.colors.text}
+              />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={themed($profileButton)}
             onPress={() =>
@@ -250,30 +262,16 @@ export default function FeedScreen() {
           >
             <Ionicons
               name={currentUser ? "person" : "person-outline"}
-              size={24}
-              color={theme.colors.tint}
+              size={22}
+              color={theme.colors.text}
             />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* 액션 버튼 섹션 */}
-      {currentUser ? (
-        <View style={themed($actionButtonsContainer)}>
-          <TouchableOpacity
-            style={themed($createPostButton)}
-            onPress={() => router.push("/(modals)/create-post")}
-          >
-            <Ionicons name="add-circle" size={18} color="#fff" />
-            <Text style={themed($createPostButtonText)}>Create Post</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={themed($trendingButton)} onPress={() => {}}>
-            <Ionicons name="trending-up" size={18} color={theme.colors.text} />
-            <Text style={themed($trendingButtonText)}>Trending</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={themed($actionButtonsContainer)}>
+      {/* 로그인 버튼 섹션 (로그인 안 된 경우에만 표시) */}
+      {!currentUser && (
+        <View style={themed($loginContainer)}>
           <TouchableOpacity
             style={themed($loginButton)}
             onPress={() => setAuthModalVisible(true)}
@@ -290,7 +288,7 @@ export default function FeedScreen() {
       <TabSlider tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* 스토리 섹션 (Feed 탭에서만 표시) */}
-      {activeTab === "feed" && <StorySection />}
+      {activeTab === "feed" && currentUser && <StorySection />}
 
       {/* 탭 콘텐츠 */}
       {activeTab === "feed" ? (
@@ -346,15 +344,10 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   alignItems: "center",
   justifyContent: "space-between",
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.lg,
+  paddingVertical: spacing.md,
   backgroundColor: colors.card,
   borderBottomWidth: 1,
-  borderBottomColor: colors.shadowLight,
-  shadowColor: colors.shadowLight,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.8,
-  shadowRadius: 2,
-  elevation: 3,
+  borderBottomColor: colors.border,
 });
 
 const $headerLeft: ThemedStyle<ViewStyle> = () => ({
@@ -377,15 +370,14 @@ const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontStyle: "italic",
 });
 
-const $headerRight: ThemedStyle<ViewStyle> = () => ({
-  width: 100,
-  alignItems: "flex-end",
+const $headerRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: spacing.xs,
 });
 
-const $actionButtonsContainer: ThemedStyle<ViewStyle> = ({
-  spacing,
-  colors,
-}) => ({
+const $loginContainer: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   flexDirection: "row",
   justifyContent: "center",
   gap: spacing.md,
@@ -451,61 +443,20 @@ const $listFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.md,
 });
 
-const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.tint,
-  paddingHorizontal: spacing.lg,
-  paddingVertical: spacing.sm,
-  borderRadius: 12,
-  flex: 1,
-  flexDirection: "row",
+const $createButton: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.backgroundAlt,
   justifyContent: "center",
   alignItems: "center",
-  gap: spacing.sm,
-  shadowColor: colors.tint,
-  shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-  elevation: 5,
-});
-
-const $createPostButtonText: ThemedStyle<TextStyle> = () => ({
-  color: "white",
-  fontSize: 16,
-  fontWeight: "700",
-});
-
-const $trendingButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.card,
-  paddingHorizontal: spacing.lg,
-  paddingVertical: spacing.sm,
-  borderRadius: 12,
-  flex: 1,
-  flexDirection: "row",
-  justifyContent: "center",
-  alignItems: "center",
-  gap: spacing.sm,
-  borderWidth: 1,
-  borderColor: colors.border,
-  shadowColor: colors.shadowLight,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.3,
-  shadowRadius: 3,
-  elevation: 2,
-});
-
-const $trendingButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 16,
-  fontWeight: "600",
 });
 
 const $profileButton: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-  padding: spacing.sm,
-  borderRadius: 999,
-  backgroundColor: colors.card,
-  shadowColor: colors.shadowLight,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.5,
-  shadowRadius: 3,
-  elevation: 2,
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.backgroundAlt,
+  justifyContent: "center",
+  alignItems: "center",
 });

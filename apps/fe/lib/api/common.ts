@@ -63,7 +63,7 @@ export class PostCreationError extends Error {
   constructor(
     message: string,
     public phase: "upload" | "post_creation",
-    public originalError?: any,
+    public originalError?: any
   ) {
     super(message);
     this.name = "PostCreationError";
@@ -124,7 +124,7 @@ export function createReactNativeFile(
     name?: string;
     fileSize?: number;
   },
-  index: number = 0,
+  index: number = 0
 ): ReactNativeFile {
   // 파일 이름 추출 또는 생성
   const uriParts = image.uri.split("/");

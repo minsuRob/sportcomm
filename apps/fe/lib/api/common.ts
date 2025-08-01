@@ -194,7 +194,7 @@ export function debugFormData(formData: FormData): void {
 
         if (value instanceof File) {
           console.log(
-            `${key}: File(이름: ${value.name}, 타입: ${value.type}, 크기: ${value.size} bytes)`,
+            `${key}: File(이름: ${value.name}, 타입: ${value.type}, 크기: ${value.size} bytes)`
           );
         } else if (typeof value === "object" && value !== null) {
           console.log(`${key}: 객체`, value);
@@ -207,7 +207,7 @@ export function debugFormData(formData: FormData): void {
     }
   } else {
     console.log(
-      "FormData 항목을 나열할 수 없습니다 (entries 메서드 지원 안 함)",
+      "FormData 항목을 나열할 수 없습니다 (entries 메서드 지원 안 함)"
     );
   }
 

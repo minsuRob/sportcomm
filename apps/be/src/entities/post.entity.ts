@@ -15,6 +15,7 @@ import { Comment } from './comment.entity';
 import { Media } from './media.entity';
 import { PostVersion } from './post-version.entity';
 import { PostLike } from './post-like.entity';
+import { Bookmark } from './bookmark.entity';
 
 /**
  * 게시물 유형 열거형
@@ -236,6 +237,17 @@ export class Post extends BaseEntity {
   })
   @OneToMany(() => PostLike, (postLike) => postLike.post)
   likes: PostLike[];
+
+  /**
+   * 게시물에 대한 북마크 목록
+   * 일대다 관계: 한 게시물은 여러 사용자에 의해 북마크될 수 있습니다.
+   */
+  @Field(() => [Bookmark], {
+    nullable: true,
+    description: '게시물에 대한 북마크 목록',
+  })
+  @OneToMany(() => Bookmark, (bookmark) => bookmark.post)
+  bookmarks: Bookmark[];
 
   // === 헬퍼 메서드 ===
 

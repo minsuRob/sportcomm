@@ -15,6 +15,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { SearchModule } from './modules/search/search.module';
 import { MediaModule } from './modules/media/media.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
+import { BookmarkModule } from './modules/bookmarks/bookmark.module';
 
 /**
  * 메인 애플리케이션 모듈
@@ -222,6 +223,7 @@ import { ModerationModule } from './modules/moderation/moderation.module';
     SearchModule,
     MediaModule,
     ModerationModule,
+    BookmarkModule,
   ],
 
   // 컨트롤러 및 서비스

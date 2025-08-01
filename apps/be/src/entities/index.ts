@@ -16,6 +16,7 @@ import { ChatMessage } from './chat-message.entity';
 import { PostLike } from './post-like.entity';
 import { Report } from './report.entity';
 import { Block } from './block.entity';
+import { Bookmark } from './bookmark.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -45,6 +46,9 @@ export { ChatMessage, ChatMessageType } from './chat-message.entity';
 export { Report, ReportType, ReportStatus } from './report.entity';
 export { Block } from './block.entity';
 
+// 북마크 관련 엔티티
+export { Bookmark } from './bookmark.entity';
+
 /**
  * 모든 엔티티를 배열로 내보내는 상수
  * TypeORM 설정에서 사용됩니다.
@@ -61,6 +65,7 @@ export const entities = [
   PostLike,
   Report,
   Block,
+  Bookmark,
 ];
 
 /**
@@ -80,6 +85,7 @@ export const tableNames = {
   chatRoomParticipants: 'chat_room_participants',
   reports: 'reports',
   blocks: 'blocks',
+  bookmarks: 'bookmarks',
 } as const;
 
 /**
@@ -124,6 +130,9 @@ export const entityRelations = {
   Block: {
     manyToOne: ['blocker', 'blockedUser'],
   },
+  Bookmark: {
+    manyToOne: ['user', 'post'],
+  },
 } as const;
 
 /**
@@ -149,4 +158,5 @@ export const entityIndexes = {
     'createdAt',
   ],
   blocks: ['blockerId', 'blockedUserId', 'createdAt'],
+  bookmarks: ['userId', 'postId', 'createdAt'],
 } as const;

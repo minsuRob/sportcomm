@@ -16,8 +16,13 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
 import { useRouter } from "expo-router";
-import { GET_USER_PROFILE, GET_USER_POSTS } from "@/lib/graphql";
+import {
+  GET_USER_PROFILE,
+  GET_USER_POSTS,
+  GET_USER_BOOKMARKS,
+} from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
+import TabSlider from "@/components/TabSlider";
 import type { Post } from "@/components/PostCard";
 // WebCenteredLayout 제거 - 전역 레이아웃 사용
 
@@ -41,7 +46,15 @@ export default function ProfileScreen() {
   const { themed, theme } = useAppTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<Post[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("posts");
   const router = useRouter();
+
+  // 탭 설정
+  const tabs = [
+    { key: "posts", title: "내 게시물" },
+    { key: "bookmarks", title: "북마크" },
+  ];
 
   // 사용자 프로필 데이터 조회
   const {
@@ -67,6 +80,19 @@ export default function ProfileScreen() {
     fetchPolicy: "network-only",
   });
 
+  // 사용자의 북마크 목록 조회
+  const {
+    data: bookmarksData,
+    loading: bookmarksLoading,
+    refetch: refetchBookmarks,
+  } = useQuery<{
+    getUserBookmarks: Post[];
+  }>(GET_USER_BOOKMARKS, {
+    variables: { userId: currentUser?.id },
+    skip: !currentUser?.id,
+    fetchPolicy: "network-only",
+  });
+
   useEffect(() => {
     const loadUserProfile = async () => {
       const { user } = await getSession();
@@ -80,8 +106,9 @@ export default function ProfileScreen() {
     if (currentUser?.id) {
       refetchProfile();
       refetchPosts();
+      refetchBookmarks();
     }
-  }, [currentUser?.id, refetchProfile, refetchPosts]);
+  }, [currentUser?.id, refetchProfile, refetchPosts, refetchBookmarks]);
 
   // 게시물 데이터가 변경되면 상태 업데이트
   useEffect(() => {
@@ -89,6 +116,13 @@ export default function ProfileScreen() {
       setUserPosts(postsData.posts.posts);
     }
   }, [postsData]);
+
+  // 북마크 데이터가 변경되면 상태 업데이트
+  useEffect(() => {
+    if (bookmarksData?.getUserBookmarks) {
+      setBookmarkedPosts(bookmarksData.getUserBookmarks);
+    }
+  }, [bookmarksData]);
 
   const handleEditProfile = () => {
     router.push("/(modals)/edit-profile");
@@ -108,6 +142,36 @@ export default function ProfileScreen() {
     if (currentUser?.id) {
       router.push(`/(details)/following?userId=${currentUser.id}`);
     }
+  };
+
+  /**
+   * 탭 변경 핸들러
+   */
+  const handleTabChange = (tabKey: string) => {
+    setActiveTab(tabKey);
+  };
+
+  /**
+   * 현재 활성 탭에 따른 게시물 목록 반환
+   */
+  const getCurrentPosts = (): Post[] => {
+    return activeTab === "posts" ? userPosts : bookmarkedPosts;
+  };
+
+  /**
+   * 현재 활성 탭에 따른 로딩 상태 반환
+   */
+  const getCurrentLoading = (): boolean => {
+    return activeTab === "posts" ? postsLoading : bookmarksLoading;
+  };
+
+  /**
+   * 현재 활성 탭에 따른 빈 상태 메시지 반환
+   */
+  const getEmptyMessage = (): string => {
+    return activeTab === "posts"
+      ? "아직 작성한 게시물이 없습니다"
+      : "아직 북마크한 게시물이 없습니다";
   };
 
   if (!currentUser) {
@@ -188,24 +252,24 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 내 게시물 섹션 제목 */}
-      <View style={themed($postsSection)}>
-        <Text style={themed($sectionTitle)}>내 게시물</Text>
-      </View>
+      {/* 탭 슬라이더 */}
+      <TabSlider
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
 
       {/* 게시물 목록 - FeedList가 직접 스크롤 처리 */}
-      {postsLoading ? (
+      {getCurrentLoading() ? (
         <View style={themed($loadingContainer)}>
           <ActivityIndicator size="large" color={theme.colors.tint} />
         </View>
       ) : (
         <FeedList
-          posts={userPosts}
+          posts={getCurrentPosts()}
           ListEmptyComponent={
             <View style={themed($emptyState)}>
-              <Text style={themed($emptyStateText)}>
-                아직 작성한 게시물이 없습니다
-              </Text>
+              <Text style={themed($emptyStateText)}>{getEmptyMessage()}</Text>
             </View>
           }
         />
@@ -294,17 +358,6 @@ const $statLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 14,
   color: colors.textDim,
   marginTop: spacing.xxxs,
-});
-
-const $postsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.md,
-});
-
-const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 18,
-  fontWeight: "bold",
-  color: colors.text,
-  marginBottom: spacing.md,
 });
 
 const $emptyState: ThemedStyle<ViewStyle> = ({ spacing }) => ({

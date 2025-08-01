@@ -14,6 +14,7 @@ import { Follow } from './follow.entity';
 import { ChatMessage } from './chat-message.entity';
 import { PostLike } from './post-like.entity';
 import { Block } from './block.entity';
+import { Bookmark } from './bookmark.entity';
 
 /**
  * 사용자 역할 열거형
@@ -231,6 +232,14 @@ export class User extends BaseEntity {
    */
   @OneToMany(() => Block, (block) => block.blockedUser)
   blockedBy: Block[];
+
+  /**
+   * 사용자가 북마크한 게시물들
+   * 일대다 관계: 한 사용자는 여러 게시물을 북마크할 수 있습니다.
+   */
+  @Field(() => [Bookmark], { description: '북마크한 게시물 목록' })
+  @OneToMany(() => Bookmark, (bookmark) => bookmark.user)
+  bookmarks: Bookmark[];
 
   // === 헬퍼 메서드 ===
 

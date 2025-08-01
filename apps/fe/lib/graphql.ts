@@ -454,3 +454,46 @@ export const DELETE_POST = gql`
     deletePost(id: $id)
   }
 `;
+
+/**
+ * 북마크 토글 뮤테이션
+ * 게시물을 북마크에 추가하거나 제거합니다.
+ * 이미 북마크되어 있으면 제거하고, 없으면 추가합니다.
+ */
+export const TOGGLE_BOOKMARK = gql`
+  mutation ToggleBookmark($postId: String!) {
+    toggleBookmark(postId: $postId)
+  }
+`;
+
+/**
+ * 사용자의 북마크 목록 조회
+ * 사용자가 북마크한 모든 게시물을 반환합니다.
+ */
+export const GET_USER_BOOKMARKS = gql`
+  query GetUserBookmarks($userId: String!) {
+    getUserBookmarks(userId: $userId) {
+      id
+      title
+      content
+      createdAt
+      type
+      viewCount
+      likeCount
+      commentCount
+      author {
+        id
+        nickname
+        profileImageUrl
+      }
+      media {
+        id
+        url
+        type
+      }
+      comments {
+        id
+      }
+    }
+  }
+`;

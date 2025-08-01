@@ -24,6 +24,10 @@ import { Ionicons } from "@expo/vector-icons";
 import StorySection from "@/components/StorySection";
 import TabSlider from "@/components/TabSlider";
 import ChatList from "@/components/chat/ChatList";
+import {
+  NotificationBadge,
+  NotificationToast,
+} from "@/components/notifications";
 
 // --- Type Definitions ---
 interface GqlPost {
@@ -160,6 +164,31 @@ export default function FeedScreen() {
     setCurrentUser(null);
   };
 
+  /**
+   * 알림 버튼 클릭 핸들러
+   */
+  const handleNotificationPress = () => {
+    router.push("/(details)/notifications");
+  };
+
+  /**
+   * 알림 토스트 클릭 핸들러
+   */
+  const handleNotificationToastPress = (notification: any) => {
+    // 알림 타입에 따라 적절한 화면으로 이동
+    if (notification.post) {
+      router.push({
+        pathname: "/(details)/post/[postId]",
+        params: { postId: notification.post.id },
+      });
+    } else if (notification.user) {
+      router.push({
+        pathname: "/(details)/profile/[userId]",
+        params: { userId: notification.user.id },
+      });
+    }
+  };
+
   // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
   useEffect(() => {
     const handleFocus = () => {
@@ -247,16 +276,32 @@ export default function FeedScreen() {
         <Text style={themed($headerTitle)}>Home</Text>
         <View style={themed($headerRight)}>
           {currentUser && (
-            <TouchableOpacity
-              style={themed($createButton)}
-              onPress={() => router.push("/(modals)/create-post")}
-            >
-              <Ionicons
-                name="add-outline"
-                size={22}
-                color={theme.colors.text}
-              />
-            </TouchableOpacity>
+            <>
+              {/* 알림 버튼 */}
+              <TouchableOpacity
+                style={themed($notificationButton)}
+                onPress={handleNotificationPress}
+              >
+                <Ionicons
+                  name="notifications-outline"
+                  size={22}
+                  color={theme.colors.text}
+                />
+                <NotificationBadge size="small" />
+              </TouchableOpacity>
+
+              {/* 게시물 작성 버튼 */}
+              <TouchableOpacity
+                style={themed($createButton)}
+                onPress={() => router.push("/(modals)/create-post")}
+              >
+                <Ionicons
+                  name="add-outline"
+                  size={22}
+                  color={theme.colors.text}
+                />
+              </TouchableOpacity>
+            </>
           )}
           <TouchableOpacity
             style={themed($profileButton)}
@@ -311,6 +356,15 @@ export default function FeedScreen() {
           currentUser={currentUser}
           isLoading={false}
           title="채팅"
+        />
+      )}
+
+      {/* 실시간 알림 토스트 */}
+      {currentUser && (
+        <NotificationToast
+          onPress={handleNotificationToastPress}
+          position="top"
+          duration={4000}
         />
       )}
     </View>
@@ -458,7 +512,17 @@ const $createButton: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   alignItems: "center",
 });
 
-const $profileButton: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+const $notificationButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.backgroundAlt,
+  justifyContent: "center",
+  alignItems: "center",
+  position: "relative",
+});
+
+const $profileButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
   width: 36,
   height: 36,
   borderRadius: 18,

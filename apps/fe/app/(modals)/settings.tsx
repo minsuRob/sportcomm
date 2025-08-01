@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { clearSession, getSession, User } from "@/lib/auth";
+import Toast from "react-native-toast-message";
 
 // 안드로이드에서 LayoutAnimation 활성화
 if (
@@ -33,16 +35,45 @@ export default function SettingsScreen() {
   const { themed, theme, toggleTheme, setAppColor, appColor } = useAppTheme();
   const router = useRouter();
   const { switchLanguage, currentLanguage } = useTranslation();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // 설정 섹션 상태 관리
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
+  // 현재 로그인된 사용자 정보 불러오기
+  useEffect(() => {
+    const fetchUserSession = async () => {
+      const { user } = await getSession();
+      setCurrentUser(user);
+    };
+
+    fetchUserSession();
+  }, []);
+
   /**
    * 로그아웃 처리 함수
    */
-  const handleLogout = (): void => {
-    // TODO: 로그아웃 로직 구현
-    console.log("로그아웃");
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await clearSession();
+      setCurrentUser(null);
+      Toast.show({
+        type: 'success',
+        text1: '로그아웃 성공',
+        text2: '로그아웃이 완료되었습니다.',
+        position: 'bottom',
+      });
+      // 피드 화면으로 이동
+      router.push('/feed');
+    } catch (error) {
+      console.error('로그아웃 중 오류 발생:', error);
+      Toast.show({
+        type: 'error',
+        text1: '로그아웃 실패',
+        text2: '로그아웃 처리 중 오류가 발생했습니다.',
+        position: 'bottom',
+      });
+    }
   };
 
   /**

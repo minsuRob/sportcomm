@@ -6,6 +6,7 @@ import {
   ViewStyle,
   TextStyle,
   Image,
+  ImageStyle,
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
@@ -197,9 +198,9 @@ const renderContentText = ({
 
 // --- The Component ---
 export default function PostCard({ post, onPostUpdated }: PostCardProps) {
-  const { themed } = useAppTheme();
+  const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const { height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   // 컨텍스트 메뉴 상태 관리
   const [showContextMenu, setShowContextMenu] = useState(false);

@@ -123,7 +123,7 @@ export function usePostInteractions({
           try {
             const existingData = cache.readQuery({
               query: GET_POSTS,
-              variables: { input: { page: 1, limit: 10 } },
+              variables: { input: { page: 1, limit: 10 } }, // TODO: PAGE_SIZE 상수 사용 고려
             });
 
             if (existingData?.posts?.posts) {
@@ -142,7 +142,7 @@ export function usePostInteractions({
 
               cache.writeQuery({
                 query: GET_POSTS,
-                variables: { input: { page: 1, limit: 10 } },
+                variables: { input: { page: 1, limit: 10 } }, // TODO: PAGE_SIZE 상수 사용 고려
                 data: {
                   ...existingData,
                   posts: {

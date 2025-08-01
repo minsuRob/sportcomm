@@ -104,7 +104,10 @@ export class Notification {
   commentId?: string;
 
   // 추가 메타데이터 (JSON 형태로 저장)
-  @Field({ nullable: true, description: '추가 메타데이터' })
+  @Field(() => String, {
+    nullable: true,
+    description: '추가 메타데이터 (JSON 문자열)',
+  })
   @Column({ type: 'json', nullable: true, comment: '추가 메타데이터' })
   metadata?: Record<string, any>;
 

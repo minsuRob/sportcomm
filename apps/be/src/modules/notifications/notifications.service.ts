@@ -109,7 +109,7 @@ export class NotificationsService {
       { isRead: true },
     );
 
-    return result.affected > 0;
+    return (result.affected ?? 0) > 0;
   }
 
   /**
@@ -127,7 +127,9 @@ export class NotificationsService {
   /**
    * 알림 생성
    */
-  async createNotification(dto: CreateNotificationDto): Promise<Notification> {
+  async createNotification(
+    dto: CreateNotificationDto,
+  ): Promise<Notification | null> {
     // 자기 자신에게는 알림을 보내지 않음
     if (dto.senderId && dto.senderId === dto.recipientId) {
       this.logger.debug('자기 자신에게 알림을 보내려고 시도함. 무시됨.');
@@ -137,9 +139,10 @@ export class NotificationsService {
     // 발신자 정보 조회 (있는 경우)
     let sender: User | undefined;
     if (dto.senderId) {
-      sender = await this.userRepository.findOne({
-        where: { id: dto.senderId },
-      });
+      sender =
+        (await this.userRepository.findOne({
+          where: { id: dto.senderId },
+        })) ?? undefined;
     }
 
     // 알림 메시지 생성
@@ -171,6 +174,13 @@ export class NotificationsService {
       relations: ['sender', 'post', 'comment'],
     });
 
+    if (!fullNotification) {
+      this.logger.error(
+        `생성된 알림을 찾을 수 없습니다: ${savedNotification.id}`,
+      );
+      return null;
+    }
+
     this.logger.log(`알림 생성됨: ${dto.type} -> ${dto.recipientId}`);
 
     // 실시간 알림 이벤트 발생 (WebSocket 등에서 사용)
@@ -186,16 +196,22 @@ export class NotificationsService {
   async handleLikeEvent(payload: NotificationEvents['notification.like']) {
     const { postId, userId, authorId } = payload;
 
-    // 게시물 작성자에게 좋아요 알림 전송
-    await this.createNotification({
-      type: NotificationType.LIKE,
-      recipientId: authorId,
-      senderId: userId,
-      postId,
-    });
+    try {
+      // 게시물 작성자에게 좋아요 알림 전송
+      const notification = await this.createNotification({
+        type: NotificationType.LIKE,
+        recipientId: authorId,
+        senderId: userId,
+        postId,
+      });
 
-    // 좋아요 마일스톤 확인
-    await this.checkLikeMilestone(postId, authorId);
+      if (notification) {
+        // 좋아요 마일스톤 확인
+        await this.checkLikeMilestone(postId, authorId);
+      }
+    } catch (error) {
+      this.logger.error('좋아요 알림 처리 중 오류:', error);
+    }
   }
 
   /**
@@ -207,14 +223,18 @@ export class NotificationsService {
   ) {
     const { postId, commentId, userId, authorId } = payload;
 
-    // 게시물 작성자에게 댓글 알림 전송
-    await this.createNotification({
-      type: NotificationType.COMMENT,
-      recipientId: authorId,
-      senderId: userId,
-      postId,
-      commentId,
-    });
+    try {
+      // 게시물 작성자에게 댓글 알림 전송
+      await this.createNotification({
+        type: NotificationType.COMMENT,
+        recipientId: authorId,
+        senderId: userId,
+        postId,
+        commentId,
+      });
+    } catch (error) {
+      this.logger.error('댓글 알림 처리 중 오류:', error);
+    }
   }
 
   /**
@@ -224,12 +244,16 @@ export class NotificationsService {
   async handleFollowEvent(payload: NotificationEvents['notification.follow']) {
     const { followerId, followedId } = payload;
 
-    // 팔로우 당한 사용자에게 알림 전송
-    await this.createNotification({
-      type: NotificationType.FOLLOW,
-      recipientId: followedId,
-      senderId: followerId,
-    });
+    try {
+      // 팔로우 당한 사용자에게 알림 전송
+      await this.createNotification({
+        type: NotificationType.FOLLOW,
+        recipientId: followedId,
+        senderId: followerId,
+      });
+    } catch (error) {
+      this.logger.error('팔로우 알림 처리 중 오류:', error);
+    }
   }
 
   /**
@@ -294,7 +318,7 @@ export class NotificationsService {
       recipientId: userId,
     });
 
-    return result.affected > 0;
+    return (result.affected ?? 0) > 0;
   }
 
   /**

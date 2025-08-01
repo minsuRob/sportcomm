@@ -147,7 +147,7 @@ export class NotificationsResolver {
   })
   @UseGuards(GqlAuthGuard)
   newNotification(@CurrentUser() user: User) {
-    return this.pubSub.asyncIterator('notification_created');
+    return this.pubSub.asyncIterableIterator('notification_created');
   }
 
   /**
@@ -158,7 +158,7 @@ export class NotificationsResolver {
   })
   @UseGuards(GqlAuthGuard)
   notificationUpdated(@CurrentUser() user: User) {
-    return this.pubSub.asyncIterator(`notification_updated_${user.id}`);
+    return this.pubSub.asyncIterableIterator(`notification_updated_${user.id}`);
   }
 }
 

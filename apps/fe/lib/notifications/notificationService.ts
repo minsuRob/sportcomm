@@ -32,9 +32,13 @@ const NOTIFICATION_CONFIG = {
 class NotificationService {
   private notifications: Notification[] = [];
   private isLocalMode: boolean = NOTIFICATION_CONFIG.USE_LOCAL_MODE;
-  private refreshTimer: NodeJS.Timeout | null = null;
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private listeners: Array<(notifications: Notification[]) => void> = [];
   private apolloClient: ApolloClient<any> | null = null;
+  private lastCheckTime: string | null = null; // 마지막 알림 확인 시점
+  private newNotificationListeners: Array<
+    (notification: Notification) => void
+  > = []; // 신규 알림 리스너
 
   /**
    * Apollo Client 설정
@@ -47,6 +51,9 @@ class NotificationService {
    * 서비스 초기화
    */
   async initialize() {
+    // 마지막 확인 시점 로드
+    await this.loadLastCheckTime();
+
     if (this.isLocalMode) {
       console.log("알림 서비스 초기화 - 로컬 모드");
       this.notifications = this.generateMockNotifications();
@@ -151,6 +158,22 @@ class NotificationService {
     // 언마운트 함수 반환
     return () => {
       this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  /**
+   * 신규 알림 리스너 등록
+   */
+  addNewNotificationListener(
+    listener: (notification: Notification) => void
+  ): () => void {
+    this.newNotificationListeners.push(listener);
+
+    // 언마운트 함수 반환
+    return () => {
+      this.newNotificationListeners = this.newNotificationListeners.filter(
+        (l) => l !== listener
+      );
     };
   }
 
@@ -260,10 +283,14 @@ class NotificationService {
 
       const notifications = data?.notifications?.notifications || [];
 
-      // 첫 페이지인 경우 전체 알림 목록 업데이트
+      // 첫 페이지인 경우 전체 알림 목록 업데이트 및 신규 알림 확인
       if (page === 1) {
+        await this.checkForNewNotifications(notifications);
         this.notifications = notifications;
         this.notifyListeners();
+
+        // 현재 시점을 마지막 확인 시점으로 저장
+        await this.saveLastCheckTime();
       }
 
       return notifications;
@@ -361,6 +388,84 @@ class NotificationService {
     const randomNotification =
       mockNotifications[Math.floor(Math.random() * mockNotifications.length)];
     this.addNotification(randomNotification);
+  }
+
+  /**
+   * 신규 알림 확인 및 토스트 표시
+   */
+  private async checkForNewNotifications(
+    notifications: Notification[]
+  ): Promise<void> {
+    if (!this.lastCheckTime) {
+      // 첫 실행이면 신규 알림으로 간주하지 않음
+      return;
+    }
+
+    const lastCheckDate = new Date(this.lastCheckTime);
+    const newNotifications = notifications.filter((notification) => {
+      const notificationDate = new Date(notification.createdAt);
+      return notificationDate > lastCheckDate && !notification.isRead;
+    });
+
+    // 신규 알림이 있으면 리스너들에게 알림
+    newNotifications.forEach((notification) => {
+      this.notifyNewNotificationListeners(notification);
+    });
+  }
+
+  /**
+   * 마지막 확인 시점 로드
+   */
+  private async loadLastCheckTime(): Promise<void> {
+    try {
+      // React Native 환경에서는 AsyncStorage 사용
+      if (typeof window === "undefined") {
+        const AsyncStorage =
+          require("@react-native-async-storage/async-storage").default;
+        this.lastCheckTime = await AsyncStorage.getItem(
+          "notification_last_check_time"
+        );
+      } else {
+        // 웹 환경에서는 localStorage 사용
+        this.lastCheckTime = localStorage.getItem(
+          "notification_last_check_time"
+        );
+      }
+    } catch (error) {
+      console.warn("마지막 확인 시점 로드 실패:", error);
+      this.lastCheckTime = null;
+    }
+  }
+
+  /**
+   * 마지막 확인 시점 저장
+   */
+  private async saveLastCheckTime(): Promise<void> {
+    try {
+      const currentTime = new Date().toISOString();
+      this.lastCheckTime = currentTime;
+
+      // React Native 환경에서는 AsyncStorage 사용
+      if (typeof window === "undefined") {
+        const AsyncStorage =
+          require("@react-native-async-storage/async-storage").default;
+        await AsyncStorage.setItem("notification_last_check_time", currentTime);
+      } else {
+        // 웹 환경에서는 localStorage 사용
+        localStorage.setItem("notification_last_check_time", currentTime);
+      }
+    } catch (error) {
+      console.warn("마지막 확인 시점 저장 실패:", error);
+    }
+  }
+
+  /**
+   * 신규 알림 리스너들에게 알림
+   */
+  private notifyNewNotificationListeners(notification: Notification): void {
+    this.newNotificationListeners.forEach((listener) => {
+      listener(notification);
+    });
   }
 
   /**

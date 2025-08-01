@@ -234,35 +234,26 @@ export const useNotificationPermissions = () => {
 };
 
 /**
- * 실시간 알림 표시 훅
+ * 신규 알림 토스트 표시 훅 (페이지 새로고침 시에만)
  */
-export const useRealtimeNotifications = () => {
+export const useNewNotificationToast = () => {
   const [latestNotification, setLatestNotification] =
     useState<Notification | null>(null);
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
-    let previousCount = notificationService.getUnreadCount();
+    // 신규 알림 리스너 등록
+    const unsubscribe = notificationService.addNewNotificationListener(
+      (notification) => {
+        setLatestNotification(notification);
+        setShowToast(true);
 
-    const unsubscribe = notificationService.addListener((notifications) => {
-      const currentCount = notifications.filter((n) => !n.isRead).length;
-
-      // 새 알림이 추가된 경우
-      if (currentCount > previousCount) {
-        const newestNotification = notifications.find((n) => !n.isRead);
-        if (newestNotification) {
-          setLatestNotification(newestNotification);
-          setShowToast(true);
-
-          // 3초 후 토스트 숨김
-          setTimeout(() => {
-            setShowToast(false);
-          }, 3000);
-        }
+        // 4초 후 토스트 자동 숨김
+        setTimeout(() => {
+          setShowToast(false);
+        }, 4000);
       }
-
-      previousCount = currentCount;
-    });
+    );
 
     return unsubscribe;
   }, []);
@@ -279,4 +270,12 @@ export const useRealtimeNotifications = () => {
     showToast,
     dismissToast,
   };
+};
+
+/**
+ * 실시간 알림 표시 훅 (기존 호환성 유지)
+ * @deprecated useNewNotificationToast를 사용하세요
+ */
+export const useRealtimeNotifications = () => {
+  return useNewNotificationToast();
 };

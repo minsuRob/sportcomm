@@ -13,7 +13,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Notification, NotificationType } from "./NotificationItem";
-import { useRealtimeNotifications } from "@/lib/notifications";
+import { useNewNotificationToast } from "@/lib/notifications";
 
 interface NotificationToastProps {
   onPress?: (notification: Notification) => void;
@@ -54,7 +54,7 @@ export default function NotificationToast({
 }: NotificationToastProps) {
   const { themed, theme } = useAppTheme();
   const { latestNotification, showToast, dismissToast } =
-    useRealtimeNotifications();
+    useNewNotificationToast();
   const slideAnim = new Animated.Value(-100);
   const opacityAnim = new Animated.Value(0);
 

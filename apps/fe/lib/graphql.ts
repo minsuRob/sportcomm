@@ -503,3 +503,116 @@ export const GET_USER_BOOKMARKS = gql`
     }
   }
 `;
+
+/**
+ * 알림 목록 조회 쿼리
+ */
+export const GET_NOTIFICATIONS = gql`
+  query GetNotifications($page: Int = 1, $limit: Int = 20) {
+    notifications(page: $page, limit: $limit) {
+      notifications {
+        id
+        type
+        title
+        message
+        isRead
+        createdAt
+        sender {
+          id
+          nickname
+          profileImageUrl
+        }
+        post {
+          id
+          title
+          content
+        }
+        comment {
+          id
+          content
+        }
+        metadata
+      }
+      total
+      hasMore
+      page
+      limit
+    }
+  }
+`;
+
+/**
+ * 읽지 않은 알림 개수 조회 쿼리
+ */
+export const GET_UNREAD_NOTIFICATION_COUNT = gql`
+  query GetUnreadNotificationCount {
+    unreadNotificationCount
+  }
+`;
+
+/**
+ * 알림 읽음 처리 뮤테이션
+ */
+export const MARK_NOTIFICATION_AS_READ = gql`
+  mutation MarkNotificationAsRead($notificationId: String!) {
+    markNotificationAsRead(notificationId: $notificationId)
+  }
+`;
+
+/**
+ * 모든 알림 읽음 처리 뮤테이션
+ */
+export const MARK_ALL_NOTIFICATIONS_AS_READ = gql`
+  mutation MarkAllNotificationsAsRead {
+    markAllNotificationsAsRead
+  }
+`;
+
+/**
+ * 알림 삭제 뮤테이션
+ */
+export const DELETE_NOTIFICATION = gql`
+  mutation DeleteNotification($notificationId: String!) {
+    deleteNotification(notificationId: $notificationId)
+  }
+`;
+
+/**
+ * 새로운 알림 실시간 구독
+ */
+export const NEW_NOTIFICATION_SUBSCRIPTION = gql`
+  subscription NewNotification {
+    newNotification {
+      id
+      type
+      title
+      message
+      isRead
+      createdAt
+      sender {
+        id
+        nickname
+        profileImageUrl
+      }
+      post {
+        id
+        title
+        content
+      }
+      comment {
+        id
+        content
+      }
+      metadata
+    }
+  }
+`;
+
+/**
+ * 알림 업데이트 실시간 구독
+ */
+export const NOTIFICATION_UPDATED_SUBSCRIPTION = gql`
+  subscription NotificationUpdated {
+    notificationUpdated
+  }
+`;

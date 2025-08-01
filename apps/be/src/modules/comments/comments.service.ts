@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Comment } from '../../entities/comment.entity';
 import { Post } from '../../entities/post.entity';
 import { CreateCommentInput } from './dto/create-comment.input';
@@ -21,6 +22,7 @@ export class CommentsService {
     private readonly commentRepository: Repository<Comment>,
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -92,6 +94,16 @@ export class CommentsService {
       throw new NotFoundException(
         `방금 생성한 댓글을 찾을 수 없습니다. (ID: ${savedComment.id})`,
       );
+    }
+
+    // 댓글 알림 이벤트 발생 (자신의 게시물에 댓글을 달 때는 알림 안 보냄)
+    if (post.authorId !== userId) {
+      this.eventEmitter.emit('notification.comment', {
+        postId,
+        commentId: savedComment.id,
+        userId,
+        authorId: post.authorId,
+      });
     }
 
     return commentWithAuthor;

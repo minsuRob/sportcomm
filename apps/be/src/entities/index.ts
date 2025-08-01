@@ -17,6 +17,7 @@ import { PostLike } from './post-like.entity';
 import { Report } from './report.entity';
 import { Block } from './block.entity';
 import { Bookmark } from './bookmark.entity';
+import { Notification } from './notification.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -49,6 +50,9 @@ export { Block } from './block.entity';
 // 북마크 관련 엔티티
 export { Bookmark } from './bookmark.entity';
 
+// 알림 관련 엔티티
+export { Notification, NotificationType } from './notification.entity';
+
 /**
  * 모든 엔티티를 배열로 내보내는 상수
  * TypeORM 설정에서 사용됩니다.
@@ -66,6 +70,7 @@ export const entities = [
   Report,
   Block,
   Bookmark,
+  Notification,
 ];
 
 /**

@@ -177,3 +177,6 @@ export const client = new ApolloClient({
     },
   },
 });
+// 알림 서비스에 Apollo Client 설정
+import { notificationService } from "@/lib/notifications/notificationService";
+notificationService.setApolloClient(client);

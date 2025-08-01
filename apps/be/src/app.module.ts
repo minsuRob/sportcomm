@@ -16,6 +16,8 @@ import { SearchModule } from './modules/search/search.module';
 import { MediaModule } from './modules/media/media.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { BookmarkModule } from './modules/bookmarks/bookmark.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 /**
  * 메인 애플리케이션 모듈
@@ -215,6 +217,9 @@ import { BookmarkModule } from './modules/bookmarks/bookmark.module';
 
     TypeOrmModule.forFeature([User, Post]),
 
+    // 이벤트 시스템 모듈
+    EventEmitterModule.forRoot(),
+
     // 기능 모듈들
     AuthModule,
     PostsModule,
@@ -224,6 +229,7 @@ import { BookmarkModule } from './modules/bookmarks/bookmark.module';
     MediaModule,
     ModerationModule,
     BookmarkModule,
+    NotificationsModule,
   ],
 
   // 컨트롤러 및 서비스

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Post, PostType } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
@@ -111,6 +112,7 @@ export class PostsService {
     private readonly mediaRepository: Repository<Media>,
     private dataSource: DataSource,
     private readonly mediaService: MediaService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -529,6 +531,13 @@ export class PostsService {
             `[DEBUG] likePost - 좋아요 추가됨 - postId: ${postId}, userId: ${userId}`,
           );
         }
+
+        // 좋아요 알림 이벤트 발생
+        this.eventEmitter.emit('notification.like', {
+          postId,
+          userId,
+          authorId: post.authorId,
+        });
 
         return true;
       }

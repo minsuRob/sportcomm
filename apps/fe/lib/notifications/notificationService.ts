@@ -9,12 +9,19 @@ import {
   NotificationType,
 } from "@/components/notifications/NotificationItem";
 import { getSession } from "@/lib/auth";
+import {
+  GET_NOTIFICATIONS,
+  GET_UNREAD_NOTIFICATION_COUNT,
+  MARK_NOTIFICATION_AS_READ,
+  MARK_ALL_NOTIFICATIONS_AS_READ,
+} from "@/lib/graphql";
+import { ApolloClient, InMemoryCache } from "@apollo/client";
 
 /**
  * 알림 서비스 설정
  */
 const NOTIFICATION_CONFIG = {
-  USE_LOCAL_MODE: true, // 개발 중에는 로컬 모드 사용
+  USE_LOCAL_MODE: false, // 백엔드 연동 모드로 변경
   MAX_NOTIFICATIONS: 50, // 최대 알림 개수
   REFRESH_INTERVAL: 30000, // 30초마다 새 알림 확인
 };
@@ -27,6 +34,14 @@ class NotificationService {
   private isLocalMode: boolean = NOTIFICATION_CONFIG.USE_LOCAL_MODE;
   private refreshTimer: NodeJS.Timeout | null = null;
   private listeners: Array<(notifications: Notification[]) => void> = [];
+  private apolloClient: ApolloClient<any> | null = null;
+
+  /**
+   * Apollo Client 설정
+   */
+  setApolloClient(client: ApolloClient<any>) {
+    this.apolloClient = client;
+  }
 
   /**
    * 서비스 초기화
@@ -230,28 +245,28 @@ class NotificationService {
     limit: number = 20
   ): Promise<Notification[]> {
     try {
-      const { user, token } = await getSession();
-      if (!user || !token) {
-        throw new Error("인증이 필요합니다");
+      const { user } = await getSession();
+      if (!user || !this.apolloClient) {
+        throw new Error(
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+        );
       }
 
-      // TODO: 실제 API 엔드포인트로 대체
-      const response = await fetch(
-        `/api/notifications?page=${page}&limit=${limit}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const { data } = await this.apolloClient.query({
+        query: GET_NOTIFICATIONS,
+        variables: { page, limit },
+        fetchPolicy: "network-only", // 항상 최신 데이터 가져오기
+      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const notifications = data?.notifications?.notifications || [];
+
+      // 첫 페이지인 경우 전체 알림 목록 업데이트
+      if (page === 1) {
+        this.notifications = notifications;
+        this.notifyListeners();
       }
 
-      const data = await response.json();
-      return data.notifications || [];
+      return notifications;
     } catch (error) {
       console.error("서버에서 알림 가져오기 실패:", error);
       return [];
@@ -263,26 +278,17 @@ class NotificationService {
    */
   private async markAsReadOnServer(notificationId: string): Promise<void> {
     try {
-      const { token } = await getSession();
-      if (!token) {
-        throw new Error("인증이 필요합니다");
+      const { user } = await getSession();
+      if (!user || !this.apolloClient) {
+        throw new Error(
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+        );
       }
 
-      // TODO: 실제 API 엔드포인트로 대체
-      const response = await fetch(
-        `/api/notifications/${notificationId}/read`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      await this.apolloClient.mutate({
+        mutation: MARK_NOTIFICATION_AS_READ,
+        variables: { notificationId },
+      });
     } catch (error) {
       console.error("알림 읽음 처리 실패:", error);
       throw error;
@@ -294,23 +300,16 @@ class NotificationService {
    */
   private async markAllAsReadOnServer(): Promise<void> {
     try {
-      const { token } = await getSession();
-      if (!token) {
-        throw new Error("인증이 필요합니다");
+      const { user } = await getSession();
+      if (!user || !this.apolloClient) {
+        throw new Error(
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+        );
       }
 
-      // TODO: 실제 API 엔드포인트로 대체
-      const response = await fetch("/api/notifications/read-all", {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      await this.apolloClient.mutate({
+        mutation: MARK_ALL_NOTIFICATIONS_AS_READ,
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
     } catch (error) {
       console.error("모든 알림 읽음 처리 실패:", error);
       throw error;

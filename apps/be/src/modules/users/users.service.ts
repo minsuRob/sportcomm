@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User } from '../../entities/user.entity';
 import { Follow } from '../../entities/follow.entity';
 import { Post } from '../../entities/post.entity';
@@ -14,6 +15,7 @@ export class UsersService {
     private readonly followsRepository: Repository<Follow>,
     @InjectRepository(Post)
     private readonly postsRepository: Repository<Post>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -166,6 +168,13 @@ export class UsersService {
         followingId: targetUserId,
       });
       await this.followsRepository.save(newFollow);
+
+      // 팔로우 알림 이벤트 발생
+      this.eventEmitter.emit('notification.follow', {
+        followerId: currentUserId,
+        followedId: targetUserId,
+      });
+
       return true;
     }
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ViewStyle,
   TextStyle,
   Image,
-  ImageStyle,
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
@@ -157,11 +156,6 @@ const renderStrokedText = ({
   );
 };
 
-// 이전 StrokedText 컴포넌트를 새 함수로 대체하기 위한 호환성 래퍼
-const StrokedText = (props: Parameters<typeof renderStrokedText>[0]) => {
-  return renderStrokedText(props);
-};
-
 /**
  * 컨텐츠 텍스트와 테두리 효과 렌더링 함수
  * @param content 표시할 텍스트 내용
@@ -203,9 +197,9 @@ const renderContentText = ({
 
 // --- The Component ---
 export default function PostCard({ post, onPostUpdated }: PostCardProps) {
-  const { themed, theme } = useAppTheme();
+  const { themed } = useAppTheme();
   const router = useRouter();
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight } = useWindowDimensions();
 
   // 컨텍스트 메뉴 상태 관리
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -220,7 +214,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   );
 
   // 공통 이미지 최적화 훅 사용
-  const { imageAspectRatio, imageHeight, imageLoading, error } =
+  const { imageAspectRatio, imageHeight, imageLoading } =
     usePostImageDimensions(imageMedia.length > 0 ? imageMedia[0]?.url : null);
 
   // 현재 사용자 정보 가져오기
@@ -615,10 +609,6 @@ const $loadingContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   justifyContent: "center",
   alignItems: "center",
   backgroundColor: colors.backgroundDim, // 로딩 시 배경색
-});
-
-const $mediaImage: ThemedStyle<ImageStyle> = () => ({
-  // 스타일은 조건부로 직접 적용되므로 여기서는 기본 스타일만 지정
 });
 
 const $gradientOverlay: ThemedStyle<ViewStyle> = () => ({

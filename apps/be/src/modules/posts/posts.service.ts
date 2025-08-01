@@ -285,14 +285,44 @@ export class PostsService {
   async isPostLikedByUser(postId: string, userId: string): Promise<boolean> {
     if (!userId) return false;
 
-    const postLike = await this.postLikeRepository.findOne({
-      where: {
-        postId,
-        userId,
-      },
-    });
+    try {
+      // 먼저 해당 사용자의 모든 좋아요를 확인
+      const allUserLikes = await this.postLikeRepository.find({
+        where: { userId },
+      });
 
-    return !!postLike;
+      // 특정 게시물에 대한 좋아요 확인
+      const postLike = await this.postLikeRepository.findOne({
+        where: {
+          postId,
+          userId,
+        },
+      });
+
+      const isLiked = !!postLike;
+
+      // 개발 환경에서만 디버깅 로그 출력
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `[DEBUG] isPostLikedByUser - postId: ${postId}, userId: ${userId}, isLiked: ${isLiked}`,
+        );
+        console.log(`[DEBUG] 사용자의 전체 좋아요 수: ${allUserLikes.length}`);
+        console.log(`[DEBUG] 찾은 postLike:`, postLike);
+
+        // 해당 게시물의 모든 좋아요도 확인
+        const allPostLikes = await this.postLikeRepository.find({
+          where: { postId },
+        });
+        console.log(
+          `[DEBUG] 해당 게시물의 전체 좋아요 수: ${allPostLikes.length}`,
+        );
+      }
+
+      return isLiked;
+    } catch (error) {
+      console.error('좋아요 상태 확인 중 오류:', error);
+      return false;
+    }
   }
 
   /**
@@ -461,28 +491,48 @@ export class PostsService {
       throw new NotFoundException('게시물을 찾을 수 없습니다.');
     }
 
-    try {
-      // 좋아요 기록 생성 시도
-      // UNIQUE 제약조건 덕분에 중복 좋아요는 자동으로 방지됩니다
-      const like = this.postLikeRepository.create({
-        userId,
-        postId,
-      });
-      await this.postLikeRepository.save(like);
+    // 트랜잭션 사용하여 데이터 일관성 보장
+    return await this.dataSource.transaction(async (manager) => {
+      const postLikeRepo = manager.getRepository(PostLike);
+      const postRepo = manager.getRepository(Post);
 
-      // 좋아요 수 증가
-      await this.postRepository.increment({ id: postId }, 'likeCount', 1);
-      return true;
-    } catch (error) {
-      // 이미 좋아요가 있는 경우 (Unique constraint violation)
-      if (error.code === '23505') {
-        // 좋아요 취소 처리 (삭제)
-        await this.postLikeRepository.delete({ userId, postId });
-        await this.postRepository.decrement({ id: postId }, 'likeCount', 1);
+      // 기존 좋아요 확인
+      const existingLike = await postLikeRepo.findOne({
+        where: { postId, userId },
+      });
+
+      if (existingLike) {
+        // 좋아요 제거
+        await postLikeRepo.remove(existingLike);
+        await postRepo.decrement({ id: postId }, 'likeCount', 1);
+
+        // 개발 환경에서만 디버깅 로그 출력
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[DEBUG] likePost - 좋아요 제거됨 - postId: ${postId}, userId: ${userId}`,
+          );
+        }
+
         return false;
+      } else {
+        // 좋아요 추가
+        const like = postLikeRepo.create({
+          userId,
+          postId,
+        });
+        await postLikeRepo.save(like);
+        await postRepo.increment({ id: postId }, 'likeCount', 1);
+
+        // 개발 환경에서만 디버깅 로그 출력
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[DEBUG] likePost - 좋아요 추가됨 - postId: ${postId}, userId: ${userId}`,
+          );
+        }
+
+        return true;
       }
-      throw error;
-    }
+    });
   }
 
   /**

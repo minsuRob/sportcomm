@@ -77,6 +77,7 @@ export default function FeedScreen() {
   } = useQuery<PostsQueryResponse>(GET_POSTS, {
     variables: { input: { page: 1, limit: PAGE_SIZE } },
     notifyOnNetworkStatusChange: true,
+    fetchPolicy: "cache-and-network", // 캐시와 네트워크 모두 사용하여 최신 데이터 보장
   });
 
   // 차단된 사용자 목록 조회
@@ -114,7 +115,7 @@ export default function FeedScreen() {
         .filter((p) => !blockedUserIds.includes(p.author.id)) // 차단된 사용자 게시물 필터링
         .map((p) => ({
           ...p,
-          isLiked: false,
+          // 서버에서 받은 실제 isLiked 상태 유지 (강제로 false 설정하지 않음)
           isMock: false,
         }));
 

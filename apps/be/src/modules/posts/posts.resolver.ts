@@ -6,6 +6,7 @@ import {
   Int,
   ResolveField,
   Parent,
+  Context,
 } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { ObjectType, Field, InputType } from '@nestjs/graphql';
@@ -259,10 +260,21 @@ export class PostsResolver {
   @ResolveField(() => Boolean)
   async isLiked(
     @Parent() post: Post,
-    @OptionalCurrentUser() user: User | null,
+    @Context() context: any,
   ): Promise<boolean> {
+    const user = context.req?.user;
     if (!user) return false;
-    return await this.postsService.isPostLikedByUser(post.id, user.id);
+
+    const result = await this.postsService.isPostLikedByUser(post.id, user.id);
+
+    // 개발 환경에서만 디버깅 로그 출력
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `[DEBUG] ResolveField isLiked - postId: ${post.id}, userId: ${user.id}, result: ${result}`,
+      );
+    }
+
+    return result;
   }
 
   /**
@@ -271,8 +283,9 @@ export class PostsResolver {
   @ResolveField(() => Boolean)
   async isBookmarked(
     @Parent() post: Post,
-    @OptionalCurrentUser() user: User | null,
+    @Context() context: any,
   ): Promise<boolean> {
+    const user = context.req?.user;
     if (!user) return false;
     return await this.bookmarkService.isBookmarkedByUser(user.id, post.id);
   }

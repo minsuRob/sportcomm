@@ -1,6 +1,11 @@
-import { useState, useEffect } from "react";
-import { useMutation } from "@apollo/client";
-import { TOGGLE_LIKE, TOGGLE_FOLLOW, TOGGLE_BOOKMARK } from "@/lib/graphql";
+import { useState, useEffect, useRef } from "react";
+import { useMutation, useApolloClient } from "@apollo/client";
+import {
+  TOGGLE_LIKE,
+  TOGGLE_FOLLOW,
+  TOGGLE_BOOKMARK,
+  GET_POSTS,
+} from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { getSession } from "@/lib/auth";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -29,6 +34,7 @@ export function usePostInteractions({
   initialIsBookmarked = false,
 }: UsePostInteractionsProps) {
   const { t } = useTranslation();
+  const apolloClient = useApolloClient();
 
   // 상태 관리
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -55,12 +61,24 @@ export function usePostInteractions({
     checkCurrentUser();
   }, []);
 
-  // Props 변경 시 상태 동기화
+  // 초기값이 한 번만 설정되도록 useRef 사용
+  const isInitializedRef = useRef(false);
+
   useEffect(() => {
-    setIsLiked(initialIsLiked);
-    setLikeCount(initialLikeCount);
-    setIsFollowing(initialIsFollowing);
-    setIsBookmarked(initialIsBookmarked);
+    if (!isInitializedRef.current) {
+      setIsLiked(initialIsLiked);
+      setLikeCount(initialLikeCount);
+      setIsFollowing(initialIsFollowing);
+      setIsBookmarked(initialIsBookmarked);
+      isInitializedRef.current = true;
+
+      // 개발 환경에서만 디버깅 로그
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `[DEBUG] usePostInteractions 초기화 - isLiked: ${initialIsLiked}, isBookmarked: ${initialIsBookmarked}`
+        );
+      }
+    }
   }, [
     initialIsLiked,
     initialLikeCount,
@@ -96,7 +114,51 @@ export function usePostInteractions({
     setIsLiked(newLikedStatus);
     setLikeCount(newLikeCount);
 
-    executeLike({ variables: { postId } })
+    executeLike({
+      variables: { postId },
+      // Apollo Client 캐시 업데이트 설정
+      update: (cache, { data }) => {
+        if (data?.likePost !== undefined) {
+          // GET_POSTS 쿼리의 캐시 업데이트
+          try {
+            const existingData = cache.readQuery({
+              query: GET_POSTS,
+              variables: { input: { page: 1, limit: 10 } },
+            });
+
+            if (existingData?.posts?.posts) {
+              const updatedPosts = existingData.posts.posts.map((post: any) => {
+                if (post.id === postId) {
+                  return {
+                    ...post,
+                    isLiked: data.likePost,
+                    likeCount: data.likePost
+                      ? post.likeCount + 1
+                      : Math.max(0, post.likeCount - 1),
+                  };
+                }
+                return post;
+              });
+
+              cache.writeQuery({
+                query: GET_POSTS,
+                variables: { input: { page: 1, limit: 10 } },
+                data: {
+                  ...existingData,
+                  posts: {
+                    ...existingData.posts,
+                    posts: updatedPosts,
+                  },
+                },
+              });
+            }
+          } catch (error) {
+            // 캐시 업데이트 실패 시 로그만 출력 (정상 동작에는 영향 없음)
+            console.warn("Apollo 캐시 업데이트 실패:", error);
+          }
+        }
+      },
+    })
       .then(({ data, errors }) => {
         if (errors) {
           console.error("좋아요 처리 실패:", errors);
@@ -114,6 +176,14 @@ export function usePostInteractions({
         }
 
         const likeSuccessful = data?.likePost;
+
+        // 개발 환경에서만 디버깅 로그
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            `[DEBUG] 좋아요 응답 - postId: ${postId}, likeSuccessful: ${likeSuccessful}, 예상값: ${newLikedStatus}`
+          );
+        }
+
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(

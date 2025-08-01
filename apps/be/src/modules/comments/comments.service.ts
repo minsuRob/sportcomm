@@ -179,6 +179,15 @@ export class CommentsService {
     // 댓글 삭제 처리
     const deletedComment = { ...comment } as Comment;
     await this.commentRepository.remove(comment);
+
+    // 댓글 삭제 알림 이벤트 발생 (관련 알림 삭제용)
+    this.eventEmitter.emit('notification.comment.delete', {
+      postId: comment.postId,
+      commentId: comment.id,
+      userId: comment.authorId,
+      authorId: comment.post?.authorId,
+    });
+
     return deletedComment;
   }
 }

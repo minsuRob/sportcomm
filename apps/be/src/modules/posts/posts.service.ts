@@ -405,6 +405,12 @@ export class PostsService {
     // 소프트 삭제
     await this.postRepository.softDelete(id);
 
+    // 게시물 삭제 알림 이벤트 발생 (관련 알림 모두 삭제용)
+    this.eventEmitter.emit('notification.post.delete', {
+      postId: id,
+      authorId: existingPost.authorId,
+    });
+
     return existingPost;
   }
 
@@ -514,6 +520,13 @@ export class PostsService {
             `[DEBUG] likePost - 좋아요 제거됨 - postId: ${postId}, userId: ${userId}`,
           );
         }
+
+        // 좋아요 취소 알림 이벤트 발생 (알림 삭제용)
+        this.eventEmitter.emit('notification.like.cancel', {
+          postId,
+          userId,
+          authorId: post.authorId,
+        });
 
         return false;
       } else {

@@ -27,13 +27,27 @@ export interface CreateNotificationDto {
  */
 export interface NotificationEvents {
   'notification.like': { postId: string; userId: string; authorId: string };
+  'notification.like.cancel': {
+    postId: string;
+    userId: string;
+    authorId: string;
+  };
   'notification.comment': {
     postId: string;
     commentId: string;
     userId: string;
     authorId: string;
   };
+  'notification.comment.delete': {
+    postId: string;
+    commentId: string;
+    userId: string;
+    authorId?: string;
+  };
   'notification.follow': { followerId: string; followedId: string };
+  'notification.follow.cancel': { followerId: string; followedId: string };
+  'notification.post.delete': { postId: string; authorId: string };
+  'notification.user.delete': { userId: string };
   'notification.like.milestone': {
     postId: string;
     authorId: string;
@@ -197,6 +211,25 @@ export class NotificationsService {
     const { postId, userId, authorId } = payload;
 
     try {
+      // 이미 해당 사용자가 해당 게시물에 대해 좋아요 알림을 받았는지 확인
+      const existingLikeNotification =
+        await this.notificationRepository.findOne({
+          where: {
+            type: NotificationType.LIKE,
+            recipientId: authorId,
+            senderId: userId,
+            postId,
+          },
+        });
+
+      // 이미 좋아요 알림이 존재하면 새로운 알림을 생성하지 않음
+      if (existingLikeNotification) {
+        this.logger.debug(
+          `좋아요 알림 중복 방지: userId=${userId}, postId=${postId}, authorId=${authorId}`,
+        );
+        return;
+      }
+
       // 게시물 작성자에게 좋아요 알림 전송
       const notification = await this.createNotification({
         type: NotificationType.LIKE,
@@ -211,6 +244,34 @@ export class NotificationsService {
       }
     } catch (error) {
       this.logger.error('좋아요 알림 처리 중 오류:', error);
+    }
+  }
+
+  /**
+   * 좋아요 취소 이벤트 처리
+   */
+  @OnEvent('notification.like.cancel')
+  async handleLikeCancelEvent(
+    payload: NotificationEvents['notification.like.cancel'],
+  ) {
+    const { postId, userId, authorId } = payload;
+
+    try {
+      // 해당 좋아요 알림 삭제
+      const result = await this.notificationRepository.delete({
+        type: NotificationType.LIKE,
+        recipientId: authorId,
+        senderId: userId,
+        postId,
+      });
+
+      if (result.affected && result.affected > 0) {
+        this.logger.debug(
+          `좋아요 알림 삭제됨: userId=${userId}, postId=${postId}, authorId=${authorId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('좋아요 취소 알림 처리 중 오류:', error);
     }
   }
 
@@ -238,6 +299,35 @@ export class NotificationsService {
   }
 
   /**
+   * 댓글 삭제 이벤트 처리
+   */
+  @OnEvent('notification.comment.delete')
+  async handleCommentDeleteEvent(
+    payload: NotificationEvents['notification.comment.delete'],
+  ) {
+    const { postId, commentId, userId, authorId } = payload;
+
+    try {
+      // 해당 댓글 알림 삭제
+      const result = await this.notificationRepository.delete({
+        type: NotificationType.COMMENT,
+        postId,
+        commentId,
+        senderId: userId,
+        ...(authorId && { recipientId: authorId }),
+      });
+
+      if (result.affected && result.affected > 0) {
+        this.logger.debug(
+          `댓글 알림 삭제됨: commentId=${commentId}, postId=${postId}, userId=${userId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('댓글 삭제 알림 처리 중 오류:', error);
+    }
+  }
+
+  /**
    * 팔로우 이벤트 처리
    */
   @OnEvent('notification.follow')
@@ -253,6 +343,90 @@ export class NotificationsService {
       });
     } catch (error) {
       this.logger.error('팔로우 알림 처리 중 오류:', error);
+    }
+  }
+
+  /**
+   * 팔로우 취소 이벤트 처리
+   */
+  @OnEvent('notification.follow.cancel')
+  async handleFollowCancelEvent(
+    payload: NotificationEvents['notification.follow.cancel'],
+  ) {
+    const { followerId, followedId } = payload;
+
+    try {
+      // 해당 팔로우 알림 삭제
+      const result = await this.notificationRepository.delete({
+        type: NotificationType.FOLLOW,
+        recipientId: followedId,
+        senderId: followerId,
+      });
+
+      if (result.affected && result.affected > 0) {
+        this.logger.debug(
+          `팔로우 알림 삭제됨: followerId=${followerId}, followedId=${followedId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('팔로우 취소 알림 처리 중 오류:', error);
+    }
+  }
+
+  /**
+   * 게시물 삭제 이벤트 처리
+   */
+  @OnEvent('notification.post.delete')
+  async handlePostDeleteEvent(
+    payload: NotificationEvents['notification.post.delete'],
+  ) {
+    const { postId, authorId } = payload;
+
+    try {
+      // 해당 게시물과 관련된 모든 알림 삭제
+      const result = await this.notificationRepository.delete({
+        postId,
+      });
+
+      if (result.affected && result.affected > 0) {
+        this.logger.log(
+          `게시물 관련 알림 ${result.affected}개 삭제됨: postId=${postId}, authorId=${authorId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('게시물 삭제 알림 처리 중 오류:', error);
+    }
+  }
+
+  /**
+   * 사용자 삭제 이벤트 처리
+   */
+  @OnEvent('notification.user.delete')
+  async handleUserDeleteEvent(
+    payload: NotificationEvents['notification.user.delete'],
+  ) {
+    const { userId } = payload;
+
+    try {
+      // 해당 사용자와 관련된 모든 알림 삭제 (발신자 또는 수신자)
+      const senderResult = await this.notificationRepository.delete({
+        senderId: userId,
+      });
+
+      const recipientResult = await this.notificationRepository.delete({
+        recipientId: userId,
+      });
+
+      const totalDeleted =
+        (senderResult.affected || 0) + (recipientResult.affected || 0);
+
+      if (totalDeleted > 0) {
+        this.logger.log(
+          `사용자 관련 알림 ${totalDeleted}개 삭제됨: userId=${userId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('사용자 삭제 알림 처리 중 오류:', error);
     }
   }
 

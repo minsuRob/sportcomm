@@ -160,6 +160,13 @@ export class UsersService {
     if (existingFollow) {
       // 이미 팔로우 중이므로 언팔로우 처리
       await this.followsRepository.remove(existingFollow);
+
+      // 언팔로우 알림 이벤트 발생 (관련 알림 삭제용)
+      this.eventEmitter.emit('notification.follow.cancel', {
+        followerId: currentUserId,
+        followedId: targetUserId,
+      });
+
       return false;
     } else {
       // 팔로우하고 있지 않으므로 팔로우 처리

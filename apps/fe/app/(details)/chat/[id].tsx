@@ -45,12 +45,15 @@ export default function ChatDetailScreen() {
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
 
   // 차단된 사용자 목록 조회
-  const { data: blockedUsersData } = useQuery<{ getBlockedUsers: string[] }>(
-    GET_BLOCKED_USERS,
-    {
-      skip: !currentUser, // 로그인하지 않은 경우 실행하지 않음
+  const { data: blockedUsersData, error: blockedUsersError } = useQuery<{
+    getBlockedUsers: string[];
+  }>(GET_BLOCKED_USERS, {
+    errorPolicy: "all", // 에러와 데이터 모두 반환
+    notifyOnNetworkStatusChange: false,
+    onError: (error) => {
+      console.warn("차단된 사용자 목록 조회 실패:", error.message);
     },
-  );
+  });
 
   // 실시간 메시지 수신 구독 참조
   const subscribedRef = useRef(false);
@@ -100,11 +103,14 @@ export default function ChatDetailScreen() {
       // 기존 메시지에서 차단된 사용자 메시지 제거
       setMessages((prevMessages) =>
         prevMessages.filter(
-          (message) => !newBlockedUserIds.includes(message.user_id),
-        ),
+          (message) => !newBlockedUserIds.includes(message.user_id)
+        )
       );
+    } else if (blockedUsersError) {
+      // 에러 발생 시 빈 배열로 초기화
+      setBlockedUserIds([]);
     }
-  }, [blockedUsersData]);
+  }, [blockedUsersData, blockedUsersError]);
 
   /**
    * 메시지 로드 함수
@@ -118,7 +124,7 @@ export default function ChatDetailScreen() {
 
       // 차단된 사용자 메시지 필터링
       const filteredMessages = messageData.filter(
-        (message) => !blockedUserIds.includes(message.user_id),
+        (message) => !blockedUserIds.includes(message.user_id)
       );
 
       setMessages(filteredMessages);
@@ -145,12 +151,12 @@ export default function ChatDetailScreen() {
       let moreMessages = await chatService.getMessages(
         channelId,
         50,
-        oldestMessage.created_at,
+        oldestMessage.created_at
       );
 
       // 차단된 사용자 메시지 필터링
       const filteredMoreMessages = moreMessages.filter(
-        (message) => !blockedUserIds.includes(message.user_id),
+        (message) => !blockedUserIds.includes(message.user_id)
       );
 
       if (filteredMoreMessages.length > 0) {
@@ -242,7 +248,7 @@ export default function ChatDetailScreen() {
           style: "cancel",
         },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 
@@ -259,7 +265,7 @@ export default function ChatDetailScreen() {
         { text: "위치 공유", onPress: () => console.log("위치 공유") },
         { text: "취소", style: "cancel" },
       ],
-      { cancelable: true },
+      { cancelable: true }
     );
   };
 

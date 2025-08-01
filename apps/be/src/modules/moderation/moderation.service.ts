@@ -204,12 +204,21 @@ export class ModerationService {
    * @returns 차단된 사용자 ID 배열
    */
   async getBlockedUserIds(userId: string): Promise<string[]> {
-    const blocks = await this.blockRepository.find({
-      where: { blockerId: userId },
-      select: ['blockedUserId'],
-    });
+    try {
+      if (!userId) {
+        return [];
+      }
 
-    return blocks.map((block) => block.blockedUserId);
+      const blocks = await this.blockRepository.find({
+        where: { blockerId: userId },
+        select: ['blockedUserId'],
+      });
+
+      return blocks.map((block) => block.blockedUserId);
+    } catch (error) {
+      console.error('차단된 사용자 ID 조회 오류:', error);
+      return [];
+    }
   }
 
   /**

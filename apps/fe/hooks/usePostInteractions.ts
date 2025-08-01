@@ -105,7 +105,7 @@ export function usePostInteractions({
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(
-            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1
           );
         }
       })
@@ -140,12 +140,12 @@ export function usePostInteractions({
         variables: { userId: authorId },
       });
 
-      if (result.error || !result.data) {
+      if (result.errors || !result.data) {
         setIsFollowing(previousIsFollowing);
         showToast({
           type: "error",
           title: t(TRANSLATION_KEYS.POST_FOLLOW_ERROR),
-          message: result.error?.message || "An unknown error occurred.",
+          message: result.errors?.[0]?.message || "An unknown error occurred.",
           duration: 3000,
         });
         return;

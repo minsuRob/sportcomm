@@ -76,12 +76,15 @@ export default function FeedScreen() {
   });
 
   // 차단된 사용자 목록 조회
-  const { data: blockedUsersData } = useQuery<{ getBlockedUsers: string[] }>(
-    GET_BLOCKED_USERS,
-    {
-      skip: !currentUser, // 로그인하지 않은 경우 실행하지 않음
-    }
-  );
+  const { data: blockedUsersData, error: blockedUsersError } = useQuery<{
+    getBlockedUsers: string[];
+  }>(GET_BLOCKED_USERS, {
+    errorPolicy: "all", // 에러와 데이터 모두 반환
+    notifyOnNetworkStatusChange: false,
+    onError: (error) => {
+      console.warn("차단된 사용자 목록 조회 실패:", error.message);
+    },
+  });
 
   useEffect(() => {
     const checkSession = async () => {
@@ -95,8 +98,11 @@ export default function FeedScreen() {
   useEffect(() => {
     if (blockedUsersData?.getBlockedUsers) {
       setBlockedUserIds(blockedUsersData.getBlockedUsers);
+    } else if (blockedUsersError) {
+      // 에러 발생 시 빈 배열로 초기화
+      setBlockedUserIds([]);
     }
-  }, [blockedUsersData]);
+  }, [blockedUsersData, blockedUsersError]);
 
   useEffect(() => {
     if (data?.posts?.posts) {

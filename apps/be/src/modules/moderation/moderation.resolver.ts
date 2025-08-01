@@ -15,7 +15,10 @@ import {
 import { Report, ReportType } from '../../entities/report.entity';
 import { Block } from '../../entities/block.entity';
 import { User } from '../../entities/user.entity';
-import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
+import {
+  GqlAuthGuard,
+  OptionalGqlAuthGuard,
+} from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 /**
@@ -128,10 +131,18 @@ export class ModerationResolver {
    * @param user 현재 사용자
    * @returns 차단된 사용자 ID 배열
    */
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(OptionalGqlAuthGuard)
   @Query(() => [String], { description: '차단된 사용자 목록 조회' })
-  async getBlockedUsers(@CurrentUser() user: User): Promise<string[]> {
-    return await this.moderationService.getBlockedUserIds(user.id);
+  async getBlockedUsers(@CurrentUser() user: User | null): Promise<string[]> {
+    try {
+      if (!user || !user.id) {
+        return [];
+      }
+      return await this.moderationService.getBlockedUserIds(user.id);
+    } catch (error) {
+      console.error('차단된 사용자 목록 조회 오류:', error);
+      return [];
+    }
   }
 
   /**

@@ -354,4 +354,11 @@ export class Post extends BaseEntity {
    */
   @Field(() => Boolean, { description: '현재 사용자가 좋아요를 눌렀는지 여부' })
   isLiked?: boolean;
+
+  /**
+   * 현재 사용자가 이 게시물을 북마크했는지 여부
+   * GraphQL 리졸버에서 계산된 필드로 사용됩니다.
+   */
+  @Field(() => Boolean, { description: '현재 사용자가 북마크했는지 여부' })
+  isBookmarked?: boolean;
 }

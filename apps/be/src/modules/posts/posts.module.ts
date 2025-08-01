@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PostsService } from './posts.service';
 import { MediaModule } from '../media/media.module';
+import { BookmarkModule } from '../bookmarks/bookmark.module';
 import { PostsResolver } from './posts.resolver';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
@@ -26,6 +27,8 @@ import { Media } from '../../entities/media.entity';
     TypeOrmModule.forFeature([Post, PostVersion, PostLike, Media]),
     // 미디어 관련 기능 사용을 위한 MediaModule 가져오기
     MediaModule,
+    // 북마크 관련 기능 사용을 위한 BookmarkModule 가져오기
+    BookmarkModule,
   ],
 
   // 서비스 및 리졸버 제공

@@ -1,4 +1,12 @@
-import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  Int,
+  ResolveField,
+  Parent,
+} from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { ObjectType, Field, InputType } from '@nestjs/graphql';
 import {
@@ -16,6 +24,7 @@ import {
 import { PostsService, FindPostsOptions } from './posts.service';
 import { Post, PostType } from '../../entities/post.entity';
 import { User } from '../../entities/user.entity';
+import { BookmarkService } from '../bookmarks/bookmark.service';
 import {
   GqlAuthGuard,
   OptionalGqlAuthGuard,
@@ -239,7 +248,34 @@ export class PostStatsResponse {
  */
 @Resolver(() => Post)
 export class PostsResolver {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly bookmarkService: BookmarkService,
+  ) {}
+
+  /**
+   * 현재 사용자가 게시물에 좋아요를 눌렀는지 여부를 계산하는 필드 리졸버
+   */
+  @ResolveField(() => Boolean)
+  async isLiked(
+    @Parent() post: Post,
+    @OptionalCurrentUser() user: User | null,
+  ): Promise<boolean> {
+    if (!user) return false;
+    return await this.postsService.isPostLikedByUser(post.id, user.id);
+  }
+
+  /**
+   * 현재 사용자가 게시물을 북마크했는지 여부를 계산하는 필드 리졸버
+   */
+  @ResolveField(() => Boolean)
+  async isBookmarked(
+    @Parent() post: Post,
+    @OptionalCurrentUser() user: User | null,
+  ): Promise<boolean> {
+    if (!user) return false;
+    return await this.bookmarkService.isBookmarkedByUser(user.id, post.id);
+  }
 
   /**
    * 게시물 생성
@@ -300,16 +336,6 @@ export class PostsResolver {
     // 로그인한 사용자만 조회수 증가
     const incrementView = !!user;
     const post = await this.postsService.findById(id, incrementView);
-
-    // 현재 사용자의 좋아요 상태 설정
-    if (user) {
-      post.isLiked = await this.postsService.isPostLikedByUser(
-        post.id,
-        user.id,
-      );
-    } else {
-      post.isLiked = false;
-    }
 
     return post;
   }
@@ -492,19 +518,7 @@ export class PostsResolver {
     @OptionalCurrentUser() user: User,
     @Args('limit', { defaultValue: 10 }) limit: number,
   ): Promise<Post[]> {
-    const posts = await this.postsService.findPopularPosts(limit);
-
-    // 현재 사용자의 좋아요 상태 설정
-    if (user) {
-      for (const post of posts) {
-        post.isLiked = await this.postsService.isPostLikedByUser(
-          post.id,
-          user.id,
-        );
-      }
-    }
-
-    return posts;
+    return await this.postsService.findPopularPosts(limit);
   }
 
   /**
@@ -518,19 +532,7 @@ export class PostsResolver {
     @OptionalCurrentUser() user: User,
     @Args('limit', { defaultValue: 10 }) limit: number,
   ): Promise<Post[]> {
-    const posts = await this.postsService.findRecentPosts(limit);
-
-    // 현재 사용자의 좋아요 상태 설정
-    if (user) {
-      for (const post of posts) {
-        post.isLiked = await this.postsService.isPostLikedByUser(
-          post.id,
-          user.id,
-        );
-      }
-    }
-
-    return posts;
+    return await this.postsService.findRecentPosts(limit);
   }
 
   /**

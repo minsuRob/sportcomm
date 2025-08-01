@@ -24,6 +24,8 @@ export const GET_POSTS = gql`
         viewCount
         likeCount
         commentCount
+        isLiked
+        isBookmarked
         author {
           id
           nickname
@@ -147,6 +149,8 @@ export const GET_POST_DETAIL = gql`
       shareCount
       isPinned
       isPublic
+      isLiked
+      isBookmarked
       author {
         id
         nickname
@@ -278,6 +282,8 @@ export const GET_USER_POSTS = gql`
         viewCount
         likeCount
         commentCount
+        isLiked
+        isBookmarked
         author {
           id
           nickname

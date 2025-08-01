@@ -50,6 +50,7 @@ export interface Post {
   likeCount: number;
   commentCount: number;
   isLiked: boolean;
+  isBookmarked?: boolean; // 북마크 상태 추가
   isMock?: boolean;
 }
 
@@ -248,7 +249,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     initialLikeCount: post.likeCount,
     initialIsLiked: post.isLiked,
     initialIsFollowing: post.author.isFollowing || false,
-    initialIsBookmarked: false, // TODO: 실제 북마크 상태로 변경 필요
+    initialIsBookmarked: post.isBookmarked || false, // 실제 북마크 상태 사용
   });
 
   // 게시물 상세 페이지로 이동하는 함수

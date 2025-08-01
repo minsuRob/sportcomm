@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@apollo/client";
-import { TOGGLE_LIKE, TOGGLE_FOLLOW } from "@/lib/graphql";
+import { TOGGLE_LIKE, TOGGLE_FOLLOW, TOGGLE_BOOKMARK } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { getSession } from "@/lib/auth";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -12,6 +12,7 @@ interface UsePostInteractionsProps {
   initialLikeCount: number;
   initialIsLiked: boolean;
   initialIsFollowing: boolean;
+  initialIsBookmarked?: boolean;
 }
 
 /**
@@ -25,6 +26,7 @@ export function usePostInteractions({
   initialLikeCount,
   initialIsLiked,
   initialIsFollowing,
+  initialIsBookmarked = false,
 }: UsePostInteractionsProps) {
   const { t } = useTranslation();
 
@@ -33,12 +35,16 @@ export function usePostInteractions({
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+  const [isBookmarked, setIsBookmarked] = useState(initialIsBookmarked);
   const [isLikeProcessing, setIsLikeProcessing] = useState(false);
+  const [isBookmarkProcessing, setIsBookmarkProcessing] = useState(false);
   const [isLikeError, setIsLikeError] = useState(false);
 
   // GraphQL 뮤테이션
   const [executeLike, { loading: likeLoading }] = useMutation(TOGGLE_LIKE);
   const [toggleFollow, { loading: followLoading }] = useMutation(TOGGLE_FOLLOW);
+  const [toggleBookmark, { loading: bookmarkLoading }] =
+    useMutation(TOGGLE_BOOKMARK);
 
   // 현재 사용자 확인
   useEffect(() => {
@@ -54,7 +60,13 @@ export function usePostInteractions({
     setIsLiked(initialIsLiked);
     setLikeCount(initialLikeCount);
     setIsFollowing(initialIsFollowing);
-  }, [initialIsLiked, initialLikeCount, initialIsFollowing]);
+    setIsBookmarked(initialIsBookmarked);
+  }, [
+    initialIsLiked,
+    initialLikeCount,
+    initialIsFollowing,
+    initialIsBookmarked,
+  ]);
 
   /**
    * 좋아요 토글 핸들러
@@ -173,17 +185,75 @@ export function usePostInteractions({
     }
   };
 
+  /**
+   * 북마크 토글 핸들러
+   */
+  const handleBookmark = async () => {
+    if (isBookmarkProcessing) return;
+
+    if (!currentUserId) {
+      showToast({
+        type: "error",
+        title: "로그인 필요",
+        message: "북마크하려면 로그인이 필요합니다.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsBookmarkProcessing(true);
+    const previousIsBookmarked = isBookmarked;
+
+    // 낙관적 업데이트
+    setIsBookmarked(!previousIsBookmarked);
+
+    try {
+      const { data } = await toggleBookmark({
+        variables: { postId },
+      });
+
+      if (data?.toggleBookmark !== undefined) {
+        const newIsBookmarked = data.toggleBookmark;
+        setIsBookmarked(newIsBookmarked);
+
+        showToast({
+          type: "success",
+          title: newIsBookmarked ? "북마크 추가" : "북마크 제거",
+          message: newIsBookmarked
+            ? "게시물이 북마크에 추가되었습니다."
+            : "게시물이 북마크에서 제거되었습니다.",
+          duration: 2000,
+        });
+      }
+    } catch (error) {
+      // 실패 시 원래 상태로 복원
+      setIsBookmarked(previousIsBookmarked);
+      console.error("북마크 토글 오류:", error);
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "북마크 처리 중 문제가 발생했습니다. 다시 시도해주세요.",
+        duration: 3000,
+      });
+    } finally {
+      setIsBookmarkProcessing(false);
+    }
+  };
+
   return {
     // 상태
     currentUserId,
     isLiked,
     likeCount,
     isFollowing,
+    isBookmarked,
     isLikeProcessing,
+    isBookmarkProcessing,
     isLikeError,
 
     // 핸들러
     handleLike,
     handleFollowToggle,
+    handleBookmark,
   };
 }

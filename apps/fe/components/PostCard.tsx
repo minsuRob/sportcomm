@@ -232,15 +232,24 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   }, []);
 
   // 게시물 상호작용 훅 사용
-  const { isLiked, likeCount, isLikeProcessing, isLikeError, handleLike } =
-    usePostInteractions({
-      postId: post.id,
-      authorId: post.author.id,
-      authorName: post.author.nickname,
-      initialLikeCount: post.likeCount,
-      initialIsLiked: post.isLiked,
-      initialIsFollowing: post.author.isFollowing || false,
-    });
+  const {
+    isLiked,
+    likeCount,
+    isLikeProcessing,
+    isLikeError,
+    handleLike,
+    isBookmarked,
+    isBookmarkProcessing,
+    handleBookmark,
+  } = usePostInteractions({
+    postId: post.id,
+    authorId: post.author.id,
+    authorName: post.author.nickname,
+    initialLikeCount: post.likeCount,
+    initialIsLiked: post.isLiked,
+    initialIsFollowing: post.author.isFollowing || false,
+    initialIsBookmarked: false, // TODO: 실제 북마크 상태로 변경 필요
+  });
 
   // 게시물 상세 페이지로 이동하는 함수
   const handlePostPress = () => {
@@ -487,7 +496,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           </View>
         </TouchableOpacity>
 
-        {/* 액션 버튼 - 좋아요, 댓글, 리포스트 */}
+        {/* 액션 버튼 - 좋아요, 댓글, 북마크 */}
         <PostActions
           isLiked={isLiked}
           isLikeProcessing={isLikeProcessing}
@@ -499,11 +508,12 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
               params: { postId: post.id },
             })
           }
-          onRepost={() => {}}
+          onBookmark={handleBookmark}
+          isBookmarked={isBookmarked}
+          isBookmarkProcessing={isBookmarkProcessing}
           variant="feed"
           likeCount={likeCount}
           commentCount={post.commentCount}
-          shareCount={67}
         />
       </View>
 
@@ -523,6 +533,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
         }}
         currentUserId={currentUser?.id}
         onPostUpdated={onPostUpdated}
+        isBookmarked={isBookmarked}
       />
     </View>
   );

@@ -18,7 +18,9 @@ interface PostActionsProps {
   onLike: () => void;
   onComment?: () => void;
   onShare?: () => void;
-  onRepost?: () => void;
+  onBookmark?: () => void;
+  isBookmarked?: boolean;
+  isBookmarkProcessing?: boolean;
   variant?: "feed" | "detail";
   disabled?: boolean;
   likeCount?: number;
@@ -37,7 +39,9 @@ export default function PostActions({
   onLike,
   onComment,
   onShare,
-  onRepost,
+  onBookmark,
+  isBookmarked = false,
+  isBookmarkProcessing = false,
   variant = "feed",
   disabled = false,
   likeCount = 0,
@@ -79,14 +83,17 @@ export default function PostActions({
         <Text style={themed($actionCount)}>{commentCount}</Text>
       </TouchableOpacity>
 
-      {/* 리포스트 버튼 */}
-      <TouchableOpacity style={themed($actionButton)} onPress={onRepost}>
-        <MaterialIcons
-          name="repeat"
+      {/* 북마크 버튼 */}
+      <TouchableOpacity
+        style={themed($actionButton)}
+        onPress={onBookmark}
+        disabled={isBookmarkProcessing || disabled}
+      >
+        <Ionicons
+          name={isBookmarked ? "bookmark" : "bookmark-outline"}
           size={iconSize}
-          color={theme.colors.textDim}
+          color={isBookmarked ? theme.colors.tint : theme.colors.textDim}
         />
-        <Text style={themed($actionCount)}>{shareCount}</Text>
       </TouchableOpacity>
     </View>
   );

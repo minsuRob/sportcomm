@@ -26,6 +26,7 @@ interface PostContextMenuProps {
   };
   currentUserId?: string | null;
   onPostUpdated?: (updatedPost: any) => void;
+  isBookmarked?: boolean;
 }
 
 /**
@@ -38,6 +39,7 @@ export default function PostContextMenu({
   post,
   currentUserId,
   onPostUpdated,
+  isBookmarked = false,
 }: PostContextMenuProps) {
   const { theme } = useAppTheme();
   const [showEditModal, setShowEditModal] = useState(false);
@@ -201,10 +203,14 @@ export default function PostContextMenu({
       ),
     },
     {
-      text: "북마크",
+      text: isBookmarked ? "북마크 제거" : "북마크 추가",
       onPress: handleBookmark,
       icon: (
-        <Ionicons name="bookmark-outline" color={theme.colors.text} size={20} />
+        <Ionicons
+          name={isBookmarked ? "bookmark" : "bookmark-outline"}
+          color={isBookmarked ? theme.colors.tint : theme.colors.text}
+          size={20}
+        />
       ),
     },
   ];

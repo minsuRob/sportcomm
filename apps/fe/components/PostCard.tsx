@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -17,8 +18,10 @@ import { usePostInteractions } from "../hooks/usePostInteractions";
 import { PostType } from "./shared/PostHeader";
 import { Media } from "./shared/PostMedia";
 import PostActions from "./shared/PostActions";
+import PostContextMenu from "./shared/PostContextMenu";
 import { isWeb } from "@/lib/platform";
 import { usePostImageDimensions, IMAGE_CONSTANTS } from "@/lib/image";
+import { getSession } from "@/lib/auth";
 
 // --- Type Definitions ---
 export { PostType, Media };
@@ -64,7 +67,7 @@ const formatTimeAgo = (dateString: string) => {
   const now = new Date();
   const postDate = new Date(dateString);
   const diffHours = Math.floor(
-    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
+    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
   );
 
   if (diffHours < 1) return "방금 전";
@@ -199,21 +202,34 @@ const renderContentText = ({
 
 // --- The Component ---
 export default function PostCard({ post, onPostUpdated }: PostCardProps) {
-  const { themed } = useAppTheme();
+  const { themed, theme } = useAppTheme();
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  // 컨텍스트 메뉴 상태 관리
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // __DEV__ 상수 선언 (React Native에서는 기본 제공되지만 웹에서는 아닐 수 있음)
   const __DEV__ = process.env.NODE_ENV === "development";
 
   // 이미지 미디어만 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
+    (item) => item.type === "image" || item.type === "IMAGE"
   );
 
   // 공통 이미지 최적화 훅 사용
   const { imageAspectRatio, imageHeight, imageLoading, error } =
     usePostImageDimensions(imageMedia.length > 0 ? imageMedia[0]?.url : null);
+
+  // 현재 사용자 정보 가져오기
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      const { user } = await getSession();
+      setCurrentUser(user);
+    };
+    loadCurrentUser();
+  }, []);
 
   // 게시물 상호작용 훅 사용
   const { isLiked, likeCount, isLikeProcessing, isLikeError, handleLike } =
@@ -234,6 +250,16 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     });
   };
 
+  // 컨텍스트 메뉴 핸들러
+  const handleMorePress = (e: any) => {
+    e.stopPropagation(); // 부모의 onPress 이벤트 방지
+    setShowContextMenu(true);
+  };
+
+  const handleCloseContextMenu = () => {
+    setShowContextMenu(false);
+  };
+
   // 이미지 미디어는 위에서 이미 필터링되었음
 
   // 불필요한 코드 제거
@@ -244,7 +270,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       console.log(`PostCard - post.id: ${post.id}`);
       console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
       console.log(
-        `PostCard - post.content: ${post.content.substring(0, 20)}...`,
+        `PostCard - post.content: ${post.content.substring(0, 20)}...`
       );
     }
   }, [post.id]);
@@ -400,27 +426,39 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
               </View>
             </View>
 
-            <View
-              style={[
-                themed($categoryBadge),
-                { backgroundColor: categoryInfo.colors.badge + "40" },
-              ]}
-            >
+            {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
+            <View style={themed($topRightContainer)}>
               <View
                 style={[
-                  themed($categoryIcon),
-                  { backgroundColor: categoryInfo.colors.badge + "60" },
+                  themed($categoryBadge),
+                  { backgroundColor: categoryInfo.colors.badge + "40" },
                 ]}
               >
-                <Text style={themed($categoryIconText)}>
-                  {post.type === PostType.ANALYSIS
-                    ? "📊"
-                    : post.type === PostType.HIGHLIGHT
-                      ? "⚡"
-                      : "📣"}
-                </Text>
+                <View
+                  style={[
+                    themed($categoryIcon),
+                    { backgroundColor: categoryInfo.colors.badge + "60" },
+                  ]}
+                >
+                  <Text style={themed($categoryIconText)}>
+                    {post.type === PostType.ANALYSIS
+                      ? "📊"
+                      : post.type === PostType.HIGHLIGHT
+                        ? "⚡"
+                        : "📣"}
+                  </Text>
+                </View>
+                <Text style={themed($categoryText)}>{categoryInfo.text}</Text>
               </View>
-              <Text style={themed($categoryText)}>{categoryInfo.text}</Text>
+
+              {/* 더보기 버튼 */}
+              <TouchableOpacity
+                style={themed($moreButton)}
+                onPress={handleMorePress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="ellipsis-horizontal" size={20} color="white" />
+              </TouchableOpacity>
             </View>
 
             {/* title이 있으면 표시 */}
@@ -468,6 +506,24 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           shareCount={67}
         />
       </View>
+
+      {/* 컨텍스트 메뉴 */}
+      <PostContextMenu
+        visible={showContextMenu}
+        onClose={handleCloseContextMenu}
+        post={{
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          type: post.type,
+          author: {
+            id: post.author.id,
+            nickname: post.author.nickname,
+          },
+        }}
+        currentUserId={currentUser?.id}
+        onPostUpdated={onPostUpdated}
+      />
     </View>
   );
 }
@@ -601,17 +657,24 @@ const $profileTime: ThemedStyle<TextStyle> = () => ({
   fontSize: 12,
 });
 
-// 카테고리 배지 - 오른쪽 위
-const $categoryBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+// 오른쪽 위 컨테이너 - 카테고리 배지와 더보기 버튼을 포함
+const $topRightContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   top: spacing.md,
   right: spacing.md,
   flexDirection: "row",
   alignItems: "center",
+  gap: spacing.xs,
+  zIndex: 3,
+});
+
+// 카테고리 배지
+const $categoryBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
   borderRadius: 20,
   paddingVertical: spacing.xs,
   paddingHorizontal: spacing.sm,
-  zIndex: 3,
 });
 
 const $categoryIcon: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -725,4 +788,16 @@ const $emptyMediaContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   height: 300, // 이미지가 없을 때 높이 300px로 고정
   width: "100%",
   backgroundColor: colors.backgroundDim, // 이미지가 없을 때 배경색 설정
+});
+
+// 더보기 버튼
+const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: "rgba(0, 0, 0, 0.4)",
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "rgba(255, 255, 255, 0.2)",
 });

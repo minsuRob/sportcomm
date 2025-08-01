@@ -7,8 +7,8 @@ import ReportModal from "@/components/ReportModal";
 import PostEditModal from "@/components/PostEditModal";
 import { useModerationActions } from "../../hooks/useModerationActions";
 import { useAppTheme } from "@/lib/theme/context";
-import { PostType } from "./PostHeader";
-import { DELETE_POST } from "@/lib/graphql";
+import { PostType } from "../PostCard";
+import { DELETE_POST, TOGGLE_BOOKMARK } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 
 interface PostContextMenuProps {
@@ -42,6 +42,8 @@ export default function PostContextMenu({
   const { theme } = useAppTheme();
   const [showEditModal, setShowEditModal] = useState(false);
   const [deletePost, { loading: deleteLoading }] = useMutation(DELETE_POST);
+  const [toggleBookmark, { loading: bookmarkLoading }] =
+    useMutation(TOGGLE_BOOKMARK);
   const {
     showReportModal,
     reportTarget,
@@ -79,11 +81,37 @@ export default function PostContextMenu({
   };
 
   /**
-   * 북마크 핸들러 (향후 구현)
+   * 북마크 토글 핸들러
    */
-  const handleBookmark = () => {
-    // TODO: 북마크 기능 구현
-    console.log("북마크 기능 - 향후 구현 예정");
+  const handleBookmark = async () => {
+    try {
+      const { data } = await toggleBookmark({
+        variables: { postId: post.id },
+      });
+
+      if (data?.toggleBookmark !== undefined) {
+        const isBookmarked = data.toggleBookmark;
+        showToast({
+          type: "success",
+          title: isBookmarked ? "북마크 추가" : "북마크 제거",
+          message: isBookmarked
+            ? "게시물이 북마크에 추가되었습니다."
+            : "게시물이 북마크에서 제거되었습니다.",
+          duration: 2000,
+        });
+      }
+    } catch (error) {
+      console.error("북마크 토글 오류:", error);
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "북마크 처리 중 문제가 발생했습니다. 다시 시도해주세요.",
+        duration: 3000,
+      });
+    }
+
+    // 메뉴 닫기
+    onClose();
   };
 
   /**
@@ -141,7 +169,7 @@ export default function PostContextMenu({
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -198,7 +226,7 @@ export default function PostContextMenu({
         icon: (
           <Ionicons name="trash-outline" color={theme.colors.error} size={20} />
         ),
-      },
+      }
     );
   } else {
     // 다른 사용자의 게시물인 경우 신고/차단 옵션 추가
@@ -222,7 +250,7 @@ export default function PostContextMenu({
             size={20}
           />
         ),
-      },
+      }
     );
   }
 
@@ -233,7 +261,7 @@ export default function PostContextMenu({
         onClose={onClose}
         title="게시물 옵션"
         options={
-          deleteLoading
+          deleteLoading || bookmarkLoading
             ? options.map((opt) => ({ ...opt, disabled: true }))
             : options
         }

@@ -6,6 +6,7 @@
 
 import { Platform } from "react-native";
 import { ReactNativeFile } from "apollo-upload-client";
+import { SERVER_URL } from "@env";
 
 // --------------------------
 // 타입 정의
@@ -156,18 +157,14 @@ export function createReactNativeFile(
  * API 기본 URL 설정
  */
 export const getApiBaseUrl = () => {
-  return __DEV__
-    ? Platform.OS === "android"
-      ? "http://10.0.2.2:3000" // Android 에뮬레이터용
-      : "http://localhost:3000" // iOS 에뮬레이터와 웹용
-    : "https://api.sportcomm.com"; // 프로덕션 URL
+  return "http://localhost:3000"; // 프로덕션 URL
 };
 
 /**
  * 업로드 엔드포인트 URL들
  */
 export const getUploadEndpoints = () => {
-  const baseUrl = getApiBaseUrl();
+  const baseUrl = SERVER_URL;
   return {
     upload: `${baseUrl}/api/upload`,
     uploadSingle: `${baseUrl}/api/upload/single`,

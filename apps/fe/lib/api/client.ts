@@ -11,12 +11,12 @@ import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
 // import { createHybridUploadLink } from "./fileUpload"; // 임시 비활성화
 import { logPlatformInfo, getPlatformType } from "@/lib/platform";
-import { GRAPHQL_URL } from "@env";
+import { SERVER_URL } from "@env";
 /**
  * API 기본 URL 설정
  * 개발 환경에서는 로컬 서버, 프로덕션 환경에서는 실제 API 서버 URL 사용
  */
-const API_URL = GRAPHQL_URL;
+const API_URL = `${SERVER_URL}/graphql`;
 // const API_URL = __DEV__
 //   ? Platform.OS === "android"
 //     ? "http://10.0.2.2:3000/graphql" // Android 에뮬레이터용

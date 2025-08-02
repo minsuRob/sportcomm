@@ -14,7 +14,7 @@ import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { User } from "@/lib/auth";
 import { GET_CHAT_ROOMS, JOIN_CHAT_CHANNEL } from "@/lib/graphql/chat";
 import { GET_ADMIN_CHAT_ROOMS } from "@/lib/graphql/admin";
 import { showToast } from "@/components/CustomToast";
@@ -75,15 +75,22 @@ interface AdminChatRoomsResponse {
   };
 }
 
+interface ChatRoomListProps {
+  currentUser: User | null;
+  showHeader?: boolean;
+}
+
 /**
- * 채팅방 목록 화면
+ * 채팅방 목록 컴포넌트
  *
  * 사용자가 참여할 수 있는 채팅방 목록을 표시합니다.
  */
-export default function ChatScreen() {
+export default function ChatRoomList({
+  currentUser,
+  showHeader = false,
+}: ChatRoomListProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // GraphQL 쿼리 및 뮤테이션
   const { data, loading, error, refetch } = useQuery<ChatRoomsResponse>(
@@ -113,26 +120,10 @@ export default function ChatScreen() {
     ],
   });
 
-  // 사용자 정보 로드
-  useEffect(() => {
-    const loadUser = async () => {
-      const { user } = await getSession();
-      setCurrentUser(user);
-    };
-    loadUser();
-  }, []);
-
   // 에러 처리
   useEffect(() => {
     if (error) {
       console.error("채팅방 목록 로드 실패:", error);
-      showToast({
-        type: "error",
-        title: "데이터 로드 실패",
-        message:
-          error.message || "채팅방 목록을 불러오는 중 오류가 발생했습니다.",
-        duration: 3000,
-      });
     }
     if (adminError) {
       console.error("관리자 채팅방 로드 실패:", adminError);
@@ -257,6 +248,11 @@ export default function ChatScreen() {
     };
   };
 
+  // 새로고침 핸들러
+  const handleRefresh = async () => {
+    await Promise.all([refetch(), refetchAdmin()]);
+  };
+
   // 채팅방 아이템 렌더링
   const renderChatRoom = ({ item }: { item: ChatRoom }) => {
     const memberCount = item.currentParticipants || item.members.length;
@@ -283,7 +279,7 @@ export default function ChatScreen() {
             <Ionicons
               name={typeInfo.icon as any}
               color={typeInfo.color}
-              size={24}
+              size={20}
             />
           </View>
 
@@ -325,7 +321,7 @@ export default function ChatScreen() {
                   <Ionicons
                     name="people"
                     color={theme.colors.textDim}
-                    size={12}
+                    size={10}
                   />
                   <Text style={themed($memberCount)}>
                     {memberCount}
@@ -355,34 +351,26 @@ export default function ChatScreen() {
     );
   };
 
-  // 새로고침 핸들러
-  const handleRefresh = async () => {
-    await Promise.all([refetch(), refetchAdmin()]);
-  };
-
   if ((loading || adminLoading) && !data && !adminData) {
     return (
-      <View style={themed($container)}>
-        <View style={themed($header)}>
-          <Text style={themed($headerTitle)}>채팅</Text>
-        </View>
-        <View style={themed($loadingContainer)}>
-          <ActivityIndicator size="large" color={theme.colors.tint} />
-          <Text style={themed($loadingText)}>채팅방 목록을 불러오는 중...</Text>
-        </View>
+      <View style={themed($loadingContainer)}>
+        <ActivityIndicator size="large" color={theme.colors.tint} />
+        <Text style={themed($loadingText)}>채팅방 목록을 불러오는 중...</Text>
       </View>
     );
   }
 
   return (
     <View style={themed($container)}>
-      {/* 헤더 */}
-      <View style={themed($header)}>
-        <Text style={themed($headerTitle)}>채팅</Text>
-        <TouchableOpacity onPress={() => router.push("/(app)/chat/rooms")}>
-          <Ionicons name="add" color={theme.colors.tint} size={24} />
-        </TouchableOpacity>
-      </View>
+      {/* 헤더 (옵션) */}
+      {showHeader && (
+        <View style={themed($header)}>
+          <Text style={themed($headerTitle)}>채팅</Text>
+          <TouchableOpacity onPress={() => router.push("/(app)/chat/rooms")}>
+            <Ionicons name="add" color={theme.colors.tint} size={24} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 채팅방 목록 */}
       <FlatList
@@ -403,19 +391,19 @@ export default function ChatScreen() {
               <Ionicons
                 name="chatbubbles-outline"
                 color={theme.colors.textDim}
-                size={64}
+                size={48}
               />
               <Text style={themed($emptyTitle)}>
                 참여 중인 채팅방이 없습니다
               </Text>
               <Text style={themed($emptyDescription)}>
-                새로운 채팅방을 만들거나 기존 채팅방에 참여해보세요
+                새로운 채팅방을 찾아보세요
               </Text>
               <TouchableOpacity
                 style={themed($createButton)}
                 onPress={() => router.push("/(app)/chat/rooms")}
               >
-                <Ionicons name="add" color="white" size={20} />
+                <Ionicons name="add" color="white" size={16} />
                 <Text style={themed($createButtonText)}>채팅방 찾기</Text>
               </TouchableOpacity>
             </View>
@@ -437,13 +425,13 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   justifyContent: "space-between",
   alignItems: "center",
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.lg,
+  paddingVertical: spacing.md,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
 });
 
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 24,
+  fontSize: 20,
   fontWeight: "bold",
   color: colors.text,
 });
@@ -453,7 +441,7 @@ const $flatList: ThemedStyle<ViewStyle> = () => ({
 });
 
 const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.md,
+  padding: spacing.sm,
 });
 
 const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -464,15 +452,15 @@ const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
+  fontSize: 14,
   color: colors.textDim,
 });
 
 const $roomCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.card,
-  borderRadius: 12,
-  padding: spacing.md,
-  marginBottom: spacing.sm,
+  borderRadius: 8,
+  padding: spacing.sm,
+  marginBottom: spacing.xs,
   borderWidth: 1,
   borderColor: colors.border,
 });
@@ -480,13 +468,13 @@ const $roomCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $roomHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "flex-start",
-  gap: spacing.md,
+  gap: spacing.sm,
 });
 
-const $roomIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  width: 48,
-  height: 48,
-  borderRadius: 24,
+const $roomIconContainer: ThemedStyle<ViewStyle> = () => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
   justifyContent: "center",
   alignItems: "center",
 });
@@ -503,14 +491,14 @@ const $roomTitleRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $roomName: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
+  fontSize: 14,
   fontWeight: "600",
   color: colors.text,
   flex: 1,
 });
 
 const $roomTime: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
+  fontSize: 10,
   color: colors.textDim,
 });
 
@@ -522,7 +510,7 @@ const $roomInfoRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $roomLastMessage: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
+  fontSize: 12,
   color: colors.textDim,
   flex: 1,
 });
@@ -530,41 +518,41 @@ const $roomLastMessage: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $roomBadges: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  gap: spacing.sm,
+  gap: spacing.xs,
 });
 
 const $memberBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   backgroundColor: colors.border + "50",
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
-  borderRadius: 12,
-  gap: spacing.xs,
+  paddingHorizontal: spacing.xs,
+  paddingVertical: 2,
+  borderRadius: 8,
+  gap: 2,
 });
 
 const $memberCount: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
+  fontSize: 10,
   color: colors.textDim,
 });
 
 const $unreadBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.tint,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
-  borderRadius: 12,
-  minWidth: 20,
+  paddingHorizontal: spacing.xs,
+  paddingVertical: 2,
+  borderRadius: 8,
+  minWidth: 16,
   alignItems: "center",
 });
 
 const $unreadCount: ThemedStyle<TextStyle> = () => ({
-  fontSize: 12,
+  fontSize: 10,
   color: "white",
   fontWeight: "600",
 });
 
 const $roomDescription: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
+  fontSize: 10,
   color: colors.textDim,
   fontStyle: "italic",
 });
@@ -573,47 +561,48 @@ const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
   justifyContent: "center",
   alignItems: "center",
-  paddingHorizontal: spacing.xl,
-  gap: spacing.md,
+  paddingHorizontal: spacing.lg,
+  gap: spacing.sm,
+  paddingVertical: spacing.xl,
 });
 
 const $emptyTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 18,
+  fontSize: 16,
   fontWeight: "600",
   color: colors.text,
   textAlign: "center",
 });
 
 const $emptyDescription: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
+  fontSize: 12,
   color: colors.textDim,
   textAlign: "center",
-  lineHeight: 20,
+  lineHeight: 16,
 });
 
 const $createButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   backgroundColor: colors.tint,
-  paddingHorizontal: spacing.lg,
-  paddingVertical: spacing.md,
-  borderRadius: 24,
-  gap: spacing.sm,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 16,
+  gap: spacing.xs,
 });
 
 const $createButtonText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 16,
+  fontSize: 12,
   color: "white",
   fontWeight: "600",
 });
 
 const $typeBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
-  borderRadius: 12,
+  paddingHorizontal: spacing.xs,
+  paddingVertical: 2,
+  borderRadius: 8,
 });
 
 const $typeText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 11,
+  fontSize: 9,
   fontWeight: "500",
 });

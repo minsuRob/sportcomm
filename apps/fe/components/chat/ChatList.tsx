@@ -16,6 +16,13 @@ import ChatMessage, {
   Message as ChatMessageType,
   MessageWithIsMe,
 } from "./ChatMessage";
+import { User } from "@/lib/auth";
+import dayjs from "dayjs";
+import {
+  useModerationActions,
+  ModerationTarget,
+} from "@/lib/useModerationActions";
+import ReportModal from "../ReportModal";
 
 // ChatList에서 사용하는 Message 타입 (GraphQL 응답과 호환)
 export interface Message {
@@ -37,13 +44,6 @@ export interface Message {
   };
   isSystem?: boolean;
 }
-import { User } from "@/lib/auth";
-import dayjs from "dayjs";
-import {
-  useModerationActions,
-  ModerationTarget,
-} from "@/lib/useModerationActions";
-import ReportModal from "../ReportModal";
 
 /**
  * 채팅 목록 Props 타입 정의

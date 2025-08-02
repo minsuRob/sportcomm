@@ -23,7 +23,7 @@ import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { Ionicons } from "@expo/vector-icons";
 import StorySection from "@/components/StorySection";
 import TabSlider from "@/components/TabSlider";
-import ChatList from "@/components/chat/ChatList";
+import ChatRoomList from "@/components/chat/ChatRoomList";
 import {
   NotificationBadge,
   NotificationToast,
@@ -352,12 +352,7 @@ export default function FeedScreen() {
           ListFooterComponent={ListFooter}
         />
       ) : (
-        <ChatList
-          messages={[]}
-          currentUser={currentUser}
-          isLoading={false}
-          title="채팅"
-        />
+        <ChatRoomList currentUser={currentUser} showHeader={false} />
       )}
 
       {/* 실시간 알림 토스트 */}

@@ -595,9 +595,9 @@ export class PostsResolver {
       totalPosts: stats.totalPosts,
       publicPosts: stats.publicPosts,
       privatePosts: stats.privatePosts,
-      analysisCount: stats.postsByType[PostType.LIVERPOOL] || 0, // ANALYSIS를 LIVERPOOL로 대체
-      cheeringCount: stats.postsByType[PostType.TOTTENHAM] || 0, // CHEERING을 TOTTENHAM으로 대체
-      highlightCount: stats.postsByType[PostType.DOOSAN_BEARS] || 0, // HIGHLIGHT를 DOOSAN_BEARS로 대체
+      analysisCount: stats.postsByType[PostType.ANALYSIS] || 0,
+      cheeringCount: stats.postsByType[PostType.CHEERING] || 0,
+      highlightCount: stats.postsByType[PostType.HIGHLIGHT] || 0,
     };
   }
 }

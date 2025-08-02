@@ -1,7 +1,7 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { TeamManagementService } from './team-management.service';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
 import {
@@ -18,7 +18,7 @@ import {
  * 관리자 전용 팀 관리 GraphQL API를 제공합니다.
  */
 @Resolver()
-@UseGuards(JwtAuthGuard)
+@UseGuards(GqlAuthGuard)
 export class TeamManagementResolver {
   constructor(private readonly teamManagementService: TeamManagementService) {}
 

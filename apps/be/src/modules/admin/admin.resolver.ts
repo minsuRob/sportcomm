@@ -1,7 +1,7 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../../entities/user.entity';
 import { Post } from '../../entities/post.entity';
@@ -118,7 +118,7 @@ export class PaginatedReports {
  * 관리자 전용 GraphQL API를 제공합니다.
  */
 @Resolver()
-@UseGuards(JwtAuthGuard)
+@UseGuards(GqlAuthGuard)
 export class AdminResolver {
   constructor(private readonly adminService: AdminService) {}
 

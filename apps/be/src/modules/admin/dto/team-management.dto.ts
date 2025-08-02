@@ -1,4 +1,9 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
+import {
+  InputType,
+  Field,
+  ObjectType,
+  registerEnumType,
+} from '@nestjs/graphql';
 import {
   IsString,
   IsOptional,
@@ -17,6 +22,19 @@ export enum TeamCategory {
   BASKETBALL = 'BASKETBALL',
   VOLLEYBALL = 'VOLLEYBALL',
 }
+
+// GraphQL 스키마에 TeamCategory enum 등록
+registerEnumType(TeamCategory, {
+  name: 'TeamCategory',
+  description: '팀 카테고리',
+  valuesMap: {
+    SOCCER: { description: '축구' },
+    BASEBALL: { description: '야구' },
+    ESPORTS: { description: 'e스포츠' },
+    BASKETBALL: { description: '농구' },
+    VOLLEYBALL: { description: '배구' },
+  },
+});
 
 /**
  * 팀 정보 타입

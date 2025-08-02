@@ -57,6 +57,14 @@ export enum PostType {
   KT_ROLSTER = 'KT_ROLSTER',
   /** 담원 기아 */
   DAMWON_KIA = 'DAMWON_KIA',
+
+  // 게시물 유형
+  /** 응원글 */
+  CHEERING = 'CHEERING',
+  /** 분석글 */
+  ANALYSIS = 'ANALYSIS',
+  /** 하이라이트 */
+  HIGHLIGHT = 'HIGHLIGHT',
 }
 
 // GraphQL 스키마에 PostType enum 등록
@@ -84,6 +92,11 @@ registerEnumType(PostType, {
     DRX: { description: 'DRX' },
     KT_ROLSTER: { description: 'KT 롤스터' },
     DAMWON_KIA: { description: '담원 기아' },
+
+    // 게시물 유형
+    CHEERING: { description: '응원글' },
+    ANALYSIS: { description: '분석글' },
+    HIGHLIGHT: { description: '하이라이트' },
   },
 });
 

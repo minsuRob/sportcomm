@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { Video } from "expo-video";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { usePostInteractions } from "../hooks/usePostInteractions";
@@ -209,10 +210,17 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   // __DEV__ 상수 선언 (React Native에서는 기본 제공되지만 웹에서는 아닐 수 있음)
   const __DEV__ = process.env.NODE_ENV === "development";
 
-  // 이미지 미디어만 필터링
+  // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
     (item) => item.type === "image" || item.type === "IMAGE"
   );
+  const videoMedia = post.media.filter(
+    (item) => item.type === "video" || item.type === "VIDEO"
+  );
+
+  // 동영상 재생 상태 관리
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [showVideoControls, setShowVideoControls] = useState(true);
 
   // 공통 이미지 최적화 훅 사용
   const { imageAspectRatio, imageHeight, imageLoading } =
@@ -360,7 +368,64 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       >
         <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
           <View style={themed($mediaContainer)}>
-            {imageMedia.length > 0 ? (
+            {videoMedia.length > 0 ? (
+              // 동영상이 있는 경우
+              <View
+                style={{
+                  aspectRatio: 16 / 9, // 동영상 기본 비율
+                  maxHeight: screenHeight * IMAGE_CONSTANTS.MAX_HEIGHT_RATIO,
+                  minHeight: IMAGE_CONSTANTS.MIN_HEIGHT,
+                  backgroundColor: themed($mediaContainer).backgroundColor,
+                  position: "relative",
+                  overflow: "hidden",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Video
+                  source={{ uri: videoMedia[0]?.url }}
+                  style={{ height: "100%", width: "100%" }}
+                  useNativeControls={showVideoControls}
+                  resizeMode="cover"
+                  isLooping={false}
+                  shouldPlay={isVideoPlaying}
+                  onPlaybackStatusUpdate={(status) => {
+                    if (status.isLoaded) {
+                      setIsVideoPlaying(status.isPlaying || false);
+                    }
+                  }}
+                />
+
+                {/* 동영상 컨트롤 오버레이 */}
+                {!isVideoPlaying && (
+                  <TouchableOpacity
+                    style={themed($videoPlayButton)}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setIsVideoPlaying(true);
+                    }}
+                  >
+                    <Ionicons name="play" size={48} color="white" />
+                  </TouchableOpacity>
+                )}
+
+                {/* 동영상 정보 표시 */}
+                {videoMedia[0]?.duration && (
+                  <View style={themed($videoDurationBadge)}>
+                    <Ionicons name="videocam" size={12} color="white" />
+                    <Text style={themed($videoDurationText)}>
+                      {Math.floor(videoMedia[0].duration / 60)}:
+                      {(videoMedia[0].duration % 60)
+                        .toFixed(0)
+                        .padStart(2, "0")}
+                    </Text>
+                  </View>
+                )}
+
+                {/* 그라데이션 오버레이 */}
+                <View style={themed($gradientOverlay)} />
+              </View>
+            ) : imageMedia.length > 0 ? (
               imageLoading ? (
                 // 로딩 중 인디케이터 표시
                 <View style={themed($loadingContainer)}>
@@ -409,7 +474,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                 </View>
               )
             ) : (
-              // 이미지가 없는 경우 빈 컨테이너 표시
+              // 미디어가 없는 경우 빈 컨테이너 표시
               <View style={themed($emptyMediaContainer)} />
             )}
 
@@ -803,4 +868,39 @@ const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   borderWidth: 1,
   borderColor: "rgba(255, 255, 255, 0.2)",
+});
+
+// --- 동영상 관련 스타일 ---
+const $videoPlayButton: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: [{ translateX: -24 }, { translateY: -24 }],
+  width: 80,
+  height: 80,
+  borderRadius: 40,
+  backgroundColor: "rgba(0, 0, 0, 0.6)",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 2,
+});
+
+const $videoDurationBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  bottom: spacing.sm,
+  right: spacing.sm,
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "rgba(0, 0, 0, 0.8)",
+  borderRadius: 12,
+  paddingHorizontal: spacing.xs,
+  paddingVertical: 4,
+  zIndex: 3,
+});
+
+const $videoDurationText: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  color: "white",
+  fontSize: 12,
+  fontWeight: "600",
+  marginLeft: spacing.xxxs,
 });

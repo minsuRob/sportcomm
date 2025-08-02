@@ -7,6 +7,7 @@ import * as sharp from 'sharp';
 sharp.cache(false); // 캐시 비활성화로 메모리 누수 방지
 sharp.concurrency(2); // 병렬 처리 제한
 import * as path from 'path';
+import * as ffmpeg from 'fluent-ffmpeg';
 
 /**
  * 미디어 서비스
@@ -50,26 +51,41 @@ export class MediaService {
           throw new Error(`파일 크기가 0 또는 음수입니다: ${file.size} bytes`);
         }
 
-        // 이미지 메타데이터 추출 - extractImageMetadata 메서드가 항상 객체 반환
-        const metadata = await this.extractImageMetadata(file.path);
+        // 파일 타입에 따른 처리 분기
+        const isVideo = file.mimetype.startsWith('video/');
+        let metadata: { width: number; height: number; duration?: number };
+        let mediaType: MediaType;
+        let folderPath: string;
+
+        if (isVideo) {
+          // 동영상 메타데이터 추출
+          metadata = await this.extractVideoMetadata(file.path);
+          mediaType = MediaType.VIDEO;
+          folderPath = 'uploads/videos/';
+        } else {
+          // 이미지 메타데이터 추출
+          metadata = await this.extractImageMetadata(file.path);
+          mediaType = MediaType.IMAGE;
+          folderPath = 'uploads/images/';
+        }
 
         // 환경에 따른 기본 URL 설정
         const baseUrl = 'http://localhost:3000';
 
-        // 파일 경로에서 '/uploads/images/' 이후 부분만 추출
-        const relativePath =
-          file.path.split('uploads/images/')[1] || file.filename;
+        // 파일 경로에서 업로드 폴더 이후 부분만 추출
+        const relativePath = file.path.split(folderPath)[1] || file.filename;
 
         const media = this.mediaRepository.create({
           originalName: file.originalname,
-          url: `${baseUrl}/uploads/images/${relativePath}`,
-          type: MediaType.IMAGE,
+          url: `${baseUrl}/${folderPath}${relativePath}`,
+          type: mediaType,
           status: UploadStatus.COMPLETED,
           fileSize: file.size,
           mimeType: file.mimetype,
           extension: path.extname(file.originalname).substring(1),
           width: metadata.width,
           height: metadata.height,
+          duration: metadata.duration, // 동영상인 경우에만 값이 있음
           // postId는 나중에 게시물 작성 시 연결됨
         });
 
@@ -79,17 +95,19 @@ export class MediaService {
         console.error(`파일 처리 실패: ${file.originalname}`, error);
         // 실패해도 DB에 기록하여 클라이언트에서 처리할 수 있게 함
         try {
+          const isVideo = file.mimetype.startsWith('video/');
           const media = this.mediaRepository.create({
             originalName: file.originalname,
             url: file.path,
-            type: MediaType.IMAGE,
+            type: isVideo ? MediaType.VIDEO : MediaType.IMAGE,
             status: UploadStatus.FAILED,
             fileSize: file.size,
             mimeType: file.mimetype,
             extension: path.extname(file.originalname).substring(1),
             width: 0,
             height: 0,
-            failureReason: error.message || '이미지 처리 오류',
+            duration: isVideo ? 0 : undefined,
+            failureReason: error.message || '미디어 처리 오류',
           });
           const savedMedia = await this.mediaRepository.save(media);
           mediaEntities.push(savedMedia);
@@ -244,5 +262,143 @@ export class MediaService {
         id: In(mediaIds),
       },
     });
+  }
+
+  /**
+   * 동영상 메타데이터를 추출합니다.
+   * @param filePath 동영상 파일 경로
+   * @returns 동영상 메타데이터
+   */
+  private async extractVideoMetadata(filePath: string): Promise<{
+    width: number;
+    height: number;
+    duration: number;
+  }> {
+    try {
+      // 파일이 존재하는지 확인
+      const fs = require('fs');
+      const fileExists = fs.existsSync(filePath);
+      if (!fileExists) {
+        throw new Error(`동영상 파일이 존재하지 않습니다: ${filePath}`);
+      }
+
+      // 파일 크기 확인
+      const stats = fs.statSync(filePath);
+      if (stats.size <= 0) {
+        throw new Error(
+          `동영상 파일 크기가 0 또는 음수입니다: ${stats.size} bytes`,
+        );
+      }
+
+      this.logger.log(
+        `동영상 메타데이터 추출 시작: ${filePath}, 크기: ${stats.size} bytes`,
+      );
+
+      // FFmpeg를 사용한 동영상 메타데이터 추출
+      return new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(filePath, (err, metadata) => {
+          if (err) {
+            this.logger.error('FFmpeg 메타데이터 추출 실패:', err);
+            // 기본값 반환 (서버 중단 방지)
+            resolve({
+              width: 0,
+              height: 0,
+              duration: 0,
+            });
+            return;
+          }
+
+          try {
+            // 비디오 스트림 찾기
+            const videoStream = metadata.streams.find(
+              (stream) => stream.codec_type === 'video',
+            );
+
+            if (!videoStream) {
+              this.logger.warn('비디오 스트림을 찾을 수 없습니다');
+              resolve({
+                width: 0,
+                height: 0,
+                duration: 0,
+              });
+              return;
+            }
+
+            const width = videoStream.width || 0;
+            const height = videoStream.height || 0;
+            const duration = parseFloat(
+              String(metadata.format.duration || '0'),
+            );
+
+            this.logger.log(`동영상 메타데이터 추출 성공:`, {
+              width,
+              height,
+              duration,
+              format: metadata.format.format_name,
+            });
+
+            resolve({
+              width,
+              height,
+              duration,
+            });
+          } catch (parseError) {
+            this.logger.error('메타데이터 파싱 오류:', parseError);
+            resolve({
+              width: 0,
+              height: 0,
+              duration: 0,
+            });
+          }
+        });
+      });
+    } catch (error) {
+      this.logger.error(`동영상 메타데이터 추출 실패(${filePath}):`, error);
+
+      // 서버가 중단되지 않도록 기본값 반환
+      return {
+        width: 0,
+        height: 0,
+        duration: 0,
+      };
+    }
+  }
+
+  /**
+   * 동영상 썸네일을 생성합니다.
+   * @param videoPath 동영상 파일 경로
+   * @param outputPath 썸네일 출력 경로
+   * @param timeStamp 썸네일을 추출할 시간 (초)
+   * @returns 썸네일 생성 성공 여부
+   */
+  async generateVideoThumbnail(
+    videoPath: string,
+    outputPath: string,
+    timeStamp: number = 1,
+  ): Promise<boolean> {
+    try {
+      this.logger.log(`동영상 썸네일 생성 시작: ${videoPath} -> ${outputPath}`);
+
+      return new Promise((resolve, reject) => {
+        ffmpeg(videoPath)
+          .screenshots({
+            timestamps: [timeStamp],
+            filename: path.basename(outputPath),
+            folder: path.dirname(outputPath),
+            size: '320x240',
+          })
+          .on('end', () => {
+            this.logger.log('동영상 썸네일 생성 완료');
+            resolve(true);
+          })
+          .on('error', (err) => {
+            this.logger.error('동영상 썸네일 생성 실패:', err);
+            resolve(false);
+          });
+      });
+    } catch (error) {
+      this.logger.error('동영상 썸네일 생성 중 오류:', error);
+      return false;
+    }
   }
 }

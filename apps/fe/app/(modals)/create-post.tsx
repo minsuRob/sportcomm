@@ -31,6 +31,13 @@ import {
 } from "@/lib/api/postCreation";
 import { compressImageWeb } from "@/lib/api/webUpload";
 import { compressImageMobile } from "@/lib/api/mobileUpload";
+import {
+  compressVideoMobile,
+  compressVideoWeb,
+  isValidVideoFile,
+  getVideoMetadata,
+  SelectedVideo,
+} from "@/lib/api/videoUpload";
 import { UploadProgress } from "@/lib/api/common";
 
 // --- 타입 정의 ---
@@ -50,6 +57,17 @@ interface SelectedImage {
   name?: string;
 }
 
+interface SelectedMedia {
+  uri: string;
+  width?: number;
+  height?: number;
+  duration?: number; // 동영상인 경우에만
+  fileSize?: number;
+  mimeType?: string;
+  name?: string;
+  type: "image" | "video";
+}
+
 /**
  * 게시물 작성 페이지 (텍스트 전용)
  *
@@ -67,6 +85,7 @@ export default function CreatePostScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [selectedVideos, setSelectedVideos] = useState<SelectedVideo[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [uploadPercentage, setUploadPercentage] = useState<number>(0);
 
@@ -120,7 +139,8 @@ export default function CreatePostScreen() {
       title.trim() ||
       content.trim() ||
       selectedType ||
-      selectedImages.length > 0
+      selectedImages.length > 0 ||
+      selectedVideos.length > 0
     ) {
       Alert.alert(
         "작성 취소",
@@ -147,9 +167,9 @@ export default function CreatePostScreen() {
   };
 
   /**
-   * 이미지 선택 핸들러
+   * 미디어 선택 핸들러 (이미지 + 동영상)
    */
-  const handleImagePicker = async () => {
+  const handleMediaPicker = async () => {
     try {
       // 권한 요청
       const { status } =
@@ -157,101 +177,165 @@ export default function CreatePostScreen() {
       if (status !== "granted") {
         Alert.alert(
           "권한 필요",
-          "이미지를 선택하려면 갤러리 접근 권한이 필요합니다.",
+          "미디어를 선택하려면 갤러리 접근 권한이 필요합니다.",
           [{ text: "확인" }]
         );
         return;
       }
 
-      // 이미지 선택
+      // 현재 선택된 미디어 개수 확인
+      const totalSelected = selectedImages.length + selectedVideos.length;
+      if (totalSelected >= 4) {
+        showToast({
+          type: "error",
+          title: "선택 제한",
+          message: "최대 4개의 미디어만 선택할 수 있습니다.",
+          duration: 3000,
+        });
+        return;
+      }
+
+      // 미디어 선택 (이미지 + 동영상)
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.All, // 이미지와 동영상 모두
         allowsMultipleSelection: true,
-        selectionLimit: 4 - selectedImages.length, // 최대 4개까지
+        selectionLimit: 4 - totalSelected, // 남은 선택 가능 개수
         quality: 1,
         allowsEditing: false,
+        videoMaxDuration: 60, // 최대 60초 동영상
       });
 
       if (!result.canceled && result.assets) {
-        console.log(`📷 이미지 선택 완료: ${result.assets.length}개`);
+        console.log(`📱 미디어 선택 완료: ${result.assets.length}개`);
 
         const newImages: SelectedImage[] = [];
+        const newVideos: SelectedVideo[] = [];
 
         for (const [index, asset] of result.assets.entries()) {
-          console.log(`📷 Asset ${index}:`, {
+          console.log(`📱 Asset ${index}:`, {
             uri: asset.uri?.substring(0, 50) + "...",
             width: asset.width,
             height: asset.height,
             type: asset.type,
             fileSize: asset.fileSize,
+            duration: asset.duration,
           });
 
           try {
-            let compressedImage: SelectedImage;
+            if (asset.type === "video") {
+              // 동영상 처리
+              let processedVideo: SelectedVideo;
 
-            if (isWeb()) {
-              // 웹 환경에서 이미지 압축
-              const file = await compressImageWeb(asset.uri, {
-                maxWidth: 1920,
-                maxHeight: 1080,
-                quality: 0.8,
-                fileName: `image_${index}_${Date.now()}.jpg`,
-              });
+              if (isWeb()) {
+                // 웹 환경에서는 원본 사용 (압축 제한적)
+                const response = await fetch(asset.uri);
+                const blob = await response.blob();
+                const file = new File(
+                  [blob],
+                  `video_${index}_${Date.now()}.mp4`,
+                  {
+                    type: "video/mp4",
+                  }
+                );
 
-              // File 객체를 data URL로 변환
-              const reader = new FileReader();
-              const dataUrl = await new Promise<string>((resolve, reject) => {
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-              });
+                // 메타데이터 추출
+                const metadata = await getVideoMetadata(file);
 
-              compressedImage = {
-                uri: dataUrl,
-                width: asset.width,
-                height: asset.height,
-                fileSize: file.size,
-                mimeType: file.type, // 압축된 파일의 실제 MIME 타입 사용 (GIF 원본 유지)
-                name: file.name,
-              };
+                processedVideo = {
+                  uri: asset.uri,
+                  width: metadata.width || asset.width,
+                  height: metadata.height || asset.height,
+                  duration: metadata.duration || asset.duration,
+                  fileSize: metadata.fileSize || asset.fileSize,
+                  mimeType: "video/mp4",
+                  name: file.name,
+                };
+              } else {
+                // 모바일 환경에서 동영상 압축
+                processedVideo = await compressVideoMobile(asset.uri, {
+                  quality: "medium",
+                  maxWidth: 1280,
+                  maxHeight: 720,
+                });
+              }
+
+              newVideos.push(processedVideo);
             } else {
-              // 모바일 환경에서 이미지 압축
-              compressedImage = await compressImageMobile(asset.uri, {
-                maxWidth: 1920,
-                maxHeight: 1080,
-                quality: 0.8,
-              });
-            }
+              // 이미지 처리 (기존 로직)
+              let compressedImage: SelectedImage;
 
-            newImages.push(compressedImage);
+              if (isWeb()) {
+                // 웹 환경에서 이미지 압축
+                const file = await compressImageWeb(asset.uri, {
+                  maxWidth: 1920,
+                  maxHeight: 1080,
+                  quality: 0.8,
+                  fileName: `image_${index}_${Date.now()}.jpg`,
+                });
+
+                // File 객체를 data URL로 변환
+                const reader = new FileReader();
+                const dataUrl = await new Promise<string>((resolve, reject) => {
+                  reader.onload = () => resolve(reader.result as string);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(file);
+                });
+
+                compressedImage = {
+                  uri: dataUrl,
+                  width: asset.width,
+                  height: asset.height,
+                  fileSize: file.size,
+                  mimeType: file.type,
+                  name: file.name,
+                };
+              } else {
+                // 모바일 환경에서 이미지 압축
+                compressedImage = await compressImageMobile(asset.uri, {
+                  maxWidth: 1920,
+                  maxHeight: 1080,
+                  quality: 0.8,
+                });
+              }
+
+              newImages.push(compressedImage);
+            }
           } catch (error) {
-            console.error("이미지 처리 실패:", error);
+            console.error("미디어 처리 실패:", error);
             showToast({
               type: "error",
-              title: "이미지 처리 실패",
-              message: "일부 이미지를 처리할 수 없습니다.",
+              title: "미디어 처리 실패",
+              message: "일부 미디어를 처리할 수 없습니다.",
               duration: 3000,
             });
           }
         }
 
-        setSelectedImages((prev) => [...prev, ...newImages]);
-
+        // 상태 업데이트
         if (newImages.length > 0) {
+          setSelectedImages((prev) => [...prev, ...newImages]);
+        }
+        if (newVideos.length > 0) {
+          setSelectedVideos((prev) => [...prev, ...newVideos]);
+        }
+
+        // 성공 메시지
+        const totalAdded = newImages.length + newVideos.length;
+        if (totalAdded > 0) {
           showToast({
             type: "success",
-            title: "이미지 추가 완료",
-            message: `${newImages.length}개의 이미지가 추가되었습니다.`,
+            title: "미디어 추가 완료",
+            message: `${totalAdded}개의 미디어가 추가되었습니다. (이미지: ${newImages.length}, 동영상: ${newVideos.length})`,
             duration: 2000,
           });
         }
       }
     } catch (error) {
-      console.error("이미지 선택 실패:", error);
+      console.error("미디어 선택 실패:", error);
       showToast({
         type: "error",
-        title: "이미지 선택 실패",
-        message: "이미지를 선택할 수 없습니다.",
+        title: "미디어 선택 실패",
+        message: "미디어를 선택할 수 없습니다.",
         duration: 3000,
       });
     }
@@ -262,6 +346,13 @@ export default function CreatePostScreen() {
    */
   const handleRemoveImage = (index: number) => {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  /**
+   * 동영상 제거 핸들러
+   */
+  const handleRemoveVideo = (index: number) => {
+    setSelectedVideos((prev) => prev.filter((_, i) => i !== index));
   };
 
   /**
@@ -330,61 +421,81 @@ export default function CreatePostScreen() {
 
       let createdPost;
 
-      // 이미지가 있는 경우 파일과 함께 게시물 생성
-      if (selectedImages.length > 0) {
-        setUploadProgress("이미지 업로드 중...");
+      // 미디어가 있는 경우 파일과 함께 게시물 생성
+      const totalMedia = selectedImages.length + selectedVideos.length;
+      if (totalMedia > 0) {
+        setUploadProgress("미디어 업로드 중...");
 
-        // 이미지를 업로드 가능한 형식으로 변환
-        const files = await Promise.all(
-          selectedImages.map(async (image, index) => {
-            if (isWeb()) {
-              // 웹 환경: data URL을 File 객체로 변환
-              const response = await fetch(image.uri);
-              const blob = await response.blob();
-              // 원본 MIME 타입 유지 (GIF 등)
-              const fileExtension = (image.name || "")
-                .split(".")
-                .pop()
-                ?.toLowerCase();
-              const mimeType =
-                image.mimeType ||
-                (fileExtension === "gif" ? "image/gif" : "image/jpeg");
-              const fileName =
-                image.name ||
-                `image_${index}.${fileExtension === "gif" ? "gif" : "jpg"}`;
+        // 모든 미디어를 업로드 가능한 형식으로 변환
+        const allFiles: (File | any)[] = [];
 
-              return new File([blob], fileName, {
-                type: mimeType,
-              });
-            } else {
-              // 모바일 환경: ReactNativeFile 형식으로 변환
-              // 원본 MIME 타입 유지 (GIF 등)
-              const fileExtension = (image.name || "")
-                .split(".")
-                .pop()
-                ?.toLowerCase();
-              const mimeType =
-                image.mimeType ||
-                (fileExtension === "gif" ? "image/gif" : "image/jpeg");
-              const fileName =
-                image.name ||
-                `image_${index}.${fileExtension === "gif" ? "gif" : "jpg"}`;
+        // 이미지 처리
+        for (const [index, image] of selectedImages.entries()) {
+          if (isWeb()) {
+            // 웹 환경: data URL을 File 객체로 변환
+            const response = await fetch(image.uri);
+            const blob = await response.blob();
+            const fileExtension = (image.name || "")
+              .split(".")
+              .pop()
+              ?.toLowerCase();
+            const mimeType =
+              image.mimeType ||
+              (fileExtension === "gif" ? "image/gif" : "image/jpeg");
+            const fileName =
+              image.name ||
+              `image_${index}.${fileExtension === "gif" ? "gif" : "jpg"}`;
 
-              return {
-                uri: image.uri,
-                name: fileName,
-                type: mimeType,
-              };
-            }
-          })
-        );
+            allFiles.push(new File([blob], fileName, { type: mimeType }));
+          } else {
+            // 모바일 환경: ReactNativeFile 형식으로 변환
+            const fileExtension = (image.name || "")
+              .split(".")
+              .pop()
+              ?.toLowerCase();
+            const mimeType =
+              image.mimeType ||
+              (fileExtension === "gif" ? "image/gif" : "image/jpeg");
+            const fileName =
+              image.name ||
+              `image_${index}.${fileExtension === "gif" ? "gif" : "jpg"}`;
+
+            allFiles.push({
+              uri: image.uri,
+              name: fileName,
+              type: mimeType,
+            });
+          }
+        }
+
+        // 동영상 처리
+        for (const [index, video] of selectedVideos.entries()) {
+          if (isWeb()) {
+            // 웹 환경: data URL을 File 객체로 변환
+            const response = await fetch(video.uri);
+            const blob = await response.blob();
+            const fileName = video.name || `video_${index}.mp4`;
+
+            allFiles.push(new File([blob], fileName, { type: "video/mp4" }));
+          } else {
+            // 모바일 환경: ReactNativeFile 형식으로 변환
+            const fileName = video.name || `video_${index}.mp4`;
+            const mimeType = video.mimeType || "video/mp4";
+
+            allFiles.push({
+              uri: video.uri,
+              name: fileName,
+              type: mimeType,
+            });
+          }
+        }
 
         createdPost = await createPostWithFiles({
           ...postInput,
-          files,
+          files: allFiles,
           onProgress: (progress: UploadProgress) => {
             setUploadPercentage(progress.percentage);
-            setUploadProgress(`이미지 업로드 중... ${progress.percentage}%`);
+            setUploadProgress(`미디어 업로드 중... ${progress.percentage}%`);
           },
         });
       } else {
@@ -396,10 +507,21 @@ export default function CreatePostScreen() {
       console.log("게시물 생성 완료:", createdPost);
 
       // 성공 메시지
+      const totalMediaCount = selectedImages.length + selectedVideos.length;
+      let mediaMessage = "";
+      if (totalMediaCount > 0) {
+        const parts = [];
+        if (selectedImages.length > 0)
+          parts.push(`이미지 ${selectedImages.length}개`);
+        if (selectedVideos.length > 0)
+          parts.push(`동영상 ${selectedVideos.length}개`);
+        mediaMessage = ` (${parts.join(", ")} 포함)`;
+      }
+
       showToast({
         type: "success",
         title: "게시물 작성 완료",
-        message: `게시물이 성공적으로 작성되었습니다!${selectedImages.length > 0 ? ` (이미지 ${selectedImages.length}개 포함)` : ""}`,
+        message: `게시물이 성공적으로 작성되었습니다!${mediaMessage}`,
         duration: 3000,
       });
 
@@ -572,29 +694,35 @@ export default function CreatePostScreen() {
             </Text>
           </View>
 
-          {/* 이미지 업로드 버튼 */}
+          {/* 미디어 업로드 버튼 */}
           <TouchableOpacity
             style={themed($imageUploadButton)}
-            onPress={handleImagePicker}
-            disabled={isSubmitting || selectedImages.length >= 4}
+            onPress={handleMediaPicker}
+            disabled={
+              isSubmitting || selectedImages.length + selectedVideos.length >= 4
+            }
           >
             <Ionicons name="image" color={theme.colors.tint} size={20} />
             <Text style={themed($imageUploadText)}>
-              이미지 추가 ({selectedImages.length}/4)
+              미디어 추가 ({selectedImages.length + selectedVideos.length}/4)
             </Text>
           </TouchableOpacity>
 
-          {/* 선택된 이미지 미리보기 */}
-          {selectedImages.length > 0 && (
+          {/* 선택된 미디어 미리보기 */}
+          {(selectedImages.length > 0 || selectedVideos.length > 0) && (
             <View style={themed($imagePreviewContainer)}>
-              <Text style={themed($sectionTitle)}>첨부된 이미지</Text>
+              <Text style={themed($sectionTitle)}>첨부된 미디어</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={themed($imagePreviewScroll)}
               >
+                {/* 이미지 미리보기 */}
                 {selectedImages.map((image, index) => (
-                  <View key={index} style={themed($imagePreviewItem)}>
+                  <View
+                    key={`image-${index}`}
+                    style={themed($imagePreviewItem)}
+                  >
                     <Image
                       source={{ uri: image.uri }}
                       style={themed($imagePreview)}
@@ -611,6 +739,43 @@ export default function CreatePostScreen() {
                         {(image.fileSize / 1024 / 1024).toFixed(1)}MB
                       </Text>
                     )}
+                    <View style={themed($mediaTypeIndicator)}>
+                      <Ionicons name="image" color="white" size={12} />
+                    </View>
+                  </View>
+                ))}
+
+                {/* 동영상 미리보기 */}
+                {selectedVideos.map((video, index) => (
+                  <View
+                    key={`video-${index}`}
+                    style={themed($imagePreviewItem)}
+                  >
+                    <View style={themed($videoPreviewContainer)}>
+                      <View style={themed($videoPlaceholder)}>
+                        <Ionicons name="play" color="white" size={24} />
+                      </View>
+                      {video.duration && (
+                        <Text style={themed($videoDurationText)}>
+                          {Math.floor(video.duration / 60)}:
+                          {(video.duration % 60).toFixed(0).padStart(2, "0")}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={themed($imageRemoveButton)}
+                      onPress={() => handleRemoveVideo(index)}
+                    >
+                      <Ionicons name="close" color="white" size={16} />
+                    </TouchableOpacity>
+                    {video.fileSize && (
+                      <Text style={themed($imageSizeText)}>
+                        {(video.fileSize / 1024 / 1024).toFixed(1)}MB
+                      </Text>
+                    )}
+                    <View style={themed($mediaTypeIndicator)}>
+                      <Ionicons name="videocam" color="white" size={12} />
+                    </View>
                   </View>
                 ))}
               </ScrollView>
@@ -839,4 +1004,48 @@ const $imageSizeText: ThemedStyle<TextStyle> = () => ({
   paddingHorizontal: 4,
   paddingVertical: 2,
   borderRadius: 4,
+});
+
+// --- 동영상 관련 스타일 ---
+const $videoPreviewContainer: ThemedStyle<ViewStyle> = () => ({
+  width: 100,
+  height: 100,
+  borderRadius: 8,
+  backgroundColor: "rgba(0, 0, 0, 0.8)",
+  justifyContent: "center",
+  alignItems: "center",
+  position: "relative",
+});
+
+const $videoPlaceholder: ThemedStyle<ViewStyle> = () => ({
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: "rgba(255, 255, 255, 0.3)",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $videoDurationText: ThemedStyle<TextStyle> = () => ({
+  position: "absolute",
+  bottom: 4,
+  right: 4,
+  fontSize: 10,
+  color: "white",
+  backgroundColor: "rgba(0, 0, 0, 0.8)",
+  paddingHorizontal: 4,
+  paddingVertical: 2,
+  borderRadius: 4,
+});
+
+const $mediaTypeIndicator: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  top: 4,
+  left: 4,
+  backgroundColor: "rgba(0, 0, 0, 0.6)",
+  borderRadius: 8,
+  width: 20,
+  height: 20,
+  justifyContent: "center",
+  alignItems: "center",
 });

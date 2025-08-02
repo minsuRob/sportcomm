@@ -69,13 +69,19 @@ async function bootstrap() {
 
     // 정적 파일 폴더가 존재하는지 확인하고 생성
     try {
-      const uploadsDir = join(__dirname, '..', 'uploads', 'images');
-      await ensureDir(uploadsDir);
-      console.log(`✅ 업로드 디렉터리 확인: ${uploadsDir}`);
+      const imagesDir = join(__dirname, '..', 'uploads', 'images');
+      const videosDir = join(__dirname, '..', 'uploads', 'videos');
+
+      await ensureDir(imagesDir);
+      await ensureDir(videosDir);
+
+      console.log(`✅ 이미지 업로드 디렉터리 확인: ${imagesDir}`);
+      console.log(`✅ 동영상 업로드 디렉터리 확인: ${videosDir}`);
 
       // 디렉터리 권한 설정 (읽기/쓰기 권한 추가)
       const fs = require('fs');
-      fs.chmodSync(uploadsDir, '0755');
+      fs.chmodSync(imagesDir, '0755');
+      fs.chmodSync(videosDir, '0755');
       console.log('✅ 업로드 디렉터리 권한 설정 완료');
     } catch (error) {
       console.error('❌ 업로드 디렉터리 생성 실패:', error);

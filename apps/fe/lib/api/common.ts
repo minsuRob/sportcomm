@@ -94,17 +94,38 @@ export function getMimeTypeFromUri(uri: string): string {
       return "image/gif";
     case "webp":
       return "image/webp";
-    case "mp4":
-      return "video/mp4";
-    case "mov":
-      return "video/quicktime";
     case "heic":
       return "image/heic";
     case "heif":
       return "image/heif";
+    case "mp4":
+      return "video/mp4";
+    case "mov":
+      return "video/quicktime";
+    case "avi":
+      return "video/x-msvideo";
+    case "webm":
+      return "video/webm";
+    case "mkv":
+      return "video/x-matroska";
+    case "3gp":
+      return "video/3gpp";
     default:
       console.log(`알 수 없는 파일 확장자 '${extension}' - 기본값 사용`);
-      return "image/jpeg"; // 기본값으로 JPEG 사용
+      // 확장자로 동영상인지 이미지인지 추측
+      const videoExtensions = [
+        "mp4",
+        "mov",
+        "avi",
+        "webm",
+        "mkv",
+        "3gp",
+        "m4v",
+      ];
+      if (videoExtensions.includes(extension)) {
+        return "video/mp4"; // 기본 동영상 타입
+      }
+      return "image/jpeg"; // 기본 이미지 타입
   }
 }
 

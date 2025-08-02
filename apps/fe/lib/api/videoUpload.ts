@@ -5,9 +5,18 @@
  */
 
 import { Platform } from "react-native";
-import { Video } from "react-native-compressor";
 import { getSession } from "@/lib/auth";
 import { isWeb, isReactNative } from "@/lib/platform";
+
+// react-native-compressor는 조건부로 import (웹에서 문제 발생 방지)
+let Video: any = null;
+try {
+  if (!isWeb()) {
+    Video = require("react-native-compressor").Video;
+  }
+} catch (error) {
+  console.warn("react-native-compressor를 로드할 수 없습니다:", error);
+}
 import {
   UploadProgress,
   ProgressCallback,
@@ -72,6 +81,10 @@ export async function compressVideoMobile(
 ): Promise<SelectedVideo> {
   if (!isReactNative()) {
     throw new Error("이 함수는 모바일 환경에서만 사용할 수 있습니다.");
+  }
+
+  if (!Video) {
+    throw new Error("react-native-compressor를 로드할 수 없습니다.");
   }
 
   const {
@@ -339,6 +352,16 @@ export async function getVideoMetadata(videoUri: string | File): Promise<{
 }> {
   if (isReactNative() && typeof videoUri === "string") {
     // 모바일 환경
+    if (!Video) {
+      console.warn("react-native-compressor를 사용할 수 없습니다.");
+      return {
+        width: 0,
+        height: 0,
+        duration: 0,
+        fileSize: 0,
+      };
+    }
+
     try {
       const metadata = await Video.getVideoMetaData(videoUri);
       return {
@@ -359,31 +382,63 @@ export async function getVideoMetadata(videoUri: string | File): Promise<{
   } else if (isWeb() && videoUri instanceof File) {
     // 웹 환경
     return new Promise((resolve) => {
-      const video = document.createElement("video");
-      video.preload = "metadata";
+      try {
+        const video = document.createElement("video");
+        video.preload = "metadata";
 
-      video.onloadedmetadata = () => {
-        resolve({
-          width: video.videoWidth || 0,
-          height: video.videoHeight || 0,
-          duration: video.duration || 0,
-          fileSize: videoUri.size || 0,
-        });
-        URL.revokeObjectURL(video.src);
-      };
+        const cleanup = () => {
+          try {
+            if (video.src) {
+              URL.revokeObjectURL(video.src);
+            }
+          } catch (e) {
+            console.warn("URL cleanup 실패:", e);
+          }
+        };
 
-      video.onerror = () => {
-        console.error("웹 동영상 메타데이터 추출 실패");
+        video.onloadedmetadata = () => {
+          resolve({
+            width: video.videoWidth || 0,
+            height: video.videoHeight || 0,
+            duration: video.duration || 0,
+            fileSize: videoUri.size || 0,
+          });
+          cleanup();
+        };
+
+        video.onerror = (error) => {
+          console.error("웹 동영상 메타데이터 추출 실패:", error);
+          resolve({
+            width: 0,
+            height: 0,
+            duration: 0,
+            fileSize: videoUri.size || 0,
+          });
+          cleanup();
+        };
+
+        // 타임아웃 설정 (5초)
+        setTimeout(() => {
+          console.warn("동영상 메타데이터 추출 타임아웃");
+          resolve({
+            width: 0,
+            height: 0,
+            duration: 0,
+            fileSize: videoUri.size || 0,
+          });
+          cleanup();
+        }, 5000);
+
+        video.src = URL.createObjectURL(videoUri);
+      } catch (error) {
+        console.error("웹 동영상 메타데이터 추출 중 오류:", error);
         resolve({
           width: 0,
           height: 0,
           duration: 0,
           fileSize: videoUri.size || 0,
         });
-        URL.revokeObjectURL(video.src);
-      };
-
-      video.src = URL.createObjectURL(videoUri);
+      }
     });
   } else {
     throw new Error("지원되지 않는 환경 또는 파일 형식입니다.");
@@ -423,6 +478,10 @@ export async function generateVideoThumbnail(
 ): Promise<string> {
   if (!isReactNative()) {
     throw new Error("썸네일 생성은 모바일 환경에서만 지원됩니다.");
+  }
+
+  if (!Video) {
+    throw new Error("react-native-compressor를 로드할 수 없습니다.");
   }
 
   try {

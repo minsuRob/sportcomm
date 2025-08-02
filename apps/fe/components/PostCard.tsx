@@ -12,7 +12,15 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Video } from "expo-video";
+// expo-video는 조건부로 import (웹에서 문제 발생 방지)
+let Video: any = null;
+try {
+  if (!isWeb()) {
+    Video = require("expo-video").Video;
+  }
+} catch (error) {
+  console.warn("expo-video를 로드할 수 없습니다:", error);
+}
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { usePostInteractions } from "../hooks/usePostInteractions";
@@ -382,22 +390,48 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                   alignItems: "center",
                 }}
               >
-                <Video
-                  source={{ uri: videoMedia[0]?.url }}
-                  style={{ height: "100%", width: "100%" }}
-                  useNativeControls={showVideoControls}
-                  resizeMode="cover"
-                  isLooping={false}
-                  shouldPlay={isVideoPlaying}
-                  onPlaybackStatusUpdate={(status) => {
-                    if (status.isLoaded) {
-                      setIsVideoPlaying(status.isPlaying || false);
-                    }
-                  }}
-                />
+                {isWeb() ? (
+                  // 웹 환경에서는 HTML5 video 태그 사용
+                  <video
+                    src={videoMedia[0]?.url}
+                    style={{
+                      height: "100%",
+                      width: "100%",
+                      objectFit: "cover",
+                    }}
+                    controls={showVideoControls}
+                    loop={false}
+                    autoPlay={isVideoPlaying}
+                    onPlay={() => setIsVideoPlaying(true)}
+                    onPause={() => setIsVideoPlaying(false)}
+                  />
+                ) : Video ? (
+                  // 모바일 환경에서는 expo-video 사용
+                  <Video
+                    source={{ uri: videoMedia[0]?.url }}
+                    style={{ height: "100%", width: "100%" }}
+                    useNativeControls={showVideoControls}
+                    resizeMode="cover"
+                    isLooping={false}
+                    shouldPlay={isVideoPlaying}
+                    onPlaybackStatusUpdate={(status: any) => {
+                      if (status.isLoaded) {
+                        setIsVideoPlaying(status.isPlaying || false);
+                      }
+                    }}
+                  />
+                ) : (
+                  // Video 컴포넌트를 로드할 수 없는 경우 플레이스홀더 표시
+                  <View style={themed($videoPlaceholder)}>
+                    <Ionicons name="videocam" size={48} color="white" />
+                    <Text style={themed($videoPlaceholderText)}>
+                      동영상을 재생할 수 없습니다
+                    </Text>
+                  </View>
+                )}
 
-                {/* 동영상 컨트롤 오버레이 */}
-                {!isVideoPlaying && (
+                {/* 동영상 컨트롤 오버레이 (웹에서는 네이티브 컨트롤 사용) */}
+                {!isWeb() && !isVideoPlaying && (
                   <TouchableOpacity
                     style={themed($videoPlayButton)}
                     onPress={(e) => {
@@ -903,4 +937,19 @@ const $videoDurationText: ThemedStyle<TextStyle> = ({ spacing }) => ({
   fontSize: 12,
   fontWeight: "600",
   marginLeft: spacing.xxxs,
+});
+
+const $videoPlaceholder: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  height: "100%",
+  width: "100%",
+  backgroundColor: colors.backgroundDim,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $videoPlaceholderText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 14,
+  marginTop: 8,
+  textAlign: "center",
 });

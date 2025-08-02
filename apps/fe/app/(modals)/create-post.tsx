@@ -239,7 +239,18 @@ export default function CreatePostScreen() {
                 );
 
                 // 메타데이터 추출
-                const metadata = await getVideoMetadata(file);
+                let metadata;
+                try {
+                  metadata = await getVideoMetadata(file);
+                } catch (error) {
+                  console.warn("동영상 메타데이터 추출 실패:", error);
+                  metadata = {
+                    width: 0,
+                    height: 0,
+                    duration: 0,
+                    fileSize: file.size || 0,
+                  };
+                }
 
                 processedVideo = {
                   uri: asset.uri,
@@ -252,11 +263,28 @@ export default function CreatePostScreen() {
                 };
               } else {
                 // 모바일 환경에서 동영상 압축
-                processedVideo = await compressVideoMobile(asset.uri, {
-                  quality: "medium",
-                  maxWidth: 1280,
-                  maxHeight: 720,
-                });
+                try {
+                  processedVideo = await compressVideoMobile(asset.uri, {
+                    quality: "medium",
+                    maxWidth: 1280,
+                    maxHeight: 720,
+                  });
+                } catch (compressionError) {
+                  console.warn(
+                    "동영상 압축 실패, 원본 사용:",
+                    compressionError
+                  );
+                  // 압축 실패 시 원본 정보 사용
+                  processedVideo = {
+                    uri: asset.uri,
+                    width: asset.width,
+                    height: asset.height,
+                    duration: asset.duration,
+                    fileSize: asset.fileSize,
+                    mimeType: "video/mp4",
+                    name: `video_${index}_${Date.now()}.mp4`,
+                  };
+                }
               }
 
               newVideos.push(processedVideo);

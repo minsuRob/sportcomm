@@ -161,39 +161,9 @@ export default function ChatScreen() {
 
   const chatRooms = [...regularChatRooms, ...adminChatRooms];
 
-  // 채팅방 입장 핸들러
+  // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleEnterRoom = async (room: ChatRoom) => {
-    // 관리자가 생성한 채팅방이고 아직 멤버가 아닌 경우 자동 참여 처리
-    const isAdminRoom = room.type !== undefined;
-    const isMember = room.members.some(
-      (member) => member.userId === currentUser?.id
-    );
-
-    if (isAdminRoom && !isMember && currentUser) {
-      try {
-        // 자동으로 채팅방에 참여
-        await joinChatChannel({
-          variables: { channelId: room.id },
-        });
-
-        showToast({
-          type: "success",
-          title: "채팅방 참여",
-          message: `${room.name} 채팅방에 참여했습니다.`,
-          duration: 2000,
-        });
-      } catch (error) {
-        console.error("채팅방 참여 실패:", error);
-        showToast({
-          type: "error",
-          title: "참여 실패",
-          message: "채팅방 참여 중 오류가 발생했습니다.",
-          duration: 3000,
-        });
-        return;
-      }
-    }
-
+    // 임시로 바로 채팅방으로 이동 (백엔드 뮤테이션 문제로 인해)
     router.push({
       pathname: "/(app)/chat/[roomId]",
       params: {

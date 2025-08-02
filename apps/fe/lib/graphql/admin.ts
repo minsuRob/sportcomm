@@ -209,6 +209,133 @@ export const GET_ADMIN_REPORTS = gql`
   }
 `;
 
+// === 팀 관리 GraphQL ===
+
+export const GET_ADMIN_TEAMS = gql`
+  query AdminGetAllTeams {
+    adminGetAllTeams {
+      id
+      name
+      color
+      icon
+      category
+      isActive
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const GET_ADMIN_TEAMS_BY_CATEGORY = gql`
+  query AdminGetTeamsByCategory {
+    adminGetTeamsByCategory {
+      id
+      name
+      icon
+      teams {
+        id
+        name
+        color
+        icon
+        category
+        isActive
+        createdAt
+        updatedAt
+      }
+    }
+  }
+`;
+
+export const CREATE_TEAM = gql`
+  mutation AdminCreateTeam($input: CreateTeamInput!) {
+    adminCreateTeam(input: $input) {
+      id
+      name
+      color
+      icon
+      category
+      isActive
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_TEAM = gql`
+  mutation AdminUpdateTeam($teamId: String!, $input: UpdateTeamInput!) {
+    adminUpdateTeam(teamId: $teamId, input: $input) {
+      id
+      name
+      color
+      icon
+      category
+      isActive
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const DELETE_TEAM = gql`
+  mutation AdminDeleteTeam($teamId: String!) {
+    adminDeleteTeam(teamId: $teamId)
+  }
+`;
+
+export const TOGGLE_TEAM_STATUS = gql`
+  mutation AdminToggleTeamStatus($teamId: String!) {
+    adminToggleTeamStatus(teamId: $teamId) {
+      id
+      name
+      color
+      icon
+      category
+      isActive
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+// === 신고 관리 GraphQL ===
+
+export const UPDATE_REPORT_STATUS = gql`
+  mutation AdminUpdateReportStatus(
+    $reportId: String!
+    $status: ReportStatus!
+    $adminNote: String
+  ) {
+    adminUpdateReportStatus(
+      reportId: $reportId
+      status: $status
+      adminNote: $adminNote
+    ) {
+      id
+      type
+      status
+      reason
+      adminNote
+      reporter {
+        id
+        nickname
+        email
+      }
+      reportedUser {
+        id
+        nickname
+        email
+      }
+      reportedPost {
+        id
+        title
+        content
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
 // === 피드백 관리 ===
 
 export const GET_ADMIN_FEEDBACKS = gql`

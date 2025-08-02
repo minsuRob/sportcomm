@@ -87,140 +87,127 @@ export default function ChatRoomScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const inputRef = useRef<TextInput>(null);
 
+  // 임시 메시지 데이터
+  const mockMessages: Message[] = [
+    {
+      id: "1",
+      content: "안녕하세요! 이 채팅방에 오신 것을 환영합니다.",
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      user_id: "system",
+      user: {
+        id: "system",
+        nickname: "시스템",
+        profileImageUrl: undefined,
+      },
+      isSystem: true,
+    },
+    {
+      id: "2",
+      content: "오늘 경기 어떻게 보셨나요?",
+      created_at: new Date(Date.now() - 1800000).toISOString(),
+      user_id: "user1",
+      user: {
+        id: "user1",
+        nickname: "축구팬123",
+        profileImageUrl: undefined,
+      },
+    },
+    {
+      id: "3",
+      content: "정말 흥미진진한 경기였어요! 특히 후반전이 대박이었죠.",
+      created_at: new Date(Date.now() - 1200000).toISOString(),
+      user_id: "user2",
+      user: {
+        id: "user2",
+        nickname: "스포츠매니아",
+        profileImageUrl: undefined,
+      },
+    },
+    {
+      id: "4",
+      content: "맞아요! 마지막 골이 정말 환상적이었습니다 ⚽",
+      created_at: new Date(Date.now() - 600000).toISOString(),
+      user_id: "user3",
+      user: {
+        id: "user3",
+        nickname: "골키퍼",
+        profileImageUrl: undefined,
+      },
+    },
+  ];
+
   // 사용자 정보 로드
   useEffect(() => {
     const loadUser = async () => {
       const { user } = await getSession();
       setCurrentUser(user);
+
+      // 임시 메시지 데이터 설정
+      setMessages(mockMessages);
     };
     loadUser();
   }, []);
 
-  // 메시지 목록 조회
-  const {
-    data: messagesData,
-    loading: messagesLoading,
-    error: messagesError,
-    refetch: refetchMessages,
-  } = useQuery<ChatMessagesResponse>(GET_CHAT_MESSAGES, {
-    variables: {
-      filter: {
-        channelId: roomId,
-        limit: 50,
-      },
-    },
-    skip: !roomId,
-    fetchPolicy: "cache-and-network",
-    onCompleted: (data) => {
-      // GraphQL 응답을 ChatList 컴포넌트가 기대하는 형태로 변환
-      const transformedMessages: Message[] = data.chatMessages.map((msg) => ({
-        id: msg.id,
-        content: msg.content,
-        created_at: msg.createdAt,
-        user_id: msg.userId,
-        user: msg.user,
-        replyTo: msg.replyTo,
-        isSystem: msg.isSystem,
-      }));
-      setMessages(transformedMessages);
-    },
-  });
+  // 임시로 메시지 로딩 상태 관리
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messagesError, setMessagesError] = useState<any>(null);
 
-  // 메시지 전송 뮤테이션
-  const [sendMessage, { loading: sendLoading }] = useMutation(
-    SEND_CHAT_MESSAGE,
-    {
-      onCompleted: (data) => {
-        // 새 메시지를 로컬 상태에 추가
-        const newMessage = data.sendChatMessage.message;
-        const transformedMessage: Message = {
-          id: newMessage.id,
-          content: newMessage.content,
-          created_at: newMessage.createdAt,
-          user_id: newMessage.userId,
-          user: newMessage.user,
-          replyTo: newMessage.replyTo,
-          isSystem: newMessage.isSystem,
-        };
-        setMessages((prev) => [...prev, transformedMessage]);
-        setMessageText("");
-      },
-      onError: (error) => {
-        console.error("메시지 전송 실패:", error);
-        showToast({
-          type: "error",
-          title: "전송 실패",
-          message: error.message || "메시지 전송 중 오류가 발생했습니다.",
-          duration: 3000,
-        });
-      },
-    }
-  );
+  // 임시 메시지 새로고침 함수
+  const refetchMessages = async () => {
+    setMessagesLoading(true);
+    // 임시로 1초 후 로딩 완료
+    setTimeout(() => {
+      setMessagesLoading(false);
+    }, 1000);
+  };
 
-  // 읽음 처리 뮤테이션
-  const [markAsRead] = useMutation(MARK_CHANNEL_AS_READ);
+  // 임시 메시지 전송 상태
+  const [sendLoading, setSendLoading] = useState(false);
 
-  // 실시간 메시지 구독
-  useSubscription(ON_NEW_CHAT_MESSAGE, {
-    variables: { channelId: roomId },
-    skip: !roomId,
-    onData: ({ data }) => {
-      if (data.data?.onNewChatMessage) {
-        const newMessage = data.data.onNewChatMessage;
-        // 자신이 보낸 메시지가 아닌 경우에만 추가 (중복 방지)
-        if (newMessage.userId !== currentUser?.id) {
-          const transformedMessage: Message = {
-            id: newMessage.id,
-            content: newMessage.content,
-            created_at: newMessage.createdAt,
-            user_id: newMessage.userId,
-            user: newMessage.user,
-            replyTo: newMessage.replyTo,
-            isSystem: newMessage.isSystem,
-          };
-          setMessages((prev) => [...prev, transformedMessage]);
-        }
-      }
-    },
-  });
+  // 임시 메시지 전송 함수
+  const sendMessage = async (messageContent: string) => {
+    if (!currentUser) return;
 
-  // 화면 진입 시 읽음 처리
-  useEffect(() => {
-    if (roomId && currentUser) {
-      markAsRead({ variables: { channelId: roomId } });
-    }
-  }, [roomId, currentUser, markAsRead]);
+    setSendLoading(true);
 
-  // 에러 처리
-  useEffect(() => {
-    if (messagesError) {
-      console.error("메시지 로드 실패:", messagesError);
+    // 임시로 1초 후 메시지 추가
+    setTimeout(() => {
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        content: messageContent,
+        created_at: new Date().toISOString(),
+        user_id: currentUser.id,
+        user: {
+          id: currentUser.id,
+          nickname: currentUser.nickname,
+          profileImageUrl: currentUser.profileImageUrl,
+        },
+        isSystem: false,
+      };
+
+      setMessages((prev) => [...prev, newMessage]);
+      setMessageText("");
+      setSendLoading(false);
+
       showToast({
-        type: "error",
-        title: "데이터 로드 실패",
-        message:
-          messagesError.message || "메시지를 불러오는 중 오류가 발생했습니다.",
-        duration: 3000,
+        type: "success",
+        title: "메시지 전송",
+        message: "메시지가 전송되었습니다.",
+        duration: 1000,
       });
-    }
-  }, [messagesError]);
+    }, 1000);
+  };
+
+  // 임시로 읽음 처리 및 실시간 구독 비활성화
+  // (백엔드 연동 시 다시 활성화)
+
+  // 임시로 에러 처리 비활성화
 
   // 메시지 전송 핸들러
   const handleSendMessage = async () => {
-    if (!messageText.trim() || sendLoading || !roomId) return;
+    if (!messageText.trim() || sendLoading) return;
 
-    try {
-      await sendMessage({
-        variables: {
-          input: {
-            channelId: roomId,
-            content: messageText.trim(),
-          },
-        },
-      });
-    } catch (error) {
-      // 에러는 onError에서 처리됨
-    }
+    await sendMessage(messageText.trim());
   };
 
   // 뒤로가기 핸들러

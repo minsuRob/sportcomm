@@ -252,6 +252,21 @@ export class AdminResolver {
     return await this.adminService.getAllReports(user, page, limit);
   }
 
+  @Mutation(() => Report, { description: '신고 상태 업데이트' })
+  async adminUpdateReportStatus(
+    @CurrentUser() user: User,
+    @Args('reportId') reportId: string,
+    @Args('status', { type: () => String }) status: string,
+    @Args('adminNote', { nullable: true }) adminNote?: string,
+  ): Promise<Report> {
+    return await this.adminService.updateReportStatus(
+      user,
+      reportId,
+      status as any,
+      adminNote,
+    );
+  }
+
   // === 피드백 관리 ===
 
   @Query(() => PaginatedFeedbacks, { description: '모든 피드백 목록 조회' })

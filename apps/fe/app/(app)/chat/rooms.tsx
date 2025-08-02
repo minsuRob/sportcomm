@@ -128,7 +128,7 @@ export default function ChatRoomsScreen() {
         room.description?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // 채팅방 참여 핸들러
+  // 채팅방 참여 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleJoinRoom = async (room: PublicChatRoom) => {
     if (!currentUser) {
       showToast({
@@ -140,22 +140,14 @@ export default function ChatRoomsScreen() {
       return;
     }
 
-    try {
-      await joinChatChannel({
-        variables: { channelId: room.id },
-      });
-
-      // 성공 시 채팅방으로 이동
-      router.push({
-        pathname: "/(app)/chat/[roomId]",
-        params: {
-          roomId: room.id,
-          roomName: room.name,
-        },
-      });
-    } catch (error) {
-      // 에러는 onError에서 처리됨
-    }
+    // 임시로 바로 채팅방으로 이동
+    router.push({
+      pathname: "/(app)/chat/[roomId]",
+      params: {
+        roomId: room.id,
+        roomName: room.name,
+      },
+    });
   };
 
   // 날짜 포맷팅

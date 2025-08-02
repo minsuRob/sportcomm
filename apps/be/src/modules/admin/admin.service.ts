@@ -309,6 +309,35 @@ export class AdminService {
     };
   }
 
+  /**
+   * 신고 상태 업데이트
+   */
+  async updateReportStatus(
+    adminUser: User,
+    reportId: string,
+    status: ReportStatus,
+    adminNote?: string,
+  ) {
+    this.validateAdminPermission(adminUser);
+
+    const report = await this.reportRepository.findOne({
+      where: { id: reportId },
+      relations: ['reporter', 'reportedUser', 'reportedPost'],
+    });
+
+    if (!report) {
+      throw new NotFoundException('신고를 찾을 수 없습니다.');
+    }
+
+    report.status = status;
+    if (adminNote) {
+      report.adminNote = adminNote;
+    }
+
+    await this.reportRepository.save(report);
+    return report;
+  }
+
   // === 피드백 관리 ===
 
   /**

@@ -8,233 +8,212 @@ import {
   TextStyle,
   Modal,
   TextInput,
-  Alert,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
+import { GET_ADMIN_REPORTS, UPDATE_REPORT_STATUS } from "@/lib/graphql/admin";
+
+// 신고 타입 열거형
+enum ReportType {
+  SPAM = "SPAM",
+  INAPPROPRIATE_CONTENT = "INAPPROPRIATE_CONTENT",
+  HARASSMENT = "HARASSMENT",
+  MISINFORMATION = "MISINFORMATION",
+  COPYRIGHT = "COPYRIGHT",
+  OTHER = "OTHER",
+}
+
+// 신고 상태 열거형
+enum ReportStatus {
+  PENDING = "PENDING",
+  REVIEWING = "REVIEWING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+}
+
+// 사용자 정보 타입
+interface UserInfo {
+  id: string;
+  nickname: string;
+  email: string;
+}
+
+// 게시물 정보 타입
+interface PostInfo {
+  id: string;
+  title: string;
+  content: string;
+}
 
 // 신고 정보 타입
 interface ReportInfo {
   id: string;
-  type:
-    | "SPAM"
-    | "INAPPROPRIATE_CONTENT"
-    | "HARASSMENT"
-    | "MISINFORMATION"
-    | "COPYRIGHT"
-    | "OTHER";
-  status: "PENDING" | "REVIEWING" | "APPROVED" | "REJECTED";
+  type: ReportType;
+  status: ReportStatus;
   reason: string;
   description?: string;
-  reporter: {
-    id: string;
-    nickname: string;
-    email: string;
-  };
-  reportedUser?: {
-    id: string;
-    nickname: string;
-    email: string;
-  };
-  reportedPost?: {
-    id: string;
-    title: string;
-    content: string;
-  };
+  reporter: UserInfo;
+  reportedUser?: UserInfo;
+  reportedPost?: PostInfo;
   adminNote?: string;
   createdAt: string;
   updatedAt: string;
 }
 
+// GraphQL 응답 타입
+interface ReportsResponse {
+  adminGetAllReports: {
+    reports: ReportInfo[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 /**
  * 신고 관리 화면
  *
- * 관리자가 사용자 신고를 처리할 수 있는 화면입니다.
+ * 관리자가 사용자 신고를 처리하고 관리할 수 있는 화면입니다.
  */
 export default function AdminReportsScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [reports, setReports] = useState<ReportInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedReport, setSelectedReport] = useState<ReportInfo | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ReportInfo | null>(null);
+  const [statusFilter, setStatusFilter] = useState<ReportStatus | "ALL">("ALL");
   const [adminNote, setAdminNote] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [page, setPage] = useState(1);
 
-  // 신고 데이터 로드
-  const loadReports = async () => {
-    try {
-      setIsLoading(true);
+  // GraphQL 쿼리 및 뮤테이션
+  const { data, loading, error, refetch } = useQuery<ReportsResponse>(
+    GET_ADMIN_REPORTS,
+    {
+      variables: { page, limit: 20 },
+      fetchPolicy: "cache-and-network",
+      errorPolicy: "all",
+    }
+  );
 
-      // TODO: GraphQL 쿼리로 실제 데이터 로드
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  const [updateReportStatus, { loading: updateLoading }] = useMutation(
+    UPDATE_REPORT_STATUS,
+    {
+      refetchQueries: [
+        { query: GET_ADMIN_REPORTS, variables: { page, limit: 20 } },
+      ],
+      onCompleted: (data) => {
+        const report = data.adminUpdateReportStatus;
+        showToast({
+          type: "success",
+          title: "신고 처리 완료",
+          message: `신고가 ${getStatusDisplayName(report.status)}되었습니다.`,
+          duration: 2000,
+        });
+        setShowDetailModal(false);
+        setSelectedReport(null);
+        setAdminNote("");
+      },
+      onError: (error) => {
+        console.error("신고 처리 실패:", error);
+        showToast({
+          type: "error",
+          title: "처리 실패",
+          message: error.message || "신고 처리 중 오류가 발생했습니다.",
+          duration: 3000,
+        });
+      },
+    }
+  );
 
-      const mockReports: ReportInfo[] = [
-        {
-          id: "1",
-          type: "SPAM",
-          status: "PENDING",
-          reason: "스팸 게시물",
-          description: "같은 내용을 반복적으로 게시하고 있습니다.",
-          reporter: {
-            id: "user1",
-            nickname: "신고자1",
-            email: "reporter1@example.com",
-          },
-          reportedUser: {
-            id: "user2",
-            nickname: "신고당한사용자1",
-            email: "reported1@example.com",
-          },
-          reportedPost: {
-            id: "post1",
-            title: "스팸 게시물 제목",
-            content: "반복적인 스팸 내용입니다...",
-          },
-          createdAt: "2024-02-08T10:30:00Z",
-          updatedAt: "2024-02-08T10:30:00Z",
-        },
-        {
-          id: "2",
-          type: "HARASSMENT",
-          status: "REVIEWING",
-          reason: "괴롭힘 및 혐오 발언",
-          description: "다른 사용자에게 욕설과 인신공격을 하고 있습니다.",
-          reporter: {
-            id: "user3",
-            nickname: "신고자2",
-            email: "reporter2@example.com",
-          },
-          reportedUser: {
-            id: "user4",
-            nickname: "신고당한사용자2",
-            email: "reported2@example.com",
-          },
-          adminNote: "검토 중입니다.",
-          createdAt: "2024-02-07T15:20:00Z",
-          updatedAt: "2024-02-08T09:15:00Z",
-        },
-        {
-          id: "3",
-          type: "INAPPROPRIATE_CONTENT",
-          status: "APPROVED",
-          reason: "부적절한 콘텐츠",
-          description: "성인 콘텐츠를 포함하고 있습니다.",
-          reporter: {
-            id: "user5",
-            nickname: "신고자3",
-            email: "reporter3@example.com",
-          },
-          reportedPost: {
-            id: "post2",
-            title: "부적절한 게시물",
-            content: "부적절한 내용...",
-          },
-          adminNote: "신고가 승인되어 게시물이 삭제되었습니다.",
-          createdAt: "2024-02-06T11:45:00Z",
-          updatedAt: "2024-02-07T14:30:00Z",
-        },
-      ];
+  // 데이터 처리
+  const reports = data?.adminGetAllReports?.reports || [];
+  const totalReports = data?.adminGetAllReports?.total || 0;
 
-      setReports(mockReports);
-    } catch (error) {
+  // 필터링된 신고 목록
+  const filteredReports = reports.filter((report) =>
+    statusFilter === "ALL" ? true : report.status === statusFilter
+  );
+
+  // 에러 처리
+  useEffect(() => {
+    if (error) {
       console.error("신고 데이터 로드 실패:", error);
       showToast({
         type: "error",
         title: "데이터 로드 실패",
-        message: "신고 데이터를 불러오는 중 오류가 발생했습니다.",
-        duration: 3000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadReports();
-  }, []);
-
-  // 신고 처리 핸들러
-  const handleProcessReport = async (
-    reportId: string,
-    status: "APPROVED" | "REJECTED",
-    note: string
-  ) => {
-    try {
-      // TODO: GraphQL 뮤테이션으로 신고 처리
-      console.log("신고 처리:", { reportId, status, note });
-
-      showToast({
-        type: "success",
-        title: "신고 처리 완료",
-        message: `신고가 ${status === "APPROVED" ? "승인" : "거부"}되었습니다.`,
-        duration: 2000,
-      });
-
-      setShowDetailModal(false);
-      setSelectedReport(null);
-      setAdminNote("");
-      loadReports();
-    } catch (error) {
-      console.error("신고 처리 실패:", error);
-      showToast({
-        type: "error",
-        title: "처리 실패",
-        message: "신고 처리 중 오류가 발생했습니다.",
+        message:
+          error.message || "신고 데이터를 불러오는 중 오류가 발생했습니다.",
         duration: 3000,
       });
     }
-  };
+  }, [error]);
 
-  // 신고 상세 보기
-  const openReportDetail = (report: ReportInfo) => {
+  // 신고 상세 모달 열기
+  const openDetailModal = (report: ReportInfo) => {
     setSelectedReport(report);
     setAdminNote(report.adminNote || "");
     setShowDetailModal(true);
   };
 
-  // 신고 유형 표시
-  const getReportTypeDisplay = (type: string) => {
+  // 신고 상태 업데이트 핸들러
+  const handleUpdateReportStatus = async (
+    status: ReportStatus,
+    note?: string
+  ) => {
+    if (!selectedReport) return;
+
+    try {
+      await updateReportStatus({
+        variables: {
+          reportId: selectedReport.id,
+          status,
+          adminNote: note || adminNote || null,
+        },
+      });
+    } catch (error) {
+      // 에러는 onError에서 처리됨
+    }
+  };
+
+  // 신고 타입 표시명
+  const getReportTypeDisplay = (type: ReportType) => {
     const typeMap = {
       SPAM: { label: "스팸", color: "#F59E0B" },
       INAPPROPRIATE_CONTENT: { label: "부적절한 콘텐츠", color: "#EF4444" },
       HARASSMENT: { label: "괴롭힘", color: "#DC2626" },
-      MISINFORMATION: { label: "허위 정보", color: "#7C2D12" },
-      COPYRIGHT: { label: "저작권 침해", color: "#9333EA" },
+      MISINFORMATION: { label: "허위 정보", color: "#F97316" },
+      COPYRIGHT: { label: "저작권 침해", color: "#7C2D12" },
       OTHER: { label: "기타", color: "#6B7280" },
     };
-    return (
-      typeMap[type as keyof typeof typeMap] || {
-        label: "알 수 없음",
-        color: "#6B7280",
-      }
-    );
+    return typeMap[type] || { label: "알 수 없음", color: "#6B7280" };
   };
 
-  // 신고 상태 표시
-  const getReportStatusDisplay = (status: string) => {
+  // 신고 상태 표시명
+  const getStatusDisplayName = (status: ReportStatus) => {
     const statusMap = {
-      PENDING: { label: "대기 중", color: "#F59E0B" },
-      REVIEWING: { label: "검토 중", color: "#3B82F6" },
-      APPROVED: { label: "승인됨", color: "#10B981" },
-      REJECTED: { label: "거부됨", color: "#6B7280" },
+      PENDING: "대기 중",
+      REVIEWING: "검토 중",
+      APPROVED: "승인됨",
+      REJECTED: "거부됨",
     };
-    return (
-      statusMap[status as keyof typeof statusMap] || {
-        label: "알 수 없음",
-        color: "#6B7280",
-      }
-    );
+    return statusMap[status] || "알 수 없음";
   };
 
-  // 필터링된 신고 목록
-  const filteredReports =
-    filterStatus === "ALL"
-      ? reports
-      : reports.filter((report) => report.status === filterStatus);
+  // 신고 상태 색상
+  const getStatusColor = (status: ReportStatus) => {
+    const colorMap = {
+      PENDING: "#F59E0B",
+      REVIEWING: "#3B82F6",
+      APPROVED: "#10B981",
+      REJECTED: "#EF4444",
+    };
+    return colorMap[status] || "#6B7280";
+  };
 
   // 날짜 포맷팅
   const formatDate = (dateString: string) => {
@@ -248,7 +227,23 @@ export default function AdminReportsScreen() {
     });
   };
 
-  if (isLoading) {
+  // 상태별 통계
+  const getStatusStats = () => {
+    const stats = {
+      PENDING: reports.filter((r) => r.status === ReportStatus.PENDING).length,
+      REVIEWING: reports.filter((r) => r.status === ReportStatus.REVIEWING)
+        .length,
+      APPROVED: reports.filter((r) => r.status === ReportStatus.APPROVED)
+        .length,
+      REJECTED: reports.filter((r) => r.status === ReportStatus.REJECTED)
+        .length,
+    };
+    return stats;
+  };
+
+  const statusStats = getStatusStats();
+
+  if (loading && !data) {
     return (
       <View style={themed($container)}>
         <View style={themed($loadingContainer)}>
@@ -269,81 +264,77 @@ export default function AdminReportsScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* 필터 */}
-      <View style={themed($filterSection)}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={themed($filterButtons)}>
-            {["ALL", "PENDING", "REVIEWING", "APPROVED", "REJECTED"].map(
-              (status) => (
+      <ScrollView
+        style={themed($scrollContainer)}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => refetch()} />
+        }
+      >
+        {/* 통계 정보 */}
+        <View style={themed($statsSection)}>
+          <View style={themed($statCard)}>
+            <Text style={themed($statNumber)}>{totalReports}</Text>
+            <Text style={themed($statLabel)}>총 신고</Text>
+          </View>
+          <View style={themed($statCard)}>
+            <Text style={[themed($statNumber), { color: "#F59E0B" }]}>
+              {statusStats.PENDING}
+            </Text>
+            <Text style={themed($statLabel)}>대기 중</Text>
+          </View>
+          <View style={themed($statCard)}>
+            <Text style={[themed($statNumber), { color: "#3B82F6" }]}>
+              {statusStats.REVIEWING}
+            </Text>
+            <Text style={themed($statLabel)}>검토 중</Text>
+          </View>
+        </View>
+
+        {/* 상태 필터 */}
+        <View style={themed($filterSection)}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={themed($filterContainer)}>
+              {[
+                { key: "ALL", label: "전체" },
+                { key: ReportStatus.PENDING, label: "대기 중" },
+                { key: ReportStatus.REVIEWING, label: "검토 중" },
+                { key: ReportStatus.APPROVED, label: "승인됨" },
+                { key: ReportStatus.REJECTED, label: "거부됨" },
+              ].map((filter) => (
                 <TouchableOpacity
-                  key={status}
+                  key={filter.key}
                   style={[
                     themed($filterButton),
-                    {
-                      backgroundColor:
-                        filterStatus === status
-                          ? theme.colors.tint
-                          : "transparent",
-                      borderColor:
-                        filterStatus === status
-                          ? theme.colors.tint
-                          : theme.colors.border,
-                    },
+                    statusFilter === filter.key && themed($filterButtonActive),
                   ]}
-                  onPress={() => setFilterStatus(status)}
+                  onPress={() => setStatusFilter(filter.key as any)}
                 >
                   <Text
                     style={[
                       themed($filterButtonText),
-                      {
-                        color:
-                          filterStatus === status ? "white" : theme.colors.text,
-                      },
+                      statusFilter === filter.key &&
+                        themed($filterButtonTextActive),
                     ]}
                   >
-                    {status === "ALL"
-                      ? "전체"
-                      : getReportStatusDisplay(status).label}
+                    {filter.label}
                   </Text>
                 </TouchableOpacity>
-              )
-            )}
-          </View>
-        </ScrollView>
-      </View>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
 
-      {/* 통계 정보 */}
-      <View style={themed($statsSection)}>
-        <View style={themed($statCard)}>
-          <Text style={themed($statNumber)}>{reports.length}</Text>
-          <Text style={themed($statLabel)}>총 신고</Text>
-        </View>
-        <View style={themed($statCard)}>
-          <Text style={themed($statNumber)}>
-            {reports.filter((r) => r.status === "PENDING").length}
-          </Text>
-          <Text style={themed($statLabel)}>대기 중</Text>
-        </View>
-        <View style={themed($statCard)}>
-          <Text style={themed($statNumber)}>
-            {reports.filter((r) => r.status === "REVIEWING").length}
-          </Text>
-          <Text style={themed($statLabel)}>검토 중</Text>
-        </View>
-      </View>
-
-      <ScrollView style={themed($scrollContainer)}>
         {/* 신고 목록 */}
         <View style={themed($reportsSection)}>
           {filteredReports.map((report) => {
             const typeInfo = getReportTypeDisplay(report.type);
-            const statusInfo = getReportStatusDisplay(report.status);
+            const statusColor = getStatusColor(report.status);
 
             return (
               <TouchableOpacity
                 key={report.id}
                 style={themed($reportCard)}
-                onPress={() => openReportDetail(report)}
+                onPress={() => openDetailModal(report)}
               >
                 <View style={themed($reportHeader)}>
                   <View style={themed($reportTitleSection)}>
@@ -365,16 +356,16 @@ export default function AdminReportsScreen() {
                     <View
                       style={[
                         themed($reportStatusBadge),
-                        { backgroundColor: statusInfo.color + "20" },
+                        { backgroundColor: statusColor + "20" },
                       ]}
                     >
                       <Text
                         style={[
                           themed($reportStatusText),
-                          { color: statusInfo.color },
+                          { color: statusColor },
                         ]}
                       >
-                        {statusInfo.label}
+                        {getStatusDisplayName(report.status)}
                       </Text>
                     </View>
                   </View>
@@ -385,44 +376,52 @@ export default function AdminReportsScreen() {
                   />
                 </View>
 
-                <Text style={themed($reportReason)}>{report.reason}</Text>
+                <Text style={themed($reportReason)} numberOfLines={2}>
+                  {report.reason}
+                </Text>
 
-                {report.description && (
-                  <Text style={themed($reportDescription)} numberOfLines={2}>
-                    {report.description}
-                  </Text>
-                )}
-
-                <View style={themed($reportInfo)}>
-                  <View style={themed($reportInfoItem)}>
+                <View style={themed($reportMeta)}>
+                  <View style={themed($reportMetaItem)}>
                     <Ionicons
                       name="person-outline"
                       color={theme.colors.textDim}
                       size={14}
                     />
-                    <Text style={themed($reportInfoText)}>
+                    <Text style={themed($reportMetaText)}>
                       신고자: {report.reporter.nickname}
                     </Text>
                   </View>
                   {report.reportedUser && (
-                    <View style={themed($reportInfoItem)}>
+                    <View style={themed($reportMetaItem)}>
                       <Ionicons
                         name="alert-circle-outline"
                         color={theme.colors.textDim}
                         size={14}
                       />
-                      <Text style={themed($reportInfoText)}>
+                      <Text style={themed($reportMetaText)}>
                         신고 대상: {report.reportedUser.nickname}
                       </Text>
                     </View>
                   )}
-                  <View style={themed($reportInfoItem)}>
+                  {report.reportedPost && (
+                    <View style={themed($reportMetaItem)}>
+                      <Ionicons
+                        name="document-text-outline"
+                        color={theme.colors.textDim}
+                        size={14}
+                      />
+                      <Text style={themed($reportMetaText)}>
+                        게시물: {report.reportedPost.title}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={themed($reportMetaItem)}>
                     <Ionicons
                       name="time-outline"
                       color={theme.colors.textDim}
                       size={14}
                     />
-                    <Text style={themed($reportInfoText)}>
+                    <Text style={themed($reportMetaText)}>
                       {formatDate(report.createdAt)}
                     </Text>
                   </View>
@@ -432,16 +431,24 @@ export default function AdminReportsScreen() {
           })}
 
           {filteredReports.length === 0 && (
-            <View style={themed($emptyState)}>
+            <View style={themed($emptyContainer)}>
               <Ionicons
                 name="document-outline"
                 color={theme.colors.textDim}
                 size={48}
               />
-              <Text style={themed($emptyStateText)}>
-                {filterStatus === "ALL"
-                  ? "신고가 없습니다"
-                  : `${getReportStatusDisplay(filterStatus).label} 신고가 없습니다`}
+              <Text style={themed($emptyText)}>
+                {statusFilter === "ALL"
+                  ? "신고가 없습니다."
+                  : `${
+                      statusFilter === "PENDING"
+                        ? "대기 중인"
+                        : statusFilter === "REVIEWING"
+                          ? "검토 중인"
+                          : statusFilter === "APPROVED"
+                            ? "승인된"
+                            : "거부된"
+                    } 신고가 없습니다.`}
               </Text>
             </View>
           )}
@@ -458,6 +465,7 @@ export default function AdminReportsScreen() {
                 onPress={() => {
                   setShowDetailModal(false);
                   setSelectedReport(null);
+                  setAdminNote("");
                 }}
               >
                 <Ionicons name="close" color={theme.colors.text} size={24} />
@@ -470,31 +478,36 @@ export default function AdminReportsScreen() {
                 <View style={themed($detailSection)}>
                   <Text style={themed($detailSectionTitle)}>신고 정보</Text>
                   <View style={themed($detailRow)}>
-                    <Text style={themed($detailLabel)}>유형:</Text>
+                    <Text style={themed($detailLabel)}>신고 유형:</Text>
                     <Text style={themed($detailValue)}>
                       {getReportTypeDisplay(selectedReport.type).label}
                     </Text>
                   </View>
                   <View style={themed($detailRow)}>
                     <Text style={themed($detailLabel)}>상태:</Text>
-                    <Text style={themed($detailValue)}>
-                      {getReportStatusDisplay(selectedReport.status).label}
+                    <Text
+                      style={[
+                        themed($detailValue),
+                        { color: getStatusColor(selectedReport.status) },
+                      ]}
+                    >
+                      {getStatusDisplayName(selectedReport.status)}
                     </Text>
                   </View>
                   <View style={themed($detailRow)}>
-                    <Text style={themed($detailLabel)}>신고 사유:</Text>
+                    <Text style={themed($detailLabel)}>신고일:</Text>
                     <Text style={themed($detailValue)}>
-                      {selectedReport.reason}
+                      {formatDate(selectedReport.createdAt)}
                     </Text>
                   </View>
-                  {selectedReport.description && (
-                    <View style={themed($detailRow)}>
-                      <Text style={themed($detailLabel)}>상세 설명:</Text>
-                      <Text style={themed($detailValue)}>
-                        {selectedReport.description}
-                      </Text>
-                    </View>
-                  )}
+                </View>
+
+                {/* 신고 사유 */}
+                <View style={themed($detailSection)}>
+                  <Text style={themed($detailSectionTitle)}>신고 사유</Text>
+                  <Text style={themed($detailContent)}>
+                    {selectedReport.reason}
+                  </Text>
                 </View>
 
                 {/* 신고자 정보 */}
@@ -535,11 +548,11 @@ export default function AdminReportsScreen() {
                   </View>
                 )}
 
-                {/* 신고 대상 게시물 */}
+                {/* 신고된 게시물 정보 */}
                 {selectedReport.reportedPost && (
                   <View style={themed($detailSection)}>
                     <Text style={themed($detailSectionTitle)}>
-                      신고 대상 게시물
+                      신고된 게시물
                     </Text>
                     <View style={themed($detailRow)}>
                       <Text style={themed($detailLabel)}>제목:</Text>
@@ -547,12 +560,9 @@ export default function AdminReportsScreen() {
                         {selectedReport.reportedPost.title}
                       </Text>
                     </View>
-                    <View style={themed($detailRow)}>
-                      <Text style={themed($detailLabel)}>내용:</Text>
-                      <Text style={themed($detailValue)} numberOfLines={3}>
-                        {selectedReport.reportedPost.content}
-                      </Text>
-                    </View>
+                    <Text style={themed($detailContent)}>
+                      {selectedReport.reportedPost.content}
+                    </Text>
                   </View>
                 )}
 
@@ -560,66 +570,72 @@ export default function AdminReportsScreen() {
                 <View style={themed($detailSection)}>
                   <Text style={themed($detailSectionTitle)}>관리자 메모</Text>
                   <TextInput
-                    style={[themed($textInput), themed($textArea)]}
+                    style={themed($adminNoteInput)}
                     value={adminNote}
                     onChangeText={setAdminNote}
-                    placeholder="처리 내용이나 메모를 입력하세요..."
+                    placeholder="관리자 메모를 입력하세요..."
                     placeholderTextColor={theme.colors.textDim}
                     multiline
-                    numberOfLines={4}
+                    numberOfLines={3}
                   />
                 </View>
               </ScrollView>
             )}
 
-            {/* 처리 버튼 */}
+            {/* 액션 버튼 */}
             {selectedReport &&
-              selectedReport.status !== "APPROVED" &&
-              selectedReport.status !== "REJECTED" && (
+              selectedReport.status !== ReportStatus.APPROVED &&
+              selectedReport.status !== ReportStatus.REJECTED && (
                 <View style={themed($modalActions)}>
                   <TouchableOpacity
                     style={[
                       themed($actionButton),
-                      { backgroundColor: "#EF4444" },
+                      { backgroundColor: "#EF444420" },
                     ]}
-                    onPress={() => {
-                      Alert.alert("신고 승인", "이 신고를 승인하시겠습니까?", [
-                        { text: "취소", style: "cancel" },
-                        {
-                          text: "승인",
-                          onPress: () =>
-                            handleProcessReport(
-                              selectedReport.id,
-                              "APPROVED",
-                              adminNote
-                            ),
-                        },
-                      ]);
-                    }}
+                    onPress={() =>
+                      handleUpdateReportStatus(ReportStatus.REJECTED)
+                    }
+                    disabled={updateLoading}
                   >
-                    <Text style={themed($actionButtonText)}>승인</Text>
+                    <Text
+                      style={[themed($actionButtonText), { color: "#EF4444" }]}
+                    >
+                      거부
+                    </Text>
                   </TouchableOpacity>
+
                   <TouchableOpacity
                     style={[
                       themed($actionButton),
-                      { backgroundColor: "#6B7280" },
+                      { backgroundColor: "#3B82F620" },
                     ]}
-                    onPress={() => {
-                      Alert.alert("신고 거부", "이 신고를 거부하시겠습니까?", [
-                        { text: "취소", style: "cancel" },
-                        {
-                          text: "거부",
-                          onPress: () =>
-                            handleProcessReport(
-                              selectedReport.id,
-                              "REJECTED",
-                              adminNote
-                            ),
-                        },
-                      ]);
-                    }}
+                    onPress={() =>
+                      handleUpdateReportStatus(ReportStatus.REVIEWING)
+                    }
+                    disabled={updateLoading}
                   >
-                    <Text style={themed($actionButtonText)}>거부</Text>
+                    <Text
+                      style={[themed($actionButtonText), { color: "#3B82F6" }]}
+                    >
+                      검토 중
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      themed($actionButton),
+                      { backgroundColor: "#10B98120" },
+                    ]}
+                    onPress={() =>
+                      handleUpdateReportStatus(ReportStatus.APPROVED)
+                    }
+                    disabled={updateLoading}
+                  >
+                    <Text
+                      style={[themed($actionButtonText), { color: "#10B981" }]}
+                    >
+                      승인
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -652,28 +668,19 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
 });
 
-const $filterSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  paddingVertical: spacing.md,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
+const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
 });
 
-const $filterButtons: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  paddingHorizontal: spacing.md,
-  gap: spacing.sm,
+const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
 });
 
-const $filterButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  borderRadius: 20,
-  borderWidth: 1,
-});
-
-const $filterButtonText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 14,
-  fontWeight: "500",
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
 });
 
 const $statsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -694,7 +701,7 @@ const $statCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $statNumber: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 18,
+  fontSize: 20,
   fontWeight: "bold",
   color: colors.text,
 });
@@ -705,19 +712,38 @@ const $statLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginTop: spacing.xs,
 });
 
-const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
+const $filterSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingBottom: spacing.md,
 });
 
-const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
+const $filterContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  gap: spacing.sm,
 });
 
-const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
-  color: colors.textDim,
+const $filterButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: colors.border,
+  backgroundColor: colors.card,
+});
+
+const $filterButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.tint,
+  borderColor: colors.tint,
+});
+
+const $filterButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: colors.text,
+});
+
+const $filterButtonTextActive: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontWeight: "500",
 });
 
 const $reportsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -743,6 +769,7 @@ const $reportHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $reportTitleSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
+  alignItems: "center",
   gap: spacing.sm,
 });
 
@@ -769,42 +796,37 @@ const $reportStatusText: ThemedStyle<TextStyle> = () => ({
 });
 
 const $reportReason: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 16,
-  fontWeight: "600",
+  fontSize: 14,
   color: colors.text,
   marginBottom: spacing.sm,
+  lineHeight: 20,
 });
 
-const $reportDescription: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 14,
-  color: colors.textDim,
-  marginBottom: spacing.sm,
-});
-
-const $reportInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $reportMeta: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.xs,
 });
 
-const $reportInfoItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $reportMetaItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   gap: spacing.xs,
 });
 
-const $reportInfoText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $reportMetaText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
   color: colors.textDim,
 });
 
-const $emptyState: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
-  paddingVertical: spacing.xl,
-  gap: spacing.md,
+  padding: spacing.xl,
 });
 
-const $emptyStateText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $emptyText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
   color: colors.textDim,
+  marginTop: spacing.md,
+  textAlign: "center",
 });
 
 // 모달 스타일
@@ -819,9 +841,9 @@ const $modalContent: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
   borderRadius: 16,
   padding: spacing.lg,
-  width: "90%",
+  width: "95%",
   maxWidth: 500,
-  maxHeight: "80%",
+  maxHeight: "90%",
 });
 
 const $modalHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -837,8 +859,8 @@ const $modalTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
 });
 
-const $detailContainer: ThemedStyle<ViewStyle> = () => ({
-  maxHeight: 400,
+const $detailContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  maxHeight: 500,
 });
 
 const $detailSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -853,22 +875,34 @@ const $detailSectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
 });
 
 const $detailRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginBottom: spacing.sm,
+  flexDirection: "row",
+  marginBottom: spacing.xs,
 });
 
-const $detailLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+const $detailLabel: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
-  fontWeight: "500",
   color: colors.textDim,
-  marginBottom: spacing.xs,
+  width: 80,
 });
 
 const $detailValue: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.text,
+  flex: 1,
 });
 
-const $textInput: ThemedStyle<any> = ({ colors, spacing }) => ({
+const $detailContent: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.text,
+  lineHeight: 20,
+  padding: spacing.sm,
+  backgroundColor: colors.card,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $adminNoteInput: ThemedStyle<any> = ({ colors, spacing }) => ({
   borderWidth: 1,
   borderColor: colors.border,
   borderRadius: 8,
@@ -876,10 +910,7 @@ const $textInput: ThemedStyle<any> = ({ colors, spacing }) => ({
   fontSize: 14,
   color: colors.text,
   backgroundColor: colors.card,
-});
-
-const $textArea: ThemedStyle<any> = () => ({
-  height: 100,
+  height: 80,
   textAlignVertical: "top",
 });
 
@@ -898,6 +929,5 @@ const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $actionButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
-  color: "white",
   fontWeight: "500",
 });

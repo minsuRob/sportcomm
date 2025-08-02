@@ -10,12 +10,20 @@ import {
   Modal,
   TextInput,
   Switch,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
+import {
+  GET_ADMIN_CHAT_ROOMS,
+  CREATE_CHAT_ROOM,
+  UPDATE_CHAT_ROOM,
+  DELETE_CHAT_ROOM,
+} from "@/lib/graphql/admin";
 
 // 채팅방 정보 타입
 interface ChatRoomInfo {
@@ -28,7 +36,20 @@ interface ChatRoomInfo {
   currentParticipants: number;
   totalMessages: number;
   createdAt: string;
+  updatedAt: string;
+  lastMessageContent?: string;
   lastMessageAt?: string;
+}
+
+// GraphQL 응답 타입
+interface ChatRoomsResponse {
+  adminGetAllChatRooms: {
+    chatRooms: ChatRoomInfo[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 /**
@@ -39,11 +60,100 @@ interface ChatRoomInfo {
 export default function AdminChatRoomsScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [chatRooms, setChatRooms] = useState<ChatRoomInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoomInfo | null>(null);
+  const [page, setPage] = useState(1);
+
+  // GraphQL 쿼리 및 뮤테이션
+  const { data, loading, error, refetch } = useQuery<ChatRoomsResponse>(
+    GET_ADMIN_CHAT_ROOMS,
+    {
+      variables: { page, limit: 20 },
+      fetchPolicy: "cache-and-network",
+      errorPolicy: "all",
+    }
+  );
+
+  const [createChatRoom, { loading: createLoading }] = useMutation(
+    CREATE_CHAT_ROOM,
+    {
+      refetchQueries: [
+        { query: GET_ADMIN_CHAT_ROOMS, variables: { page, limit: 20 } },
+      ],
+      onCompleted: () => {
+        showToast({
+          type: "success",
+          title: "채팅방 생성 완료",
+          message: `${formData.name} 채팅방이 생성되었습니다.`,
+          duration: 2000,
+        });
+        setShowCreateModal(false);
+        resetForm();
+      },
+      onError: (error) => {
+        console.error("채팅방 생성 실패:", error);
+        showToast({
+          type: "error",
+          title: "생성 실패",
+          message: error.message || "채팅방 생성 중 오류가 발생했습니다.",
+          duration: 3000,
+        });
+      },
+    }
+  );
+
+  const [updateChatRoom, { loading: updateLoading }] = useMutation(
+    UPDATE_CHAT_ROOM,
+    {
+      refetchQueries: [
+        { query: GET_ADMIN_CHAT_ROOMS, variables: { page, limit: 20 } },
+      ],
+      onCompleted: () => {
+        showToast({
+          type: "success",
+          title: "채팅방 수정 완료",
+          message: `${formData.name} 채팅방이 수정되었습니다.`,
+          duration: 2000,
+        });
+        setShowEditModal(false);
+        setSelectedRoom(null);
+        resetForm();
+      },
+      onError: (error) => {
+        console.error("채팅방 수정 실패:", error);
+        showToast({
+          type: "error",
+          title: "수정 실패",
+          message: error.message || "채팅방 수정 중 오류가 발생했습니다.",
+          duration: 3000,
+        });
+      },
+    }
+  );
+
+  const [deleteChatRoom] = useMutation(DELETE_CHAT_ROOM, {
+    refetchQueries: [
+      { query: GET_ADMIN_CHAT_ROOMS, variables: { page, limit: 20 } },
+    ],
+    onCompleted: () => {
+      showToast({
+        type: "success",
+        title: "채팅방 삭제 완료",
+        message: "채팅방이 삭제되었습니다.",
+        duration: 2000,
+      });
+    },
+    onError: (error) => {
+      console.error("채팅방 삭제 실패:", error);
+      showToast({
+        type: "error",
+        title: "삭제 실패",
+        message: error.message || "채팅방 삭제 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    },
+  });
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -54,143 +164,74 @@ export default function AdminChatRoomsScreen() {
     isRoomActive: true,
   });
 
-  // 채팅방 데이터 로드
-  const loadChatRooms = async () => {
-    try {
-      setIsLoading(true);
+  // 데이터 처리
+  const chatRooms = data?.adminGetAllChatRooms?.chatRooms || [];
+  const totalRooms = data?.adminGetAllChatRooms?.total || 0;
 
-      // TODO: GraphQL 쿼리로 실제 데이터 로드
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const mockChatRooms: ChatRoomInfo[] = [
-        {
-          id: "1",
-          name: "일반 채팅",
-          description: "자유롭게 대화할 수 있는 공간입니다.",
-          type: "PUBLIC",
-          isRoomActive: true,
-          maxParticipants: 100,
-          currentParticipants: 45,
-          totalMessages: 1250,
-          createdAt: "2024-01-15T10:00:00Z",
-          lastMessageAt: "2024-02-08T14:30:00Z",
-        },
-        {
-          id: "2",
-          name: "축구 토론방",
-          description: "축구에 대해 이야기하는 방입니다.",
-          type: "PUBLIC",
-          isRoomActive: true,
-          maxParticipants: 50,
-          currentParticipants: 23,
-          totalMessages: 890,
-          createdAt: "2024-01-20T15:30:00Z",
-          lastMessageAt: "2024-02-08T16:45:00Z",
-        },
-        {
-          id: "3",
-          name: "야구 팬클럽",
-          description: "야구 팬들의 모임입니다.",
-          type: "GROUP",
-          isRoomActive: false,
-          maxParticipants: 30,
-          currentParticipants: 12,
-          totalMessages: 456,
-          createdAt: "2024-02-01T09:15:00Z",
-          lastMessageAt: "2024-02-07T11:20:00Z",
-        },
-      ];
-
-      setChatRooms(mockChatRooms);
-    } catch (error) {
+  // 에러 처리
+  useEffect(() => {
+    if (error) {
       console.error("채팅방 데이터 로드 실패:", error);
       showToast({
         type: "error",
         title: "데이터 로드 실패",
-        message: "채팅방 데이터를 불러오는 중 오류가 발생했습니다.",
+        message:
+          error.message || "채팅방 데이터를 불러오는 중 오류가 발생했습니다.",
         duration: 3000,
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadChatRooms();
-  }, []);
+  }, [error]);
 
   // 채팅방 생성 핸들러
   const handleCreateRoom = async () => {
-    try {
-      if (!formData.name.trim()) {
-        showToast({
-          type: "error",
-          title: "입력 오류",
-          message: "채팅방 이름을 입력해주세요.",
-          duration: 3000,
-        });
-        return;
-      }
-
-      // TODO: GraphQL 뮤테이션으로 채팅방 생성
-      console.log("채팅방 생성:", formData);
-
-      showToast({
-        type: "success",
-        title: "채팅방 생성 완료",
-        message: `${formData.name} 채팅방이 생성되었습니다.`,
-        duration: 2000,
-      });
-
-      setShowCreateModal(false);
-      resetForm();
-      loadChatRooms();
-    } catch (error) {
-      console.error("채팅방 생성 실패:", error);
+    if (!formData.name.trim()) {
       showToast({
         type: "error",
-        title: "생성 실패",
-        message: "채팅방 생성 중 오류가 발생했습니다.",
+        title: "입력 오류",
+        message: "채팅방 이름을 입력해주세요.",
         duration: 3000,
       });
+      return;
+    }
+
+    try {
+      await createChatRoom({
+        variables: {
+          name: formData.name,
+          description: formData.description || null,
+          type: formData.type,
+          maxParticipants: formData.maxParticipants,
+        },
+      });
+    } catch (error) {
+      // 에러는 onError에서 처리됨
     }
   };
 
   // 채팅방 수정 핸들러
   const handleEditRoom = async () => {
-    try {
-      if (!selectedRoom || !formData.name.trim()) {
-        showToast({
-          type: "error",
-          title: "입력 오류",
-          message: "채팅방 이름을 입력해주세요.",
-          duration: 3000,
-        });
-        return;
-      }
-
-      // TODO: GraphQL 뮤테이션으로 채팅방 수정
-      console.log("채팅방 수정:", selectedRoom.id, formData);
-
-      showToast({
-        type: "success",
-        title: "채팅방 수정 완료",
-        message: `${formData.name} 채팅방이 수정되었습니다.`,
-        duration: 2000,
-      });
-
-      setShowEditModal(false);
-      setSelectedRoom(null);
-      resetForm();
-      loadChatRooms();
-    } catch (error) {
-      console.error("채팅방 수정 실패:", error);
+    if (!selectedRoom || !formData.name.trim()) {
       showToast({
         type: "error",
-        title: "수정 실패",
-        message: "채팅방 수정 중 오류가 발생했습니다.",
+        title: "입력 오류",
+        message: "채팅방 이름을 입력해주세요.",
         duration: 3000,
       });
+      return;
+    }
+
+    try {
+      await updateChatRoom({
+        variables: {
+          roomId: selectedRoom.id,
+          name: formData.name,
+          description: formData.description || null,
+          maxParticipants: formData.maxParticipants,
+          isRoomActive: formData.isRoomActive,
+        },
+      });
+    } catch (error) {
+      // 에러는 onError에서 처리됨
     }
   };
 
@@ -206,25 +247,11 @@ export default function AdminChatRoomsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // TODO: GraphQL 뮤테이션으로 채팅방 삭제
-              console.log("채팅방 삭제:", room.id);
-
-              showToast({
-                type: "success",
-                title: "채팅방 삭제 완료",
-                message: `${room.name} 채팅방이 삭제되었습니다.`,
-                duration: 2000,
+              await deleteChatRoom({
+                variables: { roomId: room.id },
               });
-
-              loadChatRooms();
             } catch (error) {
-              console.error("채팅방 삭제 실패:", error);
-              showToast({
-                type: "error",
-                title: "삭제 실패",
-                message: "채팅방 삭제 중 오류가 발생했습니다.",
-                duration: 3000,
-              });
+              // 에러는 onError에서 처리됨
             }
           },
         },
@@ -283,7 +310,7 @@ export default function AdminChatRoomsScreen() {
     });
   };
 
-  if (isLoading) {
+  if (loading && !data) {
     return (
       <View style={themed($container)}>
         <View style={themed($loadingContainer)}>
@@ -306,11 +333,16 @@ export default function AdminChatRoomsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={themed($scrollContainer)}>
+      <ScrollView
+        style={themed($scrollContainer)}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => refetch()} />
+        }
+      >
         {/* 통계 정보 */}
         <View style={themed($statsSection)}>
           <View style={themed($statCard)}>
-            <Text style={themed($statNumber)}>{chatRooms.length}</Text>
+            <Text style={themed($statNumber)}>{totalRooms}</Text>
             <Text style={themed($statLabel)}>총 채팅방</Text>
           </View>
           <View style={themed($statCard)}>
@@ -523,10 +555,16 @@ export default function AdminChatRoomsScreen() {
                 <Text style={themed($cancelButtonText)}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={themed($confirmButton)}
+                style={[
+                  themed($confirmButton),
+                  { opacity: createLoading ? 0.5 : 1 },
+                ]}
                 onPress={handleCreateRoom}
+                disabled={createLoading}
               >
-                <Text style={themed($confirmButtonText)}>생성</Text>
+                <Text style={themed($confirmButtonText)}>
+                  {createLoading ? "생성 중..." : "생성"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -626,10 +664,16 @@ export default function AdminChatRoomsScreen() {
                 <Text style={themed($cancelButtonText)}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={themed($confirmButton)}
+                style={[
+                  themed($confirmButton),
+                  { opacity: updateLoading ? 0.5 : 1 },
+                ]}
                 onPress={handleEditRoom}
+                disabled={updateLoading}
               >
-                <Text style={themed($confirmButtonText)}>수정</Text>
+                <Text style={themed($confirmButtonText)}>
+                  {updateLoading ? "수정 중..." : "수정"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

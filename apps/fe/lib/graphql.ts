@@ -7,6 +7,9 @@ import { gql } from "@apollo/client";
  * Using a central file for these definitions helps maintain consistency.
  */
 
+// Admin GraphQL 쿼리 및 뮤테이션 import
+export * from "./graphql/admin";
+
 /**
  * Fetches a paginated list of posts for the main feed.
  * It retrieves all necessary fields to render a post card, along with pagination metadata.
@@ -108,6 +111,7 @@ export const LOGIN_MUTATION = gql`
         id
         nickname
         email
+        role
       }
     }
   }
@@ -126,6 +130,7 @@ export const REGISTER_MUTATION = gql`
         id
         nickname
         email
+        role
       }
     }
   }
@@ -257,6 +262,7 @@ export const GET_USER_PROFILE = gql`
       nickname
       email
       profileImageUrl
+      role
       isFollowing
       followerCount
       followingCount

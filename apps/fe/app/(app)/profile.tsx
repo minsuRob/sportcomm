@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { User, getSession, saveSession } from "@/lib/auth";
 import { useRouter } from "expo-router";
 import {
   GET_USER_PROFILE,
@@ -96,6 +96,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     const loadUserProfile = async () => {
       const { user } = await getSession();
+      console.log("세션에서 불러온 사용자 정보:", JSON.stringify(user, null, 2));
       if (user) setCurrentUser(user);
     };
     loadUserProfile();
@@ -109,6 +110,23 @@ export default function ProfileScreen() {
       refetchBookmarks();
     }
   }, [currentUser?.id, refetchProfile, refetchPosts, refetchBookmarks]);
+
+  // 프로필 데이터가 로드되면 사용자 정보 업데이트
+  useEffect(() => {
+    if (profileData?.getUserById) {
+      // GraphQL에서 가져온 사용자 정보와 세션의 사용자 정보를 병합
+      const updatedUser = {
+        ...currentUser,
+        ...profileData.getUserById,
+      };
+      console.log("업데이트된 사용자 정보:", JSON.stringify(updatedUser, null, 2));
+
+      // 세션 업데이트
+      saveSession(updatedUser);
+      // 현재 사용자 상태 업데이트
+      setCurrentUser(updatedUser);
+    }
+  }, [profileData?.getUserById]);
 
   // 게시물 데이터가 변경되면 상태 업데이트
   useEffect(() => {
@@ -181,6 +199,7 @@ export default function ProfileScreen() {
       ? "아직 작성한 게시물이 없습니다"
       : "아직 북마크한 게시물이 없습니다";
   };
+  console.log("ProfileScreen - currentUser:", JSON.stringify(currentUser, null, 2));
 
   if (!currentUser) {
     return (
@@ -198,11 +217,14 @@ export default function ProfileScreen() {
     nickname: currentUser.nickname,
     email: currentUser.email || "",
     profileImageUrl: currentUser.profileImageUrl,
+    role: currentUser.role,
     isFollowing: false,
     followerCount: 0,
     followingCount: 0,
     postCount: 0,
   };
+
+  console.log("현재 역할:", currentUser?.role, "사용자 프로필 역할:", userProfile?.role);
 
   const avatarUrl =
     userProfile.profileImageUrl ||
@@ -255,7 +277,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {/* 관리자 전용 버튼 */}
-          {currentUser?.role === "ADMIN" && (
+          {(currentUser?.role === "ADMIN" || userProfile?.role === "ADMIN") && (
             <TouchableOpacity
               style={themed($adminButton)}
               onPress={handleAdminDashboard}

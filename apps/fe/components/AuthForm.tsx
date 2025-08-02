@@ -82,12 +82,25 @@ export default function AuthForm({
         console.log("로그인/회원가입 성공:", {
           토큰있음: !!token,
           사용자: user,
+          역할: user.role,
         });
+
+        // 역할 정보가 제대로 설정되어 있는지 확인
+        if (!user.role) {
+          console.warn("사용자 역할 정보가 없습니다:", user);
+        } else {
+          console.log("사용자 역할:", user.role);
+        }
+
         await saveSession(token, user);
 
-        // 토큰 저장 확인을 위한 로그
-        const { token: savedToken } = await getSession();
-        console.log("저장된 토큰 확인:", { 토큰저장됨: !!savedToken });
+        // 토큰 및 사용자 정보 저장 확인을 위한 로그
+        const { token: savedToken, user: savedUser } = await getSession();
+        console.log("저장된 세션 확인:", {
+          토큰저장됨: !!savedToken,
+          사용자정보: savedUser,
+          역할: savedUser?.role
+        });
 
         onLoginSuccess(user);
       }

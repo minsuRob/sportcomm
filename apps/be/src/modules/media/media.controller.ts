@@ -60,10 +60,14 @@ export class MediaController {
       },
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const uploadPath = join(process.cwd(), 'uploads/images');
+          // 파일 타입에 따라 저장 경로 결정
+          const isVideo = file.mimetype.startsWith('video/');
+          const folderName = isVideo ? 'videos' : 'images';
+          const uploadPath = join(process.cwd(), 'uploads', folderName);
+
           // 파일 수신 시 디버그 정보 출력
           console.log(
-            `파일 저장 경로 설정 중: ${file.originalname}, 필드명: ${file.fieldname}, 크기: ${file.size || '알 수 없음'}`,
+            `파일 저장 경로 설정 중: ${file.originalname}, 필드명: ${file.fieldname}, 크기: ${file.size || '알 수 없음'}, 타입: ${file.mimetype}, 폴더: ${folderName}`,
           );
 
           // 파일 데이터 확인 로깅
@@ -76,6 +80,8 @@ export class MediaController {
             stream: typeof file.stream,
             buffer: file.buffer ? '버퍼 존재' : '버퍼 없음',
             destination: file.destination || '미설정',
+            isVideo: isVideo,
+            targetFolder: folderName,
           });
 
           // 디렉토리 존재 확인 및 생성
@@ -474,7 +480,28 @@ export class MediaController {
   @UseInterceptors(
     FilesInterceptor('files', 1, {
       storage: diskStorage({
-        destination: './uploads/images',
+        destination: (req, file, cb) => {
+          // 파일 타입에 따라 저장 경로 결정
+          const isVideo = file.mimetype.startsWith('video/');
+          const folderName = isVideo ? 'videos' : 'images';
+          const uploadPath = join(process.cwd(), 'uploads', folderName);
+
+          console.log(
+            `단일 파일 업로드 - 저장 경로: ${uploadPath} (타입: ${file.mimetype})`,
+          );
+
+          // 디렉토리 존재 확인 및 생성
+          try {
+            if (!existsSync(uploadPath)) {
+              mkdirSync(uploadPath, { recursive: true });
+              console.log(`업로드 디렉토리 생성 완료: ${uploadPath}`);
+            }
+            cb(null, uploadPath);
+          } catch (error) {
+            console.error(`업로드 디렉토리 생성 실패: ${error.message}`);
+            cb(error as Error, '');
+          }
+        },
         filename: (req, file, cb) => {
           const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
           // 파일 확장자 가져오기 (소문자로 변환)

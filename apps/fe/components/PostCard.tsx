@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -77,7 +77,7 @@ const formatTimeAgo = (dateString: string) => {
   const now = new Date();
   const postDate = new Date(dateString);
   const diffHours = Math.floor(
-    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
+    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
   );
 
   if (diffHours < 1) return "방금 전";
@@ -220,15 +220,21 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE"
+    (item) => item.type === "image" || item.type === "IMAGE",
   );
   const videoMedia = post.media.filter(
-    (item) => item.type === "video" || item.type === "VIDEO"
+    (item) => item.type === "video" || item.type === "VIDEO",
   );
 
   // 동영상 재생 상태 관리
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const [showVideoControls, setShowVideoControls] = useState(true);
+  const [showVideoControls, setShowVideoControls] = useState(false); // 기본적으로 컨트롤 숨김
+  const [isVideoVisible, setIsVideoVisible] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoContainerRef = useRef<View | null>(null);
+  const [videoTouched, setVideoTouched] = useState(false); // 사용자가 비디오를 터치했는지 여부
+  const [autoPlayAttempted, setAutoPlayAttempted] = useState(false); // 자동재생 시도 여부
+  const [showAutoplayIndicator, setShowAutoplayIndicator] = useState(false); // 자동 재생 표시기 표시 여부
 
   // 공통 이미지 최적화 훅 사용
   const { imageAspectRatio, imageHeight, imageLoading } =
@@ -291,14 +297,77 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       console.log(`PostCard - post.id: ${post.id}`);
       console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
       console.log(
-        `PostCard - post.content: ${post.content.substring(0, 20)}...`
+        `PostCard - post.content: ${post.content.substring(0, 20)}...`,
       );
     }
   }, [post.id]);
 
-  // usePostImageDimensions 훅을 사용하여 이미지 비율과 높이 계산
-  // 이 훅에서 이미지 로딩, 크기 계산, 오류 처리 등을 자동으로 수행합니다.
-  // 해당 로직이 위에 이미 구현되어 있으므로 중복 코드 제거
+  // 비디오 가시성 감지 및 자동 재생 처리
+  useEffect(() => {
+    if (videoMedia.length === 0) return;
+
+    // 웹 환경: IntersectionObserver 사용
+    if (isWeb()) {
+      const handleVisibilityChange = (entries: IntersectionObserverEntry[]) => {
+        const [entry] = entries;
+        const isVisible = entry.isIntersecting;
+
+        setIsVideoVisible(isVisible);
+
+        // 자동 재생 표시기 상태 업데이트
+        if (isVisible) {
+          setShowAutoplayIndicator(true);
+          // 3초 후 표시기 숨기기
+          setTimeout(() => setShowAutoplayIndicator(false), 3000);
+        } else {
+          setShowAutoplayIndicator(false);
+        }
+
+        // 화면에 보일 때 자동 재생 시작, 화면에서 벗어나면 일시 정지
+        if (isVisible) {
+          if (videoRef.current) {
+            // 자동 재생 시도
+            videoRef.current
+              .play()
+              .catch((err) => console.log("비디오 자동 재생 실패:", err));
+          }
+        } else {
+          if (videoRef.current && !videoRef.current.paused) {
+            videoRef.current.pause();
+          }
+        }
+      };
+
+      const observer = new IntersectionObserver(handleVisibilityChange, {
+        threshold: 0.5, // 50% 이상 보일 때 감지
+      });
+
+      // 비디오 컨테이너 관찰 시작
+      if (videoContainerRef.current && typeof window !== "undefined") {
+        // @ts-ignore - React Native의 View 타입과 DOM Element 타입 간의 호환성 이슈
+        observer.observe(videoContainerRef.current);
+      }
+
+      return () => {
+        observer.disconnect();
+      };
+    }
+    // 모바일 환경: 간단히 항상 보이는 것으로 처리
+    else {
+      setIsVideoVisible(true);
+      setShowAutoplayIndicator(true);
+      // 3초 후 표시기 숨기기
+      const timer = setTimeout(() => setShowAutoplayIndicator(false), 3000);
+
+      return () => {
+        setIsVideoVisible(false);
+        setShowAutoplayIndicator(false);
+        clearTimeout(timer);
+      };
+    }
+  }, [videoMedia.length, isWeb]);
+
+  // 비디오 가시성 감지 및 자동 재생 처리는 위에서 구현되었음
 
   // 카테고리별 색상 및 텍스트 매핑
   const getCategoryInfo = (type: PostType) => {
@@ -379,6 +448,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
             {videoMedia.length > 0 ? (
               // 동영상이 있는 경우
               <View
+                ref={videoContainerRef}
                 style={{
                   aspectRatio: 16 / 9, // 동영상 기본 비율
                   maxHeight: screenHeight * IMAGE_CONSTANTS.MAX_HEIGHT_RATIO,
@@ -389,69 +459,122 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                   justifyContent: "center",
                   alignItems: "center",
                 }}
+                onLayout={() => {
+                  // 모바일 환경에서 비디오가 레이아웃에 배치되면 가시성 체크
+                  if (!isWeb() && videoMedia.length > 0) {
+                    setIsVideoVisible(true);
+                  }
+                }}
               >
-                {isWeb() ? (
-                  // 웹 환경에서는 HTML5 video 태그 사용
-                  <video
-                    src={videoMedia[0]?.url}
-                    style={{
-                      height: "100%",
-                      width: "100%",
-                      objectFit: "cover",
-                    }}
-                    controls={showVideoControls}
-                    loop={false}
-                    autoPlay={isVideoPlaying}
-                    onPlay={() => setIsVideoPlaying(true)}
-                    onPause={() => setIsVideoPlaying(false)}
-                  />
-                ) : Video ? (
-                  // 모바일 환경에서는 expo-video 사용
-                  <Video
-                    source={{ uri: videoMedia[0]?.url }}
-                    style={{ height: "100%", width: "100%" }}
-                    useNativeControls={showVideoControls}
-                    resizeMode="cover"
-                    isLooping={false}
-                    shouldPlay={isVideoPlaying}
-                    onPlaybackStatusUpdate={(status: any) => {
-                      if (status.isLoaded) {
-                        setIsVideoPlaying(status.isPlaying || false);
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => {
+                    setVideoTouched(true);
+                    setShowVideoControls(true);
+                    // 터치 시 비디오 재생/일시정지 토글
+                    if (isWeb() && videoRef.current) {
+                      if (videoRef.current.paused) {
+                        videoRef.current.play();
+                      } else {
+                        videoRef.current.pause();
                       }
-                    }}
-                  />
-                ) : (
-                  // Video 컴포넌트를 로드할 수 없는 경우 플레이스홀더 표시
-                  <View style={themed($videoPlaceholder)}>
-                    <Ionicons name="videocam" size={48} color="white" />
-                    <Text style={themed($videoPlaceholderText)}>
-                      동영상을 재생할 수 없습니다
-                    </Text>
-                  </View>
-                )}
+                    }
+                  }}
+                  style={{ width: "100%", height: "100%" }}
+                >
+                  {isWeb() ? (
+                    // 웹 환경에서는 HTML5 video 태그 사용
+                    <video
+                      ref={videoRef}
+                      src={videoMedia[0]?.url}
+                      style={{
+                        height: "100%",
+                        width: "100%",
+                        objectFit: "cover",
+                        cursor: "pointer",
+                      }}
+                      controls={videoTouched || showVideoControls}
+                      loop={true}
+                      muted={!videoTouched}
+                      playsInline={true}
+                      autoPlay={isVideoVisible}
+                      onPlay={() => setIsVideoPlaying(true)}
+                      onPause={() => setIsVideoPlaying(false)}
+                      onClick={() => {
+                        setVideoTouched(true);
+                        setShowVideoControls(true);
+                      }}
+                    />
+                  ) : Video ? (
+                    // 모바일 환경에서는 expo-video 사용
+                    <Video
+                      source={{ uri: videoMedia[0]?.url }}
+                      style={{ height: "100%", width: "100%" }}
+                      useNativeControls={videoTouched || showVideoControls}
+                      resizeMode="cover"
+                      isLooping={false}
+                      isMuted={true}
+                      shouldPlay={isVideoVisible}
+                      positionMillis={0}
+                      progressUpdateIntervalMillis={500}
+                      onPlaybackStatusUpdate={(status: any) => {
+                        if (status.isLoaded) {
+                          setIsVideoPlaying(status.isPlaying || false);
+                        }
+                      }}
+                    />
+                  ) : (
+                    // Video 컴포넌트를 로드할 수 없는 경우 플레이스홀더 표시
+                    <View style={themed($videoPlaceholder)}>
+                      <Ionicons name="videocam" size={48} color="white" />
+                      <Text style={themed($videoPlaceholderText)}>
+                        동영상을 재생할 수 없습니다
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
 
                 {/* 동영상 컨트롤 오버레이 (웹에서는 네이티브 컨트롤 사용) */}
-                {!isWeb() && !isVideoPlaying && (
+                {!isWeb() && !isVideoPlaying && !videoTouched && (
                   <TouchableOpacity
                     style={themed($videoPlayButton)}
                     onPress={(e) => {
                       e.stopPropagation();
                       setIsVideoPlaying(true);
+                      setVideoTouched(true);
                     }}
                   >
                     <Ionicons name="play" size={48} color="white" />
                   </TouchableOpacity>
                 )}
 
+                {/* 자동 재생 상태 표시 */}
+                {isVideoPlaying && !videoTouched && showAutoplayIndicator && (
+                  <View style={themed($autoplayIndicator)}>
+                    <Ionicons
+                      name="play-circle-outline"
+                      size={14}
+                      color="white"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={themed($autoplayIndicatorText)}>
+                      자동 재생 중
+                    </Text>
+                  </View>
+                )}
+
                 {/* 동영상 정보 표시 */}
-                {videoMedia[0]?.duration && (
+                {videoMedia[0] && (
                   <View style={themed($videoDurationBadge)}>
                     <Ionicons name="videocam" size={12} color="white" />
                     <Text style={themed($videoDurationText)}>
-                      {Math.floor(videoMedia[0].duration / 60)}:
-                      {(videoMedia[0].duration % 60)
-                        .toFixed(0)
-                        .padStart(2, "0")}
+                      {videoMedia[0]
+                        ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
+                            ((videoMedia[0] as any).duration || 0) % 60,
+                          )
+                            .toString()
+                            .padStart(2, "0")}`
+                        : "00:00"}
                     </Text>
                   </View>
                 )}
@@ -603,8 +726,11 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
               params: { postId: post.id },
             })
           }
+          // @ts-ignore - PostActions 컴포넌트 타입 정의에 onBookmark가 없음
           onBookmark={handleBookmark}
+          // @ts-ignore - PostActions 컴포넌트 타입 정의에 isBookmarked가 없음
           isBookmarked={isBookmarked}
+          // @ts-ignore - PostActions 컴포넌트 타입 정의에 isBookmarkProcessing이 없음
           isBookmarkProcessing={isBookmarkProcessing}
           variant="feed"
           likeCount={likeCount}
@@ -752,6 +878,26 @@ const $profileName: ThemedStyle<TextStyle> = () => ({
   color: "white",
   fontSize: 14,
   fontWeight: "600",
+});
+
+// 자동 재생 표시기
+const $autoplayIndicator: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  bottom: spacing.md,
+  left: spacing.md,
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "rgba(0, 0, 0, 0.7)",
+  borderRadius: 12,
+  paddingHorizontal: spacing.xs,
+  paddingVertical: 4,
+  zIndex: 3,
+});
+
+const $autoplayIndicatorText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 11,
+  fontWeight: "500",
 });
 
 const $profileTime: ThemedStyle<TextStyle> = () => ({
@@ -909,7 +1055,8 @@ const $videoPlayButton: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
   top: "50%",
   left: "50%",
-  transform: [{ translateX: -24 }, { translateY: -24 }],
+  marginLeft: -40,
+  marginTop: -40,
   width: 80,
   height: 80,
   borderRadius: 40,
@@ -953,3 +1100,5 @@ const $videoPlaceholderText: ThemedStyle<TextStyle> = () => ({
   marginTop: 8,
   textAlign: "center",
 });
+
+// 스타일 정의 완료

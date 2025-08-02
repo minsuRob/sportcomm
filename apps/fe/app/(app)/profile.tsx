@@ -148,6 +148,10 @@ export default function ProfileScreen() {
     router.push("/(modals)/team-selection");
   };
 
+  const handleAdminDashboard = () => {
+    router.push("/(admin)/dashboard");
+  };
+
   /**
    * 탭 변경 핸들러
    */
@@ -249,6 +253,17 @@ export default function ProfileScreen() {
             />
             <Text style={themed($teamButtonText)}>My Team</Text>
           </TouchableOpacity>
+
+          {/* 관리자 전용 버튼 */}
+          {currentUser?.role === "ADMIN" && (
+            <TouchableOpacity
+              style={themed($adminButton)}
+              onPress={handleAdminDashboard}
+            >
+              <Ionicons name="settings-outline" color="#EF4444" size={16} />
+              <Text style={themed($adminButtonText)}>관리자</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -379,6 +394,24 @@ const $teamButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $teamButtonText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginLeft: spacing.xs,
   color: colors.tint,
+  fontWeight: "600",
+});
+
+const $adminButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderWidth: 1,
+  borderColor: "#EF4444",
+  borderRadius: 8,
+  flex: 1,
+  justifyContent: "center",
+});
+
+const $adminButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  marginLeft: spacing.xs,
+  color: "#EF4444",
   fontWeight: "600",
 });
 

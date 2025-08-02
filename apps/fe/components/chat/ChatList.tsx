@@ -12,7 +12,31 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import ChatMessage, { Message, MessageWithIsMe } from "./ChatMessage";
+import ChatMessage, {
+  Message as ChatMessageType,
+  MessageWithIsMe,
+} from "./ChatMessage";
+
+// ChatList에서 사용하는 Message 타입 (GraphQL 응답과 호환)
+export interface Message {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  user: {
+    id: string;
+    nickname: string;
+    profileImageUrl?: string;
+  };
+  replyTo?: {
+    id: string;
+    content: string;
+    user: {
+      nickname: string;
+    };
+  };
+  isSystem?: boolean;
+}
 import { User } from "@/lib/auth";
 import dayjs from "dayjs";
 import {
@@ -130,9 +154,30 @@ export default function ChatList({
   }));
 
   /**
+   * 메시지를 ChatMessage 컴포넌트 형식으로 변환
+   */
+  const convertToChatMessage = (
+    message: MessageWithIsMe
+  ): ChatMessageType & { isMe: boolean } => {
+    return {
+      id: message.id,
+      content: message.content,
+      created_at: message.created_at,
+      user_id: message.user_id,
+      user: {
+        id: message.user.id,
+        nickname: message.user.nickname,
+        avatar_url: message.user.profileImageUrl,
+      },
+      is_system: message.isSystem,
+      isMe: message.isMe,
+    };
+  };
+
+  /**
    * 메시지 신고/차단 핸들러
    */
-  const handleModerationAction = (message: Message) => {
+  const handleModerationAction = (message: ChatMessageType) => {
     const target: ModerationTarget = {
       userId: message.user.id,
       userName: message.user.nickname,
@@ -192,6 +237,7 @@ export default function ChatList({
 
     // 메시지인 경우
     const message = item as MessageWithIsMe;
+    const convertedMessage = convertToChatMessage(message);
 
     // 연속된 메시지인지 확인 (아바타 표시 여부 결정)
     const showAvatar = (() => {
@@ -211,10 +257,12 @@ export default function ChatList({
 
     return (
       <ChatMessage
-        message={message}
+        message={convertedMessage}
         showAvatar={showAvatar}
         showDate={showDate}
-        onLongPress={onLongPressMessage}
+        onLongPress={
+          onLongPressMessage ? () => onLongPressMessage(message) : undefined
+        }
         onModerationAction={handleModerationAction}
       />
     );

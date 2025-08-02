@@ -20,20 +20,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
+    // HTTP 컨텍스트가 아닌 경우 처리하지 않음 (GraphQL 등은 다른 필터에서 처리)
+    // 타입 오류 방지를 위해 contextType 변수를 사용하지 않고 즉시 비교
+    if (String(host.getType()) !== 'http') {
+      return;
+    }
+
     // HTTP 어댑터 가져오기
     const { httpAdapter } = this.httpAdapterHost;
 
-    // 컨텍스트 타입에 따라 처리
-    const contextType = host.getType();
-    let request: Request | undefined;
-    let response: Response | undefined;
-
-    // HTTP 컨텍스트인 경우에만 request, response 객체 추출
-    if (contextType === 'http') {
-      const ctx = host.switchToHttp();
-      request = ctx.getRequest<Request>();
-      response = ctx.getResponse<Response>();
-    }
+    // HTTP 컨텍스트 추출
+    const ctx = host.switchToHttp();
+    const request = ctx.getRequest<Request>();
+    const response = ctx.getResponse<Response>();
 
     // HTTP 상태 코드 결정
     const httpStatus =
@@ -70,22 +69,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // 요청 정보 - request 객체가 있는 경우에만 수집
-    let requestInfo: any = {
-      type: contextType,
-      message: '요청 정보를 사용할 수 없습니다.'
+    // 요청 정보 수집
+    const requestInfo = {
+      method: request.method,
+      url: request.url,
+      query: request.query,
+      body: this.sanitizeRequestBody(request.body),
+      params: request.params,
+      headers: this.sanitizeHeaders(request.headers),
     };
-
-    if (request) {
-      requestInfo = {
-        method: request.method,
-        url: request.url,
-        query: request.query,
-        body: this.sanitizeRequestBody(request.body),
-        params: request.params,
-        headers: this.sanitizeHeaders(request.headers),
-      };
-    }
 
     // 오류 로깅
     this.logger.error(`예외 발생: ${errorMessage}`, {
@@ -119,17 +111,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : {}),
     };
 
-    // HTTP 컨텍스트인 경우에만 응답 전송
-    if (contextType === 'http' && response) {
-      try {
-        httpAdapter.reply(response, responseBody, httpStatus);
-      } catch (error) {
-        this.logger.error(`응답 전송 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    } else {
-      // 다른 컨텍스트(GraphQL 등)에서는 로그만 기록하고 계속 진행
-      // GraphQL은 자체 에러 처리 메커니즘이 있으므로 별도 처리 필요 없음
-      this.logger.error(`컨텍스트 타입 ${contextType}에 대한 응답을 처리할 수 없습니다: ${errorMessage}`);
+    // 응답 전송
+    try {
+      httpAdapter.reply(response, responseBody, httpStatus);
+    } catch (error) {
+      this.logger.error(`응답 전송 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

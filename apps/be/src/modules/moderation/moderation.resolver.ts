@@ -19,7 +19,7 @@ import {
   GqlAuthGuard,
   OptionalGqlAuthGuard,
 } from '../../common/guards/gql-auth.guard';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { CurrentUser, OptionalCurrentUser } from '../../common/decorators/current-user.decorator';
 
 /**
  * 신고 생성 입력 타입
@@ -133,7 +133,7 @@ export class ModerationResolver {
    */
   @UseGuards(OptionalGqlAuthGuard)
   @Query(() => [String], { description: '차단된 사용자 목록 조회' })
-  async getBlockedUsers(@CurrentUser() user: User | null): Promise<string[]> {
+  async getBlockedUsers(@OptionalCurrentUser() user: User | null): Promise<string[]> {
     // 인증되지 않은 사용자는 빈 배열 반환
     if (!user || !user.id) {
       return [];

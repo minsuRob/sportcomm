@@ -5,8 +5,9 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { GqlExceptionFilter } from '@nestjs/graphql';
+import { GqlExceptionFilter, GqlContextType } from '@nestjs/graphql';
 
 /**
  * GraphQL 전용 예외 필터
@@ -17,6 +18,11 @@ export class GraphQLExceptionFilter implements GqlExceptionFilter {
   private readonly logger = new Logger(GraphQLExceptionFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost): any {
+    // GraphQL 컨텍스트가 아닌 경우는 처리하지 않음
+    if (String(host.getType()) !== 'graphql') {
+      return exception;
+    }
+
     // 기본 응답 객체
     const response: any = {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -55,6 +61,12 @@ export class GraphQLExceptionFilter implements GqlExceptionFilter {
       if (process.env.NODE_ENV === 'development') {
         response.stack = exception.stack?.split('\n').map((line) => line.trim());
       }
+
+      // 인증 관련 오류 처리
+      if (exception.message.includes('인증되지 않은 사용자입니다') ||
+          exception.message.includes('로그인이 필요합니다')) {
+        response.statusCode = HttpStatus.UNAUTHORIZED;
+      }
     }
 
     // Sharp 라이브러리 관련 특정 오류 메시지 사용자 친화적으로 변환
@@ -68,11 +80,41 @@ export class GraphQLExceptionFilter implements GqlExceptionFilter {
 
     // 로깅
     const contextInfo = this.getContextInfo(host);
-    this.logger.error(`GraphQL 예외 발생: ${response.message}`, {
-      exception: exception instanceof Error ? exception.stack : String(exception),
-      context: contextInfo,
-      statusCode: response.statusCode,
-    });
+
+    // 로그 레벨 결정 (인증 오류는 경고로 처리)
+    const isAuthError =
+      exception instanceof UnauthorizedException ||
+      response.statusCode === HttpStatus.UNAUTHORIZED ||
+      (exception instanceof Error && (
+        exception.message.includes('인증되지 않은 사용자입니다') ||
+        exception.message.includes('로그인이 필요합니다') ||
+        exception.message.includes('이메일 또는 비밀번호가 잘못되었습니다')
+      ));
+
+    if (isAuthError) {
+      this.logger.warn(`GraphQL 인증 오류: ${response.message}`, {
+        context: contextInfo,
+        statusCode: response.statusCode,
+      });
+    } else {
+      this.logger.error(`GraphQL 예외 발생: ${response.message}`, {
+        exception: exception instanceof Error ? exception.stack : String(exception),
+        context: contextInfo,
+        statusCode: response.statusCode,
+      });
+    }
+
+    // 에러 코드 매핑
+    let errorCode = 'INTERNAL_SERVER_ERROR';
+    if (exception instanceof UnauthorizedException || response.statusCode === HttpStatus.UNAUTHORIZED) {
+      errorCode = 'UNAUTHENTICATED';
+    } else if (response.statusCode === HttpStatus.FORBIDDEN) {
+      errorCode = 'FORBIDDEN';
+    } else if (response.statusCode === HttpStatus.BAD_REQUEST) {
+      errorCode = 'BAD_USER_INPUT';
+    } else if (response.statusCode !== HttpStatus.INTERNAL_SERVER_ERROR) {
+      errorCode = response.statusCode.toString();
+    }
 
     // GraphQL 응답 형식으로 변환
     const gqlResponse = {
@@ -93,10 +135,7 @@ export class GraphQLExceptionFilter implements GqlExceptionFilter {
     // GraphQL 형식으로 에러 반환
     return {
       extensions: {
-        code:
-          response.statusCode === HttpStatus.INTERNAL_SERVER_ERROR
-            ? 'INTERNAL_SERVER_ERROR'
-            : response.statusCode.toString(),
+        code: errorCode,
         response: gqlResponse,
       },
       message: response.message,

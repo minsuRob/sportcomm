@@ -23,10 +23,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // HTTP 어댑터 가져오기
     const { httpAdapter } = this.httpAdapterHost;
 
-    // 실행 컨텍스트 가져오기
-    const ctx = host.switchToHttp();
-    const request = ctx.getRequest<Request>();
-    const response = ctx.getResponse<Response>();
+    // 컨텍스트 타입에 따라 처리
+    const contextType = host.getType();
+    let request: Request | undefined;
+    let response: Response | undefined;
+
+    // HTTP 컨텍스트인 경우에만 request, response 객체 추출
+    if (contextType === 'http') {
+      const ctx = host.switchToHttp();
+      request = ctx.getRequest<Request>();
+      response = ctx.getResponse<Response>();
+    }
 
     // HTTP 상태 코드 결정
     const httpStatus =
@@ -63,15 +70,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // 요청 정보
-    const requestInfo = {
-      method: request.method,
-      url: request.url,
-      query: request.query,
-      body: this.sanitizeRequestBody(request.body),
-      params: request.params,
-      headers: this.sanitizeHeaders(request.headers),
+    // 요청 정보 - request 객체가 있는 경우에만 수집
+    let requestInfo: any = {
+      type: contextType,
+      message: '요청 정보를 사용할 수 없습니다.'
     };
+
+    if (request) {
+      requestInfo = {
+        method: request.method,
+        url: request.url,
+        query: request.query,
+        body: this.sanitizeRequestBody(request.body),
+        params: request.params,
+        headers: this.sanitizeHeaders(request.headers),
+      };
+    }
 
     // 오류 로깅
     this.logger.error(`예외 발생: ${errorMessage}`, {
@@ -94,8 +108,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const responseBody = {
       statusCode: httpStatus,
       timestamp: new Date().toISOString(),
-      path: request.url,
-      method: request.method,
+      path: request?.url || 'unknown',
+      method: request?.method || 'unknown',
       message: errorMessage,
       ...(errorDetails && process.env.NODE_ENV === 'development'
         ? { details: errorDetails }
@@ -105,8 +119,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : {}),
     };
 
-    // 응답 전송
-    httpAdapter.reply(response, responseBody, httpStatus);
+    // HTTP 컨텍스트인 경우에만 응답 전송
+    if (contextType === 'http' && response) {
+      try {
+        httpAdapter.reply(response, responseBody, httpStatus);
+      } catch (error) {
+        this.logger.error(`응답 전송 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } else {
+      // 다른 컨텍스트(GraphQL 등)에서는 로그만 기록하고 계속 진행
+      // GraphQL은 자체 에러 처리 메커니즘이 있으므로 별도 처리 필요 없음
+      this.logger.error(`컨텍스트 타입 ${contextType}에 대한 응답을 처리할 수 없습니다: ${errorMessage}`);
+    }
   }
 
   /**

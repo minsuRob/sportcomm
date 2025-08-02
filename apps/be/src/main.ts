@@ -11,6 +11,7 @@ import { ensureDir } from 'fs-extra';
 // morgan 패키지가 설치되지 않았으므로 임시로 제거
 // import * as morgan from 'morgan';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { GraphQLExceptionFilter } from './common/filters/gql-exception.filter';
 
 /**
  * 스포츠 커뮤니티 백엔드 애플리케이션 진입점
@@ -31,7 +32,10 @@ async function bootstrap() {
 
     // 전역 예외 필터 등록
     const httpAdapterHost = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new GlobalExceptionFilter(httpAdapterHost));
+    app.useGlobalFilters(
+      new GraphQLExceptionFilter(),
+      new GlobalExceptionFilter(httpAdapterHost)
+    );
     Logger.log('전역 예외 필터가 등록되었습니다', 'Bootstrap');
 
     // 요청 로깅 미들웨어 설정 (morgan 패키지 설치 후 활성화)

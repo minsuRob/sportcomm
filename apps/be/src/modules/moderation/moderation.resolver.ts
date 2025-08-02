@@ -134,13 +134,19 @@ export class ModerationResolver {
   @UseGuards(OptionalGqlAuthGuard)
   @Query(() => [String], { description: '차단된 사용자 목록 조회' })
   async getBlockedUsers(@CurrentUser() user: User | null): Promise<string[]> {
+    // 인증되지 않은 사용자는 빈 배열 반환
+    if (!user || !user.id) {
+      return [];
+    }
+
     try {
-      if (!user || !user.id) {
-        return [];
-      }
+      // 차단된 사용자 목록 조회
       return await this.moderationService.getBlockedUserIds(user.id);
     } catch (error) {
-      console.error('차단된 사용자 목록 조회 오류:', error);
+      // 에러 로깅 및 빈 배열 반환
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`차단된 사용자 목록 조회 오류 (사용자 ID: ${user.id}):`, errorMessage);
+      // 오류 발생 시에도 클라이언트에 빈 배열 반환하여 UX 유지
       return [];
     }
   }

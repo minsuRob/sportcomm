@@ -34,6 +34,8 @@ export class AdminService {
     private readonly chatMessageRepository: Repository<ChatMessage>,
     @InjectRepository(Report)
     private readonly reportRepository: Repository<Report>,
+    @InjectRepository(Feedback)
+    private readonly feedbackRepository: Repository<Feedback>,
   ) {}
 
   /**
@@ -307,3 +309,127 @@ export class AdminService {
     };
   }
 }
+
+  // === 피드백 관리 ===
+
+  /**
+   * 모든 피드백 목록 조회
+   */
+  async getAllFeedbacks(adminUser: User, page: number = 1, limit: number = 20) {
+    this.validateAdminPermission(adminUser);
+
+    const [feedbacks, total] = await this.feedbackRepository.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { createdAt: 'DESC' },
+      relations: ['submitter', 'responder'],
+    });
+
+    return {
+      feedbacks,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * 피드백 상태별 조회
+   */
+  async getFeedbacksByStatus(
+    adminUser: User,
+    status: FeedbackStatus,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    this.validateAdminPermission(adminUser);
+
+    const [feedbacks, total] = await this.feedbackRepository.findAndCount({
+      where: { status },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { createdAt: 'DESC' },
+      relations: ['submitter', 'responder'],
+    });
+
+    return {
+      feedbacks,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * 피드백 응답 추가
+   */
+  async respondToFeedback(
+    adminUser: User,
+    feedbackId: string,
+    response: string,
+  ) {
+    this.validateAdminPermission(adminUser);
+
+    const feedback = await this.feedbackRepository.findOne({
+      where: { id: feedbackId },
+    });
+
+    if (!feedback) {
+      throw new NotFoundException('피드백을 찾을 수 없습니다.');
+    }
+
+    feedback.addAdminResponse(response, adminUser.id);
+    await this.feedbackRepository.save(feedback);
+
+    return feedback;
+  }
+
+  /**
+   * 피드백 상태 업데이트
+   */
+  async updateFeedbackStatus(
+    adminUser: User,
+    feedbackId: string,
+    status: FeedbackStatus,
+  ) {
+    this.validateAdminPermission(adminUser);
+
+    const feedback = await this.feedbackRepository.findOne({
+      where: { id: feedbackId },
+    });
+
+    if (!feedback) {
+      throw new NotFoundException('피드백을 찾을 수 없습니다.');
+    }
+
+    feedback.updateStatus(status);
+    await this.feedbackRepository.save(feedback);
+
+    return feedback;
+  }
+
+  /**
+   * 피드백 우선순위 업데이트
+   */
+  async updateFeedbackPriority(
+    adminUser: User,
+    feedbackId: string,
+    priority: FeedbackPriority,
+  ) {
+    this.validateAdminPermission(adminUser);
+
+    const feedback = await this.feedbackRepository.findOne({
+      where: { id: feedbackId },
+    });
+
+    if (!feedback) {
+      throw new NotFoundException('피드백을 찾을 수 없습니다.');
+    }
+
+    feedback.updatePriority(priority);
+    await this.feedbackRepository.save(feedback);
+
+    return feedback;
+  }

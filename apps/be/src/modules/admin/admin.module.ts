@@ -9,6 +9,7 @@ import { Post } from '../../entities/post.entity';
 import { ChatRoom } from '../../entities/chat-room.entity';
 import { ChatMessage } from '../../entities/chat-message.entity';
 import { Report } from '../../entities/report.entity';
+import { Feedback } from '../../entities/feedback.entity';
 
 /**
  * 관리자 모듈
@@ -18,7 +19,14 @@ import { Report } from '../../entities/report.entity';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Post, ChatRoom, ChatMessage, Report]),
+    TypeOrmModule.forFeature([
+      User,
+      Post,
+      ChatRoom,
+      ChatMessage,
+      Report,
+      Feedback,
+    ]),
   ],
   providers: [
     AdminService,

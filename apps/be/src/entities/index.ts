@@ -18,6 +18,7 @@ import { Report } from './report.entity';
 import { Block } from './block.entity';
 import { Bookmark } from './bookmark.entity';
 import { Notification } from './notification.entity';
+import { Feedback } from './feedback.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -53,6 +54,14 @@ export { Bookmark } from './bookmark.entity';
 // 알림 관련 엔티티
 export { Notification, NotificationType } from './notification.entity';
 
+// 피드백 관련 엔티티
+export {
+  Feedback,
+  FeedbackType,
+  FeedbackStatus,
+  FeedbackPriority,
+} from './feedback.entity';
+
 /**
  * 모든 엔티티를 배열로 내보내는 상수
  * TypeORM 설정에서 사용됩니다.
@@ -71,6 +80,7 @@ export const entities = [
   Block,
   Bookmark,
   Notification,
+  Feedback,
 ];
 
 /**
@@ -91,6 +101,7 @@ export const tableNames = {
   reports: 'reports',
   blocks: 'blocks',
   bookmarks: 'bookmarks',
+  feedbacks: 'feedbacks',
 } as const;
 
 /**
@@ -138,6 +149,9 @@ export const entityRelations = {
   Bookmark: {
     manyToOne: ['user', 'post'],
   },
+  Feedback: {
+    manyToOne: ['submitter', 'responder'],
+  },
 } as const;
 
 /**
@@ -164,4 +178,5 @@ export const entityIndexes = {
   ],
   blocks: ['blockerId', 'blockedUserId', 'createdAt'],
   bookmarks: ['userId', 'postId', 'createdAt'],
+  feedbacks: ['submitterId', 'type', 'status', 'priority', 'createdAt'],
 } as const;

@@ -183,6 +183,13 @@ export default function AdminDashboardScreen() {
       color: "#EF4444",
       onPress: () => router.push("/(admin)/reports"),
     },
+    {
+      title: "피드백 관리",
+      description: "사용자 피드백 및 건의사항 처리",
+      icon: "chatbubble-ellipses-outline",
+      color: "#8B5CF6",
+      onPress: () => router.push("/(admin)/feedbacks"),
+    },
   ];
 
   if (isLoading) {

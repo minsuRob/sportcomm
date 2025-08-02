@@ -203,7 +203,7 @@ export default function TeamSelectionScreen() {
         title: "팀 선택 완료",
         message: selectedTeam
           ? `${selectedTeamInfo?.name} 팀이 선택되었습니다!`
-          : "팀 선택이 해제되었습니다.",
+          : "팀 선택이 저장되었습니다.",
         duration: 2000,
       });
 
@@ -354,43 +354,6 @@ export default function TeamSelectionScreen() {
       </View>
 
       <ScrollView style={themed($scrollContainer)}>
-        {/* 팀 선택 해제 옵션 */}
-        <View style={themed($noTeamSection)}>
-          <TouchableOpacity
-            style={[
-              themed($noTeamCard),
-              {
-                borderColor:
-                  selectedTeam === null
-                    ? theme.colors.tint
-                    : theme.colors.border,
-                backgroundColor:
-                  selectedTeam === null
-                    ? theme.colors.tint + "20"
-                    : theme.colors.card,
-              },
-            ]}
-            onPress={() => setSelectedTeam(null)}
-          >
-            <View style={themed($teamIconContainer)}>
-              <Text style={themed($teamCardIcon)}>🏆</Text>
-            </View>
-            <Text
-              style={[
-                themed($teamCardName),
-                {
-                  color:
-                    selectedTeam === null
-                      ? theme.colors.tint
-                      : theme.colors.text,
-                },
-              ]}
-            >
-              팀 선택 안함
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* 선택된 카테고리의 팀 목록 */}
         <View style={themed($teamsContainer)}>
           {renderTeamGrid(SPORT_CATEGORIES[activeCategoryIndex].teams)}
@@ -490,24 +453,9 @@ const $categoryTabText: ThemedStyle<TextStyle> = () => ({
   fontWeight: "600",
 });
 
-const $noTeamSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.lg,
-  alignItems: "center",
-});
-
-const $noTeamCard: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "center",
-  paddingVertical: spacing.lg,
-  paddingHorizontal: spacing.xl,
-  borderWidth: 2,
-  borderRadius: 16,
-  minWidth: 120,
-});
-
 const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
-  paddingBottom: spacing.xl,
+  paddingVertical: spacing.lg,
 });
 
 const $teamRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({

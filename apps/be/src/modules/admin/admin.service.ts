@@ -9,7 +9,12 @@ import { User, UserRole } from '../../entities/user.entity';
 import { Post } from '../../entities/post.entity';
 import { ChatRoom, ChatRoomType } from '../../entities/chat-room.entity';
 import { ChatMessage } from '../../entities/chat-message.entity';
-import { Report } from '../../entities/report.entity';
+import { Report, ReportStatus } from '../../entities/report.entity';
+import {
+  Feedback,
+  FeedbackStatus,
+  FeedbackPriority,
+} from '../../entities/feedback.entity';
 
 /**
  * 관리자 서비스
@@ -72,7 +77,7 @@ export class AdminService {
         },
       }),
       this.reportRepository.count({
-        where: { status: 'PENDING' },
+        where: { status: ReportStatus.PENDING },
       }),
     ]);
 

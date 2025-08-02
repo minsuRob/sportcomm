@@ -264,7 +264,7 @@ export class AppService {
           title: '오늘 경기 정말 대박이었네요!',
           content:
             '마지막 10초를 남기고 역전 골이라니... 믿을 수가 없습니다. 손에 땀을 쥐게 하는 경기였습니다.',
-          type: PostType.CHEERING,
+          type: PostType.TOTTENHAM,
           author: createdUsers[0],
           likeCount: 25,
           commentCount: 3,
@@ -273,7 +273,7 @@ export class AppService {
           title: '이번 시즌 우승팀 예측',
           content:
             '데이터를 기반으로 분석해 본 결과, A팀의 우승 확률이 가장 높습니다. 자세한 내용은 본문을 참고하세요.',
-          type: PostType.ANALYSIS,
+          type: PostType.LIVERPOOL,
           author: createdUsers[1],
           likeCount: 150,
           commentCount: 42,
@@ -282,7 +282,7 @@ export class AppService {
           title: '역대급 명장면 하이라이트',
           content:
             '이 선수의 슈퍼 세이브는 정말 길이 남을 명장면입니다. 다들 어떻게 보셨나요? 다시 봐도 감동적이네요.',
-          type: PostType.HIGHLIGHT,
+          type: PostType.DOOSAN_BEARS,
           author: createdUsers[0],
           likeCount: 37,
           commentCount: 12,

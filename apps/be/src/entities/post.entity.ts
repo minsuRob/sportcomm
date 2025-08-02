@@ -18,32 +18,72 @@ import { PostLike } from './post-like.entity';
 import { Bookmark } from './bookmark.entity';
 
 /**
- * 게시물 유형 열거형
- * 스포츠 커뮤니티의 다양한 게시물 형태를 정의합니다.
+ * 게시물 유형 열거형 (팀 기반)
+ * 사용자가 응원하는 팀에 따른 게시물 분류를 정의합니다.
  */
 export enum PostType {
-  /** 분석 게시물 - 경기 분석, 전술 분석 등 */
-  ANALYSIS = 'ANALYSIS',
-  /** 응원 게시물 - 팀이나 선수를 응원하는 게시물 */
-  CHEERING = 'CHEERING',
-  /** 하이라이트 게시물 - 경기 하이라이트, 명장면 등 */
-  HIGHLIGHT = 'HIGHLIGHT',
+  // 축구팀
+  /** 토트넘 홋스퍼 */
+  TOTTENHAM = 'TOTTENHAM',
+  /** 뉴캐슬 유나이티드 */
+  NEWCASTLE = 'NEWCASTLE',
+  /** 아틀레티코 마드리드 */
+  ATLETICO_MADRID = 'ATLETICO_MADRID',
+  /** 맨체스터 시티 */
+  MANCHESTER_CITY = 'MANCHESTER_CITY',
+  /** 리버풀 */
+  LIVERPOOL = 'LIVERPOOL',
+
+  // 야구팀
+  /** 두산 베어스 */
+  DOOSAN_BEARS = 'DOOSAN_BEARS',
+  /** 한화 이글스 */
+  HANWHA_EAGLES = 'HANWHA_EAGLES',
+  /** LG 트윈스 */
+  LG_TWINS = 'LG_TWINS',
+  /** 삼성 라이온즈 */
+  SAMSUNG_LIONS = 'SAMSUNG_LIONS',
+  /** KIA 타이거즈 */
+  KIA_TIGERS = 'KIA_TIGERS',
+
+  // e스포츠팀
+  /** T1 */
+  T1 = 'T1',
+  /** Gen.G */
+  GENG = 'GENG',
+  /** DRX */
+  DRX = 'DRX',
+  /** KT 롤스터 */
+  KT_ROLSTER = 'KT_ROLSTER',
+  /** 담원 기아 */
+  DAMWON_KIA = 'DAMWON_KIA',
 }
 
 // GraphQL 스키마에 PostType enum 등록
 registerEnumType(PostType, {
   name: 'PostType',
-  description: '게시물 유형',
+  description: '팀 기반 게시물 유형',
   valuesMap: {
-    ANALYSIS: {
-      description: '분석 게시물 (경기 분석, 전술 분석 등)',
-    },
-    CHEERING: {
-      description: '응원 게시물 (팀이나 선수 응원)',
-    },
-    HIGHLIGHT: {
-      description: '하이라이트 게시물 (경기 하이라이트, 명장면)',
-    },
+    // 축구팀
+    TOTTENHAM: { description: '토트넘 홋스퍼' },
+    NEWCASTLE: { description: '뉴캐슬 유나이티드' },
+    ATLETICO_MADRID: { description: '아틀레티코 마드리드' },
+    MANCHESTER_CITY: { description: '맨체스터 시티' },
+    LIVERPOOL: { description: '리버풀' },
+
+    // 야구팀
+    DOOSAN_BEARS: { description: '두산 베어스' },
+    HANWHA_EAGLES: { description: '한화 이글스' },
+    LG_TWINS: { description: 'LG 트윈스' },
+    SAMSUNG_LIONS: { description: '삼성 라이온즈' },
+    KIA_TIGERS: { description: 'KIA 타이거즈' },
+
+    // e스포츠팀
+    T1: { description: 'T1' },
+    GENG: { description: 'Gen.G' },
+    DRX: { description: 'DRX' },
+    KT_ROLSTER: { description: 'KT 롤스터' },
+    DAMWON_KIA: { description: '담원 기아' },
   },
 });
 
@@ -90,16 +130,16 @@ export class Post extends BaseEntity {
   content: string;
 
   /**
-   * 게시물 유형
-   * 분석, 응원, 하이라이트 중 하나의 유형을 가집니다.
+   * 게시물 유형 (팀 기반)
+   * 사용자가 응원하는 팀에 따른 게시물 분류입니다.
    */
-  @Field(() => PostType, { description: '게시물 유형' })
+  @Field(() => PostType, { description: '팀 기반 게시물 유형' })
   @Column({
     type: 'enum',
     enum: PostType,
-    comment: '게시물 유형',
+    comment: '팀 기반 게시물 유형',
   })
-  @IsEnum(PostType, { message: '올바른 게시물 유형을 선택해주세요.' })
+  @IsEnum(PostType, { message: '올바른 팀을 선택해주세요.' })
   type: PostType;
 
   /**
@@ -252,27 +292,48 @@ export class Post extends BaseEntity {
   // === 헬퍼 메서드 ===
 
   /**
-   * 게시물이 분석 유형인지 확인하는 메서드
-   * @returns 분석 게시물인 경우 true, 아닌 경우 false
+   * 게시물이 축구팀 관련인지 확인하는 메서드
+   * @returns 축구팀 게시물인 경우 true, 아닌 경우 false
    */
-  isAnalysis(): boolean {
-    return this.type === PostType.ANALYSIS;
+  isFootballTeam(): boolean {
+    const footballTeams = [
+      PostType.TOTTENHAM,
+      PostType.NEWCASTLE,
+      PostType.ATLETICO_MADRID,
+      PostType.MANCHESTER_CITY,
+      PostType.LIVERPOOL,
+    ];
+    return footballTeams.includes(this.type);
   }
 
   /**
-   * 게시물이 응원 유형인지 확인하는 메서드
-   * @returns 응원 게시물인 경우 true, 아닌 경우 false
+   * 게시물이 야구팀 관련인지 확인하는 메서드
+   * @returns 야구팀 게시물인 경우 true, 아닌 경우 false
    */
-  isCheering(): boolean {
-    return this.type === PostType.CHEERING;
+  isBaseballTeam(): boolean {
+    const baseballTeams = [
+      PostType.DOOSAN_BEARS,
+      PostType.HANWHA_EAGLES,
+      PostType.LG_TWINS,
+      PostType.SAMSUNG_LIONS,
+      PostType.KIA_TIGERS,
+    ];
+    return baseballTeams.includes(this.type);
   }
 
   /**
-   * 게시물이 하이라이트 유형인지 확인하는 메서드
-   * @returns 하이라이트 게시물인 경우 true, 아닌 경우 false
+   * 게시물이 e스포츠팀 관련인지 확인하는 메서드
+   * @returns e스포츠팀 게시물인 경우 true, 아닌 경우 false
    */
-  isHighlight(): boolean {
-    return this.type === PostType.HIGHLIGHT;
+  isEsportsTeam(): boolean {
+    const esportsTeams = [
+      PostType.T1,
+      PostType.GENG,
+      PostType.DRX,
+      PostType.KT_ROLSTER,
+      PostType.DAMWON_KIA,
+    ];
+    return esportsTeams.includes(this.type);
   }
 
   /**

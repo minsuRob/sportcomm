@@ -109,26 +109,53 @@ export default function CreatePostScreen() {
     checkSession();
   }, [router]);
 
-  // 게시물 타입 옵션
+  // 팀 타입 옵션
   const postTypeOptions: PostTypeOption[] = [
+    // 축구팀
+    { type: PostType.TOTTENHAM, label: "토트넘", color: "#132257", icon: "⚽" },
+    { type: PostType.NEWCASTLE, label: "뉴캐슬", color: "#241F20", icon: "⚽" },
     {
-      type: PostType.ANALYSIS,
-      label: t(TRANSLATION_KEYS.POST_TYPE_ANALYSIS),
-      color: "#6366f1",
-      icon: "📊",
+      type: PostType.ATLETICO_MADRID,
+      label: "아틀레티코",
+      color: "#CE2029",
+      icon: "⚽",
     },
     {
-      type: PostType.HIGHLIGHT,
-      label: t(TRANSLATION_KEYS.POST_TYPE_HIGHLIGHT),
-      color: "#f59e0b",
-      icon: "⭐",
+      type: PostType.MANCHESTER_CITY,
+      label: "맨시티",
+      color: "#6CABDD",
+      icon: "⚽",
+    },
+    { type: PostType.LIVERPOOL, label: "리버풀", color: "#C8102E", icon: "⚽" },
+
+    // 야구팀
+    {
+      type: PostType.DOOSAN_BEARS,
+      label: "두산",
+      color: "#131230",
+      icon: "⚾",
     },
     {
-      type: PostType.CHEERING,
-      label: t(TRANSLATION_KEYS.POST_TYPE_CHEERING),
-      color: "#10b981",
-      icon: "📣",
+      type: PostType.HANWHA_EAGLES,
+      label: "한화",
+      color: "#FF6600",
+      icon: "⚾",
     },
+    { type: PostType.LG_TWINS, label: "LG", color: "#C30452", icon: "⚾" },
+    {
+      type: PostType.SAMSUNG_LIONS,
+      label: "삼성",
+      color: "#074CA1",
+      icon: "⚾",
+    },
+    { type: PostType.KIA_TIGERS, label: "KIA", color: "#EA0029", icon: "⚾" },
+
+    // e스포츠팀
+    { type: PostType.T1, label: "T1", color: "#E2012D", icon: "🎮" },
+    { type: PostType.GENG, label: "Gen.G", color: "#AA8B56", icon: "🎮" },
+    { type: PostType.DRX, label: "DRX", color: "#2E5BFF", icon: "🎮" },
+    { type: PostType.KT_ROLSTER, label: "KT", color: "#D4002A", icon: "🎮" },
+    { type: PostType.DAMWON_KIA, label: "담원", color: "#004B9F", icon: "🎮" },
   ];
 
   /**
@@ -644,45 +671,49 @@ export default function CreatePostScreen() {
 
         {/* 게시물 타입 선택 */}
         <View style={themed($typeSection)}>
-          <Text style={themed($sectionTitle)}>
-            {t(TRANSLATION_KEYS.CREATE_POST_SELECT_TYPE)}
-          </Text>
-          <View style={themed($typeOptions)}>
-            {postTypeOptions.map((option) => (
-              <TouchableOpacity
-                key={option.type}
-                style={[
-                  themed($typeOption),
-                  {
-                    borderColor:
-                      selectedType === option.type
-                        ? option.color
-                        : theme.colors.border,
-                    backgroundColor:
-                      selectedType === option.type
-                        ? option.color + "20"
-                        : "transparent",
-                  },
-                ]}
-                onPress={() => handleTypeSelect(option.type)}
-              >
-                <Text style={themed($typeIcon)}>{option.icon}</Text>
-                <Text
+          <Text style={themed($sectionTitle)}>응원할 팀 선택</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={themed($typeScrollView)}
+          >
+            <View style={themed($typeOptions)}>
+              {postTypeOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.type}
                   style={[
-                    themed($typeLabel),
+                    themed($typeOption),
                     {
-                      color:
+                      borderColor:
                         selectedType === option.type
                           ? option.color
-                          : theme.colors.text,
+                          : theme.colors.border,
+                      backgroundColor:
+                        selectedType === option.type
+                          ? option.color + "20"
+                          : "transparent",
                     },
                   ]}
+                  onPress={() => handleTypeSelect(option.type)}
                 >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text style={themed($typeIcon)}>{option.icon}</Text>
+                  <Text
+                    style={[
+                      themed($typeLabel),
+                      {
+                        color:
+                          selectedType === option.type
+                            ? option.color
+                            : theme.colors.text,
+                      },
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
         </View>
 
         {/* 제목 입력 영역 */}
@@ -894,29 +925,36 @@ const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginBottom: spacing.sm,
 });
 
+const $typeScrollView: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.sm,
+});
+
 const $typeOptions: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   gap: spacing.sm,
+  paddingHorizontal: spacing.sm,
 });
 
 const $typeOption: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flex: 1,
-  flexDirection: "row",
+  minWidth: 80,
+  flexDirection: "column",
   alignItems: "center",
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.sm,
   borderWidth: 2,
   borderRadius: 12,
-});
-
-const $typeIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  fontSize: 20,
   marginRight: spacing.xs,
 });
 
+const $typeIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  fontSize: 24,
+  marginBottom: spacing.xxxs,
+});
+
 const $typeLabel: ThemedStyle<TextStyle> = () => ({
-  fontSize: 14,
+  fontSize: 12,
   fontWeight: "600",
+  textAlign: "center",
 });
 
 const $titleSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({

@@ -77,7 +77,7 @@ const formatTimeAgo = (dateString: string) => {
   const now = new Date();
   const postDate = new Date(dateString);
   const diffHours = Math.floor(
-    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
+    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
   );
 
   if (diffHours < 1) return "방금 전";
@@ -220,10 +220,10 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
+    (item) => item.type === "image" || item.type === "IMAGE"
   );
   const videoMedia = post.media.filter(
-    (item) => item.type === "video" || item.type === "VIDEO",
+    (item) => item.type === "video" || item.type === "VIDEO"
   );
 
   // 동영상 재생 상태 관리
@@ -297,7 +297,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       console.log(`PostCard - post.id: ${post.id}`);
       console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
       console.log(
-        `PostCard - post.content: ${post.content.substring(0, 20)}...`,
+        `PostCard - post.content: ${post.content.substring(0, 20)}...`
       );
     }
   }, [post.id]);
@@ -369,36 +369,110 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 비디오 가시성 감지 및 자동 재생 처리는 위에서 구현되었음
 
-  // 카테고리별 색상 및 텍스트 매핑
+  // 팀별 색상 및 텍스트 매핑
   const getCategoryInfo = (type: PostType) => {
     switch (type) {
-      case PostType.ANALYSIS:
+      // 축구팀
+      case PostType.TOTTENHAM:
         return {
-          text: "ANALYSIS",
-          colors: {
-            border: "#8B5CF6",
-            glow: "#8B5CF6",
-            badge: "#8B5CF6",
-          },
+          text: "토트넘",
+          icon: "⚽",
+          colors: { border: "#132257", glow: "#132257", badge: "#132257" },
         };
-      case PostType.HIGHLIGHT:
+      case PostType.NEWCASTLE:
         return {
-          text: "HIGHLIGHT",
-          colors: {
-            border: "#F59E0B",
-            glow: "#F59E0B",
-            badge: "#F59E0B",
-          },
+          text: "뉴캐슬",
+          icon: "⚽",
+          colors: { border: "#241F20", glow: "#241F20", badge: "#241F20" },
         };
-      case PostType.CHEERING:
+      case PostType.ATLETICO_MADRID:
+        return {
+          text: "아틀레티코",
+          icon: "⚽",
+          colors: { border: "#CE2029", glow: "#CE2029", badge: "#CE2029" },
+        };
+      case PostType.MANCHESTER_CITY:
+        return {
+          text: "맨시티",
+          icon: "⚽",
+          colors: { border: "#6CABDD", glow: "#6CABDD", badge: "#6CABDD" },
+        };
+      case PostType.LIVERPOOL:
+        return {
+          text: "리버풀",
+          icon: "⚽",
+          colors: { border: "#C8102E", glow: "#C8102E", badge: "#C8102E" },
+        };
+
+      // 야구팀
+      case PostType.DOOSAN_BEARS:
+        return {
+          text: "두산",
+          icon: "⚾",
+          colors: { border: "#131230", glow: "#131230", badge: "#131230" },
+        };
+      case PostType.HANWHA_EAGLES:
+        return {
+          text: "한화",
+          icon: "⚾",
+          colors: { border: "#FF6600", glow: "#FF6600", badge: "#FF6600" },
+        };
+      case PostType.LG_TWINS:
+        return {
+          text: "LG",
+          icon: "⚾",
+          colors: { border: "#C30452", glow: "#C30452", badge: "#C30452" },
+        };
+      case PostType.SAMSUNG_LIONS:
+        return {
+          text: "삼성",
+          icon: "⚾",
+          colors: { border: "#074CA1", glow: "#074CA1", badge: "#074CA1" },
+        };
+      case PostType.KIA_TIGERS:
+        return {
+          text: "KIA",
+          icon: "⚾",
+          colors: { border: "#EA0029", glow: "#EA0029", badge: "#EA0029" },
+        };
+
+      // e스포츠팀
+      case PostType.T1:
+        return {
+          text: "T1",
+          icon: "🎮",
+          colors: { border: "#E2012D", glow: "#E2012D", badge: "#E2012D" },
+        };
+      case PostType.GENG:
+        return {
+          text: "Gen.G",
+          icon: "🎮",
+          colors: { border: "#AA8B56", glow: "#AA8B56", badge: "#AA8B56" },
+        };
+      case PostType.DRX:
+        return {
+          text: "DRX",
+          icon: "🎮",
+          colors: { border: "#2E5BFF", glow: "#2E5BFF", badge: "#2E5BFF" },
+        };
+      case PostType.KT_ROLSTER:
+        return {
+          text: "KT",
+          icon: "🎮",
+          colors: { border: "#D4002A", glow: "#D4002A", badge: "#D4002A" },
+        };
+      case PostType.DAMWON_KIA:
+        return {
+          text: "담원",
+          icon: "🎮",
+          colors: { border: "#004B9F", glow: "#004B9F", badge: "#004B9F" },
+        };
+
       default:
         return {
-          text: "CHEERING",
-          colors: {
-            border: "#10B981",
-            glow: "#10B981",
-            badge: "#10B981",
-          },
+          text: "팀",
+          icon: "🏆",
+          colors: { border: "#6366f1", glow: "#6366f1", badge: "#6366f1" },
         };
     }
   };
@@ -570,7 +644,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                     <Text style={themed($videoDurationText)}>
                       {videoMedia[0]
                         ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
-                            ((videoMedia[0] as any).duration || 0) % 60,
+                            ((videoMedia[0] as any).duration || 0) % 60
                           )
                             .toString()
                             .padStart(2, "0")}`
@@ -668,11 +742,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                   ]}
                 >
                   <Text style={themed($categoryIconText)}>
-                    {post.type === PostType.ANALYSIS
-                      ? "📊"
-                      : post.type === PostType.HIGHLIGHT
-                        ? "⚡"
-                        : "📣"}
+                    {categoryInfo.icon}
                   </Text>
                 </View>
                 <Text style={themed($categoryText)}>{categoryInfo.text}</Text>

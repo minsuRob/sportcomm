@@ -144,6 +144,10 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleTeamSelection = () => {
+    router.push("/(modals)/team-selection");
+  };
+
   /**
    * 탭 변경 핸들러
    */
@@ -220,14 +224,32 @@ export default function ProfileScreen() {
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
         <Text style={themed($username)}>{userProfile.nickname}</Text>
 
-        {/* 프로필 편집 버튼 */}
-        <TouchableOpacity
-          style={themed($editButton)}
-          onPress={handleEditProfile}
-        >
-          <Ionicons name="create-outline" color={theme.colors.tint} size={16} />
-          <Text style={themed($editButtonText)}>프로필 편집</Text>
-        </TouchableOpacity>
+        {/* 프로필 편집 및 팀 선택 버튼 */}
+        <View style={themed($buttonContainer)}>
+          <TouchableOpacity
+            style={themed($editButton)}
+            onPress={handleEditProfile}
+          >
+            <Ionicons
+              name="create-outline"
+              color={theme.colors.tint}
+              size={16}
+            />
+            <Text style={themed($editButtonText)}>프로필 편집</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={themed($teamButton)}
+            onPress={handleTeamSelection}
+          >
+            <Ionicons
+              name="trophy-outline"
+              color={theme.colors.tint}
+              size={16}
+            />
+            <Text style={themed($teamButtonText)}>My Team</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 통계 정보 */}
@@ -318,18 +340,43 @@ const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginTop: spacing.md,
 });
 
+const $buttonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  marginTop: spacing.lg,
+  gap: spacing.sm,
+});
+
 const $editButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  marginTop: spacing.lg,
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.sm,
   borderWidth: 1,
   borderColor: colors.tint,
   borderRadius: 8,
+  flex: 1,
+  justifyContent: "center",
 });
 
 const $editButtonText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginLeft: spacing.xs,
+  color: colors.tint,
+  fontWeight: "600",
+});
+
+const $teamButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderWidth: 1,
+  borderColor: colors.tint,
+  borderRadius: 8,
+  flex: 1,
+  justifyContent: "center",
+});
+
+const $teamButtonText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginLeft: spacing.xs,
   color: colors.tint,
   fontWeight: "600",

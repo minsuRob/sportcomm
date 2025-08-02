@@ -14,9 +14,26 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import PostContextMenu from "./PostContextMenu";
 export enum PostType {
-  ANALYSIS = "ANALYSIS",
-  CHEERING = "CHEERING",
-  HIGHLIGHT = "HIGHLIGHT",
+  // 축구팀
+  TOTTENHAM = "TOTTENHAM",
+  NEWCASTLE = "NEWCASTLE",
+  ATLETICO_MADRID = "ATLETICO_MADRID",
+  MANCHESTER_CITY = "MANCHESTER_CITY",
+  LIVERPOOL = "LIVERPOOL",
+
+  // 야구팀
+  DOOSAN_BEARS = "DOOSAN_BEARS",
+  HANWHA_EAGLES = "HANWHA_EAGLES",
+  LG_TWINS = "LG_TWINS",
+  SAMSUNG_LIONS = "SAMSUNG_LIONS",
+  KIA_TIGERS = "KIA_TIGERS",
+
+  // e스포츠팀
+  T1 = "T1",
+  GENG = "GENG",
+  DRX = "DRX",
+  KT_ROLSTER = "KT_ROLSTER",
+  DAMWON_KIA = "DAMWON_KIA",
 }
 
 interface PostHeaderProps {
@@ -65,22 +82,44 @@ export default function PostHeader({
 
   const getPostTypeStyle = (type: PostType) => {
     switch (type) {
-      case PostType.ANALYSIS:
-        return {
-          color: "#6366f1",
-          text: t(TRANSLATION_KEYS.POST_TYPE_ANALYSIS),
-        };
-      case PostType.HIGHLIGHT:
-        return {
-          color: "#f59e0b",
-          text: t(TRANSLATION_KEYS.POST_TYPE_HIGHLIGHT),
-        };
-      case PostType.CHEERING:
+      // 축구팀
+      case PostType.TOTTENHAM:
+        return { color: "#132257", text: "토트넘", icon: "⚽" };
+      case PostType.NEWCASTLE:
+        return { color: "#241F20", text: "뉴캐슬", icon: "⚽" };
+      case PostType.ATLETICO_MADRID:
+        return { color: "#CE2029", text: "아틀레티코", icon: "⚽" };
+      case PostType.MANCHESTER_CITY:
+        return { color: "#6CABDD", text: "맨시티", icon: "⚽" };
+      case PostType.LIVERPOOL:
+        return { color: "#C8102E", text: "리버풀", icon: "⚽" };
+
+      // 야구팀
+      case PostType.DOOSAN_BEARS:
+        return { color: "#131230", text: "두산", icon: "⚾" };
+      case PostType.HANWHA_EAGLES:
+        return { color: "#FF6600", text: "한화", icon: "⚾" };
+      case PostType.LG_TWINS:
+        return { color: "#C30452", text: "LG", icon: "⚾" };
+      case PostType.SAMSUNG_LIONS:
+        return { color: "#074CA1", text: "삼성", icon: "⚾" };
+      case PostType.KIA_TIGERS:
+        return { color: "#EA0029", text: "KIA", icon: "⚾" };
+
+      // e스포츠팀
+      case PostType.T1:
+        return { color: "#E2012D", text: "T1", icon: "🎮" };
+      case PostType.GENG:
+        return { color: "#AA8B56", text: "Gen.G", icon: "🎮" };
+      case PostType.DRX:
+        return { color: "#2E5BFF", text: "DRX", icon: "🎮" };
+      case PostType.KT_ROLSTER:
+        return { color: "#D4002A", text: "KT", icon: "🎮" };
+      case PostType.DAMWON_KIA:
+        return { color: "#004B9F", text: "담원", icon: "🎮" };
+
       default:
-        return {
-          color: "#10b981",
-          text: t(TRANSLATION_KEYS.POST_TYPE_CHEERING),
-        };
+        return { color: "#6366f1", text: "팀", icon: "🏆" };
     }
   };
 

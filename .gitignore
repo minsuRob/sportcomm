@@ -13,3 +13,4 @@ apps/fe/.env
 .vscode
 .turbo
 apps/be/uploads/images
+apps/be/uploads/videos

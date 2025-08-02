@@ -6,7 +6,8 @@ import {
   ScrollView,
   ViewStyle,
   TextStyle,
-  Alert,
+  FlatList,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -15,116 +16,133 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession, updateSession } from "@/lib/auth";
 import { showToast } from "@/components/CustomToast";
 
+const { width: screenWidth } = Dimensions.get("window");
+
 // 팀 정보 타입
 interface TeamInfo {
   id: string;
   name: string;
   color: string;
   icon: string;
-  category: "축구" | "야구" | "e스포츠";
 }
 
-// 팀 데이터
-const TEAMS: TeamInfo[] = [
-  // 축구팀
-  {
-    id: "TOTTENHAM",
-    name: "토트넘",
-    color: "#132257",
-    icon: "⚽",
-    category: "축구",
-  },
-  {
-    id: "NEWCASTLE",
-    name: "뉴캐슬",
-    color: "#241F20",
-    icon: "⚽",
-    category: "축구",
-  },
-  {
-    id: "ATLETICO_MADRID",
-    name: "아틀레티코",
-    color: "#CE2029",
-    icon: "⚽",
-    category: "축구",
-  },
-  {
-    id: "MANCHESTER_CITY",
-    name: "맨시티",
-    color: "#6CABDD",
-    icon: "⚽",
-    category: "축구",
-  },
-  {
-    id: "LIVERPOOL",
-    name: "리버풀",
-    color: "#C8102E",
-    icon: "⚽",
-    category: "축구",
-  },
+// 스포츠 카테고리 타입
+interface SportCategory {
+  id: string;
+  name: string;
+  icon: string;
+  teams: TeamInfo[];
+}
 
-  // 야구팀
+// 스포츠 카테고리 및 팀 데이터
+const SPORT_CATEGORIES: SportCategory[] = [
   {
-    id: "DOOSAN_BEARS",
-    name: "두산",
-    color: "#131230",
-    icon: "⚾",
-    category: "야구",
+    id: "soccer",
+    name: "축구",
+    icon: "⚽",
+    teams: [
+      {
+        id: "TOTTENHAM",
+        name: "토트넘",
+        color: "#132257",
+        icon: "⚽",
+      },
+      {
+        id: "NEWCASTLE",
+        name: "뉴캐슬",
+        color: "#241F20",
+        icon: "⚽",
+      },
+      {
+        id: "ATLETICO_MADRID",
+        name: "아틀레티코",
+        color: "#CE2029",
+        icon: "⚽",
+      },
+      {
+        id: "MANCHESTER_CITY",
+        name: "맨시티",
+        color: "#6CABDD",
+        icon: "⚽",
+      },
+      {
+        id: "LIVERPOOL",
+        name: "리버풀",
+        color: "#C8102E",
+        icon: "⚽",
+      },
+    ],
   },
   {
-    id: "HANWHA_EAGLES",
-    name: "한화",
-    color: "#FF6600",
+    id: "baseball",
+    name: "야구",
     icon: "⚾",
-    category: "야구",
+    teams: [
+      {
+        id: "DOOSAN_BEARS",
+        name: "두산",
+        color: "#131230",
+        icon: "⚾",
+      },
+      {
+        id: "HANWHA_EAGLES",
+        name: "한화",
+        color: "#FF6600",
+        icon: "⚾",
+      },
+      {
+        id: "LG_TWINS",
+        name: "LG",
+        color: "#C30452",
+        icon: "⚾",
+      },
+      {
+        id: "SAMSUNG_LIONS",
+        name: "삼성",
+        color: "#074CA1",
+        icon: "⚾",
+      },
+      {
+        id: "KIA_TIGERS",
+        name: "KIA",
+        color: "#EA0029",
+        icon: "⚾",
+      },
+    ],
   },
   {
-    id: "LG_TWINS",
-    name: "LG",
-    color: "#C30452",
-    icon: "⚾",
-    category: "야구",
-  },
-  {
-    id: "SAMSUNG_LIONS",
-    name: "삼성",
-    color: "#074CA1",
-    icon: "⚾",
-    category: "야구",
-  },
-  {
-    id: "KIA_TIGERS",
-    name: "KIA",
-    color: "#EA0029",
-    icon: "⚾",
-    category: "야구",
-  },
-
-  // e스포츠팀
-  { id: "T1", name: "T1", color: "#E2012D", icon: "🎮", category: "e스포츠" },
-  {
-    id: "GENG",
-    name: "Gen.G",
-    color: "#AA8B56",
+    id: "esports",
+    name: "e스포츠",
     icon: "🎮",
-    category: "e스포츠",
-  },
-  { id: "DRX", name: "DRX", color: "#2E5BFF", icon: "🎮", category: "e스포츠" },
-  {
-    id: "KT_ROLSTER",
-    name: "KT",
-    color: "#D4002A",
-    icon: "🎮",
-    category: "e스포츠",
-  },
-  {
-    id: "DAMWON_KIA",
-    name: "담원",
-    color: "#004B9F",
-    icon: "🎮",
-    category: "e스포츠",
+    teams: [
+      { id: "T1", name: "T1", color: "#E2012D", icon: "🎮" },
+      {
+        id: "GENG",
+        name: "Gen.G",
+        color: "#AA8B56",
+        icon: "🎮",
+      },
+      { id: "DRX", name: "DRX", color: "#2E5BFF", icon: "🎮" },
+      {
+        id: "KT_ROLSTER",
+        name: "KT",
+        color: "#D4002A",
+        icon: "🎮",
+      },
+      {
+        id: "DAMWON_KIA",
+        name: "담원",
+        color: "#004B9F",
+        icon: "🎮",
+      },
+    ],
   },
 ];
+
+// 모든 팀을 하나의 배열로 합치기 (기존 로직 호환성을 위해)
+const ALL_TEAMS: TeamInfo[] = SPORT_CATEGORIES.flatMap(
+  (category) => category.teams
+);
 
 /**
  * 팀 선택 모달 화면
@@ -136,6 +154,7 @@ export default function TeamSelectionScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
 
   // 사용자 정보 로드
   useEffect(() => {
@@ -175,7 +194,9 @@ export default function TeamSelectionScreen() {
       await updateSession(updatedUser);
       setCurrentUser(updatedUser);
 
-      const selectedTeamInfo = TEAMS.find((team) => team.id === selectedTeam);
+      const selectedTeamInfo = ALL_TEAMS.find(
+        (team) => team.id === selectedTeam
+      );
 
       showToast({
         type: "success",
@@ -201,18 +222,96 @@ export default function TeamSelectionScreen() {
   };
 
   /**
-   * 카테고리별 팀 그룹화
+   * 카테고리 탭 렌더링
    */
-  const groupedTeams = TEAMS.reduce(
-    (acc, team) => {
-      if (!acc[team.category]) {
-        acc[team.category] = [];
-      }
-      acc[team.category].push(team);
-      return acc;
-    },
-    {} as Record<string, TeamInfo[]>
-  );
+  const renderCategoryTab = ({
+    item,
+    index,
+  }: {
+    item: SportCategory;
+    index: number;
+  }) => {
+    const isActive = index === activeCategoryIndex;
+
+    return (
+      <TouchableOpacity
+        style={[
+          themed($categoryTab),
+          {
+            backgroundColor: isActive ? theme.colors.tint : "transparent",
+            borderColor: isActive ? theme.colors.tint : theme.colors.border,
+          },
+        ]}
+        onPress={() => setActiveCategoryIndex(index)}
+      >
+        <Text style={themed($categoryTabIcon)}>{item.icon}</Text>
+        <Text
+          style={[
+            themed($categoryTabText),
+            {
+              color: isActive ? "white" : theme.colors.text,
+            },
+          ]}
+        >
+          {item.name}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  /**
+   * 팀 그리드 렌더링
+   */
+  const renderTeamGrid = (teams: TeamInfo[]) => {
+    const rows = [];
+    const teamsPerRow = 2;
+
+    for (let i = 0; i < teams.length; i += teamsPerRow) {
+      const rowTeams = teams.slice(i, i + teamsPerRow);
+      rows.push(
+        <View key={i} style={themed($teamRow)}>
+          {rowTeams.map((team) => (
+            <TouchableOpacity
+              key={team.id}
+              style={[
+                themed($teamCard),
+                {
+                  borderColor:
+                    selectedTeam === team.id ? team.color : theme.colors.border,
+                  backgroundColor:
+                    selectedTeam === team.id
+                      ? team.color + "20"
+                      : theme.colors.card,
+                },
+              ]}
+              onPress={() => handleTeamSelect(team.id)}
+            >
+              <View style={themed($teamIconContainer)}>
+                <Text style={themed($teamCardIcon)}>{team.icon}</Text>
+              </View>
+              <Text
+                style={[
+                  themed($teamCardName),
+                  {
+                    color:
+                      selectedTeam === team.id ? team.color : theme.colors.text,
+                  },
+                ]}
+              >
+                {team.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          {/* 빈 공간 채우기 */}
+          {rowTeams.length < teamsPerRow && (
+            <View style={[themed($teamCard), { opacity: 0 }]} />
+          )}
+        </View>
+      );
+    }
+
+    return rows;
+  };
 
   return (
     <View style={themed($container)}>
@@ -233,22 +332,33 @@ export default function TeamSelectionScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={themed($scrollContainer)}>
-        {/* 설명 */}
-        <View style={themed($descriptionSection)}>
-          <Text style={themed($descriptionTitle)}>응원할 팀을 선택하세요</Text>
-          <Text style={themed($descriptionText)}>
-            선택한 팀은 게시물 작성 시 기본 팀으로 설정되며, 언제든지 변경할 수
-            있습니다.
-          </Text>
-        </View>
+      {/* 설명 */}
+      <View style={themed($descriptionSection)}>
+        <Text style={themed($descriptionTitle)}>응원할 팀을 선택하세요</Text>
+        <Text style={themed($descriptionText)}>
+          선택한 팀은 게시물 작성 시 기본 팀으로 설정되며, 언제든지 변경할 수
+          있습니다.
+        </Text>
+      </View>
 
+      {/* 카테고리 슬라이더 */}
+      <View style={themed($categorySliderContainer)}>
+        <FlatList
+          data={SPORT_CATEGORIES}
+          renderItem={renderCategoryTab}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={themed($categorySliderContent)}
+        />
+      </View>
+
+      <ScrollView style={themed($scrollContainer)}>
         {/* 팀 선택 해제 옵션 */}
-        <View style={themed($categorySection)}>
-          <Text style={themed($categoryTitle)}>기본 설정</Text>
+        <View style={themed($noTeamSection)}>
           <TouchableOpacity
             style={[
-              themed($teamOption),
+              themed($noTeamCard),
               {
                 borderColor:
                   selectedTeam === null
@@ -257,15 +367,17 @@ export default function TeamSelectionScreen() {
                 backgroundColor:
                   selectedTeam === null
                     ? theme.colors.tint + "20"
-                    : "transparent",
+                    : theme.colors.card,
               },
             ]}
             onPress={() => setSelectedTeam(null)}
           >
-            <Text style={themed($teamIcon)}>🏆</Text>
+            <View style={themed($teamIconContainer)}>
+              <Text style={themed($teamCardIcon)}>🏆</Text>
+            </View>
             <Text
               style={[
-                themed($teamName),
+                themed($teamCardName),
                 {
                   color:
                     selectedTeam === null
@@ -279,48 +391,10 @@ export default function TeamSelectionScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 카테고리별 팀 목록 */}
-        {Object.entries(groupedTeams).map(([category, teams]) => (
-          <View key={category} style={themed($categorySection)}>
-            <Text style={themed($categoryTitle)}>{category}</Text>
-            <View style={themed($teamsGrid)}>
-              {teams.map((team) => (
-                <TouchableOpacity
-                  key={team.id}
-                  style={[
-                    themed($teamOption),
-                    {
-                      borderColor:
-                        selectedTeam === team.id
-                          ? team.color
-                          : theme.colors.border,
-                      backgroundColor:
-                        selectedTeam === team.id
-                          ? team.color + "20"
-                          : "transparent",
-                    },
-                  ]}
-                  onPress={() => handleTeamSelect(team.id)}
-                >
-                  <Text style={themed($teamIcon)}>{team.icon}</Text>
-                  <Text
-                    style={[
-                      themed($teamName),
-                      {
-                        color:
-                          selectedTeam === team.id
-                            ? team.color
-                            : theme.colors.text,
-                      },
-                    ]}
-                  >
-                    {team.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
+        {/* 선택된 카테고리의 팀 목록 */}
+        <View style={themed($teamsContainer)}>
+          {renderTeamGrid(SPORT_CATEGORIES[activeCategoryIndex].teams)}
+        </View>
       </ScrollView>
     </View>
   );
@@ -383,41 +457,88 @@ const $descriptionText: ThemedStyle<TextStyle> = ({ colors }) => ({
   lineHeight: 20,
 });
 
-const $categorySection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingBottom: spacing.lg,
+const $categorySliderContainer: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  paddingVertical: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
 });
 
-const $categoryTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+const $categorySliderContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+});
+
+const $categoryTab: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  marginRight: spacing.sm,
+  borderWidth: 1,
+  borderRadius: 20,
+});
+
+const $categoryTabIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
   fontSize: 16,
+  marginRight: spacing.xs,
+});
+
+const $categoryTabText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 14,
   fontWeight: "600",
-  color: colors.text,
+});
+
+const $noTeamSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.lg,
+  alignItems: "center",
+});
+
+const $noTeamCard: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.xl,
+  borderWidth: 2,
+  borderRadius: 16,
+  minWidth: 120,
+});
+
+const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingBottom: spacing.xl,
+});
+
+const $teamRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
   marginBottom: spacing.md,
 });
 
-const $teamsGrid: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: spacing.sm,
+const $teamCard: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  alignItems: "center",
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.md,
+  marginHorizontal: spacing.xs,
+  borderWidth: 2,
+  borderRadius: 16,
+  minHeight: 100,
+  justifyContent: "center",
 });
 
-const $teamOption: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  borderWidth: 2,
-  borderRadius: 12,
-  minWidth: 100,
+const $teamIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.sm,
 });
 
-const $teamIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  fontSize: 20,
-  marginRight: spacing.sm,
+const $teamCardIcon: ThemedStyle<TextStyle> = () => ({
+  fontSize: 32,
+  textAlign: "center",
 });
 
-const $teamName: ThemedStyle<TextStyle> = () => ({
+const $teamCardName: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   fontWeight: "600",
+  textAlign: "center",
 });

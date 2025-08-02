@@ -251,6 +251,72 @@ export class AdminResolver {
   ): Promise<PaginatedReports> {
     return await this.adminService.getAllReports(user, page, limit);
   }
+
+  // === 피드백 관리 ===
+
+  @Query(() => PaginatedFeedbacks, { description: '모든 피드백 목록 조회' })
+  async adminGetAllFeedbacks(
+    @CurrentUser() user: User,
+    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
+    @Args('limit', { type: () => Int, defaultValue: 20 }) limit: number,
+  ): Promise<PaginatedFeedbacks> {
+    return await this.adminService.getAllFeedbacks(user, page, limit);
+  }
+
+  @Query(() => PaginatedFeedbacks, { description: '상태별 피드백 목록 조회' })
+  async adminGetFeedbacksByStatus(
+    @CurrentUser() user: User,
+    @Args('status', { type: () => FeedbackStatus }) status: FeedbackStatus,
+    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
+    @Args('limit', { type: () => Int, defaultValue: 20 }) limit: number,
+  ): Promise<PaginatedFeedbacks> {
+    return await this.adminService.getFeedbacksByStatus(
+      user,
+      status,
+      page,
+      limit,
+    );
+  }
+
+  @Mutation(() => Feedback, { description: '피드백에 응답' })
+  async adminRespondToFeedback(
+    @CurrentUser() user: User,
+    @Args('feedbackId') feedbackId: string,
+    @Args('response') response: string,
+  ): Promise<Feedback> {
+    return await this.adminService.respondToFeedback(
+      user,
+      feedbackId,
+      response,
+    );
+  }
+
+  @Mutation(() => Feedback, { description: '피드백 상태 업데이트' })
+  async adminUpdateFeedbackStatus(
+    @CurrentUser() user: User,
+    @Args('feedbackId') feedbackId: string,
+    @Args('status', { type: () => FeedbackStatus }) status: FeedbackStatus,
+  ): Promise<Feedback> {
+    return await this.adminService.updateFeedbackStatus(
+      user,
+      feedbackId,
+      status,
+    );
+  }
+
+  @Mutation(() => Feedback, { description: '피드백 우선순위 업데이트' })
+  async adminUpdateFeedbackPriority(
+    @CurrentUser() user: User,
+    @Args('feedbackId') feedbackId: string,
+    @Args('priority', { type: () => FeedbackPriority })
+    priority: FeedbackPriority,
+  ): Promise<Feedback> {
+    return await this.adminService.updateFeedbackPriority(
+      user,
+      feedbackId,
+      priority,
+    );
+  }
 }
 
 @ObjectType()
@@ -270,50 +336,3 @@ export class PaginatedFeedbacks {
   @Field(() => Int, { description: '총 페이지 수' })
   totalPages: number;
 }
-  // === 피드백 관리 ===
-
-  @Query(() => PaginatedFeedbacks, { description: '모든 피드백 목록 조회' })
-  async adminGetAllFeedbacks(
-    @CurrentUser() user: User,
-    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
-    @Args('limit', { type: () => Int, defaultValue: 20 }) limit: number,
-  ): Promise<PaginatedFeedbacks> {
-    return await this.adminService.getAllFeedbacks(user, page, limit);
-  }
-
-  @Query(() => PaginatedFeedbacks, { description: '상태별 피드백 목록 조회' })
-  async adminGetFeedbacksByStatus(
-    @CurrentUser() user: User,
-    @Args('status', { type: () => FeedbackStatus }) status: FeedbackStatus,
-    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
-    @Args('limit', { type: () => Int, defaultValue: 20 }) limit: number,
-  ): Promise<PaginatedFeedbacks> {
-    return await this.adminService.getFeedbacksByStatus(user, status, page, limit);
-  }
-
-  @Mutation(() => Feedback, { description: '피드백에 응답' })
-  async adminRespondToFeedback(
-    @CurrentUser() user: User,
-    @Args('feedbackId') feedbackId: string,
-    @Args('response') response: string,
-  ): Promise<Feedback> {
-    return await this.adminService.respondToFeedback(user, feedbackId, response);
-  }
-
-  @Mutation(() => Feedback, { description: '피드백 상태 업데이트' })
-  async adminUpdateFeedbackStatus(
-    @CurrentUser() user: User,
-    @Args('feedbackId') feedbackId: string,
-    @Args('status', { type: () => FeedbackStatus }) status: FeedbackStatus,
-  ): Promise<Feedback> {
-    return await this.adminService.updateFeedbackStatus(user, feedbackId, status);
-  }
-
-  @Mutation(() => Feedback, { description: '피드백 우선순위 업데이트' })
-  async adminUpdateFeedbackPriority(
-    @CurrentUser() user: User,
-    @Args('feedbackId') feedbackId: string,
-    @Args('priority', { type: () => FeedbackPriority }) priority: FeedbackPriority,
-  ): Promise<Feedback> {
-    return await this.adminService.updateFeedbackPriority(user, feedbackId, priority);
-  }

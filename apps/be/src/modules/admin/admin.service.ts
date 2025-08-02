@@ -308,7 +308,6 @@ export class AdminService {
       totalPages: Math.ceil(total / limit),
     };
   }
-}
 
   // === 피드백 관리 ===
 
@@ -433,3 +432,4 @@ export class AdminService {
 
     return feedback;
   }
+}

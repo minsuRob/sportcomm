@@ -39,18 +39,33 @@ const uploadLink = new HttpLink({
 /**
  * 에러 처리 링크
  */
-const errorLink = onError(({ graphQLErrors, networkError }) => {
+const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
   if (graphQLErrors) {
-    graphQLErrors.forEach(({ message, locations, path }) => {
+    graphQLErrors.forEach(({ message, locations, path, extensions }) => {
       console.error(
         `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`
       );
+
+      // 인증 오류 처리
+      if (
+        message.includes('Unauthorized') ||
+        message.includes('인증') ||
+        message.includes('로그인') ||
+        message.includes('token') ||
+        message.includes('access denied') ||
+        (extensions && extensions.code === 'UNAUTHENTICATED')
+      ) {
+        console.error('인증 오류 감지:', message);
+        // 여기서 리프레시 토큰 처리나 로그인 페이지로 리다이렉트 등의 로직을 추가할 수 있음
+      }
     });
   }
 
   if (networkError) {
     console.error(`[네트워크 에러]: ${networkError}`);
   }
+
+  return forward(operation);
 });
 
 /**
@@ -134,6 +149,12 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
 logPlatformInfo();
 console.log(`Apollo 클라이언트 초기화 (${getPlatformType()} 환경)`);
 
+// 인증 상태 체크 함수
+export const checkAuthStatus = async () => {
+  const { token, user } = await getSession();
+  return { isAuthenticated: !!token && !!user, token, user };
+};
+
 export const client = new ApolloClient({
   link: from([requestDebugLink, authLink, errorLink, uploadLink]),
   cache: new InMemoryCache({
@@ -174,6 +195,17 @@ export const client = new ApolloClient({
     },
     mutate: {
       errorPolicy: "all",
+      // 뮤테이션에서 인증 관련 컨텍스트를 항상 최신으로 유지
+      context: {
+        getAuth: async () => {
+          const { token } = await getSession();
+          return {
+            headers: {
+              authorization: token ? `Bearer ${token}` : "",
+            },
+          };
+        }
+      }
     },
   },
 });

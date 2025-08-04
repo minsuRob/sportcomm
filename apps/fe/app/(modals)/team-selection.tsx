@@ -47,18 +47,31 @@ export default function TeamSelectionScreen() {
 
   const { data: myTeamsData, loading: myTeamsLoading, refetch: refetchMyTeams } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS);
 
-  const [updateMyTeams, { loading: updateLoading }] = useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
+  const [updateMyTeams, { loading: updateLoading, error: updateError }] = useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
 
-  // 사용자 정보 로드
+  // 전체 로딩 상태
+  const isLoading = sportsLoading || myTeamsLoading || updateLoading;
+
+  // 사용자 정보 로드 및 인증 확인
   useEffect(() => {
-    const loadUser = async () => {
-      const { user } = await getSession();
+    const loadUserAndCheckAuth = async () => {
+      const { token, user } = await getSession();
       if (user) {
         setCurrentUser(user);
+      } else if (!token) {
+        // 인증되지 않은 경우 처리
+        console.warn("인증되지 않은 사용자가 팀 선택 화면에 접근");
+        showToast({
+          type: "error",
+          title: "인증 필요",
+          message: "로그인이 필요한 기능입니다.",
+          duration: 2000,
+        });
+        setTimeout(() => router.back(), 500);
       }
     };
-    loadUser();
-  }, []);
+    loadUserAndCheckAuth();
+  }, [router]);
 
   // 사용자가 선택한 팀 목록 로드
   useEffect(() => {
@@ -86,10 +99,54 @@ export default function TeamSelectionScreen() {
   };
 
   /**
+   * 인증 상태 확인 함수
+   */
+  const checkAuthentication = async () => {
+    const { token, user } = await getSession();
+    if (!token || !user) {
+      showToast({
+        type: "error",
+        title: "인증 필요",
+        message: "로그인이 필요한 기능입니다.",
+        duration: 3000,
+      });
+      return false;
+    }
+    return true;
+  };
+
+  /**
    * 팀 선택 저장 핸들러
    */
   const handleSave = async () => {
-    if (!currentUser) return;
+    if (isLoading) return; // 로딩 중이면 중복 요청 방지
+
+    // 인증 상태 확인
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) {
+      router.back(); // 인증이 안된 경우 뒤로 가기
+      return;
+    }
+
+    if (!currentUser) {
+      showToast({
+        type: "error",
+        title: "인증 필요",
+        message: "팀 선택을 저장하려면 로그인이 필요합니다.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (selectedTeams.length === 0) {
+      showToast({
+        type: "warning",
+        title: "팀 선택 필요",
+        message: "최소 1개 이상의 팀을 선택해주세요.",
+        duration: 3000,
+      });
+      return;
+    }
 
     try {
       // GraphQL 뮤테이션으로 팀 선택 업데이트
@@ -119,12 +176,41 @@ export default function TeamSelectionScreen() {
       router.back();
     } catch (error) {
       console.error("팀 선택 저장 실패:", error);
-      showToast({
-        type: "error",
-        title: "저장 실패",
-        message: "팀 선택을 저장하는 중 오류가 발생했습니다.",
-        duration: 3000,
-      });
+
+      // 인증 관련 오류인지 확인
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('login') || errorMessage.includes('로그인') ||
+          errorMessage.includes('인증') || errorMessage.includes('auth') ||
+          errorMessage.includes('token') || errorMessage.includes('토큰') ||
+          errorMessage.includes('undefined') || errorMessage.includes('logIn')) {
+        console.error("인증 오류 발생:", errorMessage);
+
+        showToast({
+          type: "error",
+          title: "인증 오류",
+          message: "인증에 문제가 발생했습니다. 다시 로그인해주세요.",
+          duration: 3000,
+        });
+
+        // 인증 문제인 경우 뒤로 가기
+        setTimeout(() => router.back(), 1000);
+
+        // 추가 세션 정보 출력 (디버깅용)
+        getSession().then(({token, user}) => {
+          console.log("현재 세션 상태:", {
+            hasToken: !!token,
+            hasUser: !!user,
+            userId: user?.id
+          });
+        });
+      } else {
+        showToast({
+          type: "error",
+          title: "저장 실패",
+          message: "팀 선택을 저장하는 중 오류가 발생했습니다.",
+          duration: 3000,
+        });
+      }
     }
   };
 
@@ -265,8 +351,17 @@ export default function TeamSelectionScreen() {
           <Ionicons name="close" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>My Team 선택</Text>
-        <TouchableOpacity onPress={handleSave} style={themed($saveButton)}>
-          <Text style={themed($saveButtonText)}>저장</Text>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={isLoading || !currentUser}
+          style={[
+            themed($saveButton),
+            (isLoading || !currentUser) && { opacity: 0.5 }
+          ]}
+        >
+          <Text style={themed($saveButtonText)}>
+            {isLoading ? "저장 중..." : "저장"}
+          </Text>
         </TouchableOpacity>
       </View>
 

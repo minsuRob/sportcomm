@@ -142,7 +142,7 @@ export default function ChatRoomsScreen() {
 
     // 임시로 바로 채팅방으로 이동
     router.push({
-      pathname: "/(app)/chat/[roomId]",
+      pathname: "/(details)/chat/[roomId]",
       params: {
         roomId: room.id,
         roomName: room.name,

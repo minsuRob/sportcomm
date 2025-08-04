@@ -156,7 +156,7 @@ export default function ChatRoomList({
   const handleEnterRoom = async (room: ChatRoom) => {
     // 임시로 바로 채팅방으로 이동 (백엔드 뮤테이션 문제로 인해)
     router.push({
-      pathname: "/(app)/chat/[roomId]",
+      pathname: "/(details)/chat/[roomId]",
       params: {
         roomId: room.id,
         roomName: room.name,

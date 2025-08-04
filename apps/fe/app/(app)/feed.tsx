@@ -28,6 +28,8 @@ import {
   NotificationBadge,
   NotificationToast,
 } from "@/components/notifications";
+import TeamFilterSelector from "@/components/TeamFilterSelector";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { gql } from "@apollo/client";
 
 // --- Type Definitions ---
@@ -69,6 +71,7 @@ export default function FeedScreen() {
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("feed");
   const [mockChatRooms, setMockChatRooms] = useState<any[]>([]);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[] | null>(null);
 
   const {
     data,
@@ -77,7 +80,13 @@ export default function FeedScreen() {
     refetch,
     fetchMore,
   } = useQuery<PostsQueryResponse>(GET_POSTS, {
-    variables: { input: { page: 1, limit: PAGE_SIZE } },
+    variables: {
+      input: {
+        page: 1,
+        limit: PAGE_SIZE,
+        teamIds: selectedTeamIds, // 팀 필터 추가
+      },
+    },
     notifyOnNetworkStatusChange: true,
     fetchPolicy: "cache-and-network", // 캐시와 네트워크 모두 사용하여 최신 데이터 보장
   });
@@ -106,6 +115,19 @@ export default function FeedScreen() {
       }
     };
     checkSession();
+
+    // 저장된 팀 필터 로드
+    const loadTeamFilter = async () => {
+      try {
+        const savedFilter = await AsyncStorage.getItem("selected_team_filter");
+        if (savedFilter) {
+          setSelectedTeamIds(JSON.parse(savedFilter));
+        }
+      } catch (error) {
+        console.error("팀 필터 로드 실패:", error);
+      }
+    };
+    loadTeamFilter();
 
     // 임시 채팅방 데이터 설정 (백엔드 연동 전까지 사용)
     setMockChatRooms([
@@ -186,7 +208,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         });
       }
@@ -197,21 +219,31 @@ export default function FeedScreen() {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     refetch({
-      input: { page: 1, limit: PAGE_SIZE },
+      input: {
+        page: 1,
+        limit: PAGE_SIZE,
+        teamIds: selectedTeamIds,
+      },
     });
-  }, [refetch]);
+  }, [refetch, selectedTeamIds]);
 
   const handleLoadMore = useCallback(() => {
     if (fetching || !data?.posts?.hasNext) return;
     const nextPage = (data?.posts?.page ?? 0) + 1;
     fetchMore({
-      variables: { input: { page: nextPage, limit: PAGE_SIZE } },
+      variables: {
+        input: {
+          page: nextPage,
+          limit: PAGE_SIZE,
+          teamIds: selectedTeamIds,
+        },
+      },
       updateQuery: (prev, { fetchMoreResult }) => {
         if (!fetchMoreResult) return prev;
         return fetchMoreResult;
       },
     });
-  }, [fetching, fetchMore, data]);
+  }, [fetching, fetchMore, data, selectedTeamIds]);
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
@@ -246,6 +278,17 @@ export default function FeedScreen() {
         params: { userId: notification.user.id },
       });
     }
+  };
+
+  /**
+   * 팀 필터 선택 핸들러
+   */
+  const handleTeamFilterChange = (teamIds: string[] | null) => {
+    setSelectedTeamIds(teamIds);
+    // 팀 필터 변경 시 피드 새로고침
+    setTimeout(() => {
+      handleRefresh();
+    }, 100);
   };
 
   // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
@@ -336,6 +379,12 @@ export default function FeedScreen() {
         <View style={themed($headerRight)}>
           {currentUser && (
             <>
+              {/* 팀 필터 선택 버튼 */}
+              <TeamFilterSelector
+                onTeamSelect={handleTeamFilterChange}
+                selectedTeamIds={selectedTeamIds}
+              />
+
               {/* 알림 버튼 */}
               <TouchableOpacity
                 style={themed($notificationButton)}

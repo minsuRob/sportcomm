@@ -7,7 +7,6 @@ import ReportModal from "@/components/ReportModal";
 import PostEditModal from "@/components/PostEditModal";
 import { useModerationActions } from "../../hooks/useModerationActions";
 import { useAppTheme } from "@/lib/theme/context";
-import { PostType } from "../PostCard";
 import { DELETE_POST, TOGGLE_BOOKMARK } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 
@@ -18,7 +17,7 @@ interface PostContextMenuProps {
     id: string;
     title?: string;
     content: string;
-    type: PostType;
+    teamId: string;
     author: {
       id: string;
       nickname: string;
@@ -171,7 +170,7 @@ export default function PostContextMenu({
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -232,7 +231,7 @@ export default function PostContextMenu({
         icon: (
           <Ionicons name="trash-outline" color={theme.colors.error} size={20} />
         ),
-      }
+      },
     );
   } else {
     // 다른 사용자의 게시물인 경우 신고/차단 옵션 추가
@@ -256,7 +255,7 @@ export default function PostContextMenu({
             size={20}
           />
         ),
-      }
+      },
     );
   }
 
@@ -290,7 +289,7 @@ export default function PostContextMenu({
           id: post.id,
           title: post.title,
           content: post.content,
-          type: post.type,
+          teamId: post.teamId,
         }}
         onPostUpdated={handlePostUpdated}
       />

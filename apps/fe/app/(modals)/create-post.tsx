@@ -460,7 +460,7 @@ export default function CreatePostScreen() {
 
       console.log("게시물 생성 시작:", {
         title: postInput.title,
-        type: postInput.type,
+        teamId: postInput.teamId,
         hasImages: selectedImages.length > 0,
         imageCount: selectedImages.length,
       });
@@ -687,12 +687,6 @@ export default function CreatePostScreen() {
             >
               <View style={themed($typeOptions)}>
                 {teamOptions.map((option) => (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={themed($typeScrollView)}
-              >
-                {selectedTeams.map((option) => (
                   <TouchableOpacity
                     key={option.teamId}
                     style={[

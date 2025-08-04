@@ -379,7 +379,7 @@ export const UPDATE_POST = gql`
       id
       title
       content
-      type
+      teamId
       createdAt
       updatedAt
       isPublic

@@ -18,14 +18,13 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { UPDATE_POST } from "@/lib/graphql";
-import { PostType } from "@/components/shared/PostHeader";
-
 // --- 타입 정의 ---
-interface PostTypeOption {
-  type: PostType;
+interface TeamOption {
+  teamId: string;
   label: string;
   color: string;
   icon: string;
+  sportName: string;
 }
 
 interface PostEditModalProps {
@@ -35,7 +34,7 @@ interface PostEditModalProps {
     id: string;
     title?: string;
     content: string;
-    type: PostType;
+    teamId: string;
   };
   onPostUpdated?: (updatedPost: any) => void;
 }
@@ -55,31 +54,34 @@ export default function PostEditModal({
   // 상태 관리
   const [title, setTitle] = useState(post.title || "");
   const [content, setContent] = useState(post.content);
-  const [selectedType, setSelectedType] = useState<PostType>(post.type);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(post.teamId);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // GraphQL 뮤테이션
   const [executeUpdatePost] = useMutation(UPDATE_POST);
 
-  // 게시물 타입 옵션
-  const postTypeOptions: PostTypeOption[] = [
+  // 팀 옵션 - 실제로는 API로 가져와야 합니다
+  const teamOptions: TeamOption[] = [
     {
-      type: PostType.ANALYSIS,
-      label: t(TRANSLATION_KEYS.POST_TYPE_ANALYSIS),
-      color: "#6366f1",
-      icon: "📊",
+      teamId: "tottenham-id",
+      label: "토트넘",
+      color: "#132257",
+      icon: "⚽",
+      sportName: "축구",
     },
     {
-      type: PostType.HIGHLIGHT,
-      label: t(TRANSLATION_KEYS.POST_TYPE_HIGHLIGHT),
-      color: "#f59e0b",
-      icon: "⭐",
+      teamId: "doosan-id",
+      label: "두산",
+      color: "#131230",
+      icon: "⚾",
+      sportName: "야구",
     },
     {
-      type: PostType.CHEERING,
-      label: t(TRANSLATION_KEYS.POST_TYPE_CHEERING),
-      color: "#10b981",
-      icon: "📣",
+      teamId: "t1-id",
+      label: "T1",
+      color: "#E2012D",
+      icon: "🎮",
+      sportName: "e스포츠",
     },
   ];
 
@@ -88,7 +90,7 @@ export default function PostEditModal({
     if (visible) {
       setTitle(post.title || "");
       setContent(post.content);
-      setSelectedType(post.type);
+      setSelectedTeamId(post.teamId);
     }
   }, [visible, post]);
 
@@ -99,7 +101,7 @@ export default function PostEditModal({
     return (
       title.trim() !== (post.title || "").trim() ||
       content.trim() !== post.content.trim() ||
-      selectedType !== post.type
+      selectedTeamId !== post.teamId
     );
   };
 
@@ -122,10 +124,10 @@ export default function PostEditModal({
   };
 
   /**
-   * 게시물 타입 선택 핸들러
+   * 팀 선택 핸들러
    */
-  const handleTypeSelect = (type: PostType) => {
-    setSelectedType(selectedType === type ? post.type : type);
+  const handleTeamSelect = (teamId: string) => {
+    setSelectedTeamId(selectedTeamId === teamId ? post.teamId : teamId);
   };
 
   /**
@@ -171,7 +173,7 @@ export default function PostEditModal({
             id: post.id,
             title: title.trim(),
             content: content.trim(),
-            type: selectedType,
+            teamId: selectedTeamId,
           },
         },
       });
@@ -248,27 +250,27 @@ export default function PostEditModal({
           style={themed($scrollContainer)}
           showsVerticalScrollIndicator={false}
         >
-          {/* 게시물 타입 선택 */}
+          {/* 팀 선택 */}
           <View style={themed($typeSection)}>
-            <Text style={themed($sectionTitle)}>게시물 유형</Text>
+            <Text style={themed($sectionTitle)}>팀 선택</Text>
             <View style={themed($typeOptions)}>
-              {postTypeOptions.map((option) => (
+              {teamOptions.map((option) => (
                 <TouchableOpacity
-                  key={option.type}
+                  key={option.teamId}
                   style={[
                     themed($typeOption),
                     {
                       borderColor:
-                        selectedType === option.type
+                        selectedTeamId === option.teamId
                           ? option.color
                           : theme.colors.border,
                       backgroundColor:
-                        selectedType === option.type
+                        selectedTeamId === option.teamId
                           ? option.color + "20"
                           : "transparent",
                     },
                   ]}
-                  onPress={() => handleTypeSelect(option.type)}
+                  onPress={() => handleTeamSelect(option.teamId)}
                 >
                   <Text style={themed($typeIcon)}>{option.icon}</Text>
                   <Text
@@ -276,7 +278,7 @@ export default function PostEditModal({
                       themed($typeLabel),
                       {
                         color:
-                          selectedType === option.type
+                          selectedTeamId === option.teamId
                             ? option.color
                             : theme.colors.text,
                       },

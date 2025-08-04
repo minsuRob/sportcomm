@@ -169,7 +169,7 @@ export default function PostItem({ post, onPress }: PostItemProps) {
 
         {/* 게시물 팀 */}
         <View style={themed($typeTag)}>
-          <Text style={themed($typeText)}>팀 {post.teamId}</Text>
+          <Text style={themed($typeText)}>팀 정보</Text>
         </View>
       </View>
 
@@ -223,7 +223,7 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderRadius: 8,
   padding: spacing.md,
   marginBottom: spacing.md,
-  shadowColor: colors.shadow,
+  shadowColor: "#000000",
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
   shadowRadius: 3,
@@ -256,7 +256,7 @@ const $timestamp: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 const $typeTag: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.tintLight,
+  backgroundColor: colors.tint + "20",
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.xs,
   borderRadius: 4,

@@ -14,3 +14,4 @@ apps/fe/.env
 .turbo
 apps/be/uploads/images
 apps/be/uploads/videos
+apps/be/uploads/team-logos

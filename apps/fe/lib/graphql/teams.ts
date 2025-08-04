@@ -1,4 +1,4 @@
-import { gql } from "urql";
+import { gql } from "@apollo/client";
 
 /**
  * 스포츠 및 팀 관련 GraphQL 쿼리와 뮤테이션
@@ -135,7 +135,7 @@ export const GET_MY_PRIMARY_TEAM = gql`
 
 // 팀 선택
 export const SELECT_TEAM = gql`
-  mutation SelectTeam($teamId: String!, $priority: Number = 0) {
+  mutation SelectTeam($teamId: String!, $priority: Int = 0) {
     selectTeam(teamId: $teamId, priority: $priority) {
       ...UserTeamInfo
     }

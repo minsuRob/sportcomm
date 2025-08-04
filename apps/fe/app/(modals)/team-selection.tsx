@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useQuery, useMutation } from "urql";
+import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
@@ -43,15 +43,11 @@ export default function TeamSelectionScreen() {
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
 
   // GraphQL 쿼리 및 뮤테이션
-  const [sportsResult] = useQuery<GetSportsResult>({
-    query: GET_SPORTS,
-  });
+  const { data: sportsData, loading: sportsLoading, refetch: refetchSports } = useQuery<GetSportsResult>(GET_SPORTS);
 
-  const [myTeamsResult, refetchMyTeams] = useQuery<GetMyTeamsResult>({
-    query: GET_MY_TEAMS,
-  });
+  const { data: myTeamsData, loading: myTeamsLoading, refetch: refetchMyTeams } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS);
 
-  const [, updateMyTeams] = useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
+  const [updateMyTeams, { loading: updateLoading }] = useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
 
   // 사용자 정보 로드
   useEffect(() => {
@@ -66,13 +62,13 @@ export default function TeamSelectionScreen() {
 
   // 사용자가 선택한 팀 목록 로드
   useEffect(() => {
-    if (myTeamsResult.data?.myTeams) {
-      const teamIds = myTeamsResult.data.myTeams.map(
+    if (myTeamsData?.myTeams) {
+      const teamIds = myTeamsData.myTeams.map(
         (userTeam) => userTeam.team.id
       );
       setSelectedTeams(teamIds);
     }
-  }, [myTeamsResult.data]);
+  }, [myTeamsData]);
 
   /**
    * 팀 선택/해제 핸들러
@@ -97,16 +93,18 @@ export default function TeamSelectionScreen() {
 
     try {
       // GraphQL 뮤테이션으로 팀 선택 업데이트
-      const result = await updateMyTeams({
-        teamIds: selectedTeams,
+      const { data, errors } = await updateMyTeams({
+        variables: {
+          teamIds: selectedTeams,
+        },
       });
 
-      if (result.error) {
-        throw new Error(result.error.message);
+      if (errors) {
+        throw new Error(errors[0].message);
       }
 
       // 사용자 팀 목록 다시 조회
-      refetchMyTeams({ requestPolicy: "network-only" });
+      refetchMyTeams({ fetchPolicy: "network-only" });
 
       showToast({
         type: "success",
@@ -228,7 +226,7 @@ export default function TeamSelectionScreen() {
   };
 
   // 로딩 상태 처리
-  if (sportsResult.fetching || myTeamsResult.fetching) {
+  if (sportsLoading || myTeamsLoading) {
     return (
       <View style={[themed($container), themed($loadingContainer)]}>
         <ActivityIndicator size="large" color={theme.colors.tint} />
@@ -238,7 +236,7 @@ export default function TeamSelectionScreen() {
   }
 
   // 에러 상태 처리
-  if (sportsResult.error) {
+  if (!sportsData) {
     return (
       <View style={[themed($container), themed($errorContainer)]}>
         <Text style={themed($errorText)}>
@@ -247,7 +245,7 @@ export default function TeamSelectionScreen() {
         <TouchableOpacity
           style={themed($retryButton)}
           onPress={() => {
-            sportsResult.reexecuteQuery({ requestPolicy: "network-only" });
+            refetchSports({ fetchPolicy: "network-only" });
           }}
         >
           <Text style={themed($retryButtonText)}>다시 시도</Text>
@@ -256,7 +254,7 @@ export default function TeamSelectionScreen() {
     );
   }
 
-  const sports = sportsResult.data?.sports || [];
+  const sports = sportsData?.sports || [];
   const currentSport = sports[activeCategoryIndex];
 
   return (
@@ -306,6 +304,14 @@ export default function TeamSelectionScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* 로딩 중 표시 */}
+      {updateLoading && (
+        <View style={themed($loadingOverlay)}>
+          <ActivityIndicator size="large" color={theme.colors.tint} />
+          <Text style={themed($loadingText)}>데이터 저장 중...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -349,6 +355,18 @@ const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginTop: spacing.md,
   fontSize: 16,
   color: colors.textDim,
+});
+
+const $loadingOverlay: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: colors.background + "CC",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 10,
 });
 
 const $errorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

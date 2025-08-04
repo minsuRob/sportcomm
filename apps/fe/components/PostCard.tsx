@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useQuery } from "@apollo/client";
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
 try {
@@ -31,6 +32,7 @@ import { isWeb } from "@/lib/platform";
 import { usePostImageDimensions, IMAGE_CONSTANTS } from "@/lib/image";
 import { getSession } from "@/lib/auth";
 import { useTeams } from "@/hooks/useTeams";
+import { GET_MY_TEAMS, type UserTeam } from "@/lib/graphql/teams";
 import TeamLogo from "./TeamLogo";
 
 // --- Type Definitions ---
@@ -212,6 +214,9 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { getTeamById } = useTeams();
+  const { data: myTeamsData } = useQuery<{ myTeams: UserTeam[] }>(GET_MY_TEAMS);
+
+  const myTeams = myTeamsData?.myTeams || [];
 
   // 컨텍스트 메뉴 상태 관리
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -659,33 +664,51 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
             <View style={themed($topRightContainer)}>
-              <View
-                style={[
-                  themed($categoryBadge),
-                  { backgroundColor: categoryInfo.colors.badge + "40" },
-                ]}
-              >
+              <View style={themed($topRightRow)}>
                 <View
                   style={[
-                    themed($categoryIcon),
-                    { backgroundColor: categoryInfo.colors.badge + "60" },
+                    themed($categoryBadge),
+                    { backgroundColor: categoryInfo.colors.badge + "40" },
                   ]}
                 >
-                  <Text style={themed($categoryIconText)}>
-                    {categoryInfo.icon}
-                  </Text>
+                  <View
+                    style={[
+                      themed($categoryIcon),
+                      { backgroundColor: categoryInfo.colors.badge + "60" },
+                    ]}
+                  >
+                    <Text style={themed($categoryIconText)}>
+                      {categoryInfo.icon}
+                    </Text>
+                  </View>
+                  <Text style={themed($categoryText)}>{categoryInfo.text}</Text>
                 </View>
-                <Text style={themed($categoryText)}>{categoryInfo.text}</Text>
-              </View>
 
-              {/* 더보기 버튼 */}
-              <TouchableOpacity
-                style={themed($moreButton)}
-                onPress={handleMorePress}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="ellipsis-horizontal" size={20} color="white" />
-              </TouchableOpacity>
+                {/* 더보기 버튼 */}
+                <TouchableOpacity
+                  style={themed($moreButton)}
+                  onPress={handleMorePress}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="ellipsis-horizontal"
+                    size={20}
+                    color="white"
+                  />
+                </TouchableOpacity>
+              </View>
+              {/* My Teams */}
+              <View style={themed($myTeamsContainer)}>
+                {(myTeams || []).slice(0, 3).map((userTeam: UserTeam) => (
+                  <TeamLogo
+                    key={userTeam.team.id}
+                    logoUrl={userTeam.team.logoUrl}
+                    teamName={userTeam.team.name}
+                    size={36}
+                    style={{ marginBottom: 4 }}
+                  />
+                ))}
+              </View>
             </View>
 
             {/* title이 있으면 표시 */}
@@ -746,7 +769,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
           id: post.id,
           title: post.title,
           content: post.content,
-          type: post.type,
+          teamId: post.teamId,
           author: {
             id: post.author.id,
             nickname: post.author.nickname,
@@ -910,10 +933,20 @@ const $topRightContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   top: spacing.md,
   right: spacing.md,
+  flexDirection: "column",
+  alignItems: "flex-end",
+  zIndex: 3,
+});
+
+const $topRightRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   gap: spacing.xs,
-  zIndex: 3,
+  marginBottom: spacing.sm,
+});
+
+const $myTeamsContainer: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "flex-end",
 });
 
 // 카테고리 배지

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, ViewStyle, TextStyle } from "react-native";
-import { Image } from "expo-image";
+import { Image, ImageStyle } from "expo-image";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
@@ -110,7 +110,7 @@ const $circleBackground: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderColor: colors.border + "30", // 투명도 적용
 });
 
-const $image: ThemedStyle<ViewStyle> = () => ({
+const $image: ThemedStyle<ImageStyle> = () => ({
   position: "absolute",
 });
 

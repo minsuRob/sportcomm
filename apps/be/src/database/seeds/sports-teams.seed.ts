@@ -205,7 +205,16 @@ export async function seedSportsAndTeams(
         await teamRepository.save(team);
         console.log(`  ✅ 팀 생성: ${team.name} (${sport.name})`);
       } else {
-        console.log(`  ⏭️  팀 이미 존재: ${teamData.name} (${sport.name})`);
+        // 기존 팀의 sportId 업데이트 (항상 업데이트)
+        existingTeam.sportId = sport.id;
+        existingTeam.name = teamData.name;
+        existingTeam.color = teamData.color;
+        existingTeam.icon = teamData.icon;
+        existingTeam.description = teamData.description;
+        existingTeam.sortOrder = teamData.sortOrder;
+        existingTeam.isActive = true;
+        await teamRepository.save(existingTeam);
+        console.log(`  🔄 팀 업데이트: ${teamData.name} -> ${sport.name}`);
       }
     }
   }

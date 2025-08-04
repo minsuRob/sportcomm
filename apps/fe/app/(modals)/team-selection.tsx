@@ -43,11 +43,20 @@ export default function TeamSelectionScreen() {
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
 
   // GraphQL 쿼리 및 뮤테이션
-  const { data: sportsData, loading: sportsLoading, refetch: refetchSports } = useQuery<GetSportsResult>(GET_SPORTS);
+  const {
+    data: sportsData,
+    loading: sportsLoading,
+    refetch: refetchSports,
+  } = useQuery<GetSportsResult>(GET_SPORTS);
 
-  const { data: myTeamsData, loading: myTeamsLoading, refetch: refetchMyTeams } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS);
+  const {
+    data: myTeamsData,
+    loading: myTeamsLoading,
+    refetch: refetchMyTeams,
+  } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS);
 
-  const [updateMyTeams, { loading: updateLoading, error: updateError }] = useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
+  const [updateMyTeams, { loading: updateLoading, error: updateError }] =
+    useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
 
   // 전체 로딩 상태
   const isLoading = sportsLoading || myTeamsLoading || updateLoading;
@@ -76,9 +85,7 @@ export default function TeamSelectionScreen() {
   // 사용자가 선택한 팀 목록 로드
   useEffect(() => {
     if (myTeamsData?.myTeams) {
-      const teamIds = myTeamsData.myTeams.map(
-        (userTeam) => userTeam.team.id
-      );
+      const teamIds = myTeamsData.myTeams.map((userTeam) => userTeam.team.id);
       setSelectedTeams(teamIds);
     }
   }, [myTeamsData]);
@@ -178,11 +185,18 @@ export default function TeamSelectionScreen() {
       console.error("팀 선택 저장 실패:", error);
 
       // 인증 관련 오류인지 확인
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('login') || errorMessage.includes('로그인') ||
-          errorMessage.includes('인증') || errorMessage.includes('auth') ||
-          errorMessage.includes('token') || errorMessage.includes('토큰') ||
-          errorMessage.includes('undefined') || errorMessage.includes('logIn')) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (
+        errorMessage.includes("login") ||
+        errorMessage.includes("로그인") ||
+        errorMessage.includes("인증") ||
+        errorMessage.includes("auth") ||
+        errorMessage.includes("token") ||
+        errorMessage.includes("토큰") ||
+        errorMessage.includes("undefined") ||
+        errorMessage.includes("logIn")
+      ) {
         console.error("인증 오류 발생:", errorMessage);
 
         showToast({
@@ -196,11 +210,11 @@ export default function TeamSelectionScreen() {
         setTimeout(() => router.back(), 1000);
 
         // 추가 세션 정보 출력 (디버깅용)
-        getSession().then(({token, user}) => {
+        getSession().then(({ token, user }) => {
           console.log("현재 세션 상태:", {
             hasToken: !!token,
             hasUser: !!user,
-            userId: user?.id
+            userId: user?.id,
           });
         });
       } else {
@@ -343,6 +357,11 @@ export default function TeamSelectionScreen() {
   const sports = sportsData?.sports || [];
   const currentSport = sports[activeCategoryIndex];
 
+  // 디버깅을 위한 로그
+  console.log("Sports data:", sports);
+  console.log("Current sport:", currentSport);
+  console.log("Current sport teams:", currentSport?.teams);
+
   return (
     <View style={themed($container)}>
       {/* 헤더 */}
@@ -356,7 +375,7 @@ export default function TeamSelectionScreen() {
           disabled={isLoading || !currentUser}
           style={[
             themed($saveButton),
-            (isLoading || !currentUser) && { opacity: 0.5 }
+            (isLoading || !currentUser) && { opacity: 0.5 },
           ]}
         >
           <Text style={themed($saveButtonText)}>
@@ -393,9 +412,23 @@ export default function TeamSelectionScreen() {
 
       <ScrollView style={themed($scrollContainer)}>
         {/* 선택된 카테고리의 팀 목록 */}
-        {currentSport && (
+        {currentSport ? (
           <View style={themed($teamsContainer)}>
-            {renderTeamGrid(currentSport.teams || [])}
+            {currentSport.teams && currentSport.teams.length > 0 ? (
+              renderTeamGrid(currentSport.teams)
+            ) : (
+              <View style={themed($emptyContainer)}>
+                <Text style={themed($emptyText)}>
+                  {currentSport.name} 카테고리에 등록된 팀이 없습니다.
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={themed($emptyContainer)}>
+            <Text style={themed($emptyText)}>
+              스포츠 카테고리를 불러오는 중입니다...
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -606,5 +639,18 @@ const $teamCardIcon: ThemedStyle<TextStyle> = () => ({
 const $teamCardName: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   fontWeight: "600",
+  textAlign: "center",
+});
+
+const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: spacing.xl,
+});
+
+const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
   textAlign: "center",
 });

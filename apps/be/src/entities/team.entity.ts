@@ -139,8 +139,9 @@ export class Team extends BaseEntity {
    * 소속 스포츠 ID
    * Sport 엔티티와의 관계를 위한 외래키입니다.
    */
-  @RelationId((team: Team) => team.sport)
-  sportId: string;
+  @Field(() => String, { nullable: true, description: '소속 스포츠 ID' })
+  @Column({ type: 'uuid', nullable: true, comment: '소속 스포츠 ID' })
+  sportId?: string;
 
   // === 관계 설정 ===
 
@@ -148,12 +149,12 @@ export class Team extends BaseEntity {
    * 소속 스포츠
    * 다대일 관계: 여러 팀이 하나의 스포츠에 속할 수 있습니다.
    */
-  @Field(() => Sport, { description: '소속 스포츠' })
+  @Field(() => Sport, { nullable: true, description: '소속 스포츠' })
   @ManyToOne(() => Sport, (sport) => sport.teams, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'sportId' })
-  sport: Sport;
+  sport?: Sport;
 
   /**
    * 이 팀을 선택한 사용자들과의 관계

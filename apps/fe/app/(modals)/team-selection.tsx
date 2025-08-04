@@ -17,6 +17,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
 import { showToast } from "@/components/CustomToast";
+import TeamLogo from "@/components/TeamLogo";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -440,7 +441,12 @@ export default function TeamSelectionScreen() {
                 onPress={() => handleTeamSelect(teamId)}
               >
                 <View style={themed($teamIconContainer)}>
-                  <Text style={themed($teamCardIcon)}>{team.icon}</Text>
+                  <TeamLogo
+                    logoUrl={team.logoUrl}
+                    fallbackIcon={team.icon}
+                    teamName={team.name}
+                    size={40}
+                  />
                   {isSelected && (
                     <View style={themed($selectedIndicator)}>
                       <Ionicons name="checkmark" size={16} color="white" />

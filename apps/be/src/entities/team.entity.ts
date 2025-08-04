@@ -84,14 +84,17 @@ export class Team extends BaseEntity {
 
   /**
    * 팀 로고 이미지 URL
-   * 선택적 필드입니다.
+   * webp 형식의 팀 로고 이미지 URL입니다.
    */
-  @Field(() => String, { nullable: true, description: '팀 로고 이미지 URL' })
+  @Field(() => String, {
+    nullable: true,
+    description: '팀 로고 이미지 URL (webp 형식)',
+  })
   @Column({
     type: 'varchar',
     length: 500,
     nullable: true,
-    comment: '팀 로고 이미지 URL',
+    comment: '팀 로고 이미지 URL (webp 형식)',
   })
   @IsString({ message: '로고 URL은 문자열이어야 합니다.' })
   @MaxLength(500, { message: '로고 URL은 최대 500자까지 가능합니다.' })

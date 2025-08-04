@@ -18,6 +18,7 @@ import {
   type Team,
   type GetMyTeamsResult,
 } from "@/lib/graphql/teams";
+import TeamLogo from "@/components/TeamLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -101,15 +102,20 @@ export default function TeamFilterSelector({
     return `${selectedTeams.length}개 팀`;
   };
 
-  // 표시할 아이콘 결정
-  const getDisplayIcon = () => {
+  // 표시할 로고 결정
+  const getDisplayLogo = () => {
     if (!selectedTeamIds || selectedTeamIds.length === 0) {
-      return "🏆";
+      return { logoUrl: undefined, fallbackIcon: "🏆", teamName: "전체" };
     }
     if (selectedTeams.length === 1) {
-      return selectedTeams[0].icon;
+      const team = selectedTeams[0];
+      return {
+        logoUrl: team.logoUrl,
+        fallbackIcon: team.icon,
+        teamName: team.name,
+      };
     }
-    return "🏆";
+    return { logoUrl: undefined, fallbackIcon: "🏆", teamName: "다중 선택" };
   };
 
   if (loading || !myTeamsData?.myTeams || myTeamsData.myTeams.length === 0) {
@@ -123,7 +129,12 @@ export default function TeamFilterSelector({
         style={themed($filterButton)}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={themed($filterIcon)}>{getDisplayIcon()}</Text>
+        <TeamLogo
+          logoUrl={getDisplayLogo().logoUrl}
+          fallbackIcon={getDisplayLogo().fallbackIcon}
+          teamName={getDisplayLogo().teamName}
+          size={16}
+        />
         <Text style={themed($filterText)} numberOfLines={1}>
           {getDisplayText()}
         </Text>
@@ -185,7 +196,12 @@ export default function TeamFilterSelector({
                     ]}
                     onPress={() => toggleTeam(team.id)}
                   >
-                    <Text style={themed($teamIcon)}>{team.icon}</Text>
+                    <TeamLogo
+                      logoUrl={team.logoUrl}
+                      fallbackIcon={team.icon}
+                      teamName={team.name}
+                      size={24}
+                    />
                     <Text style={themed($teamName)}>{team.name}</Text>
                     {isSelected && (
                       <Ionicons

@@ -265,4 +265,24 @@ export class TeamsService {
 
     return !!userTeam;
   }
+
+  /**
+   * 팀 로고 업데이트
+   * @param teamId 팀 ID
+   * @param logoUrl 새로운 로고 URL
+   * @returns 업데이트된 팀 정보
+   */
+  async updateTeamLogo(teamId: string, logoUrl: string): Promise<Team> {
+    const team = await this.teamsRepository.findOne({
+      where: { id: teamId },
+      relations: ['sport'],
+    });
+
+    if (!team) {
+      throw new NotFoundException('팀을 찾을 수 없습니다.');
+    }
+
+    team.logoUrl = logoUrl;
+    return await this.teamsRepository.save(team);
+  }
 }

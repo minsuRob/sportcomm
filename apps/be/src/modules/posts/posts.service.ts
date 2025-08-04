@@ -27,7 +27,7 @@ export interface CreatePostInput {
   isPublic?: boolean;
   /** 첨부할 미디어 ID 배열 */
   mediaIds?: string[];
-  /** 응원할 팀 ID (CHEERING 타입인 경우) */
+  /** 연관된 팀 ID */
   teamId?: string;
 }
 
@@ -139,8 +139,7 @@ export class PostsService {
       teamId,
     } = createPostInput;
 
-    // teamId가 제공된 경우 type을 CHEERING으로 설정
-    // 현재는 PostType enum 구조를 유지하므로 teamId는 로깅만 수행
+    // teamId가 제공된 경우 팀 연관 게시물 로깅
     if (teamId) {
       console.log(`게시물 생성 - 팀 ID: ${teamId}, 타입: ${type}`);
     }
@@ -148,6 +147,7 @@ export class PostsService {
     // 게시물 생성
     const post = this.postRepository.create({
       title,
+      teamId,
       content,
       type,
       isPublic,
@@ -651,6 +651,7 @@ export class PostsService {
     publicPosts: number;
     privatePosts: number;
     postsByType: Record<PostType, number>;
+    teamRelatedCount: number;
   }> {
     const [totalPosts, publicPosts, privatePosts] = await Promise.all([
       this.postRepository.count(),
@@ -673,11 +674,19 @@ export class PostsService {
       {} as Record<PostType, number>,
     );
 
+    // 팀 연관 게시물 수 - teamId 필드 확인
+    const teamRelatedPostsQuery = this.postRepository
+      .createQueryBuilder('post')
+      .where('post.teamId IS NOT NULL');
+
+    const teamRelatedCount = await teamRelatedPostsQuery.getCount();
+
     return {
       totalPosts,
       publicPosts,
       privatePosts,
       postsByType: typeStats,
+      teamRelatedCount,
     };
   }
 

@@ -16,6 +16,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
 import ChatList from "@/components/chat/ChatList";
+import ChatInput from "@/components/chat/ChatInput";
 import { showToast } from "@/components/CustomToast";
 import {
   GET_CHAT_MESSAGES,
@@ -114,6 +115,17 @@ export default function ChatRoomScreen() {
     },
     {
       id: "3",
+      content: "💌 우리 팀이 우승할 것 같아요! 정말 기대됩니다!",
+      created_at: new Date(Date.now() - 1500000).toISOString(),
+      user_id: "user4",
+      user: {
+        id: "user4",
+        nickname: "열정팬",
+        profileImageUrl: undefined,
+      },
+    },
+    {
+      id: "4",
       content: "정말 흥미진진한 경기였어요! 특히 후반전이 대박이었죠.",
       created_at: new Date(Date.now() - 1200000).toISOString(),
       user_id: "user2",
@@ -124,7 +136,18 @@ export default function ChatRoomScreen() {
       },
     },
     {
-      id: "4",
+      id: "5",
+      content: "💌 이번 시즌 최고의 경기였습니다! 감동적이었어요 🏆",
+      created_at: new Date(Date.now() - 900000).toISOString(),
+      user_id: "user5",
+      user: {
+        id: "user5",
+        nickname: "챔피언",
+        profileImageUrl: undefined,
+      },
+    },
+    {
+      id: "6",
       content: "맞아요! 마지막 골이 정말 환상적이었습니다 ⚽",
       created_at: new Date(Date.now() - 600000).toISOString(),
       user_id: "user3",
@@ -203,11 +226,11 @@ export default function ChatRoomScreen() {
 
   // 임시로 에러 처리 비활성화
 
-  // 메시지 전송 핸들러
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || sendLoading) return;
+  // 메시지 전송 핸들러 (ChatInput에서 호출)
+  const handleSendMessage = async (messageContent: string) => {
+    if (!messageContent.trim() || sendLoading) return;
 
-    await sendMessage(messageText.trim());
+    await sendMessage(messageContent.trim());
   };
 
   // 뒤로가기 핸들러
@@ -244,39 +267,19 @@ export default function ChatRoomScreen() {
       />
 
       {/* 메시지 입력 영역 */}
-      <View style={themed($inputContainer)}>
-        <View style={themed($inputWrapper)}>
-          <TextInput
-            ref={inputRef}
-            style={themed($textInput)}
-            value={messageText}
-            onChangeText={setMessageText}
-            placeholder="메시지를 입력하세요..."
-            placeholderTextColor={theme.colors.textDim}
-            multiline
-            maxLength={1000}
-            returnKeyType="send"
-            onSubmitEditing={handleSendMessage}
-            blurOnSubmit={false}
-          />
-          <TouchableOpacity
-            style={[
-              themed($sendButton),
-              {
-                opacity: messageText.trim() && !sendLoading ? 1 : 0.5,
-              },
-            ]}
-            onPress={handleSendMessage}
-            disabled={!messageText.trim() || sendLoading}
-          >
-            <Ionicons
-              name={sendLoading ? "hourglass" : "send"}
-              color="white"
-              size={20}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        disabled={sendLoading}
+        placeholder="메시지를 입력하세요..."
+        onEmoji={() => {
+          // 이모지 버튼 클릭 시 특별 메시지 모드 토글
+          console.log("Special message mode toggled");
+        }}
+        onAddOption={() => {
+          // + 버튼 클릭 시 추가 옵션 표시
+          console.log("Add options clicked");
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -287,39 +290,4 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
 });
 
-const $inputContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  backgroundColor: colors.background,
-  borderTopWidth: 1,
-  borderTopColor: colors.border,
-});
-
-const $inputWrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  alignItems: "flex-end",
-  gap: spacing.sm,
-});
-
-const $textInput: ThemedStyle<any> = ({ colors, spacing }) => ({
-  flex: 1,
-  borderWidth: 1,
-  borderColor: colors.border,
-  borderRadius: 20,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  fontSize: 16,
-  color: colors.text,
-  backgroundColor: colors.card,
-  maxHeight: 100,
-  minHeight: 40,
-});
-
-const $sendButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  backgroundColor: colors.tint,
-  justifyContent: "center",
-  alignItems: "center",
-});
+// ChatInput 컴포넌트를 사용하므로 입력 관련 스타일 제거

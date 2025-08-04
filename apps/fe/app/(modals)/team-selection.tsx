@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession, updateSession } from "@/lib/auth";
+import { User, getSession, saveSession } from "@/lib/auth";
 import { showToast } from "@/components/CustomToast";
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -162,7 +162,7 @@ export default function TeamSelectionScreen() {
       const { user } = await getSession();
       if (user) {
         setCurrentUser(user);
-        setSelectedTeam(user.favoriteTeam || null);
+        setSelectedTeam(user.team || null);
       }
     };
     loadUser();
@@ -188,14 +188,14 @@ export default function TeamSelectionScreen() {
       // 현재는 로컬 세션만 업데이트
       const updatedUser = {
         ...currentUser,
-        favoriteTeam: selectedTeam || undefined,
+        team: selectedTeam || undefined,
       };
 
-      await updateSession(updatedUser);
+      await saveSession(updatedUser);
       setCurrentUser(updatedUser);
 
       const selectedTeamInfo = ALL_TEAMS.find(
-        (team) => team.id === selectedTeam
+        (t) => t.id === selectedTeam
       );
 
       showToast({

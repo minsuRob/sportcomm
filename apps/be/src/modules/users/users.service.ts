@@ -196,8 +196,8 @@ export class UsersService {
    */
   async getUserTeams(userId: string): Promise<UserTeam[]> {
     return this.userTeamsRepository.find({
-      where: { userId },
-      relations: ['team', 'team.sport'],
+      where: { user: { id: userId } },
+      relations: ['team', 'team.sport', 'user'],
       order: {
         priority: 'ASC',
         createdAt: 'ASC',

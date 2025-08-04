@@ -27,6 +27,7 @@ export class UserTeam extends BaseEntity {
    */
   @Field(() => String, { description: '사용자 ID' })
   @RelationId((userTeam: UserTeam) => userTeam.user)
+  @Column({ name: 'userId' })
   userId: string;
 
   /**
@@ -35,6 +36,7 @@ export class UserTeam extends BaseEntity {
    */
   @Field(() => String, { description: '팀 ID' })
   @RelationId((userTeam: UserTeam) => userTeam.team)
+  @Column({ name: 'teamId' })
   teamId: string;
 
   /**

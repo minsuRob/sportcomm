@@ -458,16 +458,14 @@ export const UPLOAD_FILE = gql`
 /**
  * 사용자 프로필 업데이트 뮤테이션
  */
-export const UPDATE_USER_PROFILE = gql`
-  mutation UpdateUserProfile($input: UpdateUserInput!) {
-    updateUserProfile(input: $input) {
+export const UPDATE_PROFILE = gql`
+  mutation UpdateProfile($input: UpdateProfileInput!) {
+    updateProfile(input: $input) {
       id
       nickname
       email
       bio
-      team
       profileImageUrl
-      isPrivate
       role
       createdAt
       updatedAt

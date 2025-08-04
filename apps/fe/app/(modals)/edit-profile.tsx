@@ -19,8 +19,12 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession, saveSession } from "@/lib/auth";
 import { useMutation } from "@apollo/client";
-import { UPDATE_USER_PROFILE } from "@/lib/graphql";
+import { UPDATE_PROFILE } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
+import { uploadFilesWeb } from "@/lib/api/webUpload";
+import { uploadFilesMobile } from "@/lib/api/mobileUpload";
+import { isWeb } from "@/lib/platform";
+import { UploadedMedia, ProgressCallback } from "@/lib/api/common";
 
 /**
  * 프로필 편집 모달 화면
@@ -38,9 +42,11 @@ export default function EditProfileScreen() {
   const [team, setTeam] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
-  // GraphQL 뮤테이션
-  const [updateProfile] = useMutation(UPDATE_USER_PROFILE);
+  // GraphQL 뮤테이션 (프로필 정보 업데이트용)
+  const [updateProfile] = useMutation(UPDATE_PROFILE);
 
   // 사용자 정보 로드
   useEffect(() => {
@@ -59,7 +65,59 @@ export default function EditProfileScreen() {
   }, []);
 
   /**
-   * 프로필 이미지 선택
+   * 프로필 이미지 업로드 처리
+   * create-post.tsx와 동일한 패턴으로 구현
+   */
+  const uploadProfileImage = async (
+    file: File | { uri: string; name: string; type: string },
+  ): Promise<string | null> => {
+    try {
+      setIsImageUploading(true);
+      setUploadProgress(0);
+
+      console.log("프로필 이미지 업로드 시작:", {
+        isWeb: isWeb(),
+        fileInfo: isWeb() ? (file as File).name : (file as any).name,
+      });
+
+      // 진행률 콜백 함수
+      const progressCallback: ProgressCallback = (progress) => {
+        setUploadProgress(progress.percentage);
+        console.log(`업로드 진행률: ${progress.percentage}%`);
+      };
+
+      let uploadedFiles: UploadedMedia[];
+
+      // 플랫폼별 업로드 (create-post.tsx와 동일한 패턴)
+      if (isWeb()) {
+        uploadedFiles = await uploadFilesWeb([file as File], progressCallback);
+      } else {
+        uploadedFiles = await uploadFilesMobile(
+          [file as { uri: string; name: string; type: string }],
+          progressCallback,
+        );
+      }
+
+      if (uploadedFiles.length === 0) {
+        throw new Error("파일 업로드에 실패했습니다.");
+      }
+
+      const uploadedMedia = uploadedFiles[0];
+      console.log("프로필 이미지 업로드 성공:", uploadedMedia);
+
+      // 업로드된 미디어의 URL 반환
+      return uploadedMedia.url;
+    } catch (error) {
+      console.error("프로필 이미지 업로드 실패:", error);
+      throw error;
+    } finally {
+      setIsImageUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  /**
+   * 프로필 이미지 선택 및 업로드
    */
   const handleSelectImage = async () => {
     try {
@@ -68,10 +126,65 @@ export default function EditProfileScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        allowsMultipleSelection: false,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setProfileImage(result.assets[0].uri);
+        const selectedAsset = result.assets[0];
+
+        // 파일 타입 검증
+        if (!selectedAsset.mimeType?.startsWith("image/")) {
+          showToast({
+            type: "error",
+            title: "오류",
+            message: "이미지 파일만 업로드 가능합니다.",
+            duration: 3000,
+          });
+          return;
+        }
+
+        try {
+          let uploadFile: File | { uri: string; name: string; type: string };
+
+          if (isWeb()) {
+            // 웹 환경에서는 blob을 File로 변환
+            const response = await fetch(selectedAsset.uri);
+            const blob = await response.blob();
+            const fileName =
+              selectedAsset.fileName || `profile_${Date.now()}.jpg`;
+            uploadFile = new File([blob], fileName, {
+              type: selectedAsset.mimeType || "image/jpeg",
+            });
+          } else {
+            // 모바일 환경
+            uploadFile = {
+              uri: selectedAsset.uri,
+              name: selectedAsset.fileName || `profile_${Date.now()}.jpg`,
+              type: selectedAsset.mimeType || "image/jpeg",
+            };
+          }
+
+          // REST API를 통한 이미지 업로드
+          const uploadedImageUrl = await uploadProfileImage(uploadFile);
+
+          if (uploadedImageUrl) {
+            setProfileImage(uploadedImageUrl);
+            showToast({
+              type: "success",
+              title: "완료",
+              message: "프로필 이미지가 업로드되었습니다.",
+              duration: 3000,
+            });
+          }
+        } catch (uploadError) {
+          console.error("이미지 업로드 오류:", uploadError);
+          showToast({
+            type: "error",
+            title: "오류",
+            message: "이미지 업로드에 실패했습니다.",
+            duration: 3000,
+          });
+        }
       }
     } catch (error) {
       console.error("이미지 선택 오류:", error);
@@ -117,27 +230,24 @@ export default function EditProfileScreen() {
     setIsLoading(true);
 
     try {
+      // GraphQL로 프로필 정보 업데이트 (이미지 URL 포함)
       const result = await updateProfile({
         variables: {
           input: {
             nickname: name.trim(),
             bio: bio.trim(),
-            team: team.trim(),
             profileImageUrl: profileImage,
-            isPrivate,
           },
         },
       });
 
-      if (result.data?.updateUserProfile) {
+      if (result.data?.updateProfile) {
         // 세션 업데이트
         const updatedUser = {
           ...currentUser,
           nickname: name.trim(),
           bio: bio.trim(),
-          team: team.trim(),
           profileImageUrl: profileImage,
-          isPrivate,
         };
         await saveSession(updatedUser);
 
@@ -186,9 +296,14 @@ export default function EditProfileScreen() {
         <TouchableOpacity
           onPress={handleSave}
           style={themed($headerButton)}
-          disabled={isLoading}
+          disabled={isLoading || isImageUploading}
         >
-          <Text style={[themed($saveText), isLoading && themed($disabledText)]}>
+          <Text
+            style={[
+              themed($saveText),
+              (isLoading || isImageUploading) && themed($disabledText),
+            ]}
+          >
             {isLoading ? "저장 중..." : "완료"}
           </Text>
         </TouchableOpacity>
@@ -201,30 +316,65 @@ export default function EditProfileScreen() {
         {/* 프로필 이미지 섹션 */}
         <View style={themed($imageSection)}>
           <View style={themed($imageContainer)}>
-            <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
+            <View style={themed($profileImageWrapper)}>
+              <Image
+                source={{ uri: avatarUrl }}
+                style={themed($profileImage)}
+              />
+
+              {/* 업로드 진행률 표시 */}
+              {isImageUploading && (
+                <View style={themed($uploadOverlay)}>
+                  <Text style={themed($uploadProgressText)}>
+                    {uploadProgress}%
+                  </Text>
+                </View>
+              )}
+            </View>
 
             <View style={themed($imageButtons)}>
               <TouchableOpacity
                 style={themed($imageButton)}
                 onPress={handleSelectImage}
+                disabled={isImageUploading}
               >
-                <Ionicons name="camera" size={16} color={theme.colors.tint} />
-                <Text style={themed($imageButtonText)}>사진 수정</Text>
+                <Ionicons
+                  name={isImageUploading ? "hourglass" : "camera"}
+                  size={16}
+                  color={
+                    isImageUploading ? theme.colors.textDim : theme.colors.tint
+                  }
+                />
+                <Text
+                  style={[
+                    themed($imageButtonText),
+                    isImageUploading && { color: theme.colors.textDim },
+                  ]}
+                >
+                  {isImageUploading ? "업로드 중..." : "사진 수정"}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={themed($imageButton)}
                 onPress={handleDeleteImage}
+                disabled={isImageUploading}
               >
                 <Ionicons
                   name="trash-outline"
                   size={16}
-                  color={theme.colors.error}
+                  color={
+                    isImageUploading ? theme.colors.textDim : theme.colors.error
+                  }
                 />
                 <Text
                   style={[
                     themed($imageButtonText),
-                    { color: theme.colors.error },
+                    {
+                      color: isImageUploading
+                        ? theme.colors.textDim
+                        : theme.colors.error,
+                    },
                   ]}
                 >
                   사진 삭제
@@ -372,12 +522,34 @@ const $imageContainer: ThemedStyle<ViewStyle> = () => ({
   alignItems: "center",
 });
 
+const $profileImageWrapper: ThemedStyle<ViewStyle> = () => ({
+  position: "relative",
+});
+
 const $profileImage: ThemedStyle<ImageStyle> = ({ colors }) => ({
   width: 80,
   height: 80,
   borderRadius: 40,
   borderWidth: 2,
   borderColor: colors.border,
+});
+
+const $uploadOverlay: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  borderRadius: 40,
+  backgroundColor: colors.text + "80",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $uploadProgressText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.background,
+  fontSize: 12,
+  fontWeight: "600",
 });
 
 const $imageButtons: ThemedStyle<ViewStyle> = ({ spacing }) => ({

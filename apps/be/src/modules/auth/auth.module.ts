@@ -5,8 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthResolver } from './auth.resolver';
+import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from '../../entities/user.entity';
+import { MediaModule } from '../media/media.module';
 
 /**
  * 인증 모듈
@@ -71,7 +73,13 @@ import { User } from '../../entities/user.entity';
 
     // 환경 변수 설정 모듈
     ConfigModule,
+
+    // 미디어 모듈 (프로필 이미지 업로드용)
+    MediaModule,
   ],
+
+  // 컨트롤러 추가
+  controllers: [AuthController],
 
   // 서비스 및 전략 제공
   providers: [AuthService, AuthResolver, JwtStrategy],

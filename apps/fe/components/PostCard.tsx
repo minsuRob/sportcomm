@@ -715,7 +715,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                 {/* 내 게시글이면 나의 팀 목록 최대 3개 표시, 아니면 게시글의 팀만 표시 */}
                 {currentUser?.id === post.author.id ? (
                   // 내 게시글인 경우 내 팀 목록 표시 (최대 3개)
-                  <View style={{ flexDirection: "row" }}>
+                  <View style={themed($postTeamContainer)}>
                     {(currentUser?.myTeams || [])
                       .slice(0, 3)
                       .map((userTeam: UserTeam) => (
@@ -730,7 +730,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                   </View>
                 ) : (
                   // 타인의 게시글인 경우 해당 게시글 작성자의 팀 목록 표시 (최대 3개)
-                  <View style={{ flexDirection: "row" }}>
+                  <View style={themed($postTeamContainer)}>
                     {(post.author.myTeams || [])
                       .slice(0, 3)
                       .map((userTeam: UserTeam) => (

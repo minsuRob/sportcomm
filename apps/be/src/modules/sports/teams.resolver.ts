@@ -171,6 +171,14 @@ export class TeamsResolver {
    */
   @ResolveField(() => Sport, { description: '소속 스포츠' })
   async sport(@Parent() team: Team): Promise<Sport> {
+    if (!team.sport) {
+      // 스포츠 정보가 없을 경우 직접 조회
+      const fullTeam = await this.teamsService.findById(team.id);
+      if (!fullTeam.sport) {
+        throw new Error(`팀 ${team.name}의 스포츠 정보를 찾을 수 없습니다.`);
+      }
+      return fullTeam.sport;
+    }
     return team.sport;
   }
 

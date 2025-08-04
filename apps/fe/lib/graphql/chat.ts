@@ -2,6 +2,38 @@ import { gql } from "@apollo/client";
 
 // === 채팅 관련 GraphQL ===
 
+// 사용자 채팅방 조회 쿼리 (백엔드 개발 완료 후 사용)
+export const GET_USER_CHAT_ROOMS = gql`
+  query GetUserChatRooms {
+    userChatRooms {
+      id
+      name
+      description
+      isPrivate
+      type
+      isRoomActive
+      maxParticipants
+      currentParticipants
+      lastMessage
+      lastMessageAt
+      unreadCount
+      members {
+        userId
+        user {
+          id
+          nickname
+          profileImageUrl
+        }
+        isAdmin
+        joinedAt
+        lastReadAt
+      }
+      createdAt
+    }
+  }
+`;
+
+// 관리자 채팅방 쿼리 (백엔드 마이그레이션 전까지 유지)
 export const GET_CHAT_ROOMS = gql`
   query GetChatRooms {
     chatChannels {
@@ -182,6 +214,54 @@ export const ON_CHAT_CHANNEL_UPDATED = gql`
       lastMessage
       lastMessageAt
       unreadCount
+    }
+  }
+`;
+
+// 공개 채팅방 목록 조회 쿼리
+export const GET_PUBLIC_CHAT_ROOMS = gql`
+  query GetPublicChatRooms($page: Int = 1, $limit: Int = 20) {
+    publicChatRooms(page: $page, limit: $limit) {
+      chatRooms {
+        id
+        name
+        description
+        type
+        isRoomActive
+        maxParticipants
+        currentParticipants
+        lastMessage
+        lastMessageAt
+        createdAt
+      }
+      total
+      page
+      limit
+      totalPages
+    }
+  }
+`;
+
+// 채팅방 검색 쿼리
+export const SEARCH_CHAT_ROOMS = gql`
+  query SearchChatRooms($keyword: String!, $page: Int = 1, $limit: Int = 20) {
+    searchChatRooms(keyword: $keyword, page: $page, limit: $limit) {
+      chatRooms {
+        id
+        name
+        description
+        type
+        isRoomActive
+        maxParticipants
+        currentParticipants
+        lastMessage
+        lastMessageAt
+        createdAt
+      }
+      total
+      page
+      limit
+      totalPages
     }
   }
 `;

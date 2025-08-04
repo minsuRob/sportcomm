@@ -15,7 +15,7 @@ import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User } from "@/lib/auth";
-import { GET_CHAT_ROOMS, JOIN_CHAT_CHANNEL } from "@/lib/graphql/chat";
+import { JOIN_CHAT_CHANNEL } from "@/lib/graphql/chat";
 import { GET_ADMIN_CHAT_ROOMS } from "@/lib/graphql/admin";
 import { showToast } from "@/components/CustomToast";
 
@@ -78,6 +78,7 @@ interface AdminChatRoomsResponse {
 interface ChatRoomListProps {
   currentUser: User | null;
   showHeader?: boolean;
+  mockRooms?: ChatRoom[];
 }
 
 /**
@@ -88,18 +89,14 @@ interface ChatRoomListProps {
 export default function ChatRoomList({
   currentUser,
   showHeader = false,
+  mockRooms = [],
 }: ChatRoomListProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
 
-  // GraphQL 쿼리 및 뮤테이션
-  const { data, loading, error, refetch } = useQuery<ChatRoomsResponse>(
-    GET_CHAT_ROOMS,
-    {
-      fetchPolicy: "cache-and-network",
-      errorPolicy: "all",
-    }
-  );
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hasError, setHasError] = useState<boolean>(false);
 
   // 관리자 채팅방 쿼리 (공개 채팅방만)
   const {
@@ -111,27 +108,29 @@ export default function ChatRoomList({
     variables: { page: 1, limit: 100 },
     fetchPolicy: "cache-and-network",
     errorPolicy: "all",
+    // 오류가 발생하더라도 계속 진행
+    onError: (error) => {
+      console.log("관리자 채팅방 로드 오류(무시됨):", error.message);
+    },
+    // 일반 사용자는 접근 권한이 없으므로 오류 발생 시 무시
+    skip: !currentUser?.isAdmin,
   });
 
   const [joinChatChannel] = useMutation(JOIN_CHAT_CHANNEL, {
     refetchQueries: [
-      { query: GET_CHAT_ROOMS },
       { query: GET_ADMIN_CHAT_ROOMS, variables: { page: 1, limit: 100 } },
     ],
   });
 
   // 에러 처리
   useEffect(() => {
-    if (error) {
-      console.error("채팅방 목록 로드 실패:", error);
-    }
-    if (adminError) {
+    if (adminError && currentUser?.isAdmin) {
       console.error("관리자 채팅방 로드 실패:", adminError);
     }
-  }, [error, adminError]);
+  }, [adminError, currentUser]);
 
-  // 일반 채팅방과 관리자 채팅방 합치기
-  const regularChatRooms = data?.chatChannels || [];
+  // 채팅방 데이터 준비
+  const regularChatRooms: ChatRoom[] = [];
   const adminChatRooms = (adminData?.adminGetAllChatRooms?.chatRooms || [])
     .filter((room) => room.type === "PUBLIC" && room.isRoomActive) // 공개이고 활성화된 채팅방만
     .map((room) => ({
@@ -150,7 +149,11 @@ export default function ChatRoomList({
       createdAt: room.createdAt,
     }));
 
-  const chatRooms = [...regularChatRooms, ...adminChatRooms];
+  // 모든 채팅방을 합쳐서 상태로 관리
+  useEffect(() => {
+    const allChatRooms = [...regularChatRooms, ...adminChatRooms, ...mockRooms];
+    setChatRooms(allChatRooms);
+  }, [regularChatRooms, adminChatRooms, mockRooms]);
 
   // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleEnterRoom = async (room: ChatRoom) => {
@@ -220,7 +223,14 @@ export default function ChatRoomList({
 
   // 새로고침 핸들러
   const handleRefresh = async () => {
-    await Promise.all([refetch(), refetchAdmin()]);
+    if (currentUser?.isAdmin) {
+      await refetchAdmin();
+    }
+    // 임시 데이터 로딩 시뮬레이션
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
   };
 
   // 채팅방 아이템 렌더링
@@ -321,7 +331,7 @@ export default function ChatRoomList({
     );
   };
 
-  if ((loading || adminLoading) && !data && !adminData) {
+  if ((isLoading || adminLoading) && chatRooms.length === 0) {
     return (
       <View style={themed($loadingContainer)}>
         <ActivityIndicator size="large" color={theme.colors.tint} />
@@ -351,12 +361,12 @@ export default function ChatRoomList({
         contentContainerStyle={themed($contentContainer)}
         refreshControl={
           <RefreshControl
-            refreshing={loading || adminLoading}
+            refreshing={isLoading || adminLoading}
             onRefresh={handleRefresh}
           />
         }
         ListEmptyComponent={
-          !loading && !adminLoading ? (
+          !isLoading && !adminLoading ? (
             <View style={themed($emptyContainer)}>
               <Ionicons
                 name="chatbubbles-outline"

@@ -28,6 +28,7 @@ import {
   NotificationBadge,
   NotificationToast,
 } from "@/components/notifications";
+import { gql } from "@apollo/client";
 
 // --- Type Definitions ---
 interface GqlPost {
@@ -67,6 +68,7 @@ export default function FeedScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("feed");
+  const [mockChatRooms, setMockChatRooms] = useState<any[]>([]);
 
   const {
     data,
@@ -94,9 +96,65 @@ export default function FeedScreen() {
   useEffect(() => {
     const checkSession = async () => {
       const { user } = await getSession();
-      if (user) setCurrentUser(user);
+      if (user) {
+        // 사용자 역할에 따라 isAdmin 속성 설정
+        if (user.role === "ADMIN" && user.isAdmin === undefined) {
+          user.isAdmin = true;
+        }
+        setCurrentUser(user);
+        console.log("현재 사용자 정보:", { ...user, isAdmin: user.isAdmin });
+      }
     };
     checkSession();
+
+    // 임시 채팅방 데이터 설정 (백엔드 연동 전까지 사용)
+    setMockChatRooms([
+      {
+        id: "public-chat-1",
+        name: "스포츠 일반 토론",
+        description: "다양한 스포츠 주제에 대해 자유롭게 이야기해요",
+        isPrivate: false,
+        type: "PUBLIC",
+        isRoomActive: true,
+        maxParticipants: 100,
+        currentParticipants: 42,
+        lastMessage: "오늘 경기 누가 이길 것 같나요?",
+        lastMessageAt: new Date().toISOString(),
+        unreadCount: 0,
+        members: [],
+        createdAt: "2023-01-01T00:00:00Z",
+      },
+      {
+        id: "public-chat-2",
+        name: "축구 팬 모임",
+        description: "축구를 사랑하는 모든 팬들의 모임",
+        isPrivate: false,
+        type: "PUBLIC",
+        isRoomActive: true,
+        maxParticipants: 50,
+        currentParticipants: 28,
+        lastMessage: "어제 경기 정말 재미있었어요!",
+        lastMessageAt: new Date().toISOString(),
+        unreadCount: 0,
+        members: [],
+        createdAt: "2023-01-02T00:00:00Z",
+      },
+      {
+        id: "public-chat-3",
+        name: "농구 토크",
+        description: "농구에 관한 모든 이야기",
+        isPrivate: false,
+        type: "PUBLIC",
+        isRoomActive: true,
+        maxParticipants: 30,
+        currentParticipants: 15,
+        lastMessage: "오늘 경기 분석해보겠습니다",
+        lastMessageAt: new Date().toISOString(),
+        unreadCount: 0,
+        members: [],
+        createdAt: "2023-01-03T00:00:00Z",
+      },
+    ]);
   }, []);
 
   // 차단된 사용자 목록 업데이트
@@ -128,7 +186,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
       }
@@ -352,7 +410,11 @@ export default function FeedScreen() {
           ListFooterComponent={ListFooter}
         />
       ) : (
-        <ChatRoomList currentUser={currentUser} showHeader={false} />
+        <ChatRoomList
+          currentUser={currentUser}
+          showHeader={false}
+          mockRooms={currentUser?.isAdmin ? [] : mockChatRooms}
+        />
       )}
 
       {/* 실시간 알림 토스트 */}

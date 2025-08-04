@@ -12,11 +12,12 @@ export interface User {
   team?: string;
   isPrivate?: boolean;
   role?: string;
+  isAdmin?: boolean;
 }
 
 export const saveSession = async (
   tokenOrUser: string | User,
-  user?: User
+  user?: User,
 ): Promise<void> => {
   try {
     // 두 개의 매개변수가 전달된 경우 (기존 방식)
@@ -28,12 +29,20 @@ export const saveSession = async (
         });
         return;
       }
+      // role이 'ADMIN'인 경우 isAdmin 속성 자동 설정
+      if (user.role === "ADMIN") {
+        user.isAdmin = true;
+      }
       await setItem(TOKEN_KEY, tokenOrUser);
       await setItem(USER_KEY, JSON.stringify(user));
       console.log("세션 저장 완료: 토큰과 사용자 정보가 모두 저장됨");
     }
     // 사용자 정보만 업데이트하는 경우
     else if (typeof tokenOrUser === "object") {
+      // role이 'ADMIN'인 경우 isAdmin 속성 자동 설정
+      if (tokenOrUser.role === "ADMIN") {
+        tokenOrUser.isAdmin = true;
+      }
       await setItem(USER_KEY, JSON.stringify(tokenOrUser));
       console.log("세션 저장 완료: 사용자 정보만 업데이트됨");
     }
@@ -52,13 +61,18 @@ export const getSession = async (): Promise<{
     const token = await getItem(TOKEN_KEY);
     const userJson = await getItem(USER_KEY);
     const user = userJson ? (JSON.parse(userJson) as User) : null;
+    // 사용자 객체가 있고 role이 'ADMIN'이면 isAdmin 속성 설정
+    if (user && user.role === "ADMIN" && user.isAdmin === undefined) {
+      user.isAdmin = true;
+    }
     const isAuthenticated = !!token && !!user;
 
     // 디버깅을 위한 로그
     console.log("세션 조회 결과:", {
       hasToken: !!token,
       hasUser: !!user,
-      isAuthenticated
+      isAdmin: user?.isAdmin,
+      isAuthenticated,
     });
 
     return { token, user, isAuthenticated };

@@ -31,41 +31,55 @@ export default function TeamLogo({
   if (!logoUrl || imageError) {
     return (
       <View style={[themed($container), { width: size, height: size }, style]}>
-        <Text style={[themed($fallbackIcon), { fontSize: size * 0.7 }]}>
-          {fallbackIcon}
-        </Text>
+        <View
+          style={[
+            themed($circleBackground),
+            { width: size, height: size, borderRadius: size / 2 },
+          ]}
+        >
+          <Text style={[themed($fallbackIcon), { fontSize: size * 0.5 }]}>
+            {fallbackIcon}
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={[themed($container), { width: size, height: size }, style]}>
-      {imageLoading && (
-        <View style={themed($loadingContainer)}>
-          <Text style={[themed($fallbackIcon), { fontSize: size * 0.7 }]}>
-            {fallbackIcon}
-          </Text>
-        </View>
-      )}
-      <Image
-        source={{ uri: logoUrl }}
+      <View
         style={[
-          themed($image),
-          {
-            width: size,
-            height: size,
-            opacity: imageLoading ? 0 : 1,
-          },
+          themed($circleBackground),
+          { width: size, height: size, borderRadius: size / 2 },
         ]}
-        onLoad={() => setImageLoading(false)}
-        onError={() => {
-          setImageError(true);
-          setImageLoading(false);
-        }}
-        contentFit="contain"
-        transition={200}
-        accessibilityLabel={`${teamName} 로고`}
-      />
+      >
+        {imageLoading && (
+          <View style={themed($loadingContainer)}>
+            <Text style={[themed($fallbackIcon), { fontSize: size * 0.5 }]}>
+              {fallbackIcon}
+            </Text>
+          </View>
+        )}
+        <Image
+          source={{ uri: logoUrl }}
+          style={[
+            themed($image),
+            {
+              width: size * 0.9, // 원형 배경보다 약간 작게
+              height: size * 0.9,
+              opacity: imageLoading ? 0 : 1,
+            },
+          ]}
+          onLoad={() => setImageLoading(false)}
+          onError={() => {
+            setImageError(true);
+            setImageLoading(false);
+          }}
+          contentFit="contain"
+          transition={200}
+          accessibilityLabel={`${teamName} 로고`}
+        />
+      </View>
     </View>
   );
 }
@@ -75,6 +89,25 @@ const $container: ThemedStyle<ViewStyle> = () => ({
   justifyContent: "center",
   alignItems: "center",
   position: "relative",
+});
+
+const $circleBackground: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: "white",
+  justifyContent: "center",
+  alignItems: "center",
+  position: "relative",
+  // 그림자 효과 추가
+  shadowColor: "#000",
+  shadowOffset: {
+    width: 0,
+    height: 2,
+  },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+  elevation: 3,
+  // 테두리 추가 (선택사항)
+  borderWidth: 1,
+  borderColor: colors.border + "30", // 투명도 적용
 });
 
 const $image: ThemedStyle<ViewStyle> = () => ({

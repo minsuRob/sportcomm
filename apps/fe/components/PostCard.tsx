@@ -652,7 +652,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
               <TeamLogo
                 logoUrl={categoryInfo.logoUrl}
                 teamName={categoryInfo.text}
-                size={48}
+                size={36}
                 style={{ marginLeft: 8 }}
               />
             </View>

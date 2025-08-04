@@ -378,6 +378,19 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 팀별 색상 및 텍스트 매핑
   const getCategoryInfo = (teamId: string) => {
+    // teamId가 없는 경우 기본 정보 반환
+    if (!teamId) {
+      return {
+        text: "팀 없음",
+        icon: "",
+        logoUrl: "",
+        colors: {
+          border: "#888888",
+          glow: "#888888",
+        },
+      };
+    }
+
     const team = getTeamById(teamId);
 
     if (team) {
@@ -406,7 +419,9 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     };
   };
 
-  const categoryInfo = getCategoryInfo(post.teamId);
+  // 게시글의 팀 정보 가져오기
+  const postTeamInfo = getCategoryInfo(post.teamId);
+  const categoryInfo = postTeamInfo; // 기존 코드 호환성을 위해 유지
 
   return (
     <View style={themed($outerContainer)}>
@@ -697,17 +712,17 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                   />
                 </TouchableOpacity>
               </View>
-              {/* My Teams */}
-              <View style={themed($myTeamsContainer)}>
-                {(myTeams || []).slice(0, 3).map((userTeam: UserTeam) => (
+              {/* Post Team */}
+              <View style={themed($postTeamContainer)}>
+                {post.teamId && (
                   <TeamLogo
-                    key={userTeam.team.id}
-                    logoUrl={userTeam.team.logoUrl}
-                    teamName={userTeam.team.name}
+                    key={post.teamId}
+                    logoUrl={postTeamInfo.logoUrl}
+                    teamName={postTeamInfo.text}
                     size={36}
                     style={{ marginBottom: 4 }}
                   />
-                ))}
+                )}
               </View>
             </View>
 
@@ -945,8 +960,9 @@ const $topRightRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.sm,
 });
 
-const $myTeamsContainer: ThemedStyle<ViewStyle> = () => ({
+const $postTeamContainer: ThemedStyle<ViewStyle> = () => ({
   alignItems: "flex-end",
+  justifyContent: "flex-end",
 });
 
 // 카테고리 배지

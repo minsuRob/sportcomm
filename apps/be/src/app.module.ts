@@ -18,6 +18,7 @@ import { ModerationModule } from './modules/moderation/moderation.module';
 import { BookmarkModule } from './modules/bookmarks/bookmark.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { SportsModule } from './modules/sports/sports.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 /**
@@ -232,6 +233,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     BookmarkModule,
     NotificationsModule,
     AdminModule,
+    SportsModule,
   ],
 
   // 컨트롤러 및 서비스

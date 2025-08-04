@@ -15,6 +15,7 @@ import { ChatMessage } from './chat-message.entity';
 import { PostLike } from './post-like.entity';
 import { Block } from './block.entity';
 import { Bookmark } from './bookmark.entity';
+import { UserTeam } from './user-team.entity';
 
 /**
  * 사용자 역할 열거형
@@ -169,21 +170,6 @@ export class User extends BaseEntity {
   })
   isUserActive: boolean;
 
-  /**
-   * 사용자가 선호하는 팀
-   * 선택적 필드이며, 게시물 작성 시 기본 팀으로 사용됩니다.
-   */
-  @Field(() => String, { nullable: true, description: '선호하는 팀' })
-  @Column({
-    type: 'varchar',
-    length: 50,
-    nullable: true,
-    comment: '사용자가 선호하는 팀',
-  })
-  @IsString({ message: '선호 팀은 문자열이어야 합니다.' })
-  @MaxLength(50, { message: '선호 팀은 최대 50자까지 가능합니다.' })
-  favoriteTeam?: string;
-
   // === 관계 설정 ===
 
   /**
@@ -255,6 +241,14 @@ export class User extends BaseEntity {
   @Field(() => [Bookmark], { description: '북마크한 게시물 목록' })
   @OneToMany(() => Bookmark, (bookmark) => bookmark.user)
   bookmarks: Bookmark[];
+
+  /**
+   * 사용자가 선택한 팀들
+   * 일대다 관계: 한 사용자는 여러 팀을 선택할 수 있습니다.
+   */
+  @Field(() => [UserTeam], { description: '선택한 팀 목록' })
+  @OneToMany(() => UserTeam, (userTeam) => userTeam.user)
+  userTeams: UserTeam[];
 
   // === 헬퍼 메서드 ===
 

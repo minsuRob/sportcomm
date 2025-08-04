@@ -8,141 +8,28 @@ import {
   TextStyle,
   FlatList,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useQuery, useMutation } from "urql";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession, saveSession } from "@/lib/auth";
+import { User, getSession } from "@/lib/auth";
 import { showToast } from "@/components/CustomToast";
+import {
+  GET_SPORTS,
+  GET_MY_TEAMS,
+  UPDATE_MY_TEAMS,
+  type Sport,
+  type Team,
+  type UserTeam,
+  type GetSportsResult,
+  type GetMyTeamsResult,
+  type UpdateMyTeamsResult,
+} from "@/lib/graphql/teams";
 
 const { width: screenWidth } = Dimensions.get("window");
-
-// 팀 정보 타입
-interface TeamInfo {
-  id: string;
-  name: string;
-  color: string;
-  icon: string;
-}
-
-// 스포츠 카테고리 타입
-interface SportCategory {
-  id: string;
-  name: string;
-  icon: string;
-  teams: TeamInfo[];
-}
-
-// 스포츠 카테고리 및 팀 데이터
-const SPORT_CATEGORIES: SportCategory[] = [
-  {
-    id: "soccer",
-    name: "축구",
-    icon: "⚽",
-    teams: [
-      {
-        id: "TOTTENHAM",
-        name: "토트넘",
-        color: "#132257",
-        icon: "⚽",
-      },
-      {
-        id: "NEWCASTLE",
-        name: "뉴캐슬",
-        color: "#241F20",
-        icon: "⚽",
-      },
-      {
-        id: "ATLETICO_MADRID",
-        name: "아틀레티코",
-        color: "#CE2029",
-        icon: "⚽",
-      },
-      {
-        id: "MANCHESTER_CITY",
-        name: "맨시티",
-        color: "#6CABDD",
-        icon: "⚽",
-      },
-      {
-        id: "LIVERPOOL",
-        name: "리버풀",
-        color: "#C8102E",
-        icon: "⚽",
-      },
-    ],
-  },
-  {
-    id: "baseball",
-    name: "야구",
-    icon: "⚾",
-    teams: [
-      {
-        id: "DOOSAN_BEARS",
-        name: "두산",
-        color: "#131230",
-        icon: "⚾",
-      },
-      {
-        id: "HANWHA_EAGLES",
-        name: "한화",
-        color: "#FF6600",
-        icon: "⚾",
-      },
-      {
-        id: "LG_TWINS",
-        name: "LG",
-        color: "#C30452",
-        icon: "⚾",
-      },
-      {
-        id: "SAMSUNG_LIONS",
-        name: "삼성",
-        color: "#074CA1",
-        icon: "⚾",
-      },
-      {
-        id: "KIA_TIGERS",
-        name: "KIA",
-        color: "#EA0029",
-        icon: "⚾",
-      },
-    ],
-  },
-  {
-    id: "esports",
-    name: "e스포츠",
-    icon: "🎮",
-    teams: [
-      { id: "T1", name: "T1", color: "#E2012D", icon: "🎮" },
-      {
-        id: "GENG",
-        name: "Gen.G",
-        color: "#AA8B56",
-        icon: "🎮",
-      },
-      { id: "DRX", name: "DRX", color: "#2E5BFF", icon: "🎮" },
-      {
-        id: "KT_ROLSTER",
-        name: "KT",
-        color: "#D4002A",
-        icon: "🎮",
-      },
-      {
-        id: "DAMWON_KIA",
-        name: "담원",
-        color: "#004B9F",
-        icon: "🎮",
-      },
-    ],
-  },
-];
-
-// 모든 팀을 하나의 배열로 합치기 (기존 로직 호환성을 위해)
-const ALL_TEAMS: TeamInfo[] = SPORT_CATEGORIES.flatMap(
-  (category) => category.teams
-);
 
 /**
  * 팀 선택 모달 화면
@@ -152,9 +39,19 @@ export default function TeamSelectionScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
+
+  // GraphQL 쿼리 및 뮤테이션
+  const [sportsResult] = useQuery<GetSportsResult>({
+    query: GET_SPORTS,
+  });
+
+  const [myTeamsResult, refetchMyTeams] = useQuery<GetMyTeamsResult>({
+    query: GET_MY_TEAMS,
+  });
+
+  const [, updateMyTeams] = useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
 
   // 사용자 정보 로드
   useEffect(() => {
@@ -162,17 +59,34 @@ export default function TeamSelectionScreen() {
       const { user } = await getSession();
       if (user) {
         setCurrentUser(user);
-        setSelectedTeam(user.team || null);
       }
     };
     loadUser();
   }, []);
 
+  // 사용자가 선택한 팀 목록 로드
+  useEffect(() => {
+    if (myTeamsResult.data?.myTeams) {
+      const teamIds = myTeamsResult.data.myTeams.map(
+        (userTeam) => userTeam.team.id
+      );
+      setSelectedTeams(teamIds);
+    }
+  }, [myTeamsResult.data]);
+
   /**
-   * 팀 선택 핸들러
+   * 팀 선택/해제 핸들러
    */
   const handleTeamSelect = (teamId: string) => {
-    setSelectedTeam(selectedTeam === teamId ? null : teamId);
+    setSelectedTeams((prev) => {
+      if (prev.includes(teamId)) {
+        // 이미 선택된 팀이면 해제
+        return prev.filter((id) => id !== teamId);
+      } else {
+        // 선택되지 않은 팀이면 추가
+        return [...prev, teamId];
+      }
+    });
   };
 
   /**
@@ -181,29 +95,26 @@ export default function TeamSelectionScreen() {
   const handleSave = async () => {
     if (!currentUser) return;
 
-    setIsSubmitting(true);
-
     try {
-      // TODO: 백엔드 API 호출로 사용자 선호 팀 업데이트
-      // 현재는 로컬 세션만 업데이트
-      const updatedUser = {
-        ...currentUser,
-        team: selectedTeam || undefined,
-      };
+      // GraphQL 뮤테이션으로 팀 선택 업데이트
+      const result = await updateMyTeams({
+        teamIds: selectedTeams,
+      });
 
-      await saveSession(updatedUser);
-      setCurrentUser(updatedUser);
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
 
-      const selectedTeamInfo = ALL_TEAMS.find(
-        (t) => t.id === selectedTeam
-      );
+      // 사용자 팀 목록 다시 조회
+      refetchMyTeams({ requestPolicy: "network-only" });
 
       showToast({
         type: "success",
         title: "팀 선택 완료",
-        message: selectedTeam
-          ? `${selectedTeamInfo?.name} 팀이 선택되었습니다!`
-          : "팀 선택이 저장되었습니다.",
+        message:
+          selectedTeams.length > 0
+            ? `${selectedTeams.length}개 팀이 선택되었습니다!`
+            : "팀 선택이 저장되었습니다.",
         duration: 2000,
       });
 
@@ -216,8 +127,6 @@ export default function TeamSelectionScreen() {
         message: "팀 선택을 저장하는 중 오류가 발생했습니다.",
         duration: 3000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -228,7 +137,7 @@ export default function TeamSelectionScreen() {
     item,
     index,
   }: {
-    item: SportCategory;
+    item: Sport;
     index: number;
   }) => {
     const isActive = index === activeCategoryIndex;
@@ -262,7 +171,7 @@ export default function TeamSelectionScreen() {
   /**
    * 팀 그리드 렌더링
    */
-  const renderTeamGrid = (teams: TeamInfo[]) => {
+  const renderTeamGrid = (teams: Team[]) => {
     const rows = [];
     const teamsPerRow = 2;
 
@@ -270,38 +179,43 @@ export default function TeamSelectionScreen() {
       const rowTeams = teams.slice(i, i + teamsPerRow);
       rows.push(
         <View key={i} style={themed($teamRow)}>
-          {rowTeams.map((team) => (
-            <TouchableOpacity
-              key={team.id}
-              style={[
-                themed($teamCard),
-                {
-                  borderColor:
-                    selectedTeam === team.id ? team.color : theme.colors.border,
-                  backgroundColor:
-                    selectedTeam === team.id
+          {rowTeams.map((team) => {
+            const isSelected = selectedTeams.includes(team.id);
+            return (
+              <TouchableOpacity
+                key={team.id}
+                style={[
+                  themed($teamCard),
+                  {
+                    borderColor: isSelected ? team.color : theme.colors.border,
+                    backgroundColor: isSelected
                       ? team.color + "20"
                       : theme.colors.card,
-                },
-              ]}
-              onPress={() => handleTeamSelect(team.id)}
-            >
-              <View style={themed($teamIconContainer)}>
-                <Text style={themed($teamCardIcon)}>{team.icon}</Text>
-              </View>
-              <Text
-                style={[
-                  themed($teamCardName),
-                  {
-                    color:
-                      selectedTeam === team.id ? team.color : theme.colors.text,
                   },
                 ]}
+                onPress={() => handleTeamSelect(team.id)}
               >
-                {team.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <View style={themed($teamIconContainer)}>
+                  <Text style={themed($teamCardIcon)}>{team.icon}</Text>
+                  {isSelected && (
+                    <View style={themed($selectedIndicator)}>
+                      <Ionicons name="checkmark" size={16} color="white" />
+                    </View>
+                  )}
+                </View>
+                <Text
+                  style={[
+                    themed($teamCardName),
+                    {
+                      color: isSelected ? team.color : theme.colors.text,
+                    },
+                  ]}
+                >
+                  {team.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
           {/* 빈 공간 채우기 */}
           {rowTeams.length < teamsPerRow && (
             <View style={[themed($teamCard), { opacity: 0 }]} />
@@ -313,6 +227,38 @@ export default function TeamSelectionScreen() {
     return rows;
   };
 
+  // 로딩 상태 처리
+  if (sportsResult.fetching || myTeamsResult.fetching) {
+    return (
+      <View style={[themed($container), themed($loadingContainer)]}>
+        <ActivityIndicator size="large" color={theme.colors.tint} />
+        <Text style={themed($loadingText)}>팀 정보를 불러오는 중...</Text>
+      </View>
+    );
+  }
+
+  // 에러 상태 처리
+  if (sportsResult.error) {
+    return (
+      <View style={[themed($container), themed($errorContainer)]}>
+        <Text style={themed($errorText)}>
+          팀 정보를 불러오는 중 오류가 발생했습니다.
+        </Text>
+        <TouchableOpacity
+          style={themed($retryButton)}
+          onPress={() => {
+            sportsResult.reexecuteQuery({ requestPolicy: "network-only" });
+          }}
+        >
+          <Text style={themed($retryButtonText)}>다시 시도</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const sports = sportsResult.data?.sports || [];
+  const currentSport = sports[activeCategoryIndex];
+
   return (
     <View style={themed($container)}>
       {/* 헤더 */}
@@ -321,14 +267,8 @@ export default function TeamSelectionScreen() {
           <Ionicons name="close" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>My Team 선택</Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={isSubmitting}
-          style={[themed($saveButton), { opacity: isSubmitting ? 0.5 : 1 }]}
-        >
-          <Text style={themed($saveButtonText)}>
-            {isSubmitting ? "저장 중..." : "저장"}
-          </Text>
+        <TouchableOpacity onPress={handleSave} style={themed($saveButton)}>
+          <Text style={themed($saveButtonText)}>저장</Text>
         </TouchableOpacity>
       </View>
 
@@ -336,15 +276,20 @@ export default function TeamSelectionScreen() {
       <View style={themed($descriptionSection)}>
         <Text style={themed($descriptionTitle)}>응원할 팀을 선택하세요</Text>
         <Text style={themed($descriptionText)}>
-          선택한 팀은 게시물 작성 시 기본 팀으로 설정되며, 언제든지 변경할 수
-          있습니다.
+          여러 팀을 선택할 수 있으며, 첫 번째로 선택한 팀이 주 팀으로
+          설정됩니다.
         </Text>
+        {selectedTeams.length > 0 && (
+          <Text style={themed($selectedCountText)}>
+            {selectedTeams.length}개 팀 선택됨
+          </Text>
+        )}
       </View>
 
       {/* 카테고리 슬라이더 */}
       <View style={themed($categorySliderContainer)}>
         <FlatList
-          data={SPORT_CATEGORIES}
+          data={sports}
           renderItem={renderCategoryTab}
           keyExtractor={(item) => item.id}
           horizontal
@@ -355,9 +300,11 @@ export default function TeamSelectionScreen() {
 
       <ScrollView style={themed($scrollContainer)}>
         {/* 선택된 카테고리의 팀 목록 */}
-        <View style={themed($teamsContainer)}>
-          {renderTeamGrid(SPORT_CATEGORIES[activeCategoryIndex].teams)}
-        </View>
+        {currentSport && (
+          <View style={themed($teamsContainer)}>
+            {renderTeamGrid(currentSport.teams || [])}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -390,6 +337,64 @@ const $saveButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingVertical: spacing.sm,
   backgroundColor: colors.tint,
   borderRadius: 8,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.md,
+  fontSize: 16,
+  color: colors.textDim,
+});
+
+const $errorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: spacing.lg,
+});
+
+const $errorText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  color: colors.error,
+  textAlign: "center",
+  marginBottom: spacing.lg,
+});
+
+const $retryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.md,
+  backgroundColor: colors.tint,
+  borderRadius: 8,
+});
+
+const $retryButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 16,
+  fontWeight: "600",
+});
+
+const $selectedCountText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.tint,
+  fontWeight: "600",
+  marginTop: spacing.sm,
+});
+
+const $selectedIndicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: "absolute",
+  top: -8,
+  right: -8,
+  width: 24,
+  height: 24,
+  borderRadius: 12,
+  backgroundColor: colors.tint,
+  justifyContent: "center",
+  alignItems: "center",
 });
 
 const $saveButtonText: ThemedStyle<TextStyle> = () => ({

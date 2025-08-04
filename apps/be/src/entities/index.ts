@@ -19,6 +19,9 @@ import { Block } from './block.entity';
 import { Bookmark } from './bookmark.entity';
 import { Notification } from './notification.entity';
 import { Feedback } from './feedback.entity';
+import { Sport } from './sport.entity';
+import { Team } from './team.entity';
+import { UserTeam } from './user-team.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -62,6 +65,11 @@ export {
   FeedbackPriority,
 } from './feedback.entity';
 
+// 스포츠 및 팀 관련 엔티티
+export { Sport } from './sport.entity';
+export { Team } from './team.entity';
+export { UserTeam } from './user-team.entity';
+
 /**
  * 모든 엔티티를 배열로 내보내는 상수
  * TypeORM 설정에서 사용됩니다.
@@ -81,6 +89,9 @@ export const entities = [
   Bookmark,
   Notification,
   Feedback,
+  Sport,
+  Team,
+  UserTeam,
 ];
 
 /**

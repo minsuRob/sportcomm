@@ -82,8 +82,8 @@ export class TeamsService {
    */
   async getUserTeams(userId: string): Promise<UserTeam[]> {
     return this.userTeamsRepository.find({
-      where: { userId },
-      relations: ['team', 'team.sport'],
+      where: { user: { id: userId } },
+      relations: ['team', 'team.sport', 'user'],
       order: {
         priority: 'ASC',
         createdAt: 'ASC',
@@ -98,7 +98,7 @@ export class TeamsService {
    */
   async getUserPrimaryTeam(userId: string): Promise<Team | null> {
     const userTeam = await this.userTeamsRepository.findOne({
-      where: { userId, priority: 0 },
+      where: { user: { id: userId }, priority: 0 },
       relations: ['team', 'team.sport'],
     });
 
@@ -128,7 +128,7 @@ export class TeamsService {
 
     // 이미 선택한 팀인지 확인
     const existingUserTeam = await this.userTeamsRepository.findOne({
-      where: { userId, teamId },
+      where: { user: { id: userId }, team: { id: teamId } },
     });
 
     if (existingUserTeam) {
@@ -138,15 +138,15 @@ export class TeamsService {
     // 주 팀(priority: 0) 설정 시 기존 주 팀의 우선순위 변경
     if (priority === 0) {
       await this.userTeamsRepository.update(
-        { userId, priority: 0 },
+        { user: { id: userId }, priority: 0 },
         { priority: 1 },
       );
     }
 
     // 새로운 팀 선택 관계 생성
     const userTeam = this.userTeamsRepository.create({
-      userId,
-      teamId,
+      user,
+      team,
       priority,
       notificationEnabled: true,
     });
@@ -162,7 +162,7 @@ export class TeamsService {
    */
   async unselectTeam(userId: string, teamId: string): Promise<boolean> {
     const userTeam = await this.userTeamsRepository.findOne({
-      where: { userId, teamId },
+      where: { user: { id: userId }, team: { id: teamId } },
     });
 
     if (!userTeam) {
@@ -174,7 +174,7 @@ export class TeamsService {
     // 주 팀을 해제한 경우, 다음 우선순위 팀을 주 팀으로 승격
     if (userTeam.priority === 0) {
       const nextPriorityTeam = await this.userTeamsRepository.findOne({
-        where: { userId },
+        where: { user: { id: userId } },
         order: { priority: 'ASC', createdAt: 'ASC' },
       });
 
@@ -204,19 +204,19 @@ export class TeamsService {
     }
 
     // 기존 팀 선택 모두 삭제
-    await this.userTeamsRepository.delete({ userId });
+    await this.userTeamsRepository.delete({ user: { id: userId } });
 
     // 새로운 팀 선택 생성
     const userTeams: UserTeam[] = [];
     for (let i = 0; i < teamIds.length; i++) {
       const teamId = teamIds[i];
 
-      // 팀 존재 확인
-      await this.findById(teamId);
+      // 팀 존재 확인 및 조회
+      const team = await this.findById(teamId);
 
       const userTeam = this.userTeamsRepository.create({
-        userId,
-        teamId,
+        user,
+        team,
         priority: i, // 배열 순서대로 우선순위 설정
         notificationEnabled: true,
       });
@@ -260,7 +260,7 @@ export class TeamsService {
    */
   async hasUserSelectedTeam(userId: string, teamId: string): Promise<boolean> {
     const userTeam = await this.userTeamsRepository.findOne({
-      where: { userId, teamId },
+      where: { user: { id: userId }, team: { id: teamId } },
     });
 
     return !!userTeam;

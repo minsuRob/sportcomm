@@ -25,6 +25,7 @@ export class UserTeam extends BaseEntity {
    * 사용자 ID
    * User 엔티티와의 관계를 위한 외래키입니다.
    */
+  @Field(() => String, { description: '사용자 ID' })
   @RelationId((userTeam: UserTeam) => userTeam.user)
   userId: string;
 
@@ -32,6 +33,7 @@ export class UserTeam extends BaseEntity {
    * 팀 ID
    * Team 엔티티와의 관계를 위한 외래키입니다.
    */
+  @Field(() => String, { description: '팀 ID' })
   @RelationId((userTeam: UserTeam) => userTeam.team)
   teamId: string;
 

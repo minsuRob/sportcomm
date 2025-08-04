@@ -115,7 +115,7 @@ export class SportsService {
       .leftJoin('team.userTeams', 'userTeam')
       .where('team.sportId = :sportId', { sportId })
       .andWhere('team.isActive = :isActive', { isActive: true })
-      .select('COUNT(DISTINCT userTeam.userId)', 'count')
+      .select('COUNT(DISTINCT userTeam.user)', 'count')
       .getRawOne()
       .then((result) => parseInt(result.count) || 0);
 

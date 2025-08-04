@@ -13,8 +13,6 @@ export const SPORT_FRAGMENT = gql`
     description
     sortOrder
     isActive
-    activeTeamCount
-    totalUsers
   }
 `;
 
@@ -30,8 +28,6 @@ export const TEAM_FRAGMENT = gql`
     description
     sortOrder
     isActive
-    totalUsers
-    primaryUsers
   }
 `;
 
@@ -39,6 +35,8 @@ export const TEAM_FRAGMENT = gql`
 export const USER_TEAM_FRAGMENT = gql`
   fragment UserTeamInfo on UserTeam {
     id
+    userId
+    teamId
     priority
     notificationEnabled
     createdAt
@@ -48,8 +46,6 @@ export const USER_TEAM_FRAGMENT = gql`
         ...SportInfo
       }
     }
-    # 프론트엔드에서 teamId 접근을 위한 필드
-    # @client 디렉티브 제거
   }
   ${TEAM_FRAGMENT}
   ${SPORT_FRAGMENT}
@@ -192,13 +188,12 @@ export interface Team {
 
 export interface UserTeam {
   id: string;
+  userId: string;
+  teamId: string;
   priority: number;
   notificationEnabled: boolean;
   createdAt: string;
   team: Team;
-
-  // 팀 ID에 더 쉽게 접근하기 위한 계산된 속성
-  // 실제로는 Apollo Client에서 team.id로 접근
 }
 
 // GraphQL 쿼리 결과 타입

@@ -74,7 +74,26 @@ export class TeamsResolver {
   })
   @UseGuards(JwtAuthGuard)
   async getMyTeams(@Context() context: any): Promise<UserTeam[]> {
-    const userId = context.req.user.id;
+    // GraphQL 컨텍스트에서 사용자 정보 추출
+    const request = context.req || context.request;
+    const user = request?.user;
+
+    console.log('getMyTeams 컨텍스트 디버깅:', {
+      hasContext: !!context,
+      hasReq: !!context.req,
+      hasRequest: !!context.request,
+      hasUser: !!user,
+      userId: user?.id,
+      userKeys: user ? Object.keys(user) : null,
+    });
+
+    if (!user || !user.id) {
+      throw new Error(
+        '인증된 사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.',
+      );
+    }
+
+    const userId = user.id;
     return this.teamsService.getUserTeams(userId);
   }
 
@@ -160,7 +179,26 @@ export class TeamsResolver {
     teamIds: string[],
     @Context() context: any,
   ): Promise<UserTeam[]> {
-    const userId = context.req.user.id;
+    // GraphQL 컨텍스트에서 사용자 정보 추출
+    const request = context.req || context.request;
+    const user = request?.user;
+
+    console.log('updateMyTeams 컨텍스트 디버깅:', {
+      hasContext: !!context,
+      hasReq: !!context.req,
+      hasRequest: !!context.request,
+      hasUser: !!user,
+      userId: user?.id,
+      userKeys: user ? Object.keys(user) : null,
+    });
+
+    if (!user || !user.id) {
+      throw new Error(
+        '인증된 사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.',
+      );
+    }
+
+    const userId = user.id;
     return this.teamsService.updateUserTeams(userId, teamIds);
   }
 

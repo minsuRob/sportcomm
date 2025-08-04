@@ -643,18 +643,18 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                 }}
                 style={themed($profileImage)}
               />
-              <TeamLogo
-                logoUrl={categoryInfo.logoUrl}
-                teamName={categoryInfo.text}
-                size={32}
-                style={{ marginRight: 8 }}
-              />
               <View style={themed($profileInfo)}>
                 <Text style={themed($profileName)}>{post.author.nickname}</Text>
                 <Text style={themed($profileTime)}>
                   {formatTimeAgo(post.createdAt)}
                 </Text>
               </View>
+              <TeamLogo
+                logoUrl={categoryInfo.logoUrl}
+                teamName={categoryInfo.text}
+                size={48}
+                style={{ marginLeft: 8 }}
+              />
             </View>
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}

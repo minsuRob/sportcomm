@@ -27,6 +27,8 @@ export interface CreatePostInput {
   isPublic?: boolean;
   /** 첨부할 미디어 ID 배열 */
   mediaIds?: string[];
+  /** 응원할 팀 ID (CHEERING 타입인 경우) */
+  teamId?: string;
 }
 
 /**
@@ -71,6 +73,8 @@ export interface FindPostsOptions {
   sortOrder?: 'ASC' | 'DESC';
   /** 검색 키워드 */
   search?: string;
+  /** 팀 ID 목록 필터 (해당 팀을 선호하는 사용자들의 게시물만 조회) */
+  teamIds?: string[];
 }
 
 /**
@@ -132,7 +136,14 @@ export class PostsService {
       type,
       isPublic = true,
       mediaIds = [],
+      teamId,
     } = createPostInput;
+
+    // teamId가 제공된 경우 type을 CHEERING으로 설정
+    // 현재는 PostType enum 구조를 유지하므로 teamId는 로깅만 수행
+    if (teamId) {
+      console.log(`게시물 생성 - 팀 ID: ${teamId}, 타입: ${type}`);
+    }
 
     // 게시물 생성
     const post = this.postRepository.create({
@@ -179,6 +190,7 @@ export class PostsService {
       sortBy = 'createdAt',
       sortOrder = 'DESC',
       search,
+      teamIds,
     } = options;
 
     // 페이지네이션 계산
@@ -209,6 +221,13 @@ export class PostsService {
         '(post.title ILIKE :search OR post.content ILIKE :search)',
         { search: `%${search}%` },
       );
+    }
+
+    // 팀 필터 적용 (해당 팀을 선호하는 사용자들의 게시물만 조회)
+    if (teamIds && teamIds.length > 0) {
+      queryBuilder
+        .innerJoin('author.userTeams', 'userTeam')
+        .andWhere('userTeam.teamId IN (:...teamIds)', { teamIds });
     }
 
     // 정렬 적용

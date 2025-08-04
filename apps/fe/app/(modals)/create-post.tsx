@@ -29,6 +29,12 @@ import {
   createPostWithFiles,
   PostCreationError,
 } from "@/lib/api/postCreation";
+import { useQuery } from "@apollo/client";
+import {
+  GET_MY_TEAMS,
+  type UserTeam,
+  type GetMyTeamsResult,
+} from "@/lib/graphql/teams";
 import { compressImageWeb } from "@/lib/api/webUpload";
 import { compressImageMobile } from "@/lib/api/mobileUpload";
 import {
@@ -41,11 +47,12 @@ import {
 import { UploadProgress } from "@/lib/api/common";
 
 // --- 타입 정의 ---
-interface PostTypeOption {
-  type: PostType;
+interface TeamOption {
+  teamId: string;
   label: string;
   color: string;
   icon: string;
+  sportName: string;
 }
 
 interface SelectedImage {
@@ -81,13 +88,26 @@ export default function CreatePostScreen() {
   // 상태 관리
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [selectedType, setSelectedType] = useState<PostType | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<SelectedVideo[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [uploadPercentage, setUploadPercentage] = useState<number>(0);
+
+  // 사용자가 선택한 팀 목록 조회
+  const {
+    data: myTeamsData,
+    loading: teamsLoading,
+    error: teamsError,
+  } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
+    skip: !currentUser, // 사용자가 로그인하지 않은 경우 쿼리 스킵
+    fetchPolicy: "cache-first",
+    onError: (error) => {
+      console.error("사용자 팀 목록 조회 오류:", error);
+    },
+  });
 
   // 사용자 세션 확인
   React.useEffect(() => {
@@ -109,54 +129,18 @@ export default function CreatePostScreen() {
     checkSession();
   }, [router]);
 
-  // 팀 타입 옵션
-  const postTypeOptions: PostTypeOption[] = [
-    // 축구팀
-    { type: PostType.TOTTENHAM, label: "토트넘", color: "#132257", icon: "⚽" },
-    { type: PostType.NEWCASTLE, label: "뉴캐슬", color: "#241F20", icon: "⚽" },
-    {
-      type: PostType.ATLETICO_MADRID,
-      label: "아틀레티코",
-      color: "#CE2029",
-      icon: "⚽",
-    },
-    {
-      type: PostType.MANCHESTER_CITY,
-      label: "맨시티",
-      color: "#6CABDD",
-      icon: "⚽",
-    },
-    { type: PostType.LIVERPOOL, label: "리버풀", color: "#C8102E", icon: "⚽" },
+  // 사용자가 선택한 팀들을 옵션으로 변환
+  const teamOptions: TeamOption[] = React.useMemo(() => {
+    if (!myTeamsData?.myTeams) return [];
 
-    // 야구팀
-    {
-      type: PostType.DOOSAN_BEARS,
-      label: "두산",
-      color: "#131230",
-      icon: "⚾",
-    },
-    {
-      type: PostType.HANWHA_EAGLES,
-      label: "한화",
-      color: "#FF6600",
-      icon: "⚾",
-    },
-    { type: PostType.LG_TWINS, label: "LG", color: "#C30452", icon: "⚾" },
-    {
-      type: PostType.SAMSUNG_LIONS,
-      label: "삼성",
-      color: "#074CA1",
-      icon: "⚾",
-    },
-    { type: PostType.KIA_TIGERS, label: "KIA", color: "#EA0029", icon: "⚾" },
-
-    // e스포츠팀
-    { type: PostType.T1, label: "T1", color: "#E2012D", icon: "🎮" },
-    { type: PostType.GENG, label: "Gen.G", color: "#AA8B56", icon: "🎮" },
-    { type: PostType.DRX, label: "DRX", color: "#2E5BFF", icon: "🎮" },
-    { type: PostType.KT_ROLSTER, label: "KT", color: "#D4002A", icon: "🎮" },
-    { type: PostType.DAMWON_KIA, label: "담원", color: "#004B9F", icon: "🎮" },
-  ];
+    return myTeamsData.myTeams.map((userTeam: UserTeam) => ({
+      teamId: userTeam.team.id,
+      label: userTeam.team.name,
+      color: userTeam.team.color,
+      icon: userTeam.team.sport.icon,
+      sportName: userTeam.team.sport.name,
+    }));
+  }, [myTeamsData]);
 
   /**
    * 뒤로 가기 핸들러
@@ -165,7 +149,7 @@ export default function CreatePostScreen() {
     if (
       title.trim() ||
       content.trim() ||
-      selectedType ||
+      selectedTeamId ||
       selectedImages.length > 0 ||
       selectedVideos.length > 0
     ) {
@@ -187,10 +171,17 @@ export default function CreatePostScreen() {
   };
 
   /**
-   * 게시물 타입 선택 핸들러
+   * 팀 선택 핸들러
    */
-  const handleTypeSelect = (type: PostType) => {
-    setSelectedType(selectedType === type ? null : type);
+  const handleTeamSelect = (teamId: string) => {
+    setSelectedTeamId(selectedTeamId === teamId ? null : teamId);
+  };
+
+  /**
+   * 팀 선택 화면으로 이동
+   */
+  const handleGoToTeamSelection = () => {
+    router.push("/(modals)/team-selection");
   };
 
   /**
@@ -444,11 +435,11 @@ export default function CreatePostScreen() {
       return;
     }
 
-    if (!selectedType) {
+    if (!selectedTeamId) {
       showToast({
         type: "error",
-        title: "타입 선택 필요",
-        message: t(TRANSLATION_KEYS.CREATE_POST_SELECT_TYPE),
+        title: "팀 선택 필요",
+        message: "응원할 팀을 선택해주세요.",
         duration: 3000,
       });
       return;
@@ -463,7 +454,8 @@ export default function CreatePostScreen() {
       const postInput = {
         title: title.trim(),
         content: content.trim(),
-        type: selectedType as "ANALYSIS" | "CHEERING" | "HIGHLIGHT",
+        type: "CHEERING" as "ANALYSIS" | "CHEERING" | "HIGHLIGHT", // 팀 응원 게시물로 고정
+        teamId: selectedTeamId, // 선택된 팀 ID 추가
         isPublic: true,
       };
 
@@ -630,7 +622,7 @@ export default function CreatePostScreen() {
         <TouchableOpacity
           onPress={handleSubmit}
           disabled={
-            !title.trim() || !content.trim() || !selectedType || isSubmitting
+            !title.trim() || !content.trim() || !selectedTeamId || isSubmitting
           }
           style={[
             themed($publishButton),
@@ -638,7 +630,7 @@ export default function CreatePostScreen() {
               opacity:
                 !title.trim() ||
                 !content.trim() ||
-                !selectedType ||
+                !selectedTeamId ||
                 isSubmitting
                   ? 0.5
                   : 1,
@@ -669,51 +661,83 @@ export default function CreatePostScreen() {
           </Text>
         </View>
 
-        {/* 게시물 타입 선택 */}
+        {/* 응원할 팀 선택 */}
         <View style={themed($typeSection)}>
-          <Text style={themed($sectionTitle)}>응원할 팀 선택</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={themed($typeScrollView)}
-          >
-            <View style={themed($typeOptions)}>
-              {postTypeOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.type}
-                  style={[
-                    themed($typeOption),
-                    {
-                      borderColor:
-                        selectedType === option.type
-                          ? option.color
-                          : theme.colors.border,
-                      backgroundColor:
-                        selectedType === option.type
-                          ? option.color + "20"
-                          : "transparent",
-                    },
-                  ]}
-                  onPress={() => handleTypeSelect(option.type)}
-                >
-                  <Text style={themed($typeIcon)}>{option.icon}</Text>
-                  <Text
+          <View style={themed($sectionHeader)}>
+            <Text style={themed($sectionTitle)}>응원할 팀 선택</Text>
+            {teamOptions.length === 0 && !teamsLoading && (
+              <TouchableOpacity
+                style={themed($addTeamButton)}
+                onPress={handleGoToTeamSelection}
+              >
+                <Ionicons name="add" color={theme.colors.tint} size={16} />
+                <Text style={themed($addTeamText)}>팀 추가</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {teamsLoading ? (
+            <View style={themed($loadingContainer)}>
+              <Text style={themed($loadingText)}>팀 목록을 불러오는 중...</Text>
+            </View>
+          ) : teamOptions.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={themed($typeScrollView)}
+            >
+              <View style={themed($typeOptions)}>
+                {teamOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.teamId}
                     style={[
-                      themed($typeLabel),
+                      themed($typeOption),
                       {
-                        color:
-                          selectedType === option.type
+                        borderColor:
+                          selectedTeamId === option.teamId
                             ? option.color
-                            : theme.colors.text,
+                            : theme.colors.border,
+                        backgroundColor:
+                          selectedTeamId === option.teamId
+                            ? option.color + "20"
+                            : "transparent",
                       },
                     ]}
+                    onPress={() => handleTeamSelect(option.teamId)}
                   >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text style={themed($typeIcon)}>{option.icon}</Text>
+                    <Text
+                      style={[
+                        themed($typeLabel),
+                        {
+                          color:
+                            selectedTeamId === option.teamId
+                              ? option.color
+                              : theme.colors.text,
+                        },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text style={themed($sportLabel)}>{option.sportName}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          ) : (
+            <View style={themed($emptyTeamsContainer)}>
+              <Text style={themed($emptyTeamsText)}>
+                응원할 팀을 먼저 선택해주세요
+              </Text>
+              <TouchableOpacity
+                style={themed($selectTeamButton)}
+                onPress={handleGoToTeamSelection}
+              >
+                <Ionicons name="heart" color="white" size={16} />
+                <Text style={themed($selectTeamButtonText)}>팀 선택하기</Text>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
+          )}
         </View>
 
         {/* 제목 입력 영역 */}
@@ -923,6 +947,75 @@ const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontWeight: "600",
   color: colors.text,
   marginBottom: spacing.sm,
+});
+
+const $sectionHeader: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+});
+
+const $addTeamButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderWidth: 1,
+  borderColor: colors.tint,
+  borderRadius: 16,
+  backgroundColor: colors.tint + "10",
+});
+
+const $addTeamText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 12,
+  fontWeight: "600",
+  color: colors.tint,
+  marginLeft: spacing.xs,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingVertical: spacing.lg,
+  alignItems: "center",
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+});
+
+const $emptyTeamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  paddingVertical: spacing.xl,
+});
+
+const $emptyTeamsText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  textAlign: "center",
+  marginBottom: spacing.md,
+});
+
+const $selectTeamButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  borderRadius: 20,
+});
+
+const $selectTeamButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  color: "white",
+  fontSize: 14,
+  fontWeight: "600",
+  marginLeft: spacing.xs,
+});
+
+const $sportLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 10,
+  color: colors.textDim,
+  textAlign: "center",
+  marginTop: spacing.xxxs,
 });
 
 const $typeScrollView: ThemedStyle<ViewStyle> = ({ spacing }) => ({

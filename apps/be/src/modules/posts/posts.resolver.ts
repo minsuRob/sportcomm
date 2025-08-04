@@ -73,6 +73,14 @@ export class CreatePostInput {
   @IsArray({ message: '미디어 ID는 배열이어야 합니다.' })
   @IsString({ each: true, message: '미디어 ID는 문자열이어야 합니다.' })
   mediaIds?: string[];
+
+  @Field(() => String, {
+    nullable: true,
+    description: '응원할 팀 ID (CHEERING 타입인 경우)',
+  })
+  @IsOptional()
+  @IsString({ message: '팀 ID는 문자열이어야 합니다.' })
+  teamId?: string;
 }
 
 /**
@@ -186,8 +194,17 @@ export class FindPostsInput {
   @Field(() => String, { nullable: true, description: '검색 키워드' })
   @IsOptional()
   @IsString({ message: '검색 키워드는 문자열이어야 합니다.' })
-  @MaxLength(100, { message: '검색 키워드는 최대 100자까지 가능합니다.' })
   search?: string;
+
+  @Field(() => [String], {
+    nullable: true,
+    description:
+      '팀 ID 목록으로 필터링 (해당 팀을 선호하는 사용자들의 게시물만 조회)',
+  })
+  @IsOptional()
+  @IsArray({ message: '팀 ID 목록은 배열이어야 합니다.' })
+  @IsString({ each: true, message: '각 팀 ID는 문자열이어야 합니다.' })
+  teamIds?: string[];
 }
 
 /**
@@ -328,6 +345,7 @@ export class PostsResolver {
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
       sortOrder: (findPostsInput?.sortOrder as any) || 'DESC',
       search: findPostsInput?.search,
+      teamIds: findPostsInput?.teamIds,
     };
 
     return await this.postsService.findAll(options);

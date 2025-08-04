@@ -23,7 +23,7 @@ export const GET_POSTS = gql`
         title
         content
         createdAt
-        type
+        teamId
         viewCount
         likeCount
         commentCount
@@ -65,7 +65,7 @@ export const CREATE_POST = gql`
       title
       content
       createdAt
-      type
+      teamId
       viewCount
       author {
         id
@@ -147,7 +147,7 @@ export const GET_POST_DETAIL = gql`
       title
       content
       createdAt
-      type
+      teamId
       viewCount
       likeCount
       commentCount
@@ -284,7 +284,7 @@ export const GET_USER_POSTS = gql`
         title
         content
         createdAt
-        type
+        teamId
         viewCount
         likeCount
         commentCount
@@ -489,7 +489,7 @@ export const GET_USER_BOOKMARKS = gql`
       title
       content
       createdAt
-      type
+      teamId
       viewCount
       likeCount
       commentCount

@@ -30,7 +30,7 @@ export { BaseEntity } from './base.entity';
 export { User, UserRole } from './user.entity';
 
 // 게시물 관련 엔티티
-export { Post, PostType } from './post.entity';
+export { Post } from './post.entity';
 export { PostVersion } from './post-version.entity';
 export { PostLike } from './post-like.entity';
 
@@ -171,7 +171,7 @@ export const entityRelations = {
  */
 export const entityIndexes = {
   users: ['email', 'nickname'],
-  posts: ['authorId', 'type', 'createdAt'],
+  posts: ['authorId', 'teamId', 'createdAt'],
   postVersions: ['postId', 'version', 'createdAt'],
   postLikes: ['userId', 'postId', 'isLikeActive'],
   comments: ['authorId', 'postId', 'parentCommentId', 'createdAt'],

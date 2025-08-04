@@ -74,13 +74,7 @@ export class CreatePostInput {
   @IsString({ each: true, message: '미디어 ID는 문자열이어야 합니다.' })
   mediaIds?: string[];
 
-  @Field(() => String, {
-    nullable: true,
-    description: '연관된 팀 ID',
-  })
-  @IsOptional()
-  @IsString({ message: '팀 ID는 문자열이어야 합니다.' })
-  teamId?: string;
+  // 상단에 이미 팀 ID 필드가 있으므로 중복 필드 제거
 }
 
 /**
@@ -154,9 +148,12 @@ export class FindPostsInput {
   @Max(100, { message: '페이지 크기는 100 이하여야 합니다.' })
   limit?: number;
 
-  @Field(() => [String], { nullable: true, description: '팀 ID 필터' })
+  @Field(() => [String], {
+    nullable: true,
+    description: '팀 ID 목록으로 필터링 (해당 팀의 게시물만 조회)',
+  })
   @IsOptional()
-  @IsArray()
+  @IsArray({ message: '팀 ID 목록은 배열이어야 합니다.' })
   @IsString({ each: true, message: '팀 ID는 문자열이어야 합니다.' })
   teamIds?: string[];
 
@@ -197,15 +194,7 @@ export class FindPostsInput {
   @IsString({ message: '검색 키워드는 문자열이어야 합니다.' })
   search?: string;
 
-  @Field(() => [String], {
-    nullable: true,
-    description:
-      '팀 ID 목록으로 필터링 (해당 팀을 선호하는 사용자들의 게시물만 조회)',
-  })
-  @IsOptional()
-  @IsArray({ message: '팀 ID 목록은 배열이어야 합니다.' })
-  @IsString({ each: true, message: '각 팀 ID는 문자열이어야 합니다.' })
-  teamIds?: string[];
+  // 중복 필드 제거 (위에서 teamIds가 이미 정의되어 있음)
 }
 
 /**

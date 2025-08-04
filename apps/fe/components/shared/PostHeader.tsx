@@ -13,28 +13,33 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import PostContextMenu from "./PostContextMenu";
-export enum PostType {
+
+/**
+ * 팀 ID별 스타일 매핑
+ * 각 팀마다 색상, 표시 텍스트, 아이콘을 정의합니다.
+ */
+const TeamInfo: Record<string, { color: string; text: string; icon: string }> = {
   // 축구팀
-  TOTTENHAM = "TOTTENHAM",
-  NEWCASTLE = "NEWCASTLE",
-  ATLETICO_MADRID = "ATLETICO_MADRID",
-  MANCHESTER_CITY = "MANCHESTER_CITY",
-  LIVERPOOL = "LIVERPOOL",
+  "tottenham-id": { color: "#132257", text: "토트넘", icon: "⚽" },
+  "newcastle-id": { color: "#241F20", text: "뉴캐슬", icon: "⚽" },
+  "atletico-id": { color: "#CE2029", text: "아틀레티코", icon: "⚽" },
+  "mancity-id": { color: "#6CABDD", text: "맨시티", icon: "⚽" },
+  "liverpool-id": { color: "#C8102E", text: "리버풀", icon: "⚽" },
 
   // 야구팀
-  DOOSAN_BEARS = "DOOSAN_BEARS",
-  HANWHA_EAGLES = "HANWHA_EAGLES",
-  LG_TWINS = "LG_TWINS",
-  SAMSUNG_LIONS = "SAMSUNG_LIONS",
-  KIA_TIGERS = "KIA_TIGERS",
+  "doosan-id": { color: "#131230", text: "두산", icon: "⚾" },
+  "hanwha-id": { color: "#FF6600", text: "한화", icon: "⚾" },
+  "lg-id": { color: "#C30452", text: "LG", icon: "⚾" },
+  "samsung-id": { color: "#074CA1", text: "삼성", icon: "⚾" },
+  "kia-id": { color: "#EA0029", text: "KIA", icon: "⚾" },
 
   // e스포츠팀
-  T1 = "T1",
-  GENG = "GENG",
-  DRX = "DRX",
-  KT_ROLSTER = "KT_ROLSTER",
-  DAMWON_KIA = "DAMWON_KIA",
-}
+  "t1-id": { color: "#E2012D", text: "T1", icon: "🎮" },
+  "geng-id": { color: "#AA8B56", text: "Gen.G", icon: "🎮" },
+  "drx-id": { color: "#2E5BFF", text: "DRX", icon: "🎮" },
+  "kt-id": { color: "#D4002A", text: "KT", icon: "🎮" },
+  "damwon-id": { color: "#004B9F", text: "담원", icon: "🎮" },
+};
 
 interface PostHeaderProps {
   post: {
@@ -48,7 +53,7 @@ interface PostHeaderProps {
       isFollowing?: boolean;
     };
     createdAt: string;
-    type: PostType;
+    teamId: string; // 팀 ID로 변경
   };
   currentUserId?: string | null;
   isFollowing: boolean;
@@ -75,55 +80,21 @@ export default function PostHeader({
   const { t } = useTranslation();
   const [showContextMenu, setShowContextMenu] = useState(false);
 
-  const { author, createdAt, type: postType } = post;
+  const { author, createdAt, teamId } = post;
 
   const avatarUrl =
     author.profileImageUrl || `https://i.pravatar.cc/150?u=${author.id}`;
 
-  const getPostTypeStyle = (type: PostType) => {
-    switch (type) {
-      // 축구팀
-      case PostType.TOTTENHAM:
-        return { color: "#132257", text: "토트넘", icon: "⚽" };
-      case PostType.NEWCASTLE:
-        return { color: "#241F20", text: "뉴캐슬", icon: "⚽" };
-      case PostType.ATLETICO_MADRID:
-        return { color: "#CE2029", text: "아틀레티코", icon: "⚽" };
-      case PostType.MANCHESTER_CITY:
-        return { color: "#6CABDD", text: "맨시티", icon: "⚽" };
-      case PostType.LIVERPOOL:
-        return { color: "#C8102E", text: "리버풀", icon: "⚽" };
-
-      // 야구팀
-      case PostType.DOOSAN_BEARS:
-        return { color: "#131230", text: "두산", icon: "⚾" };
-      case PostType.HANWHA_EAGLES:
-        return { color: "#FF6600", text: "한화", icon: "⚾" };
-      case PostType.LG_TWINS:
-        return { color: "#C30452", text: "LG", icon: "⚾" };
-      case PostType.SAMSUNG_LIONS:
-        return { color: "#074CA1", text: "삼성", icon: "⚾" };
-      case PostType.KIA_TIGERS:
-        return { color: "#EA0029", text: "KIA", icon: "⚾" };
-
-      // e스포츠팀
-      case PostType.T1:
-        return { color: "#E2012D", text: "T1", icon: "🎮" };
-      case PostType.GENG:
-        return { color: "#AA8B56", text: "Gen.G", icon: "🎮" };
-      case PostType.DRX:
-        return { color: "#2E5BFF", text: "DRX", icon: "🎮" };
-      case PostType.KT_ROLSTER:
-        return { color: "#D4002A", text: "KT", icon: "🎮" };
-      case PostType.DAMWON_KIA:
-        return { color: "#004B9F", text: "담원", icon: "🎮" };
-
-      default:
-        return { color: "#6366f1", text: "팀", icon: "🏆" };
-    }
+  /**
+   * 팀 ID에 따른 스타일 가져오기
+   * 팀 ID에 따라 다른 색상과 아이콘을 반환합니다.
+   */
+  const getTeamStyle = (teamId: string) => {
+    // TeamInfo에서 팀 정보 가져오기, 없으면 기본값 사용
+    return TeamInfo[teamId] || { color: "#6366f1", text: "팀", icon: "🏆" };
   };
 
-  const postTypeStyle = getPostTypeStyle(postType);
+  const teamStyle = getTeamStyle(teamId);
 
   /**
    * 더보기 버튼 클릭 핸들러
@@ -201,11 +172,11 @@ export default function PostHeader({
           </TouchableOpacity>
         )}
 
-        {/* 게시물 타입 배지 */}
+        {/* 팀 배지 */}
         <View
-          style={[themed($typeBadge), { backgroundColor: postTypeStyle.color }]}
+          style={[themed($typeBadge), { backgroundColor: teamStyle.color }]}
         >
-          <Text style={themed($typeBadgeText)}>{postTypeStyle.text}</Text>
+          <Text style={themed($typeBadgeText)}>{teamStyle.text}</Text>
         </View>
 
         {/* 더보기 버튼 */}
@@ -226,7 +197,7 @@ export default function PostHeader({
           id: post.id,
           title: post.title,
           content: post.content,
-          type: post.type,
+          teamId: post.teamId,
           author: post.author,
         }}
         currentUserId={currentUserId}

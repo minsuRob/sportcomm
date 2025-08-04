@@ -22,7 +22,7 @@ import { showToast } from "@/components/CustomToast";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
-import { PostType } from "@/components/PostCard";
+// 게시물은 이제 타입 없이 teamId로만 분류됩니다
 import { User, getSession } from "@/lib/auth";
 import {
   createTextOnlyPost,
@@ -163,7 +163,7 @@ export default function CreatePostScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();
@@ -196,7 +196,7 @@ export default function CreatePostScreen() {
         Alert.alert(
           "권한 필요",
           "미디어를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }]
+          [{ text: "확인" }],
         );
         return;
       }
@@ -253,7 +253,7 @@ export default function CreatePostScreen() {
                   `video_${index}_${Date.now()}.mp4`,
                   {
                     type: "video/mp4",
-                  }
+                  },
                 );
 
                 // 메타데이터 추출
@@ -290,7 +290,7 @@ export default function CreatePostScreen() {
                 } catch (compressionError) {
                   console.warn(
                     "동영상 압축 실패, 원본 사용:",
-                    compressionError
+                    compressionError,
                   );
                   // 압축 실패 시 원본 정보 사용
                   processedVideo = {
@@ -454,8 +454,7 @@ export default function CreatePostScreen() {
       const postInput = {
         title: title.trim(),
         content: content.trim(),
-        type: "CHEERING" as "ANALYSIS" | "CHEERING" | "HIGHLIGHT", // 팀 응원 게시물로 고정
-        teamId: selectedTeamId, // 선택된 팀 ID 추가
+        teamId: selectedTeamId, // 선택된 팀 ID로 게시물 분류
         isPublic: true,
       };
 
@@ -688,6 +687,12 @@ export default function CreatePostScreen() {
             >
               <View style={themed($typeOptions)}>
                 {teamOptions.map((option) => (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={themed($typeScrollView)}
+              >
+                {selectedTeams.map((option) => (
                   <TouchableOpacity
                     key={option.teamId}
                     style={[

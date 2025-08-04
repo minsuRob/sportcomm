@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Post, PostType } from '../../entities/post.entity';
+import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
 import { User } from '../../entities/user.entity';
@@ -21,14 +21,12 @@ export interface CreatePostInput {
   title: string;
   /** 게시물 내용 */
   content: string;
-  /** 게시물 유형 */
-  type: PostType;
+  /** 팀 ID */
+  teamId: string;
   /** 공개 여부 */
   isPublic?: boolean;
   /** 첨부할 미디어 ID 배열 */
   mediaIds?: string[];
-  /** 연관된 팀 ID */
-  teamId?: string;
 }
 
 /**
@@ -41,8 +39,8 @@ export interface UpdatePostInput {
   title?: string;
   /** 게시물 내용 */
   content?: string;
-  /** 게시물 유형 */
-  type?: PostType;
+  /** 팀 ID */
+  teamId?: string;
   /** 공개 여부 */
   isPublic?: boolean;
   /** 고정 여부 */
@@ -61,8 +59,6 @@ export interface FindPostsOptions {
   page?: number;
   /** 페이지 크기 */
   limit?: number;
-  /** 게시물 유형 필터 */
-  type?: PostType;
   /** 작성자 ID 필터 */
   authorId?: string;
   /** 공개 게시물만 조회 */
@@ -73,7 +69,7 @@ export interface FindPostsOptions {
   sortOrder?: 'ASC' | 'DESC';
   /** 검색 키워드 */
   search?: string;
-  /** 팀 ID 목록 필터 (해당 팀을 선호하는 사용자들의 게시물만 조회) */
+  /** 팀 ID 목록 필터 */
   teamIds?: string[];
 }
 
@@ -133,23 +129,19 @@ export class PostsService {
     const {
       title,
       content,
-      type,
+      teamId,
       isPublic = true,
       mediaIds = [],
-      teamId,
     } = createPostInput;
 
-    // teamId가 제공된 경우 팀 연관 게시물 로깅
-    if (teamId) {
-      console.log(`게시물 생성 - 팀 ID: ${teamId}, 타입: ${type}`);
-    }
+    // 팀 연관 게시물 로깅
+    console.log(`게시물 생성 - 팀 ID: ${teamId}`);
 
     // 게시물 생성
     const post = this.postRepository.create({
       title,
       teamId,
       content,
-      type,
       isPublic,
       authorId,
       viewCount: 0,
@@ -184,7 +176,6 @@ export class PostsService {
     const {
       page = 1,
       limit = 10,
-      type,
       authorId,
       publicOnly = false,
       sortBy = 'createdAt',
@@ -204,9 +195,6 @@ export class PostsService {
       .where('post.deletedAt IS NULL');
 
     // 필터 적용
-    if (type) {
-      queryBuilder.andWhere('post.type = :type', { type });
-    }
 
     if (authorId) {
       queryBuilder.andWhere('post.authorId = :authorId', { authorId });
@@ -223,11 +211,9 @@ export class PostsService {
       );
     }
 
-    // 팀 필터 적용 (해당 팀을 선호하는 사용자들의 게시물만 조회)
+    // 팀 필터 적용
     if (teamIds && teamIds.length > 0) {
-      queryBuilder
-        .innerJoin('author.userTeams', 'userTeam')
-        .andWhere('userTeam.teamId IN (:...teamIds)', { teamIds });
+      queryBuilder.andWhere('post.teamId IN (:...teamIds)', { teamIds });
     }
 
     // 정렬 적용
@@ -372,12 +358,12 @@ export class PostsService {
     const previousTitle = existingPost.title;
 
     // 수정 정보 적용
-    const { title, content, type, isPublic, isPinned, editReason, mediaIds } =
+    const { title, content, teamId, isPublic, isPinned, editReason, mediaIds } =
       updatePostInput;
 
     if (title !== undefined) existingPost.title = title;
     if (content !== undefined) existingPost.content = content;
-    if (type !== undefined) existingPost.type = type;
+    if (teamId !== undefined) existingPost.teamId = teamId;
     if (isPublic !== undefined) existingPost.isPublic = isPublic;
     if (isPinned !== undefined) existingPost.isPinned = isPinned;
 
@@ -628,17 +614,17 @@ export class PostsService {
   }
 
   /**
-   * 게시물 유형별 조회
+   * 팀 ID별 게시물 조회
    *
-   * @param type - 게시물 유형
+   * @param teamId - 팀 ID
    * @param options - 조회 옵션
    * @returns 게시물 목록
    */
-  async findByType(
-    type: PostType,
-    options: Omit<FindPostsOptions, 'type'> = {},
+  async findByTeam(
+    teamId: string,
+    options: Omit<FindPostsOptions, 'teamIds'> = {},
   ): Promise<PostsResponse> {
-    return await this.findAll({ ...options, type });
+    return await this.findAll({ ...options, teamIds: [teamId] });
   }
 
   /**
@@ -650,8 +636,10 @@ export class PostsService {
     totalPosts: number;
     publicPosts: number;
     privatePosts: number;
-    postsByType: Record<PostType, number>;
-    teamRelatedCount: number;
+    postsByTeam: Record<string, number>;
+    teamPostsCount: number;
+    popularTeamPostsCount: number;
+    recentTeamPostsCount: number;
   }> {
     const [totalPosts, publicPosts, privatePosts] = await Promise.all([
       this.postRepository.count(),
@@ -659,34 +647,47 @@ export class PostsService {
       this.postRepository.count({ where: { isPublic: false } }),
     ]);
 
-    const postsByType = await this.postRepository
+    const postsByTeam = await this.postRepository
       .createQueryBuilder('post')
-      .select('post.type', 'type')
+      .select('post.teamId', 'teamId')
       .addSelect('COUNT(*)', 'count')
-      .groupBy('post.type')
+      .groupBy('post.teamId')
       .getRawMany();
 
-    const typeStats = postsByType.reduce(
+    const teamStats = postsByTeam.reduce(
       (acc, item) => {
-        acc[item.type as PostType] = parseInt(item.count, 10);
+        acc[item.teamId] = parseInt(item.count, 10);
         return acc;
       },
-      {} as Record<PostType, number>,
+      {} as Record<string, number>,
     );
 
-    // 팀 연관 게시물 수 - teamId 필드 확인
-    const teamRelatedPostsQuery = this.postRepository
-      .createQueryBuilder('post')
-      .where('post.teamId IS NOT NULL');
+    // 팀별 게시물 통계
+    const teamPostsCount = await this.postRepository.count();
 
-    const teamRelatedCount = await teamRelatedPostsQuery.getCount();
+    // 인기 팀별 게시물 수 (좋아요 기준)
+    const popularTeamPostsCount = await this.postRepository
+      .createQueryBuilder('post')
+      .where('post.likeCount > 10')
+      .getCount();
+
+    // 최근 팀별 게시물 수 (지난 7일 기준)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const recentTeamPostsCount = await this.postRepository
+      .createQueryBuilder('post')
+      .where('post.createdAt >= :date', { date: oneWeekAgo })
+      .getCount();
 
     return {
       totalPosts,
       publicPosts,
       privatePosts,
-      postsByType: typeStats,
-      teamRelatedCount,
+      postsByTeam: teamStats,
+      teamPostsCount,
+      popularTeamPostsCount,
+      recentTeamPostsCount,
     };
   }
 

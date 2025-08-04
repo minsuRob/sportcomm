@@ -23,7 +23,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { PostsService, FindPostsOptions } from './posts.service';
-import { Post, PostType } from '../../entities/post.entity';
+import { Post } from '../../entities/post.entity';
 import { User } from '../../entities/user.entity';
 import { BookmarkService } from '../bookmarks/bookmark.service';
 import {
@@ -52,9 +52,9 @@ export class CreatePostInput {
   @MaxLength(10000, { message: '내용은 최대 10,000자까지 가능합니다.' })
   content: string;
 
-  @Field(() => PostType, { description: '게시물 유형' })
-  @IsEnum(PostType, { message: '올바른 게시물 유형을 선택해주세요.' })
-  type: PostType;
+  @Field(() => String, { description: '팀 ID' })
+  @IsString({ message: '팀 ID는 문자열이어야 합니다.' })
+  teamId: string;
 
   @Field(() => Boolean, {
     nullable: true,
@@ -76,7 +76,7 @@ export class CreatePostInput {
 
   @Field(() => String, {
     nullable: true,
-    description: '응원할 팀 ID (CHEERING 타입인 경우)',
+    description: '연관된 팀 ID',
   })
   @IsOptional()
   @IsString({ message: '팀 ID는 문자열이어야 합니다.' })
@@ -106,10 +106,10 @@ export class UpdatePostInput {
   @MaxLength(10000, { message: '내용은 최대 10,000자까지 가능합니다.' })
   content?: string;
 
-  @Field(() => PostType, { nullable: true, description: '게시물 유형' })
+  @Field(() => String, { nullable: true, description: '팀 ID' })
   @IsOptional()
-  @IsEnum(PostType, { message: '올바른 게시물 유형을 선택해주세요.' })
-  type?: PostType;
+  @IsString({ message: '팀 ID는 문자열이어야 합니다.' })
+  teamId?: string;
 
   @Field(() => Boolean, { nullable: true, description: '공개 여부' })
   @IsOptional()
@@ -154,10 +154,11 @@ export class FindPostsInput {
   @Max(100, { message: '페이지 크기는 100 이하여야 합니다.' })
   limit?: number;
 
-  @Field(() => PostType, { nullable: true, description: '게시물 유형 필터' })
+  @Field(() => [String], { nullable: true, description: '팀 ID 필터' })
   @IsOptional()
-  @IsEnum(PostType, { message: '올바른 게시물 유형을 선택해주세요.' })
-  type?: PostType;
+  @IsArray()
+  @IsString({ each: true, message: '팀 ID는 문자열이어야 합니다.' })
+  teamIds?: string[];
 
   @Field(() => String, { nullable: true, description: '작성자 ID 필터' })
   @IsOptional()
@@ -248,14 +249,14 @@ export class PostStatsResponse {
   @Field(() => Int, { description: '비공개 게시물 수' })
   privatePosts: number;
 
-  @Field(() => Int, { description: '분석 게시물 수' })
-  analysisCount: number;
+  @Field(() => Int, { description: '팀별 게시물 통계' })
+  teamPostsCount: number;
 
-  @Field(() => Int, { description: '응원 게시물 수' })
-  cheeringCount: number;
+  @Field(() => Int, { description: '인기 있는 팀 게시물 수' })
+  popularTeamPostsCount: number;
 
-  @Field(() => Int, { description: '하이라이트 게시물 수' })
-  highlightCount: number;
+  @Field(() => Int, { description: '최근 팀 게시물 수' })
+  recentTeamPostsCount: number;
 }
 
 /**
@@ -317,8 +318,8 @@ export class PostsResolver {
   @UseGuards(GqlAuthGuard)
   @Mutation(() => Post, { description: '게시물 생성' })
   async createPost(
-    @CurrentUser() user: User,
     @Args('input') createPostInput: CreatePostInput,
+    @CurrentUser() user: User,
   ): Promise<Post> {
     return await this.postsService.create(user.id, createPostInput);
   }
@@ -339,7 +340,6 @@ export class PostsResolver {
     const options: FindPostsOptions = {
       page: findPostsInput?.page || 1,
       limit: findPostsInput?.limit || 10,
-      type: findPostsInput?.type,
       authorId: findPostsInput?.authorId,
       publicOnly: findPostsInput?.publicOnly || !user, // 비로그인 사용자는 공개 게시물만 조회
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
@@ -476,7 +476,6 @@ export class PostsResolver {
     const options: FindPostsOptions = {
       page: findPostsInput?.page || 1,
       limit: findPostsInput?.limit || 10,
-      type: findPostsInput?.type,
       authorId: user.id,
       publicOnly: false, // 내 게시물은 공개/비공개 모두 조회
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
@@ -502,7 +501,6 @@ export class PostsResolver {
     const options: FindPostsOptions = {
       page: findPostsInput?.page || 1,
       limit: findPostsInput?.limit || 10,
-      type: findPostsInput?.type,
       authorId,
       publicOnly: true, // 다른 사용자 게시물은 공개 게시물만 조회
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
@@ -514,21 +512,21 @@ export class PostsResolver {
   }
 
   /**
-   * 게시물 유형별 조회
+   * 팀별 게시물 조회
    *
-   * @param type - 게시물 유형
+   * @param teamId - 팀 ID
    * @param findPostsInput - 조회 옵션
-   * @returns 유형별 게시물 목록
+   * @returns 팀별 게시물 목록
    */
-  @Query(() => PostsResponse, { description: '게시물 유형별 조회' })
-  async postsByType(
-    @Args('type') type: PostType,
+  @Query(() => PostsResponse, { description: '팀별 게시물 조회' })
+  async postsByTeam(
+    @Args('teamId') teamId: string,
     @Args('input', { nullable: true }) findPostsInput?: FindPostsInput,
   ): Promise<PostsResponse> {
     const options: FindPostsOptions = {
       page: findPostsInput?.page || 1,
       limit: findPostsInput?.limit || 10,
-      type,
+      teamIds: [teamId],
       publicOnly: true,
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
       sortOrder: (findPostsInput?.sortOrder as any) || 'DESC',
@@ -581,7 +579,6 @@ export class PostsResolver {
     const options: FindPostsOptions = {
       page: findPostsInput?.page || 1,
       limit: findPostsInput?.limit || 10,
-      type: findPostsInput?.type,
       authorId: findPostsInput?.authorId,
       publicOnly: true,
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
@@ -609,13 +606,22 @@ export class PostsResolver {
     }
 
     const stats = await this.postsService.getPostStats();
+    // 가장 많은 게시물이 있는 상위 3개 팀을 찾습니다
+    const teamEntries = Object.entries(stats.postsByTeam || {});
+    const sortedTeams = teamEntries.sort((a, b) => b[1] - a[1]);
+    const topTeams = sortedTeams.slice(0, 3);
+    const popularTeamPostsCount = topTeams.reduce(
+      (sum, [_, count]) => sum + count,
+      0,
+    );
+
     return {
       totalPosts: stats.totalPosts,
       publicPosts: stats.publicPosts,
       privatePosts: stats.privatePosts,
-      analysisCount: stats.postsByType[PostType.ANALYSIS] || 0,
-      cheeringCount: stats.postsByType[PostType.CHEERING] || 0,
-      highlightCount: stats.postsByType[PostType.HIGHLIGHT] || 0,
+      teamPostsCount: stats.teamPostsCount || 0,
+      popularTeamPostsCount: popularTeamPostsCount || 0,
+      recentTeamPostsCount: Math.min(50, stats.teamPostsCount || 0), // 최근 게시물 수 (최대 50개)
     };
   }
 }

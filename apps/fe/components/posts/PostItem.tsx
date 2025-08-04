@@ -30,7 +30,7 @@ export interface PostItemType {
   viewCount: number;
   likeCount: number;
   commentCount: number;
-  type: string;
+  teamId: string; // 게시물은 이제 teamId로만 분류됩니다
   mediaUrl?: string;
   isLiked?: boolean;
 }
@@ -67,6 +67,32 @@ export default function PostItem({ post, onPress }: PostItemProps) {
   };
 
   /**
+   * 팀 ID에 따른 표시 이름 가져오기
+   */
+  const getTeamName = (teamId: string): string => {
+    // 팀 ID별 이름 매핑
+    const teamNames: Record<string, string> = {
+      "tottenham-id": "토트넘",
+      "newcastle-id": "뉴캐슬",
+      "atletico-id": "아틀레티코",
+      "mancity-id": "맨시티",
+      "liverpool-id": "리버풀",
+      "doosan-id": "두산",
+      "hanwha-id": "한화",
+      "lg-id": "LG",
+      "samsung-id": "삼성",
+      "kia-id": "KIA",
+      "t1-id": "T1",
+      "geng-id": "Gen.G",
+      "drx-id": "DRX",
+      "kt-id": "KT",
+      "damwon-id": "담원",
+    };
+
+    return teamNames[teamId] || "팀";
+  };
+
+  /**
    * 작성 날짜 포맷팅
    */
   const formattedDate = new Date(post.createdAt).toLocaleDateString("ko-KR", {
@@ -74,6 +100,41 @@ export default function PostItem({ post, onPress }: PostItemProps) {
     month: "short",
     day: "numeric",
   });
+
+  /**
+   * 팀 ID에 따른 표시 이름 가져오기
+   */
+  const getTeamDisplayName = (teamId: string) => {
+    // 팀 ID에 따른 표시 이름 매핑
+    const teamNames: Record<string, string> = {
+      // 목업 데이터용 팀 ID
+      team_1: "토트넘",
+      team_2: "뉴캐슬",
+      team_3: "아틀레티코",
+      team_4: "맨시티",
+      team_5: "리버풀",
+      // 실제 서비스용 팀 ID
+      "tottenham-id": "토트넘",
+      "newcastle-id": "뉴캐슬",
+      "atletico-id": "아틀레티코",
+      "mancity-id": "맨시티",
+      "liverpool-id": "리버풀",
+      // 야구팀
+      "doosan-id": "두산",
+      "hanwha-id": "한화",
+      "lg-id": "LG",
+      "samsung-id": "삼성",
+      "kia-id": "KIA",
+      // e스포츠팀
+      "t1-id": "T1",
+      "geng-id": "Gen.G",
+      "drx-id": "DRX",
+      "kt-id": "KT",
+      "damwon-id": "담원",
+    };
+
+    return teamNames[teamId] || "팀";
+  };
 
   /**
    * 게시물 내용 요약
@@ -106,15 +167,9 @@ export default function PostItem({ post, onPress }: PostItemProps) {
           <Text style={themed($timestamp)}>{formattedDate}</Text>
         </View>
 
-        {/* 게시물 유형 */}
+        {/* 게시물 팀 */}
         <View style={themed($typeTag)}>
-          <Text style={themed($typeText)}>
-            {post.type === "ANALYSIS"
-              ? "분석"
-              : post.type === "CHEERING"
-                ? "응원"
-                : "하이라이트"}
-          </Text>
+          <Text style={themed($typeText)}>팀 {post.teamId}</Text>
         </View>
       </View>
 

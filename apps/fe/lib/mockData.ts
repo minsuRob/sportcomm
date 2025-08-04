@@ -7,11 +7,10 @@
 
 // --- Type Definitions ---
 // These types should align with the main application's types (e.g., in PostCard.tsx or a shared types file).
-export enum PostType {
-  ANALYSIS = "ANALYSIS",
-  CHEERING = "CHEERING",
-  HIGHLIGHT = "HIGHLIGHT",
-}
+// 게시물은 teamId로 분류됩니다.
+
+// 팀 ID 타입 정의
+export type TeamId = string; // 실제 구현에서는 더 구체적인 팀 ID 형식으로 제한할 수 있습니다.
 
 export interface User {
   id: string;
@@ -36,7 +35,7 @@ export interface Post {
   media: Media[];
   comments: Comment[];
   createdAt: string;
-  type: PostType;
+  teamId: TeamId; // 팀 ID로 분류
   viewCount: number;
   likesCount: number;
   commentsCount: number;
@@ -76,7 +75,7 @@ export const createMockFeedData = (count = 5): Post[] => {
         }),
       ),
       createdAt: new Date(Date.now() - i * 1000 * 60 * 60 * 3).toISOString(),
-      type: [PostType.HIGHLIGHT, PostType.ANALYSIS, PostType.CHEERING][i % 3],
+      teamId: `team_${(i % 5) + 1}`, // 5개 팀 ID 중 하나로 랜덤 할당
       viewCount: Math.floor(Math.random() * 1200) + 50,
       likesCount: Math.floor(Math.random() * 250) + 10,
       commentsCount: Math.floor(Math.random() * 5) + 1,
@@ -85,4 +84,32 @@ export const createMockFeedData = (count = 5): Post[] => {
     };
   });
   return mockPosts;
+};
+
+/**
+ * 실제 팀 ID 목록에서 랜덤하게 하나의 팀 ID를 선택합니다.
+ * @param seed - 선택의 일관성을 위한 시드 값
+ * @returns 팀 ID
+ */
+const getRandomTeamId = (seed: number): TeamId => {
+  // 실제 구현에서 사용될 팀 ID 목록
+  const teamIds: TeamId[] = [
+    "tottenham-id",
+    "newcastle-id",
+    "atletico-id",
+    "mancity-id",
+    "liverpool-id",
+    "doosan-id",
+    "hanwha-id",
+    "lg-id",
+    "samsung-id",
+    "kia-id",
+    "t1-id",
+    "geng-id",
+    "drx-id",
+    "kt-id",
+    "damwon-id",
+  ];
+
+  return teamIds[seed % teamIds.length];
 };

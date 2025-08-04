@@ -7,8 +7,8 @@ import {
   Index,
   RelationId,
 } from 'typeorm';
-import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
-import { IsString, IsEnum, MaxLength, MinLength } from 'class-validator';
+import { ObjectType, Field } from '@nestjs/graphql';
+import { IsString, MaxLength, MinLength } from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { Comment } from './comment.entity';
@@ -18,87 +18,9 @@ import { PostLike } from './post-like.entity';
 import { Bookmark } from './bookmark.entity';
 
 /**
- * 게시물 유형 열거형 (팀 기반)
- * 사용자가 응원하는 팀에 따른 게시물 분류를 정의합니다.
+ * 팀 기반 게시물 분류
+ * 게시물은 팀 ID로만 분류됩니다.
  */
-export enum PostType {
-  // 축구팀
-  /** 토트넘 홋스퍼 */
-  TOTTENHAM = 'TOTTENHAM',
-  /** 뉴캐슬 유나이티드 */
-  NEWCASTLE = 'NEWCASTLE',
-  /** 아틀레티코 마드리드 */
-  ATLETICO_MADRID = 'ATLETICO_MADRID',
-  /** 맨체스터 시티 */
-  MANCHESTER_CITY = 'MANCHESTER_CITY',
-  /** 리버풀 */
-  LIVERPOOL = 'LIVERPOOL',
-
-  // 야구팀
-  /** 두산 베어스 */
-  DOOSAN_BEARS = 'DOOSAN_BEARS',
-  /** 한화 이글스 */
-  HANWHA_EAGLES = 'HANWHA_EAGLES',
-  /** LG 트윈스 */
-  LG_TWINS = 'LG_TWINS',
-  /** 삼성 라이온즈 */
-  SAMSUNG_LIONS = 'SAMSUNG_LIONS',
-  /** KIA 타이거즈 */
-  KIA_TIGERS = 'KIA_TIGERS',
-
-  // e스포츠팀
-  /** T1 */
-  T1 = 'T1',
-  /** Gen.G */
-  GENG = 'GENG',
-  /** DRX */
-  DRX = 'DRX',
-  /** KT 롤스터 */
-  KT_ROLSTER = 'KT_ROLSTER',
-  /** 담원 기아 */
-  DAMWON_KIA = 'DAMWON_KIA',
-
-  // 게시물 유형
-  /** 응원글 */
-  CHEERING = 'CHEERING',
-  /** 분석글 */
-  ANALYSIS = 'ANALYSIS',
-  /** 하이라이트 */
-  HIGHLIGHT = 'HIGHLIGHT',
-}
-
-// GraphQL 스키마에 PostType enum 등록
-registerEnumType(PostType, {
-  name: 'PostType',
-  description: '팀 기반 게시물 유형',
-  valuesMap: {
-    // 축구팀
-    TOTTENHAM: { description: '토트넘 홋스퍼' },
-    NEWCASTLE: { description: '뉴캐슬 유나이티드' },
-    ATLETICO_MADRID: { description: '아틀레티코 마드리드' },
-    MANCHESTER_CITY: { description: '맨체스터 시티' },
-    LIVERPOOL: { description: '리버풀' },
-
-    // 야구팀
-    DOOSAN_BEARS: { description: '두산 베어스' },
-    HANWHA_EAGLES: { description: '한화 이글스' },
-    LG_TWINS: { description: 'LG 트윈스' },
-    SAMSUNG_LIONS: { description: '삼성 라이온즈' },
-    KIA_TIGERS: { description: 'KIA 타이거즈' },
-
-    // e스포츠팀
-    T1: { description: 'T1' },
-    GENG: { description: 'Gen.G' },
-    DRX: { description: 'DRX' },
-    KT_ROLSTER: { description: 'KT 롤스터' },
-    DAMWON_KIA: { description: '담원 기아' },
-
-    // 게시물 유형
-    CHEERING: { description: '응원글' },
-    ANALYSIS: { description: '분석글' },
-    HIGHLIGHT: { description: '하이라이트' },
-  },
-});
 
 /**
  * 게시물 엔티티
@@ -110,7 +32,7 @@ registerEnumType(PostType, {
 @ObjectType()
 @Entity('posts')
 @Index(['authorId'])
-@Index(['type'])
+@Index(['teamId'])
 @Index(['createdAt'])
 export class Post extends BaseEntity {
   /**
@@ -141,19 +63,6 @@ export class Post extends BaseEntity {
   @MinLength(1, { message: '내용은 최소 1자 이상이어야 합니다.' })
   @MaxLength(10000, { message: '내용은 최대 10,000자까지 가능합니다.' })
   content: string;
-
-  /**
-   * 게시물 유형 (팀 기반)
-   * 사용자가 응원하는 팀에 따른 게시물 분류입니다.
-   */
-  @Field(() => PostType, { description: '팀 기반 게시물 유형' })
-  @Column({
-    type: 'enum',
-    enum: PostType,
-    comment: '팀 기반 게시물 유형',
-  })
-  @IsEnum(PostType, { message: '올바른 팀을 선택해주세요.' })
-  type: PostType;
 
   /**
    * 게시물 조회수
@@ -226,6 +135,20 @@ export class Post extends BaseEntity {
     comment: '게시물 공개 여부',
   })
   isPublic: boolean;
+
+  /**
+   * 팀 ID
+   * 게시물이 관련된 팀의 ID입니다.
+   * 모든 게시물은 teamId로 분류됩니다.
+   */
+  @Field(() => String, { description: '연관된 팀 ID' })
+  @Column({
+    type: 'uuid',
+    comment: '게시물 분류를 위한 팀 ID',
+    nullable: false, // 필수 값으로 설정
+  })
+  @IsString({ message: '팀 ID는 문자열이어야 합니다.' })
+  teamId: string;
 
   /**
    * 작성자 ID
@@ -305,48 +228,41 @@ export class Post extends BaseEntity {
   // === 헬퍼 메서드 ===
 
   /**
-   * 게시물이 축구팀 관련인지 확인하는 메서드
-   * @returns 축구팀 게시물인 경우 true, 아닌 경우 false
+   * 게시물과 관련된 팀의 스포츠 종류를 확인하는 메서드
+   * 외부 팀 서비스와의 통합이 필요합니다.
+   *
+   * @returns 팀의 스포츠 종류 ('football', 'baseball', 'esports' 등)
    */
-  isFootballTeam(): boolean {
+  async getTeamSportType(): Promise<string> {
+    // 팀 서비스와 연동하여 팀 ID에 해당하는 스포츠 종류 반환
+    // 팀 ID 기반 분류에 맞춰 구현 예정
+    return this.getTeamCategory();
+  }
+
+  /**
+   * 팀 ID 기반으로 카테고리(스포츠 종류)를 반환하는 메서드
+   * @returns 팀의 카테고리 ('football', 'baseball', 'esports' 등)
+   */
+  getTeamCategory(): string {
+    // 팀 ID 프리픽스에 따라 카테고리 결정 (예시 구현)
     const footballTeams = [
-      PostType.TOTTENHAM,
-      PostType.NEWCASTLE,
-      PostType.ATLETICO_MADRID,
-      PostType.MANCHESTER_CITY,
-      PostType.LIVERPOOL,
+      'tottenham',
+      'liverpool',
+      'mancity',
+      'atletico',
+      'newcastle',
     ];
-    return footballTeams.includes(this.type);
-  }
+    const baseballTeams = ['doosan', 'hanwha', 'lg', 'samsung', 'kia'];
+    const esportsTeams = ['t1', 'geng', 'drx', 'kt', 'damwon'];
 
-  /**
-   * 게시물이 야구팀 관련인지 확인하는 메서드
-   * @returns 야구팀 게시물인 경우 true, 아닌 경우 false
-   */
-  isBaseballTeam(): boolean {
-    const baseballTeams = [
-      PostType.DOOSAN_BEARS,
-      PostType.HANWHA_EAGLES,
-      PostType.LG_TWINS,
-      PostType.SAMSUNG_LIONS,
-      PostType.KIA_TIGERS,
-    ];
-    return baseballTeams.includes(this.type);
-  }
+    // 팀 ID에서 프리픽스 추출 (예: "tottenham-id" -> "tottenham")
+    const prefix = this.teamId.split('-')[0];
 
-  /**
-   * 게시물이 e스포츠팀 관련인지 확인하는 메서드
-   * @returns e스포츠팀 게시물인 경우 true, 아닌 경우 false
-   */
-  isEsportsTeam(): boolean {
-    const esportsTeams = [
-      PostType.T1,
-      PostType.GENG,
-      PostType.DRX,
-      PostType.KT_ROLSTER,
-      PostType.DAMWON_KIA,
-    ];
-    return esportsTeams.includes(this.type);
+    if (footballTeams.includes(prefix)) return 'football';
+    if (baseballTeams.includes(prefix)) return 'baseball';
+    if (esportsTeams.includes(prefix)) return 'esports';
+
+    return 'unknown';
   }
 
   /**

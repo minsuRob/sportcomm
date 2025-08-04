@@ -8,6 +8,7 @@ import {
   Parent,
 } from '@nestjs/graphql';
 import { Follow } from '../../entities/follow.entity';
+import { UserTeam } from '../../entities/user-team.entity';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import {
   CurrentUser,
@@ -121,5 +122,18 @@ export class UsersResolver {
       return false;
     }
     return this.usersService.isFollowing(currentUser.id, user.id);
+  }
+
+  /**
+   * 사용자가 선택한 팀 목록을 반환하는 리졸버
+   * @param user 현재 처리 중인 User 객체
+   * @returns 사용자가 선택한 팀 목록 배열
+   */
+  @ResolveField(() => [UserTeam], {
+    nullable: false,
+    description: '사용자가 선택한 팀 목록',
+  })
+  async myTeams(@Parent() user: User): Promise<UserTeam[]> {
+    return this.usersService.getUserTeams(user.id);
   }
 }

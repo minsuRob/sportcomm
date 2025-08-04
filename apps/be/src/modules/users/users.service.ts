@@ -5,6 +5,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User } from '../../entities/user.entity';
 import { Follow } from '../../entities/follow.entity';
 import { Post } from '../../entities/post.entity';
+import { UserTeam } from '../../entities/user-team.entity';
 
 @Injectable()
 export class UsersService {
@@ -15,6 +16,8 @@ export class UsersService {
     private readonly followsRepository: Repository<Follow>,
     @InjectRepository(Post)
     private readonly postsRepository: Repository<Post>,
+    @InjectRepository(UserTeam)
+    private readonly userTeamsRepository: Repository<UserTeam>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -184,5 +187,21 @@ export class UsersService {
 
       return true;
     }
+  }
+
+  /**
+   * 사용자가 선택한 팀 목록을 조회합니다.
+   * @param userId 사용자 ID
+   * @returns 사용자가 선택한 팀 목록
+   */
+  async getUserTeams(userId: string): Promise<UserTeam[]> {
+    return this.userTeamsRepository.find({
+      where: { userId },
+      relations: ['team', 'team.sport'],
+      order: {
+        priority: 'ASC',
+        createdAt: 'ASC',
+      },
+    });
   }
 }

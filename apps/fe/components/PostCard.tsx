@@ -32,7 +32,7 @@ import { isWeb } from "@/lib/platform";
 import { usePostImageDimensions, IMAGE_CONSTANTS } from "@/lib/image";
 import { getSession } from "@/lib/auth";
 import { useTeams } from "@/hooks/useTeams";
-import { GET_MY_TEAMS, type UserTeam } from "@/lib/graphql/teams";
+import { type UserTeam } from "@/lib/graphql/teams";
 import TeamLogo from "./TeamLogo";
 
 // --- Type Definitions ---
@@ -43,6 +43,7 @@ export interface User {
   nickname: string;
   profileImageUrl?: string;
   isFollowing?: boolean;
+  myTeams?: UserTeam[];
 }
 
 export interface Comment {
@@ -80,7 +81,7 @@ const formatTimeAgo = (dateString: string) => {
   const now = new Date();
   const postDate = new Date(dateString);
   const diffHours = Math.floor(
-    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60),
+    (now.getTime() - postDate.getTime()) / (1000 * 60 * 60)
   );
 
   if (diffHours < 1) return "방금 전";
@@ -214,9 +215,6 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { getTeamById } = useTeams();
-  const { data: myTeamsData } = useQuery<{ myTeams: UserTeam[] }>(GET_MY_TEAMS);
-
-  const myTeams = myTeamsData?.myTeams || [];
 
   // 컨텍스트 메뉴 상태 관리
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -227,10 +225,10 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
+    (item) => item.type === "image" || item.type === "IMAGE"
   );
   const videoMedia = post.media.filter(
-    (item) => item.type === "video" || item.type === "VIDEO",
+    (item) => item.type === "video" || item.type === "VIDEO"
   );
 
   // 동영상 재생 상태 관리
@@ -304,7 +302,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       console.log(`PostCard - post.id: ${post.id}`);
       console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
       console.log(
-        `PostCard - post.content: ${post.content.substring(0, 20)}...`,
+        `PostCard - post.content: ${post.content.substring(0, 20)}...`
       );
     }
   }, [post.id]);
@@ -588,7 +586,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                     <Text style={themed($videoDurationText)}>
                       {videoMedia[0]
                         ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
-                            ((videoMedia[0] as any).duration || 0) % 60,
+                            ((videoMedia[0] as any).duration || 0) % 60
                           )
                             .toString()
                             .padStart(2, "0")}`
@@ -714,14 +712,37 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
               </View>
               {/* Post Team */}
               <View style={themed($postTeamContainer)}>
-                {post.teamId && (
-                  <TeamLogo
-                    key={post.teamId}
-                    logoUrl={postTeamInfo.logoUrl}
-                    teamName={postTeamInfo.text}
-                    size={36}
-                    style={{ marginBottom: 4 }}
-                  />
+                {/* 내 게시글이면 나의 팀 목록 최대 3개 표시, 아니면 게시글의 팀만 표시 */}
+                {currentUser?.id === post.author.id ? (
+                  // 내 게시글인 경우 내 팀 목록 표시 (최대 3개)
+                  <View style={{ flexDirection: "row" }}>
+                    {(currentUser?.myTeams || [])
+                      .slice(0, 3)
+                      .map((userTeam: UserTeam) => (
+                        <TeamLogo
+                          key={userTeam.team.id}
+                          logoUrl={userTeam.team.logoUrl}
+                          teamName={userTeam.team.name}
+                          size={36}
+                          style={{ marginBottom: 4, marginRight: 4 }}
+                        />
+                      ))}
+                  </View>
+                ) : (
+                  // 타인의 게시글인 경우 해당 게시글 작성자의 팀 목록 표시 (최대 3개)
+                  <View style={{ flexDirection: "row" }}>
+                    {(post.author.myTeams || [])
+                      .slice(0, 3)
+                      .map((userTeam: UserTeam) => (
+                        <TeamLogo
+                          key={userTeam.team.id}
+                          logoUrl={userTeam.team.logoUrl}
+                          teamName={userTeam.team.name}
+                          size={36}
+                          style={{ marginBottom: 4, marginRight: 4 }}
+                        />
+                      ))}
+                  </View>
                 )}
               </View>
             </View>

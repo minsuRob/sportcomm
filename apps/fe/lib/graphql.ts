@@ -33,6 +33,25 @@ export const GET_POSTS = gql`
           id
           nickname
           profileImageUrl
+          myTeams {
+            id
+            userId
+            teamId
+            priority
+            notificationEnabled
+            createdAt
+            team {
+              id
+              name
+              code
+              color
+              icon
+              logoUrl
+              description
+              sortOrder
+              isActive
+            }
+          }
         }
         media {
           id

@@ -41,6 +41,8 @@ export default function TeamSelectionScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // GraphQL 쿼리 및 뮤테이션
   const {
@@ -52,8 +54,18 @@ export default function TeamSelectionScreen() {
   const {
     data: myTeamsData,
     loading: myTeamsLoading,
+    error: myTeamsError,
     refetch: refetchMyTeams,
-  } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS);
+  } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
+    onError: (error) => {
+      console.error("myTeams 쿼리 오류:", error);
+      if (error.message.includes("logIn") ||
+          error.message.includes("인증") ||
+          error.message.includes("token")) {
+        setAuthError("인증 오류가 발생했습니다. 다시 로그인해주세요.");
+      }
+    }
+  });
 
   const [updateMyTeams, { loading: updateLoading, error: updateError }] =
     useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
@@ -64,19 +76,36 @@ export default function TeamSelectionScreen() {
   // 사용자 정보 로드 및 인증 확인
   useEffect(() => {
     const loadUserAndCheckAuth = async () => {
-      const { token, user } = await getSession();
-      if (user) {
-        setCurrentUser(user);
-      } else if (!token) {
-        // 인증되지 않은 경우 처리
-        console.warn("인증되지 않은 사용자가 팀 선택 화면에 접근");
-        showToast({
-          type: "error",
-          title: "인증 필요",
-          message: "로그인이 필요한 기능입니다.",
-          duration: 2000,
+      try {
+        const { token, user, isAuthenticated: authStatus } = await getSession();
+        setIsAuthenticated(authStatus);
+
+        if (user) {
+          setCurrentUser(user);
+        } else if (!token) {
+          // 인증되지 않은 경우 처리
+          console.warn("인증되지 않은 사용자가 팀 선택 화면에 접근");
+          setAuthError("로그인이 필요한 기능입니다.");
+          showToast({
+            type: "error",
+            title: "인증 필요",
+            message: "로그인이 필요한 기능입니다.",
+            duration: 2000,
+          });
+          setTimeout(() => router.back(), 500);
+        }
+
+        // 인증 상태 디버깅
+        console.log("인증 상태:", {
+          isAuthenticated: authStatus,
+          hasToken: !!token,
+          hasUser: !!user,
+          userId: user?.id,
+          tokenLength: token?.length || 0
         });
-        setTimeout(() => router.back(), 500);
+      } catch (error) {
+        console.error("인증 확인 중 오류 발생:", error);
+        setAuthError("인증 상태를 확인할 수 없습니다.");
       }
     };
     loadUserAndCheckAuth();
@@ -85,10 +114,44 @@ export default function TeamSelectionScreen() {
   // 사용자가 선택한 팀 목록 로드
   useEffect(() => {
     if (myTeamsData?.myTeams) {
-      const teamIds = myTeamsData.myTeams.map((userTeam) => userTeam.team.id);
-      setSelectedTeams(teamIds);
+      try {
+        console.log("MyTeams 데이터 확인:", JSON.stringify(myTeamsData.myTeams, null, 2));
+
+        // 안전하게 팀 ID 추출
+        const teamIds = myTeamsData.myTeams.map((userTeam) => {
+          // userTeam 객체 로깅
+          console.log("UserTeam 객체:", userTeam);
+
+          if (!userTeam.team) {
+            console.error("UserTeam에 team 객체가 없음:", userTeam);
+            return null;
+          }
+
+          return userTeam.team.id;
+        }).filter(Boolean) as string[]; // null 값 제거
+
+        setSelectedTeams(teamIds);
+        console.log("사용자가 선택한 팀 목록 로드 성공:", teamIds);
+      } catch (error) {
+        console.error("팀 목록 처리 중 오류 발생:", error);
+      }
     }
   }, [myTeamsData]);
+
+  // 인증 오류 발생 시 처리
+  useEffect(() => {
+    if (myTeamsError) {
+      console.error("myTeams 쿼리 오류:", myTeamsError);
+      if (isAuthenticated === false) {
+        showToast({
+          type: "error",
+          title: "인증 오류",
+          message: "인증 정보가 만료되었습니다. 다시 로그인해주세요.",
+          duration: 3000,
+        });
+      }
+    }
+  }, [myTeamsError, isAuthenticated]);
 
   /**
    * 팀 선택/해제 핸들러
@@ -109,17 +172,35 @@ export default function TeamSelectionScreen() {
    * 인증 상태 확인 함수
    */
   const checkAuthentication = async () => {
-    const { token, user } = await getSession();
-    if (!token || !user) {
-      showToast({
-        type: "error",
-        title: "인증 필요",
-        message: "로그인이 필요한 기능입니다.",
-        duration: 3000,
+    try {
+      const { token, user, isAuthenticated: authStatus } = await getSession();
+
+      console.log("인증 상태 확인:", {
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        hasUser: !!user,
+        isAuthenticated: authStatus
       });
+
+      if (!authStatus) {
+        setIsAuthenticated(false);
+        setAuthError("인증 정보가 유효하지 않습니다.");
+        showToast({
+          type: "error",
+          title: "인증 필요",
+          message: "로그인이 필요한 기능입니다.",
+          duration: 3000,
+        });
+        return false;
+      }
+
+      setIsAuthenticated(true);
+      return true;
+    } catch (error) {
+      console.error("인증 확인 중 오류 발생:", error);
+      setAuthError("인증 상태를 확인할 수 없습니다.");
       return false;
     }
-    return true;
   };
 
   /**
@@ -128,20 +209,39 @@ export default function TeamSelectionScreen() {
   const handleSave = async () => {
     if (isLoading) return; // 로딩 중이면 중복 요청 방지
 
+    console.log("팀 저장 시도...");
+
     // 인증 상태 확인
-    const isAuthenticated = await checkAuthentication();
-    if (!isAuthenticated) {
-      router.back(); // 인증이 안된 경우 뒤로 가기
+    const isAuthValid = await checkAuthentication();
+    if (!isAuthValid) {
+      console.error("인증 실패 - 팀 저장 취소");
+      setTimeout(() => router.back(), 1000); // 인증이 안된 경우 뒤로 가기
       return;
     }
 
+    // 사용자 정보 확인
     if (!currentUser) {
+      console.error("사용자 정보 없음 - 팀 저장 취소");
       showToast({
         type: "error",
         title: "인증 필요",
         message: "팀 선택을 저장하려면 로그인이 필요합니다.",
         duration: 3000,
       });
+      return;
+    }
+
+    // 토큰 상태 재확인
+    const { token } = await getSession();
+    if (!token) {
+      console.error("토큰 없음 - 팀 저장 취소");
+      showToast({
+        type: "error",
+        title: "인증 오류",
+        message: "인증 정보가 만료되었습니다. 다시 로그인해주세요.",
+        duration: 3000,
+      });
+      setTimeout(() => router.back(), 1000);
       return;
     }
 
@@ -156,16 +256,37 @@ export default function TeamSelectionScreen() {
     }
 
     try {
+      console.log("팀 선택 저장 요청 시작:", selectedTeams);
+
+      // 세션 정보 가져오기
+      const sessionInfo = await getSession();
+      console.log("저장 요청 전 세션 상태:", {
+        hasToken: !!sessionInfo.token,
+        tokenLength: sessionInfo.token?.length || 0,
+        hasUser: !!sessionInfo.user,
+        userId: sessionInfo.user?.id,
+        isAuthenticated: sessionInfo.isAuthenticated
+      });
+
       // GraphQL 뮤테이션으로 팀 선택 업데이트
       const { data, errors } = await updateMyTeams({
         variables: {
           teamIds: selectedTeams,
         },
+        context: {
+          // 인증 토큰 최신 상태로 설정
+          headers: {
+            authorization: sessionInfo.token ? `Bearer ${sessionInfo.token}` : ""
+          }
+        }
       });
 
       if (errors) {
+        console.error("GraphQL 뮤테이션 오류:", errors);
         throw new Error(errors[0].message);
       }
+
+      console.log("팀 선택 저장 성공:", data);
 
       // 사용자 팀 목록 다시 조회
       refetchMyTeams({ fetchPolicy: "network-only" });
@@ -270,6 +391,9 @@ export default function TeamSelectionScreen() {
    * 팀 그리드 렌더링
    */
   const renderTeamGrid = (teams: Team[]) => {
+    console.log("렌더링할 팀 목록:", teams.map(t => ({ id: t.id, name: t.name })));
+    console.log("현재 선택된 팀 ID 목록:", selectedTeams);
+
     const rows = [];
     const teamsPerRow = 2;
 
@@ -278,10 +402,14 @@ export default function TeamSelectionScreen() {
       rows.push(
         <View key={i} style={themed($teamRow)}>
           {rowTeams.map((team) => {
-            const isSelected = selectedTeams.includes(team.id);
+            // 팀 ID가 선택 목록에 있는지 확인 (디버깅 로그 추가)
+            const teamId = team.id;
+            const isSelected = selectedTeams.includes(teamId);
+            console.log(`팀 ${team.name} (ID: ${teamId}): ${isSelected ? '선택됨' : '선택안됨'}`);
+
             return (
               <TouchableOpacity
-                key={team.id}
+                key={teamId}
                 style={[
                   themed($teamCard),
                   {
@@ -291,7 +419,7 @@ export default function TeamSelectionScreen() {
                       : theme.colors.card,
                   },
                 ]}
-                onPress={() => handleTeamSelect(team.id)}
+                onPress={() => handleTeamSelect(teamId)}
               >
                 <View style={themed($teamIconContainer)}>
                   <Text style={themed($teamCardIcon)}>{team.icon}</Text>
@@ -324,6 +452,39 @@ export default function TeamSelectionScreen() {
 
     return rows;
   };
+
+  // 인증 오류 처리
+  if (authError) {
+    console.log("인증 오류로 인한 화면 렌더링:", authError);
+
+    // 세션 상태 확인 (디버깅용)
+    getSession().then(({ token, user, isAuthenticated }) => {
+      console.log("인증 오류 화면 - 세션 상태:", {
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        hasUser: !!user,
+        userId: user?.id,
+        isAuthenticated
+      });
+    });
+
+    return (
+      <View style={[themed($container), themed($errorContainer)]}>
+        <Text style={themed($errorText)}>
+          {authError}
+        </Text>
+        <TouchableOpacity
+          style={themed($retryButton)}
+          onPress={() => {
+            console.log("로그인 화면으로 이동 시도");
+            router.back();
+          }}
+        >
+          <Text style={themed($retryButtonText)}>로그인 화면으로</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // 로딩 상태 처리
   if (sportsLoading || myTeamsLoading) {
@@ -438,6 +599,17 @@ export default function TeamSelectionScreen() {
         <View style={themed($loadingOverlay)}>
           <ActivityIndicator size="large" color={theme.colors.tint} />
           <Text style={themed($loadingText)}>데이터 저장 중...</Text>
+        </View>
+      )}
+
+      {/* 인증 오류 메시지 */}
+      {myTeamsError && (
+        <View style={[themed($errorContainer), { position: 'absolute', bottom: 20, left: 20, right: 20 }]}>
+          <Text style={themed($errorText)}>
+            {myTeamsError.message.includes('logIn') ?
+              '인증 정보가 만료되었습니다. 다시 로그인해주세요.' :
+              '팀 정보를 불러오는 중 오류가 발생했습니다.'}
+          </Text>
         </View>
       )}
     </View>

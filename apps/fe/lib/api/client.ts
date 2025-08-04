@@ -52,17 +52,36 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
         message.includes('인증') ||
         message.includes('로그인') ||
         message.includes('token') ||
+        message.includes('logIn') ||
         message.includes('access denied') ||
+        message.includes('Cannot read properties of undefined') ||
         (extensions && extensions.code === 'UNAUTHENTICATED')
       ) {
-        console.error('인증 오류 감지:', message);
-        // 여기서 리프레시 토큰 처리나 로그인 페이지로 리다이렉트 등의 로직을 추가할 수 있음
+        console.error('인증 오류 감지:', message, {
+          operation: operation.operationName,
+          path: path
+        });
+
+        // 인증 오류 발생 시 세션 체크 (디버깅용)
+        getSession().then(({ token, user }) => {
+          console.log("인증 오류 발생 시 세션 상태:", {
+            hasToken: !!token,
+            tokenLength: token?.length || 0,
+            hasUser: !!user,
+            userId: user?.id
+          });
+        });
+
+        // 여기서 필요하다면 세션 초기화 등의 작업 수행 가능
+        // clearSession().then(() => {...});
       }
     });
   }
 
   if (networkError) {
-    console.error(`[네트워크 에러]: ${networkError}`);
+    console.error(`[네트워크 에러]: ${networkError}`, {
+      operationName: operation.operationName
+    });
   }
 
   return forward(operation);
@@ -72,20 +91,47 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
  * 인증 링크
  * 모든 요청에 JWT 토큰을 헤더에 추가합니다.
  */
-const authLink = setContext(async (_, { headers }) => {
-  // auth.ts의 getSession을 통해 토큰 가져오기
-  const { token } = await getSession();
+const authLink = setContext(async (operation, { headers }) => {
+  try {
+    // auth.ts의 getSession을 통해 토큰 가져오기
+    const { token, user, isAuthenticated } = await getSession();
 
-  // 디버깅을 위한 토큰 로그
-  console.log("현재 토큰 상태:", token ? "토큰 있음" : "토큰 없음");
+    // 디버깅을 위한 인증 상태 로그
+    console.log(`[${operation.operationName}] 인증 상태:`, {
+      hasToken: !!token,
+      tokenLength: token?.length || 0,
+      hasUser: !!user,
+      userId: user?.id,
+      isAuthenticated
+    });
 
-  // 헤더에 토큰 추가
-  return {
-    headers: {
-      ...headers,
-      authorization: token ? `Bearer ${token}` : "",
-    },
-  };
+    // 인증이 필요한 operation인지 확인
+    const requiresAuth = operation.operationName && [
+      'GetMyTeams',
+      'UpdateMyTeams',
+      'SelectTeam',
+      'UnselectTeam',
+      'GetMyPrimaryTeam'
+    ].includes(operation.operationName);
+
+    // 인증이 필요한데 토큰이 없으면 경고 로그
+    if (requiresAuth && !isAuthenticated) {
+      console.warn(`인증이 필요한 작업(${operation.operationName})에 유효한 인증 정보가 없습니다.`);
+    }
+
+    // 헤더에 토큰 추가
+    return {
+      headers: {
+        ...headers,
+        authorization: token ? `Bearer ${token}` : "",
+        'Content-Type': 'application/json',
+      },
+    };
+  } catch (error) {
+    console.error("인증 컨텍스트 설정 중 오류 발생:", error);
+    // 오류가 발생해도 헤더는 반환해야 함
+    return { headers };
+  }
 });
 
 /**
@@ -166,6 +212,24 @@ export const client = new ApolloClient({
             // 검색 결과는 항상 새로운 데이터로 간주 (캐시 병합 안함)
             merge: false,
           },
+          // myTeams는 항상 네트워크에서 가져오도록 설정
+          myTeams: {
+            merge: false,
+            read(existing) {
+              console.log("myTeams 캐시 읽기:", { hasData: !!existing });
+              return existing;
+            }
+          },
+          // sports 캐시 정책 설정
+          sports: {
+            merge(existing, incoming) {
+              console.log("sports 캐시 병합:", {
+                hasExisting: !!existing,
+                incomingCount: incoming?.length
+              });
+              return incoming;
+            }
+          },
           // posts 쿼리 필드에 대한 병합 정책 (페이지네이션 지원)
           posts: {
             keyArgs: ["input", ["authorId", "type"]],
@@ -181,6 +245,35 @@ export const client = new ApolloClient({
           },
         },
       },
+      // UserTeam 타입 정책 설정
+      UserTeam: {
+        fields: {
+          // team ID를 teamId로도 접근할 수 있도록 처리
+          teamId: {
+            read(existing, { readField }) {
+              // 이미 teamId 값이 있으면 그대로 사용
+              if (existing) return existing;
+
+              // 없으면 team.id에서 가져옴
+              const team = readField('team');
+              if (!team) {
+                console.warn('UserTeam에 team 객체가 없음');
+                return null;
+              }
+
+              const id = readField('id', team);
+              console.log('UserTeam에서 teamId 읽기:', { teamObject: !!team, id });
+              return id;
+            }
+          },
+          // 필요할 경우 team 필드 캐싱 정책도 설정
+          team: {
+            merge(existing, incoming) {
+              return incoming || existing;
+            }
+          }
+        }
+      }
     },
   }),
   defaultOptions: {
@@ -198,12 +291,24 @@ export const client = new ApolloClient({
       // 뮤테이션에서 인증 관련 컨텍스트를 항상 최신으로 유지
       context: {
         getAuth: async () => {
-          const { token } = await getSession();
-          return {
-            headers: {
-              authorization: token ? `Bearer ${token}` : "",
-            },
-          };
+          try {
+            const { token, isAuthenticated } = await getSession();
+            console.log("뮤테이션 인증 컨텍스트 설정:", {
+              hasToken: !!token,
+              tokenLength: token?.length || 0,
+              isAuthenticated
+            });
+
+            return {
+              headers: {
+                authorization: token ? `Bearer ${token}` : "",
+                'Content-Type': 'application/json',
+              },
+            };
+          } catch (error) {
+            console.error("뮤테이션 인증 컨텍스트 설정 오류:", error);
+            return { headers: {} };
+          }
         }
       }
     },

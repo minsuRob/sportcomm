@@ -30,10 +30,12 @@ export const saveSession = async (
       }
       await setItem(TOKEN_KEY, tokenOrUser);
       await setItem(USER_KEY, JSON.stringify(user));
+      console.log("세션 저장 완료: 토큰과 사용자 정보가 모두 저장됨");
     }
     // 사용자 정보만 업데이트하는 경우
     else if (typeof tokenOrUser === "object") {
       await setItem(USER_KEY, JSON.stringify(tokenOrUser));
+      console.log("세션 저장 완료: 사용자 정보만 업데이트됨");
     }
   } catch (error) {
     console.error("Failed to save session", error);
@@ -44,15 +46,25 @@ export const saveSession = async (
 export const getSession = async (): Promise<{
   token: string | null;
   user: User | null;
+  isAuthenticated: boolean;
 }> => {
   try {
     const token = await getItem(TOKEN_KEY);
     const userJson = await getItem(USER_KEY);
     const user = userJson ? (JSON.parse(userJson) as User) : null;
-    return { token, user };
+    const isAuthenticated = !!token && !!user;
+
+    // 디버깅을 위한 로그
+    console.log("세션 조회 결과:", {
+      hasToken: !!token,
+      hasUser: !!user,
+      isAuthenticated
+    });
+
+    return { token, user, isAuthenticated };
   } catch (error) {
     console.error("Failed to get session", error);
-    return { token: null, user: null };
+    return { token: null, user: null, isAuthenticated: false };
   }
 };
 
@@ -60,7 +72,31 @@ export const clearSession = async (): Promise<void> => {
   try {
     await removeItem(TOKEN_KEY);
     await removeItem(USER_KEY);
+    console.log("세션 정보가 모두 삭제되었습니다.");
   } catch (error) {
     console.error("Failed to clear session", error);
+  }
+};
+
+/**
+ * 세션의 유효성을 검사합니다.
+ * 세션이 유효하면 true를 반환하고, 그렇지 않으면 false를 반환합니다.
+ */
+export const validateSession = async (): Promise<boolean> => {
+  try {
+    const { token, user } = await getSession();
+    // 토큰과 사용자 정보가 모두 있는 경우에만 유효한 세션으로 간주
+    if (!token || !user) {
+      console.warn("세션 유효성 검사 실패: 토큰 또는 사용자 정보 없음");
+      return false;
+    }
+
+    // 여기에 토큰 유효성 추가 검증 로직을 추가할 수 있음
+    // 예: JWT 만료 시간 체크 등
+
+    return true;
+  } catch (error) {
+    console.error("세션 유효성 검사 중 오류 발생:", error);
+    return false;
   }
 };

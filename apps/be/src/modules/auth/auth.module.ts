@@ -6,7 +6,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthResolver } from './auth.resolver';
 import { AuthController } from './auth.controller';
+import { AuthAdminResolver } from './auth-admin.resolver';
 import { JwtStrategy } from './jwt.strategy';
+import { SupabaseSyncService } from './supabase-sync.service';
 import { User } from '../../entities/user.entity';
 import { MediaModule } from '../media/media.module';
 import { UsersModule } from '../users/users.module';
@@ -84,10 +86,22 @@ import { UsersModule } from '../users/users.module';
   controllers: [AuthController],
 
   // 서비스 및 전략 제공
-  providers: [AuthService, AuthResolver, JwtStrategy],
+  providers: [
+    AuthService,
+    AuthResolver,
+    AuthAdminResolver,
+    JwtStrategy,
+    SupabaseSyncService,
+  ],
 
   // 다른 모듈에서 사용할 수 있도록 내보내기
-  exports: [AuthService, JwtStrategy, PassportModule, JwtModule],
+  exports: [
+    AuthService,
+    JwtStrategy,
+    PassportModule,
+    JwtModule,
+    SupabaseSyncService,
+  ],
 })
 export class AuthModule {
   constructor(private readonly configService: ConfigService) {

@@ -170,6 +170,21 @@ export class User extends BaseEntity {
   })
   isUserActive: boolean;
 
+  /**
+   * Supabase 사용자 ID
+   * 채팅 및 실시간 기능을 위한 Supabase 연동 식별자
+   * 선택적 필드로, 기존 사용자와의 호환성을 유지합니다.
+   */
+  @Field(() => String, { nullable: true, description: 'Supabase 사용자 ID' })
+  @Column({
+    type: 'uuid',
+    nullable: true,
+    unique: true,
+    comment: 'Supabase 사용자 ID (채팅 연동용)',
+  })
+  @Index('idx_user_supabase_id')
+  supabaseUserId?: string;
+
   // === 관계 설정 ===
 
   /**

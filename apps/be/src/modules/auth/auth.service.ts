@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from '../../entities/user.entity';
 import { UsersService } from '../users/users.service';
+import { SupabaseSyncService } from './supabase-sync.service';
 
 /**
  * 회원가입 입력 인터페이스
@@ -73,6 +74,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
+    private readonly supabaseSyncService: SupabaseSyncService,
   ) {}
 
   /**
@@ -118,6 +120,14 @@ export class AuthService {
 
     // 데이터베이스에 저장
     const savedUser = await this.userRepository.save(user);
+
+    // Supabase에 사용자 동기화 (비동기로 처리하여 회원가입 속도 향상)
+    this.supabaseSyncService
+      .createUserInSupabase(savedUser, password)
+      .catch((error) => {
+        console.error('Supabase 사용자 동기화 실패:', error);
+        // 실패해도 회원가입은 성공으로 처리 (로컬 DB가 우선)
+      });
 
     // 비밀번호 제거
     savedUser.password = undefined;
@@ -327,8 +337,17 @@ export class AuthService {
     // 프로필 업데이트
     await this.userRepository.update(userId, updateData);
 
-    // 업데이트된 사용자 정보 반환
-    return await this.getUserById(userId);
+    // 업데이트된 사용자 정보 조회
+    const updatedUser = await this.getUserById(userId);
+
+    // Supabase에 변경사항 동기화 (비동기 처리)
+    this.supabaseSyncService
+      .updateUserInSupabase(updatedUser)
+      .catch((error) => {
+        console.error('Supabase 프로필 업데이트 실패:', error);
+      });
+
+    return updatedUser;
   }
 
   /**
@@ -338,9 +357,24 @@ export class AuthService {
    * @returns 성공 여부
    */
   async deactivateAccount(userId: string): Promise<boolean> {
+    // 로컬 DB에서 계정 비활성화
     await this.userRepository.update(userId, {
       isUserActive: false,
     });
+
+    // Supabase에서도 비활성화 처리
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['supabaseUserId'],
+    });
+
+    if (user?.supabaseUserId) {
+      this.supabaseSyncService
+        .deactivateUserInSupabase(user.supabaseUserId)
+        .catch((error) => {
+          console.error('Supabase 계정 비활성화 실패:', error);
+        });
+    }
 
     return true;
   }
@@ -440,6 +474,74 @@ export class AuthService {
       activeUsers,
       verifiedUsers,
       usersByRole: roleStats,
+    };
+  }
+
+  /**
+   * 기존 사용자를 Supabase와 동기화
+   * 마이그레이션 목적으로 사용
+   *
+   * @param userId - 사용자 ID
+   * @returns 성공 여부
+   */
+  async syncUserWithSupabase(userId: string): Promise<boolean> {
+    return await this.supabaseSyncService.syncExistingUser(userId);
+  }
+
+  /**
+   * Supabase 동기화 통계 조회
+   *
+   * @returns 동기화 통계 정보
+   */
+  async getSupabaseSyncStats(): Promise<{
+    totalUsers: number;
+    syncedUsers: number;
+    unsyncedUsers: number;
+    supabaseConnected: boolean;
+  }> {
+    return await this.supabaseSyncService.getSyncStats();
+  }
+
+  /**
+   * 모든 기존 사용자를 Supabase와 동기화
+   * 관리자 전용 기능
+   *
+   * @returns 동기화 결과
+   */
+  async syncAllUsersWithSupabase(): Promise<{
+    success: number;
+    failed: number;
+    total: number;
+  }> {
+    const users = await this.userRepository.find({
+      where: { supabaseUserId: null as any },
+      select: ['id', 'nickname'],
+    });
+
+    let success = 0;
+    let failed = 0;
+
+    for (const user of users) {
+      try {
+        const result = await this.supabaseSyncService.syncExistingUser(user.id);
+        if (result) {
+          success++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        console.error(`사용자 ${user.nickname} 동기화 실패:`, error);
+        failed++;
+      }
+
+      // 과부하 방지를 위한 지연
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    return {
+      success,
+      failed,
+      total: users.length,
     };
   }
 }

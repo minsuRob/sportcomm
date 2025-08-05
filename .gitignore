@@ -1,0 +1,17 @@
+.DS_Store
+node_modules
+apps/fe/ios
+apps/fe/android
+apps/fe/.vscode
+
+apps/fe/.roo
+apps/fe/.kilocode
+apps/fe/.expo
+apps/fe/.cursor
+apps/be/src/schema.gql
+apps/fe/.env
+.vscode
+.turbo
+apps/be/uploads/images
+apps/be/uploads/videos
+apps/be/uploads/team-logos

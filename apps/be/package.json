@@ -25,7 +25,9 @@
     "typeorm:migration:run": "npm run typeorm -- migration:run -d src/database/datasource.ts",
     "typeorm:migration:revert": "npm run typeorm -- migration:revert -d src/database/datasource.ts",
     "typeorm:schema:sync": "npm run typeorm -- schema:sync -d src/database/datasource.ts",
-    "typeorm:schema:drop": "npm run typeorm -- schema:drop -d src/database/datasource.ts"
+    "typeorm:schema:drop": "npm run typeorm -- schema:drop -d src/database/datasource.ts",
+    "test:supabase": "node test-supabase-connection.js",
+    "db:setup": "npm run typeorm:migration:run && npm run seed:sports"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",

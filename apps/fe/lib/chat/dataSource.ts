@@ -1,5 +1,10 @@
-import { USE_SUPABASE } from "@env";
-import { supabaseChatService, ChannelInfo, SendMessageInput, CreateChannelInput } from "../supabase/chatService";
+// import { USE_SUPABASE } from "@env";
+import {
+  supabaseChatService,
+  ChannelInfo,
+  SendMessageInput,
+  CreateChannelInput,
+} from "../supabase/chatService";
 import { Message } from "../../components/chat/ChatList";
 import { User } from "../auth";
 
@@ -15,9 +20,11 @@ export class ChatDataSource {
   private mockChannels: ChannelInfo[] = [];
 
   constructor() {
-    // 환경 변수로 데이터 소스 결정
-    this.useSupabase = USE_SUPABASE === "true";
-    console.log(`채팅 데이터 소스: ${this.useSupabase ? "Supabase" : "Mock Data"}`);
+    // Supabase를 기본값으로 설정 (개발용)
+    this.useSupabase = true;
+    console.log(
+      `채팅 데이터 소스: ${this.useSupabase ? "Supabase" : "Mock Data"}`,
+    );
 
     if (!this.useSupabase) {
       this.initializeMockData();
@@ -148,7 +155,10 @@ export class ChatDataSource {
   /**
    * 공개 채팅방 목록 조회
    */
-  async getPublicChatRooms(page: number = 1, limit: number = 20): Promise<{
+  async getPublicChatRooms(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{
     chatRooms: ChannelInfo[];
     total: number;
     page: number;
@@ -175,10 +185,14 @@ export class ChatDataSource {
   async getChatMessages(
     channelId: string,
     limit: number = 50,
-    before?: string
+    before?: string,
   ): Promise<Message[]> {
     if (this.useSupabase) {
-      return await supabaseChatService.getChatMessages(channelId, limit, before);
+      return await supabaseChatService.getChatMessages(
+        channelId,
+        limit,
+        before,
+      );
     } else {
       await this.simulateDelay(500);
       // 채널별로 필터링하지 않고 모든 메시지 반환 (임시)
@@ -189,7 +203,10 @@ export class ChatDataSource {
   /**
    * 메시지 전송
    */
-  async sendMessage(input: SendMessageInput, currentUser: User): Promise<Message | null> {
+  async sendMessage(
+    input: SendMessageInput,
+    currentUser: User,
+  ): Promise<Message | null> {
     if (this.useSupabase) {
       return await supabaseChatService.sendMessage(input);
     } else {
@@ -206,7 +223,9 @@ export class ChatDataSource {
           nickname: currentUser.nickname,
           profileImageUrl: currentUser.profileImageUrl,
         },
-        replyTo: input.replyToId ? this.mockMessages.find(m => m.id === input.replyToId) : undefined,
+        replyTo: input.replyToId
+          ? this.mockMessages.find((m) => m.id === input.replyToId)
+          : undefined,
         isSystem: false,
       };
 
@@ -220,7 +239,9 @@ export class ChatDataSource {
   /**
    * 채팅방 생성
    */
-  async createChatChannel(input: CreateChannelInput): Promise<ChannelInfo | null> {
+  async createChatChannel(
+    input: CreateChannelInput,
+  ): Promise<ChannelInfo | null> {
     if (this.useSupabase) {
       return await supabaseChatService.createChatChannel(input);
     } else {
@@ -259,7 +280,7 @@ export class ChatDataSource {
       await this.simulateDelay(500);
 
       // 임시로 항상 성공 반환
-      const channel = this.mockChannels.find(c => c.id === channelId);
+      const channel = this.mockChannels.find((c) => c.id === channelId);
       if (channel) {
         channel.currentParticipants += 1;
         return true;
@@ -278,7 +299,7 @@ export class ChatDataSource {
       await this.simulateDelay(500);
 
       // 임시로 항상 성공 반환
-      const channel = this.mockChannels.find(c => c.id === channelId);
+      const channel = this.mockChannels.find((c) => c.id === channelId);
       if (channel && channel.currentParticipants > 0) {
         channel.currentParticipants -= 1;
         return true;
@@ -305,7 +326,7 @@ export class ChatDataSource {
    */
   subscribeToMessages(
     channelId: string,
-    onMessage: (message: Message) => void
+    onMessage: (message: Message) => void,
   ): () => void {
     if (this.useSupabase) {
       return supabaseChatService.subscribeToMessages(channelId, onMessage);
@@ -363,7 +384,7 @@ export class ChatDataSource {
    * API 호출 지연 시뮬레이션
    */
   private simulateDelay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

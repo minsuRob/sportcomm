@@ -1,16 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@env";
 
-// 환경 변수 유효성 검사
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error("환경 변수 누락:", {
-    SUPABASE_URL: !!SUPABASE_URL,
-    SUPABASE_ANON_KEY: !!SUPABASE_ANON_KEY,
-  });
-  throw new Error(
-    "SUPABASE_URL과 SUPABASE_ANON_KEY 환경 변수가 필요합니다. .env 파일을 확인하세요.",
-  );
-}
+// Supabase 연결 정보 (개발용 직접 설정)
+const SUPABASE_URL = "https://hgekmqvscnjcuzyduchy.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhnZWttcXZzY25qY3V6eWR1Y2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNzU4NDEsImV4cCI6MjA2OTk1MTg0MX0.2iXLIfZUtA8njiglEDUnl2Nr8pTv_PFecbm6UtFR54E";
+
+console.log("Supabase 클라이언트 초기화:", {
+  url: SUPABASE_URL,
+  keyLength: SUPABASE_ANON_KEY.length,
+});
 
 // Supabase 데이터베이스 타입 정의
 export interface Database {

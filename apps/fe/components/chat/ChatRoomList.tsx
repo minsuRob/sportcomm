@@ -79,6 +79,8 @@ interface ChatRoomListProps {
   currentUser: User | null;
   showHeader?: boolean;
   mockRooms?: ChatRoom[];
+  isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
 /**
@@ -90,6 +92,8 @@ export default function ChatRoomList({
   currentUser,
   showHeader = false,
   mockRooms = [],
+  isLoading = false,
+  onRefresh,
 }: ChatRoomListProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
@@ -153,6 +157,15 @@ export default function ChatRoomList({
     const allChatRooms = [...regularChatRooms, ...adminChatRooms, ...mockRooms];
     setChatRooms(allChatRooms);
   }, [adminData, mockRooms]); // adminData와 mockRooms만 의존성으로 설정
+
+  // 새로고침 핸들러
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setRefreshing(true);
+      await onRefresh();
+      setRefreshing(false);
+    }
+  };
 
   // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleEnterRoom = async (room: ChatRoom) => {
@@ -553,10 +566,22 @@ const $emptyTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 const $emptyDescription: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
+  fontSize: 14,
   color: colors.textDim,
   textAlign: "center",
-  lineHeight: 16,
+  lineHeight: 20,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xl,
+  alignItems: "center",
+  gap: spacing.md,
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+  textAlign: "center",
 });
 
 const $createButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

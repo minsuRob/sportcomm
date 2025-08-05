@@ -28,6 +28,7 @@ import {
   NotificationBadge,
   NotificationToast,
 } from "@/components/notifications";
+import { showToast } from "@/components/CustomToast";
 import TeamFilterSelector from "@/components/TeamFilterSelector";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { gql } from "@apollo/client";
@@ -70,7 +71,8 @@ export default function FeedScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("feed");
-  const [mockChatRooms, setMockChatRooms] = useState<any[]>([]);
+  const [chatRooms, setChatRooms] = useState<any[]>([]);
+  const [chatRoomsLoading, setChatRoomsLoading] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[] | null>(null);
 
   const {
@@ -129,55 +131,53 @@ export default function FeedScreen() {
     };
     loadTeamFilter();
 
-    // 임시 채팅방 데이터 설정 (백엔드 연동 전까지 사용)
-    setMockChatRooms([
-      {
-        id: "public-chat-1",
-        name: "스포츠 일반 토론",
-        description: "다양한 스포츠 주제에 대해 자유롭게 이야기해요",
-        isPrivate: false,
-        type: "PUBLIC",
-        isRoomActive: true,
-        maxParticipants: 100,
-        currentParticipants: 42,
-        lastMessage: "오늘 경기 누가 이길 것 같나요?",
-        lastMessageAt: new Date().toISOString(),
-        unreadCount: 0,
-        members: [],
-        createdAt: "2023-01-01T00:00:00Z",
-      },
-      {
-        id: "public-chat-2",
-        name: "축구 팬 모임",
-        description: "축구를 사랑하는 모든 팬들의 모임",
-        isPrivate: false,
-        type: "PUBLIC",
-        isRoomActive: true,
-        maxParticipants: 50,
-        currentParticipants: 28,
-        lastMessage: "어제 경기 정말 재미있었어요!",
-        lastMessageAt: new Date().toISOString(),
-        unreadCount: 0,
-        members: [],
-        createdAt: "2023-01-02T00:00:00Z",
-      },
-      {
-        id: "public-chat-3",
-        name: "농구 토크",
-        description: "농구에 관한 모든 이야기",
-        isPrivate: false,
-        type: "PUBLIC",
-        isRoomActive: true,
-        maxParticipants: 30,
-        currentParticipants: 15,
-        lastMessage: "오늘 경기 분석해보겠습니다",
-        lastMessageAt: new Date().toISOString(),
-        unreadCount: 0,
-        members: [],
-        createdAt: "2023-01-03T00:00:00Z",
-      },
-    ]);
+    // Supabase 채팅방 데이터 로드
+    loadChatRooms();
   }, []);
+
+  // Supabase 채팅방 데이터 로드 함수
+  const loadChatRooms = async () => {
+    try {
+      setChatRoomsLoading(true);
+      // 동적 import로 chatService 가져오기 (환경 변수 로드 후)
+      const { chatService } = await import("@/lib/chat/chatService");
+
+      console.log("채팅방 데이터 로드 시작...");
+      const result = await chatService.getPublicChatRooms(1, 20);
+
+      // ChannelInfo를 Feed에서 사용하는 형태로 변환
+      const transformedRooms = result.chatRooms.map((room) => ({
+        id: room.id,
+        name: room.name,
+        description: room.description,
+        isPrivate: room.isPrivate,
+        type: room.type,
+        isRoomActive: room.isRoomActive,
+        maxParticipants: room.maxParticipants,
+        currentParticipants: room.currentParticipants,
+        lastMessage: room.lastMessage,
+        lastMessageAt: room.lastMessageAt,
+        unreadCount: 0, // 기본값
+        members: room.members,
+        createdAt: room.createdAt,
+      }));
+
+      setChatRooms(transformedRooms);
+      console.log(`Supabase에서 채팅방 ${transformedRooms.length}개 로드 완료`);
+    } catch (error) {
+      console.error("채팅방 로드 실패:", error);
+      showToast({
+        type: "error",
+        title: "채팅방 로드 실패",
+        message: "채팅방 목록을 불러오는데 실패했습니다.",
+        duration: 3000,
+      });
+      // 에러 시 빈 배열 설정
+      setChatRooms([]);
+    } finally {
+      setChatRoomsLoading(false);
+    }
+  };
 
   // 차단된 사용자 목록 업데이트
   useEffect(() => {
@@ -208,7 +208,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
       }
@@ -462,7 +462,9 @@ export default function FeedScreen() {
         <ChatRoomList
           currentUser={currentUser}
           showHeader={false}
-          mockRooms={currentUser?.isAdmin ? [] : mockChatRooms}
+          mockRooms={currentUser?.isAdmin ? [] : chatRooms}
+          isLoading={chatRoomsLoading}
+          onRefresh={loadChatRooms}
         />
       )}
 

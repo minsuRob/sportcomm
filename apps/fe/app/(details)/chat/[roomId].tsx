@@ -82,76 +82,8 @@ export default function ChatRoomScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const inputRef = useRef<TextInput>(null);
 
-  // 임시 메시지 데이터
-  const mockMessages: Message[] = [
-    {
-      id: "1",
-      content: "안녕하세요! 이 채팅방에 오신 것을 환영합니다.",
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-      user_id: "system",
-      user: {
-        id: "system",
-        nickname: "시스템",
-        profileImageUrl: undefined,
-      },
-      isSystem: true,
-    },
-    {
-      id: "2",
-      content: "오늘 경기 어떻게 보셨나요?",
-      created_at: new Date(Date.now() - 1800000).toISOString(),
-      user_id: "user1",
-      user: {
-        id: "user1",
-        nickname: "축구팬123",
-        profileImageUrl: undefined,
-      },
-    },
-    {
-      id: "3",
-      content: "💌 우리 팀이 우승할 것 같아요! 정말 기대됩니다!",
-      created_at: new Date(Date.now() - 1500000).toISOString(),
-      user_id: "user4",
-      user: {
-        id: "user4",
-        nickname: "열정팬",
-        profileImageUrl: undefined,
-      },
-    },
-    {
-      id: "4",
-      content: "정말 흥미진진한 경기였어요! 특히 후반전이 대박이었죠.",
-      created_at: new Date(Date.now() - 1200000).toISOString(),
-      user_id: "user2",
-      user: {
-        id: "user2",
-        nickname: "스포츠매니아",
-        profileImageUrl: undefined,
-      },
-    },
-    {
-      id: "5",
-      content: "💌 이번 시즌 최고의 경기였습니다! 감동적이었어요 🏆",
-      created_at: new Date(Date.now() - 900000).toISOString(),
-      user_id: "user5",
-      user: {
-        id: "user5",
-        nickname: "챔피언",
-        profileImageUrl: undefined,
-      },
-    },
-    {
-      id: "6",
-      content: "맞아요! 마지막 골이 정말 환상적이었습니다 ⚽",
-      created_at: new Date(Date.now() - 600000).toISOString(),
-      user_id: "user3",
-      user: {
-        id: "user3",
-        nickname: "골키퍼",
-        profileImageUrl: undefined,
-      },
-    },
-  ];
+  // 채팅방 정보 상태
+  const [channelInfo, setChannelInfo] = useState<any>(null);
 
   // 사용자 정보 로드 및 메시지 데이터 조회
   useEffect(() => {
@@ -163,13 +95,13 @@ export default function ChatRoomScreen() {
         if (roomId && user) {
           // 실제 메시지 데이터 로드
           await loadMessages();
+          // 채팅방 정보도 로드
+          await loadChannelInfo();
         } else {
-          // 임시 메시지 데이터 설정
-          setMessages(mockMessages);
+          console.warn("roomId 또는 user 정보가 없습니다.");
         }
       } catch (error) {
         console.error("사용자 정보 및 메시지 로드 실패:", error);
-        setMessages(mockMessages);
       }
     };
     loadUserAndMessages();
@@ -198,10 +130,32 @@ export default function ChatRoomScreen() {
     } catch (error) {
       console.error("메시지 로드 실패:", error);
       setMessagesError(error);
-      // 에러 발생 시 임시 데이터 사용
-      setMessages(mockMessages);
+      // 에러 발생 시 빈 배열 설정
+      setMessages([]);
     } finally {
       setMessagesLoading(false);
+    }
+  };
+
+  /**
+   * 채팅방 정보 로드
+   */
+  const loadChannelInfo = async () => {
+    if (!roomId) return;
+
+    try {
+      // 공개 채팅방 목록에서 현재 채팅방 정보 찾기
+      const result = await chatService.getPublicChatRooms(1, 100);
+      const currentChannel = result.chatRooms.find(
+        (room) => room.id === roomId,
+      );
+
+      if (currentChannel) {
+        setChannelInfo(currentChannel);
+        console.log(`채팅방 정보 로드 완료: ${currentChannel.name}`);
+      }
+    } catch (error) {
+      console.error("채팅방 정보 로드 실패:", error);
     }
   };
 
@@ -343,7 +297,11 @@ export default function ChatRoomScreen() {
         onRefresh={handleRefresh}
         onLongPressMessage={handleLongPressMessage}
         onBack={handleBack}
-        title={roomName || `채팅방 (${chatService.getDataSourceType()})`}
+        title={
+          roomName ||
+          channelInfo?.name ||
+          `채팅방 (${chatService.getDataSourceType()})`
+        }
         hasMoreMessages={false}
         onLoadMore={() => {
           // TODO: 이전 메시지 로드 구현
@@ -356,7 +314,11 @@ export default function ChatRoomScreen() {
         onSendMessage={handleSendMessage}
         disabled={sendLoading || !currentUser}
         placeholder={
-          currentUser ? "메시지를 입력하세요..." : "로그인이 필요합니다..."
+          !currentUser
+            ? "로그인이 필요합니다..."
+            : !roomId
+              ? "채팅방 정보를 불러오는 중..."
+              : "메시지를 입력하세요..."
         }
         onEmoji={() => {
           console.log("이모지 버튼 클릭");

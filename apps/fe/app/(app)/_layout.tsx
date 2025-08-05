@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ViewStyle } from "react-native";
+import { View, ViewStyle, useWindowDimensions } from "react-native";
 import { Tabs } from "expo-router";
 import { Slot } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +7,7 @@ import { useResponsive } from "@/lib/hooks/useResponsive";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import SidebarNavigation from "@/components/SidebarNavigation";
+import { isWeb } from "@/lib/platform";
 
 /**
  * 모바일용 탭 레이아웃 컴포넌트
@@ -61,12 +62,21 @@ function MobileTabLayout() {
  */
 function DesktopSidebarLayout() {
   const { themed } = useAppTheme();
+  const { width: screenWidth } = useWindowDimensions();
 
   return (
     <View style={themed($desktopContainer)}>
       <SidebarNavigation />
       <View style={themed($contentArea)}>
-        <View style={themed($contentWrapper)}>
+        <View
+          style={[
+            themed($contentWrapper),
+            {
+              maxWidth: Math.min(640, screenWidth * 0.8), // 화면 크기에 따른 동적 조정
+              paddingHorizontal: screenWidth > 1200 ? 24 : 16, // 큰 화면에서 더 큰 여백
+            },
+          ]}
+        >
           <Slot />
         </View>
       </View>
@@ -105,12 +115,21 @@ const $contentArea: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
   // 웹에서 콘텐츠 영역 중앙 정렬
   alignItems: "center",
-  paddingHorizontal: 16,
+  paddingHorizontal: 8, // 최소 여백으로 줄임
+  // 이미지 비율 최적화를 위한 추가 스타일
+  ...(isWeb() && {
+    paddingTop: 16,
+    paddingBottom: 16,
+  }),
 });
 
 const $contentWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
   width: "100%",
-  maxWidth: 640, // 콘텐츠 최대 너비
   flex: 1,
   backgroundColor: colors.background,
+  // 이미지 컨테이너 최적화를 위한 스타일
+  ...(isWeb() && {
+    borderRadius: 8,
+    overflow: "hidden",
+  }),
 });

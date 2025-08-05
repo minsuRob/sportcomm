@@ -4,14 +4,17 @@
  * 모든 화면에 자동으로 웹 중앙 정렬을 적용합니다.
  * 모바일에서는 기존과 동일하게 작동하고,
  * 웹에서는 640px 최대 너비로 중앙 정렬됩니다.
+ *
+ * 이미지 비율 최적화를 위한 반응형 컨테이너를 제공합니다.
  */
 
 import React from "react";
-import { View, ViewStyle } from "react-native";
+import { View, ViewStyle, useWindowDimensions } from "react-native";
 import { isWeb } from "@/lib/platform";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { usePathname } from "expo-router";
+import { useResponsive } from "@/lib/hooks/useResponsive";
 
 interface GlobalWebLayoutProps {
   children: React.ReactNode;
@@ -49,6 +52,8 @@ export default function GlobalWebLayout({
 }: GlobalWebLayoutProps) {
   const { themed } = useAppTheme();
   const pathname = usePathname();
+  const { isDesktop } = useResponsive();
+  const { width: screenWidth } = useWindowDimensions();
 
   // 웹 레이아웃 비활성화 또는 모바일 환경인 경우 그대로 반환
   if (disableWebLayout || !isWeb()) {
@@ -63,7 +68,17 @@ export default function GlobalWebLayout({
   // 모달이나 기타 화면에서는 640px 중앙 정렬 레이아웃 적용
   return (
     <View style={themed($webContainer)}>
-      <View style={themed($webContent)}>{children}</View>
+      <View
+        style={[
+          themed($webContent),
+          {
+            maxWidth: isDesktop ? 640 : screenWidth * 0.95,
+            paddingHorizontal: isDesktop ? 16 : 8,
+          },
+        ]}
+      >
+        {children}
+      </View>
     </View>
   );
 }
@@ -74,14 +89,18 @@ const $webContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
   backgroundColor: colors.background,
   alignItems: "center", // 중앙 정렬
-  paddingHorizontal: 16, // 최소 여백
+  paddingHorizontal: 8, // 최소 여백 (반응형으로 조정됨)
 });
 
 const $webContent: ThemedStyle<ViewStyle> = ({ colors }) => ({
   width: "100%",
-  maxWidth: 640, // Instagram/Threads 스타일의 최대 너비
   flex: 1,
   backgroundColor: colors.background,
+  // 이미지 비율 최적화를 위한 여백 조정
+  ...(isWeb() && {
+    paddingTop: 8,
+    paddingBottom: 8,
+  }),
 });
 
 /**
@@ -108,15 +127,31 @@ export function useIsWebLayoutActive(): boolean {
 
 /**
  * 웹 환경에서 모달이나 전체 화면 컴포넌트용 스타일
+ * 이미지 비율 최적화를 고려한 스타일
  */
 export const getWebModalStyle =
-  (): ThemedStyle<ViewStyle> =>
+  (isDesktop: boolean = false): ThemedStyle<ViewStyle> =>
   ({ colors }) => ({
     ...(isWeb() && {
       alignSelf: "center",
       width: "100%",
-      maxWidth: 640,
-      marginHorizontal: 16,
+      maxWidth: isDesktop ? 640 : "95%",
+      marginHorizontal: isDesktop ? 16 : 8,
+      paddingHorizontal: isDesktop ? 16 : 8,
+    }),
+    backgroundColor: colors.background,
+  });
+
+/**
+ * 이미지 컨테이너를 위한 최적화된 스타일
+ */
+export const getImageContainerStyle =
+  (isDesktop: boolean = false): ThemedStyle<ViewStyle> =>
+  ({ colors }) => ({
+    width: "100%",
+    ...(isWeb() && {
+      maxWidth: isDesktop ? 640 : "100%",
+      alignSelf: "center",
     }),
     backgroundColor: colors.background,
   });

@@ -27,6 +27,7 @@
     "typeorm:schema:sync": "npm run typeorm -- schema:sync -d src/database/datasource.ts",
     "typeorm:schema:drop": "npm run typeorm -- schema:drop -d src/database/datasource.ts",
     "test:supabase": "node test-supabase-connection.js",
+    "test:db-connection": "ts-node -r tsconfig-paths/register scripts/test-supabase-connection.ts",
     "db:setup": "npm run typeorm:migration:run && npm run seed:sports"
   },
   "dependencies": {

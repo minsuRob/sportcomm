@@ -67,23 +67,106 @@ export class DatabaseConfig {
     const databaseUrl = configService.get<string>('DATABASE_URL');
 
     if (databaseUrl) {
+      // DATABASE_URL 형식 검증
+      if (
+        !databaseUrl.startsWith('postgresql://') &&
+        !databaseUrl.startsWith('postgres://')
+      ) {
+        throw new Error(
+          '❌ DATABASE_URL은 "postgresql://" 또는 "postgres://"로 시작해야 합니다.',
+        );
+      }
+
+      // Supabase URL인지 확인
+      if (!databaseUrl.includes('supabase.co')) {
+        console.warn(
+          '⚠️ DATABASE_URL이 Supabase 호스트가 아닙니다. 의도한 것이 맞는지 확인하세요.',
+        );
+      }
+
       // DATABASE_URL 사용 (권장 방식)
       return {
         ...baseConfig,
         url: databaseUrl,
-        ssl: true, // Supabase는 SSL 필수
+        ssl: {
+          rejectUnauthorized: false, // Supabase 자체 서명 인증서 허용
+        },
+        extra: {
+          ...baseConfig.extra,
+          ssl: {
+            rejectUnauthorized: false,
+          },
+          // 연결 재시도 설정
+          retryAttempts: 3,
+          retryDelay: 3000,
+        },
       } as TypeOrmModuleOptions;
     }
 
     // 개별 Supabase 설정 사용
+    const host =
+      configService.get<string>('SUPABASE_DB_HOST') ||
+      configService.get<string>('DB_HOST');
+    const username =
+      configService.get<string>('SUPABASE_DB_USERNAME') ||
+      configService.get<string>('DB_USERNAME');
+    const password =
+      configService.get<string>('SUPABASE_DB_PASSWORD') ||
+      configService.get<string>('DB_PASSWORD');
+    const database =
+      configService.get<string>('SUPABASE_DB_DATABASE') ||
+      configService.get<string>('DB_DATABASE');
+
+    // 필수 필드 검증
+    if (!host || !username || !password || !database) {
+      throw new Error(
+        '❌ Supabase 연결을 위한 필수 환경 변수가 누락되었습니다. DATABASE_URL 또는 개별 DB 설정을 확인하세요.',
+      );
+    }
+
+    // Supabase 호스트 형식 검증
+    if (!host.includes('supabase.co')) {
+      console.warn(
+        '⚠️ DB_HOST가 Supabase 호스트가 아닙니다. 올바른 호스트: db.hgekmqvscnjcuzyduchy.supabase.co',
+      );
+    }
+
+    // 기본값 검증
+    if (username !== 'postgres') {
+      console.warn(
+        '⚠️ Supabase의 기본 사용자명은 "postgres"입니다. 현재 설정:',
+        username,
+      );
+    }
+
+    if (database !== 'postgres') {
+      console.warn(
+        '⚠️ Supabase의 기본 데이터베이스명은 "postgres"입니다. 현재 설정:',
+        database,
+      );
+    }
+
     return {
       ...baseConfig,
-      host: configService.get<string>('DB_HOST'),
-      port: configService.get<number>('DB_PORT', 5432),
-      username: configService.get<string>('DB_USERNAME'),
-      password: configService.get<string>('DB_PASSWORD'),
-      database: configService.get<string>('DB_DATABASE'),
-      ssl: true, // Supabase는 SSL 필수
+      host,
+      port:
+        configService.get<number>('SUPABASE_DB_PORT') ||
+        configService.get<number>('DB_PORT', 5432),
+      username,
+      password,
+      database,
+      ssl: {
+        rejectUnauthorized: false, // Supabase 자체 서명 인증서 허용
+      },
+      extra: {
+        ...baseConfig.extra,
+        ssl: {
+          rejectUnauthorized: false,
+        },
+        // 연결 재시도 설정
+        retryAttempts: 3,
+        retryDelay: 3000,
+      },
     } as TypeOrmModuleOptions;
   }
 
@@ -141,8 +224,16 @@ export class DatabaseConfig {
         return;
       }
 
-      // DATABASE_URL이 없으면 개별 Supabase 설정 필수
-      const requiredSupabaseEnvVars = [
+      // DATABASE_URL이 없으면 개별 Supabase 설정 확인
+      const supabaseEnvVars = [
+        'SUPABASE_DB_HOST',
+        'SUPABASE_DB_PORT',
+        'SUPABASE_DB_USERNAME',
+        'SUPABASE_DB_PASSWORD',
+        'SUPABASE_DB_DATABASE',
+      ];
+
+      const fallbackEnvVars = [
         'DB_HOST',
         'DB_PORT',
         'DB_USERNAME',
@@ -150,17 +241,34 @@ export class DatabaseConfig {
         'DB_DATABASE',
       ];
 
-      const missingSupabaseEnvVars = requiredSupabaseEnvVars.filter(
-        (envVar) => !configService.get<string>(envVar),
+      // Supabase 전용 환경변수가 있는지 확인
+      const hasSupabaseEnvVars = supabaseEnvVars.some((envVar) =>
+        configService.get<string>(envVar),
       );
 
-      if (missingSupabaseEnvVars.length > 0) {
-        throw new Error(
-          `❌ Supabase 사용을 위한 다음 환경 변수들이 설정되지 않았습니다: ${missingSupabaseEnvVars.join(', ')}`,
+      if (hasSupabaseEnvVars) {
+        console.log('✅ 개별 Supabase 전용 설정을 사용합니다.');
+      } else {
+        // 기본 DB 환경변수 확인
+        const missingEnvVars = fallbackEnvVars.filter(
+          (envVar) => !configService.get<string>(envVar),
         );
-      }
 
-      console.log('✅ 개별 Supabase 설정을 사용합니다.');
+        if (missingEnvVars.length > 0) {
+          throw new Error(
+            `❌ Supabase 사용을 위한 다음 환경 변수들이 설정되지 않았습니다: ${missingEnvVars.join(', ')}\n` +
+              `💡 올바른 설정 예시:\n` +
+              `   DATABASE_URL=postgresql://postgres:[PASSWORD]@db.hgekmqvscnjcuzyduchy.supabase.co:5432/postgres\n` +
+              `   또는 개별 설정:\n` +
+              `   DB_HOST=db.hgekmqvscnjcuzyduchy.supabase.co\n` +
+              `   DB_USERNAME=postgres\n` +
+              `   DB_PASSWORD=[YOUR_PASSWORD]\n` +
+              `   DB_DATABASE=postgres`,
+          );
+        }
+
+        console.log('✅ 기본 DB 설정을 Supabase용으로 사용합니다.');
+      }
     } else {
       // 로컬 PostgreSQL 사용 시 검증
       if (databaseUrl) {

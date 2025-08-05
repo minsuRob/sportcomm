@@ -233,6 +233,51 @@ export class SupabaseSyncService {
   }
 
   /**
+   * Supabase에서 사용자 완전 삭제 (롤백용)
+   *
+   * @param supabaseUserId - Supabase 사용자 ID
+   * @returns 성공 여부
+   */
+  async deleteUserFromSupabase(supabaseUserId: string): Promise<boolean> {
+    if (!this.supabase) {
+      return false;
+    }
+
+    try {
+      // 1. profiles 테이블에서 삭제
+      const { error: profileError } = await this.supabase
+        .from('profiles')
+        .delete()
+        .eq('id', supabaseUserId);
+
+      if (profileError) {
+        this.logger.error(
+          `Supabase 프로필 삭제 실패 (${supabaseUserId}):`,
+          profileError,
+        );
+      }
+
+      // 2. Auth 사용자 삭제
+      const { error: authError } =
+        await this.supabase.auth.admin.deleteUser(supabaseUserId);
+
+      if (authError) {
+        this.logger.error(
+          `Supabase Auth 사용자 삭제 실패 (${supabaseUserId}):`,
+          authError,
+        );
+        return false;
+      }
+
+      this.logger.log(`Supabase 사용자 완전 삭제 완료: ${supabaseUserId}`);
+      return true;
+    } catch (error) {
+      this.logger.error('Supabase 사용자 삭제 중 오류 발생:', error);
+      return false;
+    }
+  }
+
+  /**
    * Supabase에서 사용자 프로필 조회
    *
    * @param supabaseUserId - Supabase 사용자 ID

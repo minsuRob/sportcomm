@@ -131,6 +131,15 @@ export const LOGIN_MUTATION = gql`
         nickname
         email
         role
+        profileImageUrl
+        myTeams: userTeams {
+          role
+          team {
+            id
+            name
+            logoUrl
+          }
+        }
       }
     }
   }
@@ -150,6 +159,15 @@ export const REGISTER_MUTATION = gql`
         nickname
         email
         role
+        profileImageUrl
+        myTeams: userTeams {
+          role
+          team {
+            id
+            name
+            logoUrl
+          }
+        }
       }
     }
   }

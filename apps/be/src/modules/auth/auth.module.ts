@@ -9,6 +9,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from '../../entities/user.entity';
 import { MediaModule } from '../media/media.module';
+import { UsersModule } from '../users/users.module';
 
 /**
  * 인증 모듈
@@ -26,6 +27,7 @@ import { MediaModule } from '../media/media.module';
   imports: [
     // User 엔티티를 위한 TypeORM 모듈
     TypeOrmModule.forFeature([User]),
+    UsersModule,
 
     // Passport 모듈 설정
     PassportModule.register({

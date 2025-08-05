@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from '../../entities/user.entity';
+import { UsersService } from '../users/users.service';
 
 /**
  * 회원가입 입력 인터페이스
@@ -71,6 +72,7 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -142,18 +144,7 @@ export class AuthService {
     const { email, password } = loginInput;
 
     // 이메일로 사용자 조회 (비밀번호 포함)
-    const user = await this.userRepository.findOne({
-      where: { email },
-      select: [
-        'id',
-        'email',
-        'password',
-        'nickname',
-        'role',
-        'isUserActive',
-        'isEmailVerified',
-      ],
-    });
+    const user = await this.usersService.findOneByEmail(email);
 
     if (!user) {
       throw new UnauthorizedException('이메일 또는 비밀번호가 잘못되었습니다.');

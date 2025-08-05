@@ -50,6 +50,16 @@ export class UsersService {
     return user;
   }
 
+  async findOneByEmail(email: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userTeams', 'userTeams')
+      .leftJoinAndSelect('userTeams.team', 'team')
+      .where('user.email = :email', { email })
+      .addSelect('user.password')
+      .getOne();
+  }
+
   /**
    * 특정 사용자가 팔로우하는 관계를 조회합니다.
    * @param userId 사용자 ID

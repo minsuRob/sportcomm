@@ -1,309 +1,124 @@
-import { createClient } from "@supabase/supabase-js";
-import { Message } from "@/components/chat/ChatMessage";
-import { User, getSession } from "../auth";
+import { chatDataSource, ChatDataSource } from "./dataSource";
+import { Message } from "../../components/chat/ChatList";
+import { User } from "../auth";
+import {
+  ChannelInfo,
+  SendMessageInput,
+  CreateChannelInput,
+} from "../supabase/chatService";
 
 /**
- * 로컬 모드 사용 여부 설정
- * - true: Supabase 연결 없이 로컬 메모리에서 테스트 데이터 사용
- * - false: 실제 Supabase 서버에 연결하여 데이터 처리
- */
-const USE_LOCAL_MODE = true;
-
-/**
- * 채팅 채널 타입 정의
- */
-export interface ChatChannel {
-  id: string;
-  name: string;
-  description?: string;
-  created_at: string;
-  last_message?: string;
-  last_message_at?: string;
-  is_private: boolean;
-}
-
-/**
- * 채팅 서비스 클래스
- * Supabase를 사용한 채팅 기능을 제공합니다.
- * 로컬 모드에서는 실제 서버 연결 없이 로컬 테스트 가능
+ * 통합 채팅 서비스 클래스
+ *
+ * 이 서비스는 환경에 따라 자동으로 데이터 소스를 선택합니다:
+ * - 개발 환경: 임시 데이터 (Mock Data)
+ * - 프로덕션 환경: Supabase 백엔드
  */
 export class ChatService {
-  private supabase: any; // Supabase 클라이언트
-  private realtimeSubscription: any = null; // 실시간 구독 객체
-  private currentUser: User | null = null;
-  private channelId: string | null = null;
+  private dataSource: ChatDataSource;
+  private realtimeSubscriptions: Map<string, () => void> = new Map();
+  private isInitialized: boolean = false;
 
-  // 로컬 모드 관련 변수
-  private isLocalMode: boolean = USE_LOCAL_MODE;
-  private mockChannels: ChatChannel[] = []; // 로컬 테스트용 채널 목록
-  private mockMessages: Record<string, Message[]> = {}; // 채널별 메시지 목록
-
-  /**
-   * 채팅 서비스 초기화
-   * @param supabaseUrl Supabase URL
-   * @param supabaseKey Supabase API Key
-   * @param forceLocalMode 강제로 로컬 모드 설정 (선택적)
-   */
-  constructor(
-    supabaseUrl?: string,
-    supabaseKey?: string,
-    forceLocalMode?: boolean,
-  ) {
-    // 로컬 모드 설정 (명시적으로 전달된 경우 우선 적용)
-    if (forceLocalMode !== undefined) {
-      this.isLocalMode = forceLocalMode;
-    }
-
-    if (this.isLocalMode) {
-      console.log("ChatService 초기화 - 로컬 모드로 실행 중");
-      // 테스트용 채널 생성
-      this.initMockChannels();
-    } else {
-      // Supabase 클라이언트 초기화
-      const url = supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const key = supabaseKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-      if (!url || !key) {
-        console.warn(
-          "Supabase URL 또는 Key가 제공되지 않아 로컬 모드로 전환합니다",
-        );
-        this.isLocalMode = true;
-        this.initMockChannels();
-      } else {
-        try {
-          this.supabase = createClient(url, key);
-          console.log("Supabase 클라이언트 초기화 완료");
-        } catch (error) {
-          console.error("Supabase 클라이언트 초기화 오류:", error);
-          console.log("로컬 모드로 대체합니다");
-          this.isLocalMode = true;
-          this.initMockChannels();
-        }
-      }
-    }
-
-    this.initUser();
+  constructor() {
+    this.dataSource = chatDataSource;
+    this.initialize();
   }
 
   /**
-   * 현재 사용자 정보 초기화
+   * 서비스 초기화
    */
-  private async initUser() {
-    const { user } = await getSession();
-
-    if (user) {
-      this.currentUser = user;
-    } else if (this.isLocalMode) {
-      // 로컬 모드에서만 테스트용 사용자 생성
-      this.currentUser = {
-        id: "1",
-        nickname: "김스포츠",
-        email: "test@example.com",
-      };
-      console.log("테스트용 사용자로 초기화되었습니다");
-    } else {
-      console.warn("사용자 인증이 필요합니다");
-      this.currentUser = null;
-    }
-  }
-
-  /**
-   * 테스트용 채널 초기화
-   */
-  private initMockChannels() {
-    this.mockChannels = [
-      {
-        id: "channel-1",
-        name: "일반 채팅",
-        description: "모두를 위한 오픈 채팅방입니다",
-        created_at: new Date().toISOString(),
-        last_message: "안녕하세요, 반갑습니다!",
-        last_message_at: new Date().toISOString(),
-        is_private: false,
-      },
-      {
-        id: "channel-2",
-        name: "스포츠 커뮤니티",
-        description: "스포츠 소식 및 정보 공유",
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        last_message: "오늘 경기 결과 어땠나요?",
-        last_message_at: new Date(Date.now() - 3600000).toISOString(),
-        is_private: false,
-      },
-      {
-        id: "channel-3",
-        name: "공지사항",
-        description: "중요 공지사항",
-        created_at: new Date(Date.now() - 172800000).toISOString(),
-        last_message: "새로운 기능이 추가되었습니다.",
-        last_message_at: new Date(Date.now() - 7200000).toISOString(),
-        is_private: false,
-      },
-    ];
-
-    // 각 채널에 테스트 메시지 추가
-    this.mockChannels.forEach((channel) => {
-      this.mockMessages[channel.id] = this.getMockMessages(20);
-    });
-  }
-
-  /**
-   * 채팅방 목록 가져오기
-   */
-  async getChannels(): Promise<ChatChannel[]> {
-    if (!this.currentUser) await this.initUser();
-
-    // 로컬 모드인 경우 테스트 데이터 반환
-    if (this.isLocalMode) {
-      return [...this.mockChannels];
-    }
-
-    // Supabase에서 채널 목록 조회
+  private async initialize(): Promise<void> {
     try {
-      const { data, error } = await this.supabase
-        .from("chat_channels")
-        .select("*")
-        .order("last_message_at", { ascending: false });
-
-      if (error) {
-        console.error("채팅방 목록 조회 오류:", error);
-        throw error;
-      }
-
-      return data || [];
+      console.log(
+        `채팅 서비스 초기화 중... (${this.dataSource.getDataSourceType()})`,
+      );
+      this.isInitialized = true;
+      console.log("채팅 서비스 초기화 완료");
     } catch (error) {
-      console.error("채팅방 목록 조회 중 오류 발생:", error);
-      // 오류 발생 시 빈 배열 반환
+      console.error("채팅 서비스 초기화 실패:", error);
+      this.isInitialized = false;
+    }
+  }
+
+  /**
+   * 사용자 채팅방 목록 조회
+   * @returns 사용자가 참여한 채팅방 목록
+   */
+  async getUserChatRooms(): Promise<ChannelInfo[]> {
+    this.ensureInitialized();
+
+    try {
+      const channels = await this.dataSource.getUserChatRooms();
+      console.log(`사용자 채팅방 ${channels.length}개 조회 완료`);
+      return channels;
+    } catch (error) {
+      console.error("사용자 채팅방 목록 조회 실패:", error);
       return [];
     }
   }
 
   /**
-   * 채팅방 생성하기
+   * 공개 채팅방 목록 조회
+   * @param page 페이지 번호 (기본값: 1)
+   * @param limit 페이지당 항목 수 (기본값: 20)
+   * @returns 공개 채팅방 목록과 페이지네이션 정보
    */
-  async createChannel(
-    name: string,
-    description?: string,
-    isPrivate: boolean = false,
-  ): Promise<ChatChannel> {
-    if (!this.currentUser) await this.initUser();
-    if (!this.currentUser) {
-      throw new Error("로그인이 필요합니다");
-    }
+  async getPublicChatRooms(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{
+    chatRooms: ChannelInfo[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    this.ensureInitialized();
 
-    // 로컬 모드인 경우 로컬에서 처리
-    if (this.isLocalMode) {
-      const newChannel: ChatChannel = {
-        id: `channel-${Date.now()}`,
-        name,
-        description,
-        is_private: isPrivate,
-        created_at: new Date().toISOString(),
-        last_message: "채팅방이 생성되었습니다.",
-        last_message_at: new Date().toISOString(),
-      };
-
-      this.mockChannels.push(newChannel);
-      this.mockMessages[newChannel.id] = this.getMockMessages(5);
-
-      return newChannel;
-    }
-
-    // Supabase를 통한 채널 생성
     try {
-      const { data, error } = await this.supabase
-        .from("chat_channels")
-        .insert({
-          name,
-          description,
-          is_private: isPrivate,
-          created_by: this.currentUser.id,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("채팅방 생성 오류:", error);
-        throw error;
-      }
-
-      return data;
+      const result = await this.dataSource.getPublicChatRooms(page, limit);
+      console.log(
+        `공개 채팅방 ${result.chatRooms.length}개 조회 완료 (${page}/${result.totalPages} 페이지)`,
+      );
+      return result;
     } catch (error) {
-      console.error("채팅방 생성 중 오류 발생:", error);
-      throw error;
+      console.error("공개 채팅방 목록 조회 실패:", error);
+      return {
+        chatRooms: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      };
     }
   }
 
   /**
-   * 채팅방 메시지 가져오기
+   * 채팅방 메시지 조회
    * @param channelId 채팅방 ID
-   * @param limit 가져올 메시지 수 (기본값 50)
-   * @param before 특정 날짜 이전 메시지 (페이지네이션)
+   * @param limit 메시지 개수 제한 (기본값: 50)
+   * @param before 이전 메시지 기준 시간 (페이지네이션용)
+   * @returns 메시지 목록
    */
-  async getMessages(
+  async getChatMessages(
     channelId: string,
     limit: number = 50,
     before?: string,
   ): Promise<Message[]> {
-    this.channelId = channelId;
+    this.ensureInitialized();
 
-    // 로컬 모드인 경우 테스트 데이터 반환
-    if (this.isLocalMode) {
-      let messages = this.mockMessages[channelId] || [];
-
-      // 페이지네이션 구현
-      if (before) {
-        const beforeDate = new Date(before).getTime();
-        messages = messages.filter(
-          (msg) => new Date(msg.created_at).getTime() < beforeDate,
-        );
-      }
-
-      // 시간순으로 정렬하고 limit 적용
-      messages = messages
-        .sort(
-          (a, b) =>
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-        )
-        .slice(-limit);
-
-      return messages;
-    }
-
-    // Supabase에서 메시지 조회
     try {
-      let query = this.supabase
-        .from("chat_messages")
-        .select(
-          `
-          *,
-          user:user_id (
-            id,
-            nickname,
-            avatar_url
-          )
-        `,
-        )
-        .eq("channel_id", channelId)
-        .order("created_at", { ascending: false })
-        .limit(limit);
-
-      // 페이지네이션을 위한 조건
-      if (before) {
-        query = query.lt("created_at", before);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("메시지 조회 오류:", error);
-        throw error;
-      }
-
-      // 시간순 정렬 (오래된 순)
-      return (data || []).reverse();
+      const messages = await this.dataSource.getChatMessages(
+        channelId,
+        limit,
+        before,
+      );
+      console.log(
+        `채팅방 ${channelId}의 메시지 ${messages.length}개 조회 완료`,
+      );
+      return messages;
     } catch (error) {
-      console.error("메시지 조회 중 오류 발생:", error);
+      console.error("채팅 메시지 조회 실패:", error);
       return [];
     }
   }
@@ -312,319 +127,292 @@ export class ChatService {
    * 메시지 전송
    * @param channelId 채팅방 ID
    * @param content 메시지 내용
-   * @param replyToId 답장 대상 메시지 ID (선택적)
+   * @param currentUser 현재 사용자 정보
+   * @param replyToId 답장할 메시지 ID (선택사항)
+   * @returns 전송된 메시지 또는 null
    */
   async sendMessage(
     channelId: string,
     content: string,
+    currentUser: User,
     replyToId?: string,
   ): Promise<Message | null> {
-    if (!this.currentUser) await this.initUser();
-    if (!this.currentUser) {
-      throw new Error("로그인이 필요합니다");
+    this.ensureInitialized();
+
+    if (!content.trim()) {
+      console.warn("빈 메시지는 전송할 수 없습니다.");
+      return null;
     }
 
-    // 로컬 모드인 경우 로컬에서 처리
-    if (this.isLocalMode) {
-      // 새 메시지 생성
-      const newMessage: Message = {
-        id: `msg-${Date.now()}`,
-        channel_id: channelId,
-        user_id: this.currentUser.id,
-        content,
-        reply_to: replyToId,
-        created_at: new Date().toISOString(),
-        user: {
-          id: this.currentUser.id,
-          nickname: this.currentUser.nickname,
-          avatar_url: null,
-        },
+    try {
+      const input: SendMessageInput = {
+        channelId,
+        content: content.trim(),
+        replyToId,
       };
 
-      // 채널에 메시지 추가
-      if (!this.mockMessages[channelId]) {
-        this.mockMessages[channelId] = [];
-      }
-      this.mockMessages[channelId].push(newMessage);
+      const message = await this.dataSource.sendMessage(input, currentUser);
 
-      // 채팅방 최신 메시지 업데이트
-      await this.updateChannelLastMessage(channelId, content);
-
-      return newMessage;
-    }
-
-    // Supabase를 통한 메시지 전송
-    try {
-      const { data, error } = await this.supabase
-        .from("chat_messages")
-        .insert({
-          channel_id: channelId,
-          user_id: this.currentUser.id,
-          content,
-          reply_to: replyToId,
-        })
-        .select(
-          `
-          *,
-          user:user_id (
-            id,
-            nickname,
-            avatar_url
-          )
-        `,
-        )
-        .single();
-
-      if (error) {
-        console.error("메시지 전송 오류:", error);
-        throw error;
+      if (message) {
+        console.log(`메시지 전송 완료: ${message.id}`);
+      } else {
+        console.error("메시지 전송 실패: null 반환");
       }
 
-      // 채팅방 최신 메시지 업데이트
-      await this.updateChannelLastMessage(channelId, content);
-
-      return data;
+      return message;
     } catch (error) {
-      console.error("메시지 전송 중 오류 발생:", error);
-      throw error;
+      console.error("메시지 전송 실패:", error);
+      return null;
     }
   }
 
   /**
-   * 채팅방 최근 메시지 업데이트
+   * 채팅방 생성
+   * @param name 채팅방 이름
+   * @param description 채팅방 설명 (선택사항)
+   * @param isPrivate 비공개 여부 (기본값: false)
+   * @param type 채팅방 타입 (기본값: "GENERAL")
+   * @param maxParticipants 최대 참여자 수 (기본값: 100)
+   * @returns 생성된 채팅방 정보 또는 null
    */
-  private async updateChannelLastMessage(
-    channelId: string,
-    lastMessage: string,
-  ) {
-    // 로컬 모드인 경우 로컬에서 처리
-    if (this.isLocalMode) {
-      const channelIndex = this.mockChannels.findIndex(
-        (ch) => ch.id === channelId,
-      );
-      if (channelIndex >= 0) {
-        this.mockChannels[channelIndex].last_message = lastMessage;
-        this.mockChannels[channelIndex].last_message_at =
-          new Date().toISOString();
-      }
-      return;
+  async createChatChannel(
+    name: string,
+    description?: string,
+    isPrivate: boolean = false,
+    type: string = "GENERAL",
+    maxParticipants: number = 100,
+  ): Promise<ChannelInfo | null> {
+    this.ensureInitialized();
+
+    if (!name.trim()) {
+      console.warn("채팅방 이름은 필수입니다.");
+      return null;
     }
 
-    // Supabase를 통한 채널 업데이트
     try {
-      const { error } = await this.supabase
-        .from("chat_channels")
-        .update({
-          last_message: lastMessage,
-          last_message_at: new Date().toISOString(),
-        })
-        .eq("id", channelId);
+      const input: CreateChannelInput = {
+        name: name.trim(),
+        description: description?.trim(),
+        isPrivate,
+        type,
+        maxParticipants,
+      };
 
-      if (error) {
-        console.error("채팅방 업데이트 오류:", error);
+      const channel = await this.dataSource.createChatChannel(input);
+
+      if (channel) {
+        console.log(`채팅방 생성 완료: ${channel.name} (${channel.id})`);
+      } else {
+        console.error("채팅방 생성 실패: null 반환");
       }
+
+      return channel;
     } catch (error) {
-      console.error("채팅방 업데이트 중 오류 발생:", error);
+      console.error("채팅방 생성 실패:", error);
+      return null;
     }
   }
 
   /**
-   * 실시간 채팅 구독 시작
+   * 채팅방 참여
    * @param channelId 채팅방 ID
-   * @param onNewMessage 새 메시지 이벤트 핸들러
+   * @returns 성공 여부
+   */
+  async joinChatChannel(channelId: string): Promise<boolean> {
+    this.ensureInitialized();
+
+    try {
+      const success = await this.dataSource.joinChatChannel(channelId);
+
+      if (success) {
+        console.log(`채팅방 참여 완료: ${channelId}`);
+      } else {
+        console.error(`채팅방 참여 실패: ${channelId}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error("채팅방 참여 실패:", error);
+      return false;
+    }
+  }
+
+  /**
+   * 채팅방 나가기
+   * @param channelId 채팅방 ID
+   * @returns 성공 여부
+   */
+  async leaveChatChannel(channelId: string): Promise<boolean> {
+    this.ensureInitialized();
+
+    try {
+      const success = await this.dataSource.leaveChatChannel(channelId);
+
+      if (success) {
+        console.log(`채팅방 나가기 완료: ${channelId}`);
+        // 실시간 구독도 해제
+        this.unsubscribeFromMessages(channelId);
+      } else {
+        console.error(`채팅방 나가기 실패: ${channelId}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error("채팅방 나가기 실패:", error);
+      return false;
+    }
+  }
+
+  /**
+   * 채팅방 읽음 처리
+   * @param channelId 채팅방 ID
+   * @returns 성공 여부
+   */
+  async markChannelAsRead(channelId: string): Promise<boolean> {
+    this.ensureInitialized();
+
+    try {
+      const success = await this.dataSource.markChannelAsRead(channelId);
+
+      if (success) {
+        console.log(`채팅방 읽음 처리 완료: ${channelId}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error("채팅방 읽음 처리 실패:", error);
+      return false;
+    }
+  }
+
+  /**
+   * 실시간 메시지 구독
+   * @param channelId 채팅방 ID
+   * @param onMessage 새 메시지 수신 콜백 함수
+   * @returns 구독 해제 함수
    */
   subscribeToMessages(
     channelId: string,
-    onNewMessage: (message: Message) => void,
-  ): void {
-    // 이미 구독 중이라면 이전 구독 해제
-    this.unsubscribeFromMessages();
+    onMessage: (message: Message) => void,
+  ): () => void {
+    this.ensureInitialized();
 
-    this.channelId = channelId;
+    // 기존 구독 해제
+    this.unsubscribeFromMessages(channelId);
 
-    // 로컬 모드인 경우 시뮬레이션 구현
-    if (this.isLocalMode) {
-      console.log(`채팅 구독 시작 (로컬 모드): ${channelId}`);
-
-      // 테스트용 주기적 메시지 생성
-      this.realtimeSubscription = setInterval(() => {
-        // 20% 확률로 새 메시지 발생
-        if (Math.random() > 0.8) {
-          const mockUsers = [
-            { id: "2", nickname: "이축구", avatar_url: null },
-            { id: "3", nickname: "박농구", avatar_url: null },
-            { id: "4", nickname: "최야구", avatar_url: null },
-          ];
-
-          // 랜덤 사용자 선택 (내가 아닌 다른 사용자)
-          const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-
-          const newMessage: Message = {
-            id: `msg-${Date.now()}`,
-            channel_id: channelId,
-            content: `자동 생성된 메시지 ${new Date().toLocaleTimeString()}`,
-            created_at: new Date().toISOString(),
-            user_id: user.id,
-            user: user,
-          };
-
-          // 메시지 저장 및 콜백 실행
-          if (!this.mockMessages[channelId]) {
-            this.mockMessages[channelId] = [];
-          }
-          this.mockMessages[channelId].push(newMessage);
-
-          onNewMessage(newMessage);
-
-          // 채널 정보도 업데이트
-          this.updateChannelLastMessage(channelId, newMessage.content);
-        }
-      }, 5000); // 5초마다 확인
-      return;
-    }
-
-    // Supabase Realtime 구독 설정
     try {
-      console.log(`채팅 구독 시작 (Supabase): ${channelId}`);
+      const unsubscribe = this.dataSource.subscribeToMessages(
+        channelId,
+        (message: Message) => {
+          console.log(`새 메시지 수신: ${message.id} (채널: ${channelId})`);
+          onMessage(message);
+        },
+      );
 
-      this.realtimeSubscription = this.supabase
-        .channel(`chat:${channelId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "chat_messages",
-            filter: `channel_id=eq.${channelId}`,
-          },
-          async (payload: { new: any }) => {
-            try {
-              // 새 메시지가 도착했을 때 사용자 정보 포함하여 처리
-              const message = payload.new;
+      // 구독 해제 함수 저장
+      this.realtimeSubscriptions.set(channelId, unsubscribe);
 
-              // 사용자 정보 조회
-              const { data: userData, error: userError } = await this.supabase
-                .from("users")
-                .select("id, nickname, avatar_url")
-                .eq("id", message.user_id)
-                .single();
+      console.log(`실시간 메시지 구독 시작: ${channelId}`);
 
-              if (userError) {
-                console.error("사용자 정보 조회 오류:", userError);
-                return;
-              }
-
-              // 콜백 호출
-              onNewMessage({
-                ...message,
-                user: userData,
-              });
-            } catch (error) {
-              console.error("메시지 처리 오류:", error);
-            }
-          },
-        )
-        .subscribe();
+      return () => this.unsubscribeFromMessages(channelId);
     } catch (error) {
-      console.error("Supabase 실시간 구독 오류:", error);
-      // 오류 발생 시 로컬 모드로 대체
-      this.isLocalMode = true;
-      this.subscribeToMessages(channelId, onNewMessage);
+      console.error("실시간 메시지 구독 실패:", error);
+      return () => {};
     }
   }
 
   /**
-   * 실시간 구독 해제
+   * 실시간 메시지 구독 해제
+   * @param channelId 채팅방 ID
    */
-  unsubscribeFromMessages(): void {
-    if (!this.realtimeSubscription) return;
-
-    if (this.isLocalMode) {
-      // 로컬 테스트용 구독 해제
-      clearInterval(this.realtimeSubscription);
-      this.realtimeSubscription = null;
-      console.log("채팅 구독 해제 (로컬 모드)");
-    } else {
-      // Supabase 구독 해제
+  unsubscribeFromMessages(channelId: string): void {
+    const unsubscribe = this.realtimeSubscriptions.get(channelId);
+    if (unsubscribe) {
       try {
-        this.supabase.removeChannel(this.realtimeSubscription);
-        this.realtimeSubscription = null;
-        console.log("채팅 구독 해제 (Supabase)");
+        unsubscribe();
+        this.realtimeSubscriptions.delete(channelId);
+        console.log(`실시간 메시지 구독 해제: ${channelId}`);
       } catch (error) {
-        console.error("Supabase 채널 해제 오류:", error);
+        console.error("실시간 메시지 구독 해제 실패:", error);
       }
     }
   }
 
   /**
-   * 로컬 테스트용 Mock 서비스
-   * 실제 Supabase 없이 로컬에서 테스트하기 위한 메서드
+   * 새로고침 (데이터 다시 로드)
    */
-  getMockMessages(count: number = 10): Message[] {
-    const mockUsers = [
-      { id: "1", nickname: "김스포츠", avatar_url: null },
-      { id: "2", nickname: "이축구", avatar_url: null },
-      { id: "3", nickname: "박농구", avatar_url: null },
-      { id: "4", nickname: "최야구", avatar_url: null },
-    ];
-
-    const messages: Message[] = [];
-    const now = new Date();
-
-    for (let i = 0; i < count; i++) {
-      const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-      const isSystem = Math.random() > 0.9; // 10%는 시스템 메시지
-
-      const message: Message = {
-        id: `mock-${i}`,
-        content: isSystem
-          ? "새로운 사용자가 입장했습니다."
-          : `테스트 메시지 ${i + 1}입니다. 안녕하세요!`,
-        created_at: new Date(now.getTime() - (count - i) * 60000).toISOString(),
-        user_id: user.id,
-        user: user,
-        is_system: isSystem,
-      };
-
-      messages.push(message);
+  async refresh(): Promise<void> {
+    try {
+      await this.dataSource.refresh();
+      console.log("채팅 데이터 새로고침 완료");
+    } catch (error) {
+      console.error("채팅 데이터 새로고침 실패:", error);
     }
-
-    return messages;
   }
 
   /**
-   * 로컬 테스트용 Mock 메시지 전송
+   * 서비스 정리 (모든 구독 해제)
    */
-  async sendMockMessage(content: string): Promise<Message> {
-    if (!this.currentUser) {
-      // 테스트용 사용자 설정
-      this.currentUser = {
-        id: "1",
-        nickname: "김스포츠",
-        email: "test@example.com",
-      };
+  cleanup(): void {
+    try {
+      // 모든 실시간 구독 해제
+      this.realtimeSubscriptions.forEach((unsubscribe, channelId) => {
+        unsubscribe();
+        console.log(`구독 해제: ${channelId}`);
+      });
+      this.realtimeSubscriptions.clear();
+
+      // 데이터 소스 정리
+      this.dataSource.cleanup();
+
+      console.log("채팅 서비스 정리 완료");
+    } catch (error) {
+      console.error("채팅 서비스 정리 실패:", error);
     }
+  }
 
-    const mockMessage: Message = {
-      id: `mock-${Date.now()}`,
-      content,
-      created_at: new Date().toISOString(),
-      user_id: this.currentUser.id,
-      user: {
-        id: this.currentUser.id,
-        nickname: this.currentUser.nickname,
-        avatar_url: null,
-      },
-    };
+  /**
+   * 연결 상태 확인
+   * @returns 연결 여부
+   */
+  isConnected(): boolean {
+    return this.isInitialized && this.dataSource.isConnected();
+  }
 
-    return mockMessage;
+  /**
+   * 현재 데이터 소스 타입 반환
+   * @returns "supabase" | "mock"
+   */
+  getDataSourceType(): "supabase" | "mock" {
+    return this.dataSource.getDataSourceType();
+  }
+
+  /**
+   * 초기화 상태 확인
+   */
+  private ensureInitialized(): void {
+    if (!this.isInitialized) {
+      throw new Error("채팅 서비스가 초기화되지 않았습니다.");
+    }
+  }
+
+  /**
+   * 개발용: Supabase로 전환
+   */
+  switchToSupabase(): void {
+    this.dataSource.switchToSupabase();
+    console.log("채팅 서비스를 Supabase로 전환했습니다.");
+  }
+
+  /**
+   * 개발용: Mock 데이터로 전환
+   */
+  switchToMock(): void {
+    this.dataSource.switchToMock();
+    console.log("채팅 서비스를 Mock 데이터로 전환했습니다.");
   }
 }
 
 // 싱글톤 인스턴스 생성 및 내보내기
 export const chatService = new ChatService();
-
-// 상태 정보 출력
-console.log(
-  `ChatService가 ${USE_LOCAL_MODE ? "로컬 테스트" : "Supabase"} 모드로 초기화되었습니다.`,
-);
+export default chatService;

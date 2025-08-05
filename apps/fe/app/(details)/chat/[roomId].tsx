@@ -11,19 +11,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useQuery, useMutation, useSubscription } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
 import ChatList from "@/components/chat/ChatList";
 import ChatInput from "@/components/chat/ChatInput";
 import { showToast } from "@/components/CustomToast";
-import {
-  GET_CHAT_MESSAGES,
-  SEND_CHAT_MESSAGE,
-  ON_NEW_CHAT_MESSAGE,
-  MARK_CHANNEL_AS_READ,
-} from "@/lib/graphql/chat";
+import { chatService } from "@/lib/chat/chatService";
 
 // 메시지 타입 (ChatList와 호환)
 interface Message {
@@ -159,72 +153,151 @@ export default function ChatRoomScreen() {
     },
   ];
 
-  // 사용자 정보 로드
+  // 사용자 정보 로드 및 메시지 데이터 조회
   useEffect(() => {
-    const loadUser = async () => {
-      const { user } = await getSession();
-      setCurrentUser(user);
+    const loadUserAndMessages = async () => {
+      try {
+        const { user } = await getSession();
+        setCurrentUser(user);
 
-      // 임시 메시지 데이터 설정
-      setMessages(mockMessages);
+        if (roomId && user) {
+          // 실제 메시지 데이터 로드
+          await loadMessages();
+        } else {
+          // 임시 메시지 데이터 설정
+          setMessages(mockMessages);
+        }
+      } catch (error) {
+        console.error("사용자 정보 및 메시지 로드 실패:", error);
+        setMessages(mockMessages);
+      }
     };
-    loadUser();
-  }, []);
+    loadUserAndMessages();
+  }, [roomId]);
 
-  // 임시로 메시지 로딩 상태 관리
+  // 메시지 로딩 상태 관리
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState<any>(null);
-
-  // 임시 메시지 새로고침 함수
-  const refetchMessages = async () => {
-    setMessagesLoading(true);
-    // 임시로 1초 후 로딩 완료
-    setTimeout(() => {
-      setMessagesLoading(false);
-    }, 1000);
-  };
-
-  // 임시 메시지 전송 상태
   const [sendLoading, setSendLoading] = useState(false);
 
-  // 임시 메시지 전송 함수
+  /**
+   * 메시지 목록 로드
+   */
+  const loadMessages = async () => {
+    if (!roomId) return;
+
+    setMessagesLoading(true);
+    setMessagesError(null);
+
+    try {
+      const loadedMessages = await chatService.getChatMessages(roomId);
+      setMessages(loadedMessages);
+      console.log(
+        `채팅방 ${roomId}의 메시지 ${loadedMessages.length}개 로드 완료`,
+      );
+    } catch (error) {
+      console.error("메시지 로드 실패:", error);
+      setMessagesError(error);
+      // 에러 발생 시 임시 데이터 사용
+      setMessages(mockMessages);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  /**
+   * 메시지 새로고침
+   */
+  const refetchMessages = async () => {
+    await loadMessages();
+  };
+
+  /**
+   * 실제 메시지 전송
+   */
   const sendMessage = async (messageContent: string) => {
-    if (!currentUser) return;
+    if (!currentUser || !roomId) return;
 
     setSendLoading(true);
 
-    // 임시로 1초 후 메시지 추가
-    setTimeout(() => {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        content: messageContent,
-        created_at: new Date().toISOString(),
-        user_id: currentUser.id,
-        user: {
-          id: currentUser.id,
-          nickname: currentUser.nickname,
-          profileImageUrl: currentUser.profileImageUrl,
-        },
-        isSystem: false,
-      };
+    try {
+      const newMessage = await chatService.sendMessage(
+        roomId,
+        messageContent,
+        currentUser,
+      );
 
-      setMessages((prev) => [...prev, newMessage]);
-      setMessageText("");
-      setSendLoading(false);
+      if (newMessage) {
+        // 새 메시지를 즉시 UI에 반영
+        setMessages((prev) => [...prev, newMessage]);
 
+        showToast({
+          type: "success",
+          title: "메시지 전송",
+          message: "메시지가 전송되었습니다.",
+          duration: 1000,
+        });
+      } else {
+        throw new Error("메시지 전송 실패");
+      }
+    } catch (error) {
+      console.error("메시지 전송 실패:", error);
       showToast({
-        type: "success",
-        title: "메시지 전송",
-        message: "메시지가 전송되었습니다.",
-        duration: 1000,
+        type: "error",
+        title: "전송 실패",
+        message: "메시지 전송에 실패했습니다.",
+        duration: 2000,
       });
-    }, 1000);
+    } finally {
+      setSendLoading(false);
+    }
   };
 
-  // 임시로 읽음 처리 및 실시간 구독 비활성화
-  // (백엔드 연동 시 다시 활성화)
+  // 실시간 메시지 구독 설정
+  useEffect(() => {
+    if (!roomId || !currentUser) return;
 
-  // 임시로 에러 처리 비활성화
+    console.log(`실시간 구독 시작: 채팅방 ${roomId}`);
+
+    // 실시간 메시지 구독
+    const unsubscribe = chatService.subscribeToMessages(
+      roomId,
+      (newMessage: Message) => {
+        console.log("새 메시지 수신:", newMessage);
+
+        // 자신이 보낸 메시지가 아닌 경우에만 추가
+        // (자신이 보낸 메시지는 sendMessage에서 이미 추가됨)
+        if (newMessage.user_id !== currentUser.id) {
+          setMessages((prev) => [...prev, newMessage]);
+        }
+      },
+    );
+
+    // 컴포넌트 언마운트 시 구독 해제
+    return () => {
+      console.log(`실시간 구독 해제: 채팅방 ${roomId}`);
+      unsubscribe();
+    };
+  }, [roomId, currentUser]);
+
+  // 채팅방 읽음 처리
+  useEffect(() => {
+    if (!roomId || !currentUser) return;
+
+    const markAsRead = async () => {
+      try {
+        await chatService.markChannelAsRead(roomId);
+        console.log(`채팅방 ${roomId} 읽음 처리 완료`);
+      } catch (error) {
+        console.error("읽음 처리 실패:", error);
+      }
+    };
+
+    // 메시지가 로드된 후 읽음 처리
+    if (messages.length > 0) {
+      markAsRead();
+    }
+  }, [roomId, currentUser, messages.length]);
 
   // 메시지 전송 핸들러 (ChatInput에서 호출)
   const handleSendMessage = async (messageContent: string) => {
@@ -240,13 +313,20 @@ export default function ChatRoomScreen() {
 
   // 메시지 새로고침 핸들러
   const handleRefresh = async () => {
+    console.log("채팅 메시지 새로고침 시작");
     await refetchMessages();
   };
 
   // 메시지 길게 누르기 핸들러
   const handleLongPressMessage = (message: Message) => {
+    console.log("메시지 길게 누르기:", message.id);
     // TODO: 메시지 옵션 (답장, 복사, 신고 등) 구현
-    console.log("Long press message:", message.id);
+    showToast({
+      type: "info",
+      title: "메시지 옵션",
+      message: "메시지 옵션 기능이 곧 추가될 예정입니다.",
+      duration: 1500,
+    });
   };
 
   return (
@@ -263,21 +343,38 @@ export default function ChatRoomScreen() {
         onRefresh={handleRefresh}
         onLongPressMessage={handleLongPressMessage}
         onBack={handleBack}
-        title={roomName || "채팅방"}
+        title={roomName || `채팅방 (${chatService.getDataSourceType()})`}
+        hasMoreMessages={false}
+        onLoadMore={() => {
+          // TODO: 이전 메시지 로드 구현
+          console.log("이전 메시지 로드 요청");
+        }}
       />
 
       {/* 메시지 입력 영역 */}
       <ChatInput
         onSendMessage={handleSendMessage}
-        disabled={sendLoading}
-        placeholder="메시지를 입력하세요..."
+        disabled={sendLoading || !currentUser}
+        placeholder={
+          currentUser ? "메시지를 입력하세요..." : "로그인이 필요합니다..."
+        }
         onEmoji={() => {
-          // 이모지 버튼 클릭 시 특별 메시지 모드 토글
-          console.log("Special message mode toggled");
+          console.log("이모지 버튼 클릭");
+          showToast({
+            type: "info",
+            title: "이모지",
+            message: "이모지 기능이 곧 추가될 예정입니다.",
+            duration: 1500,
+          });
         }}
         onAddOption={() => {
-          // + 버튼 클릭 시 추가 옵션 표시
-          console.log("Add options clicked");
+          console.log("추가 옵션 버튼 클릭");
+          showToast({
+            type: "info",
+            title: "추가 옵션",
+            message: "파일 첨부 등의 기능이 곧 추가될 예정입니다.",
+            duration: 1500,
+          });
         }}
       />
     </KeyboardAvoidingView>

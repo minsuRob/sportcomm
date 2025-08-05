@@ -15,8 +15,8 @@
     "postinstall": "npx tailwindcss -i ./global.css -o ./node_modules/.cache/nativewind/global.css",
     "web": "expo start -c --web",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "build:web": "expo export --platform web",
-    "deploy:web": "gh-pages -d ./dist"
+    "deploy": "gh-pages -t -d dist",
+    "predeploy": "expo export -p web"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",

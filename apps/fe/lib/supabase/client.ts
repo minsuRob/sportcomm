@@ -1,6 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@env";
 
+// 환경 변수 유효성 검사
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error("환경 변수 누락:", {
+    SUPABASE_URL: !!SUPABASE_URL,
+    SUPABASE_ANON_KEY: !!SUPABASE_ANON_KEY,
+  });
+  throw new Error(
+    "SUPABASE_URL과 SUPABASE_ANON_KEY 환경 변수가 필요합니다. .env 파일을 확인하세요.",
+  );
+}
+
 // Supabase 데이터베이스 타입 정의
 export interface Database {
   public: {
@@ -176,8 +187,8 @@ export interface Database {
  * - 실시간 기능 활성화
  */
 export const supabase = createClient<Database>(
-  SUPABASE_URL || "http://localhost:54321",
-  SUPABASE_ANON_KEY || "",
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
   {
     auth: {
       // 세션 자동 새로고침 설정
@@ -200,7 +211,7 @@ export const supabase = createClient<Database>(
         "x-application-name": "sportcomm-chat",
       },
     },
-  }
+  },
 );
 
 /**
@@ -209,8 +220,16 @@ export const supabase = createClient<Database>(
  */
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.from("users").select("count").limit(1);
-    return !error;
+    // 단순한 health check 쿼리로 변경
+    const { data, error } = await supabase.from("users").select("id").limit(1);
+
+    if (error) {
+      console.error("Supabase 연결 확인 실패:", error);
+      return false;
+    }
+
+    console.log("Supabase 연결 성공");
+    return true;
   } catch (error) {
     console.error("Supabase 연결 확인 실패:", error);
     return false;
@@ -231,7 +250,7 @@ export const getCurrentSession = () => {
  * @returns 구독 해제 함수
  */
 export const onAuthStateChange = (
-  callback: (event: string, session: any) => void
+  callback: (event: string, session: any) => void,
 ) => {
   return supabase.auth.onAuthStateChange(callback);
 };
@@ -267,6 +286,52 @@ export const handleSupabaseError = (error: any, context: string = "") => {
   }
 
   throw new Error(error?.message || "알 수 없는 오류가 발생했습니다.");
+};
+
+/**
+ * Supabase 클라이언트 초기화 및 연결 테스트
+ * 앱 시작 시 호출하여 연결 상태를 확인합니다.
+ * @returns Promise<void>
+ */
+export const initializeSupabase = async (): Promise<void> => {
+  try {
+    console.log("Supabase 클라이언트 초기화 중...");
+    console.log("URL:", SUPABASE_URL);
+    console.log("Key 존재 여부:", !!SUPABASE_ANON_KEY);
+
+    const isConnected = await checkSupabaseConnection();
+
+    if (isConnected) {
+      console.log("✅ Supabase 연결 성공");
+    } else {
+      console.warn("⚠️ Supabase 연결 실패 - 오프라인 모드로 동작");
+    }
+  } catch (error) {
+    console.error("❌ Supabase 초기화 실패:", error);
+    throw error;
+  }
+};
+
+/**
+ * 개발 환경에서 Supabase 상태 정보 출력
+ * @returns Promise<void>
+ */
+export const debugSupabaseStatus = async (): Promise<void> => {
+  if (__DEV__) {
+    try {
+      const session = await getCurrentSession();
+      const isConnected = await checkSupabaseConnection();
+
+      console.log("🔍 Supabase 디버그 정보:", {
+        연결상태: isConnected ? "연결됨" : "연결안됨",
+        URL: SUPABASE_URL,
+        세션존재: !!session.data.session,
+        사용자ID: session.data.session?.user?.id || "없음",
+      });
+    } catch (error) {
+      console.error("디버그 정보 수집 실패:", error);
+    }
+  }
 };
 
 export default supabase;

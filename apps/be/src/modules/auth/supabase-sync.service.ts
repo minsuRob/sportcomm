@@ -130,10 +130,15 @@ export class SupabaseSyncService {
         `사용자 ${user.nickname}의 Supabase 동기화 완료: ${supabaseUserId}`,
       );
 
-      // 세션 정보 반환
+      // 세션 정보 반환 (createUser는 세션을 반환하지 않으므로 로그인 시도)
+      const { data: signInData } = await this.supabase.auth.signInWithPassword({
+        email: user.email,
+        password: password,
+      });
+
       return {
         supabaseUserId,
-        session: authData.session,
+        session: signInData.session,
       };
     } catch (error) {
       this.logger.error('Supabase 사용자 생성 중 오류 발생:', error);
@@ -284,11 +289,8 @@ export class SupabaseSyncService {
         return true;
       }
 
-      const supabaseUserId = await this.createUserInSupabase(
-        user,
-        tempPassword,
-      );
-      return !!supabaseUserId;
+      const result = await this.createUserInSupabase(user, tempPassword);
+      return !!result;
     } catch (error) {
       this.logger.error('기존 사용자 동기화 중 오류 발생:', error);
       return false;
@@ -345,16 +347,18 @@ export class SupabaseSyncService {
       supabaseConnected,
     };
   }
-}
 
   /**
    * 기존 사용자의 Supabase 로그인 세션 생성
-   * 
+   *
    * @param email - 사용자 이메일
    * @param password - 사용자 비밀번호
    * @returns Supabase 세션 정보
    */
-  async signInWithSupabase(email: string, password: string): Promise<any | null> {
+  async signInWithSupabase(
+    email: string,
+    password: string,
+  ): Promise<any | null> {
     if (!this.supabase) {
       this.logger.warn('Supabase 클라이언트가 초기화되지 않았습니다.');
       return null;
@@ -380,7 +384,7 @@ export class SupabaseSyncService {
 
   /**
    * 사용자가 Supabase에 존재하는지 확인하고, 없으면 생성
-   * 
+   *
    * @param user - 로컬 DB의 사용자 정보
    * @param password - 사용자 비밀번호
    * @returns Supabase 세션 정보
@@ -393,25 +397,27 @@ export class SupabaseSyncService {
     try {
       // 1. 먼저 로그인 시도
       let session = await this.signInWithSupabase(user.email, password);
-      
+
       if (session) {
         // 로그인 성공 시 로컬 DB에 Supabase ID 업데이트 (없는 경우)
         if (!user.supabaseUserId && session.user?.id) {
           await this.userRepository.update(user.id, {
             supabaseUserId: session.user.id,
           });
-          
+
           // profiles 테이블에도 정보 동기화
           await this.syncUserProfile(session.user.id, user);
         }
-        
+
         return session;
       }
 
       // 2. 로그인 실패 시 사용자 생성 시도
-      this.logger.log(`Supabase에 사용자가 없어 새로 생성합니다: ${user.email}`);
+      this.logger.log(
+        `Supabase에 사용자가 없어 새로 생성합니다: ${user.email}`,
+      );
       const result = await this.createUserInSupabase(user, password);
-      
+
       if (result) {
         return result.session;
       }
@@ -425,11 +431,14 @@ export class SupabaseSyncService {
 
   /**
    * Supabase profiles 테이블에 사용자 정보 동기화
-   * 
+   *
    * @param supabaseUserId - Supabase 사용자 ID
    * @param user - 로컬 DB 사용자 정보
    */
-  private async syncUserProfile(supabaseUserId: string, user: User): Promise<void> {
+  private async syncUserProfile(
+    supabaseUserId: string,
+    user: User,
+  ): Promise<void> {
     try {
       const profileData = {
         id: supabaseUserId,
@@ -452,3 +461,4 @@ export class SupabaseSyncService {
       this.logger.error('Supabase 프로필 동기화 중 오류 발생:', error);
     }
   }
+}

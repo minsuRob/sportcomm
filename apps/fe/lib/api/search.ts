@@ -18,7 +18,7 @@ const SEARCH_QUERY = gql`
         id
         title
         content
-        type
+        teamId
         viewCount
         likeCount
         commentCount

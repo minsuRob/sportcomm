@@ -45,17 +45,22 @@ export class SupabaseSyncService {
       this.logger.warn(
         'Supabase 환경 변수가 설정되지 않았습니다. 동기화 기능이 비활성화됩니다.',
       );
+      this.supabase = null;
       return;
     }
 
-    this.supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-
-    this.logger.log('Supabase 동기화 서비스가 초기화되었습니다.');
+    try {
+      this.supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+      this.logger.log('Supabase 동기화 서비스가 초기화되었습니다.');
+    } catch (error) {
+      this.logger.error('Supabase 클라이언트 초기화 실패:', error);
+      this.supabase = null;
+    }
   }
 
   /**
@@ -73,7 +78,9 @@ export class SupabaseSyncService {
     session: any;
   } | null> {
     if (!this.supabase) {
-      this.logger.warn('Supabase 클라이언트가 초기화되지 않았습니다.');
+      this.logger.warn(
+        'Supabase 클라이언트가 초기화되지 않았습니다. 동기화를 건너뜁니다.',
+      );
       return null;
     }
 

@@ -25,18 +25,16 @@ export const AppDataSource = new DataSource({
   password: configService.get<string>('DB_PASSWORD', 'password'),
   database: configService.get<string>('DB_DATABASE', 'postgres'),
 
-  // Supabase SSL 설정
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  // SSL 설정 (로컬 개발에서는 비활성화)
+  ssl: false,
 
   // 엔티티 및 마이그레이션 설정
   entities: entities,
-  migrations: ['src/database/migrations/*.ts'],
+  migrations: ['dist/database/migrations/*.js'],
   migrationsTableName: 'typeorm_migrations',
 
-  // 개발 환경 설정
-  synchronize: false, // 마이그레이션 사용으로 false 설정
+  // 개발 환경 설정 (개발 중에는 synchronize 사용)
+  synchronize: configService.get<string>('NODE_ENV') === 'development',
   logging: configService.get<string>('NODE_ENV') === 'development',
 
   // 연결 풀 설정

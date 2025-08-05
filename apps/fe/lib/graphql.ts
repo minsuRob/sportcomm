@@ -133,7 +133,9 @@ export const LOGIN_MUTATION = gql`
         role
         profileImageUrl
         myTeams: userTeams {
-          role
+          id
+          priority
+          notificationEnabled
           team {
             id
             name
@@ -167,7 +169,9 @@ export const REGISTER_MUTATION = gql`
         role
         profileImageUrl
         myTeams: userTeams {
-          role
+          id
+          priority
+          notificationEnabled
           team {
             id
             name

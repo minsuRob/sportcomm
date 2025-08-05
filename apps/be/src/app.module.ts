@@ -20,6 +20,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AdminModule } from './modules/admin/admin.module';
 import { SportsModule } from './modules/sports/sports.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { DatabaseConfig } from './config/database.config';
+import { SupabaseConfig } from './config/supabase.config';
 
 /**
  * 메인 애플리케이션 모듈
@@ -40,7 +42,11 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     // 환경 변수 설정 모듈
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: [
+        `.env.${process.env.NODE_ENV || 'development'}`,
+        '.env.local',
+        '.env',
+      ],
       cache: true,
       expandVariables: true,
     }),
@@ -50,54 +56,11 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const isProduction = configService.get('NODE_ENV') === 'production';
-        const isDevelopment = configService.get('NODE_ENV') === 'development';
+        // 데이터베이스 설정 검증
+        DatabaseConfig.validateDatabaseConfig(configService);
 
-        return {
-          type: 'postgres',
-          host: configService.get<string>('DB_HOST', 'localhost'),
-          port: configService.get<number>('DB_PORT', 5432),
-          username: configService.get<string>('DB_USERNAME', 'postgres'),
-          password: configService.get<string>('DB_PASSWORD', 'password'),
-          database: configService.get<string>('DB_DATABASE', 'sportcomm'),
-
-          // 엔티티 설정
-          entities: entities,
-
-          // 개발 환경에서만 스키마 동기화 활성화
-          synchronize: isDevelopment,
-
-          // 로깅 설정 (운영 환경이 아닐 때 모든 쿼리 로깅)
-          logging: !isProduction,
-
-          // 연결 풀 설정
-          extra: {
-            connectionLimit: 10,
-            acquireTimeout: 60000,
-            timeout: 60000,
-          },
-
-          // SSL 설정 (운영 환경에서 활성화)
-          ssl: isProduction
-            ? {
-                rejectUnauthorized: false,
-              }
-            : false,
-
-          // 트랜잭션 격리 수준
-          isolationLevel: 'READ_COMMITTED',
-
-          // 자동 재연결 설정
-          autoLoadEntities: true,
-          keepConnectionAlive: true,
-
-          // 메타데이터 캐싱 활성화
-          cache: {
-            type: 'database',
-            tableName: 'query_result_cache',
-            duration: 30000, // 30초
-          },
-        };
+        // TypeORM 설정 반환
+        return DatabaseConfig.createTypeOrmOptions(configService);
       },
     }),
 
@@ -251,15 +214,8 @@ export class AppModule {
    * 필수 환경 변수 검증
    */
   private validateConfiguration(): void {
-    const requiredEnvVars = [
-      'DB_HOST',
-      'DB_PORT',
-      'DB_USERNAME',
-      'DB_PASSWORD',
-      'DB_DATABASE',
-      'JWT_SECRET',
-      'JWT_EXPIRES_IN',
-    ];
+    // JWT 관련 필수 환경 변수
+    const requiredEnvVars = ['JWT_SECRET', 'JWT_EXPIRES_IN'];
 
     const missingEnvVars = requiredEnvVars.filter(
       (envVar) => !this.configService.get<string>(envVar),
@@ -271,6 +227,10 @@ export class AppModule {
       );
       process.exit(1);
     }
+
+    // 데이터베이스 설정은 DatabaseConfig에서 검증됨
+    // Supabase 설정 검증 (선택사항)
+    SupabaseConfig.validateSupabaseConfig(this.configService, false);
   }
 
   /**
@@ -279,9 +239,11 @@ export class AppModule {
   private printStartupInfo(): void {
     const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
     const port = this.configService.get<number>('PORT', 3000);
+    const databaseUrl = this.configService.get<string>('DATABASE_URL');
     const dbHost = this.configService.get<string>('DB_HOST');
     const dbPort = this.configService.get<number>('DB_PORT');
     const dbName = this.configService.get<string>('DB_DATABASE');
+    const supabaseConfigured = SupabaseConfig.isConfigured(this.configService);
 
     console.log('\n🚀 스포츠 커뮤니티 백엔드 서버 시작 중...\n');
     console.log('📊 서버 정보:');
@@ -294,8 +256,12 @@ export class AppModule {
     }
 
     console.log('\n💾 데이터베이스 정보:');
-    console.log(`   - 호스트: ${dbHost}:${dbPort}`);
-    console.log(`   - 데이터베이스: ${dbName}`);
+    if (databaseUrl) {
+      console.log(`   - 연결: DATABASE_URL 사용`);
+    } else {
+      console.log(`   - 호스트: ${dbHost}:${dbPort}`);
+      console.log(`   - 데이터베이스: ${dbName}`);
+    }
     console.log(
       `   - 스키마 동기화: ${nodeEnv === 'development' ? '활성화' : '비활성화'}`,
     );
@@ -315,6 +281,9 @@ export class AppModule {
     console.log('   - ✅ 실시간 구독 지원');
     console.log('   - ✅ 검색 기능');
     console.log('   - ✅ 데이터베이스 캐싱');
+    console.log(
+      `   - ${supabaseConfigured ? '✅' : '⚠️'} Supabase 실시간 기능 ${supabaseConfigured ? '활성화' : '비활성화'}`,
+    );
 
     console.log('\n⚡ 성능 최적화:');
     console.log('   - 쿼리 결과 캐싱: 30초');

@@ -129,31 +129,30 @@ export default function ChatRoomList({
     }
   }, [adminError, currentUser]);
 
-  // 채팅방 데이터 준비
-  const regularChatRooms: ChatRoom[] = [];
-  const adminChatRooms = (adminData?.adminGetAllChatRooms?.chatRooms || [])
-    .filter((room) => room.type === "PUBLIC" && room.isRoomActive) // 공개이고 활성화된 채팅방만
-    .map((room) => ({
-      id: room.id,
-      name: room.name,
-      description: room.description,
-      isPrivate: false,
-      type: room.type,
-      isRoomActive: room.isRoomActive,
-      maxParticipants: room.maxParticipants,
-      currentParticipants: room.currentParticipants,
-      lastMessage: room.lastMessageContent,
-      lastMessageAt: room.lastMessageAt,
-      unreadCount: 0, // 관리자 채팅방은 초기에 읽지 않은 메시지 0개
-      members: [], // 빈 배열로 초기화 (자동 참여 처리)
-      createdAt: room.createdAt,
-    }));
-
   // 모든 채팅방을 합쳐서 상태로 관리
   useEffect(() => {
+    const regularChatRooms: ChatRoom[] = [];
+    const adminChatRooms = (adminData?.adminGetAllChatRooms?.chatRooms || [])
+      .filter((room) => room.type === "PUBLIC" && room.isRoomActive) // 공개이고 활성화된 채팅방만
+      .map((room) => ({
+        id: room.id,
+        name: room.name,
+        description: room.description,
+        isPrivate: false,
+        type: room.type,
+        isRoomActive: room.isRoomActive,
+        maxParticipants: room.maxParticipants,
+        currentParticipants: room.currentParticipants,
+        lastMessage: room.lastMessageContent,
+        lastMessageAt: room.lastMessageAt,
+        unreadCount: 0, // 관리자 채팅방은 초기에 읽지 않은 메시지 0개
+        members: [], // 빈 배열로 초기화 (자동 참여 처리)
+        createdAt: room.createdAt,
+      }));
+
     const allChatRooms = [...regularChatRooms, ...adminChatRooms, ...mockRooms];
     setChatRooms(allChatRooms);
-  }, [regularChatRooms, adminChatRooms, mockRooms]);
+  }, [adminData, mockRooms]); // adminData와 mockRooms만 의존성으로 설정
 
   // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleEnterRoom = async (room: ChatRoom) => {

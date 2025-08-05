@@ -111,28 +111,31 @@ class SupabaseChatClient {
   }
 
   /**
-   * 사용자 로그인 (Supabase Auth)
+   * 저장된 Supabase 세션으로 인증 설정
    *
-   * @param email - 이메일
-   * @param password - 비밀번호
-   * @returns 로그인 결과
+   * @param session - 백엔드에서 받은 Supabase 세션 정보
    */
-  async signIn(email: string, password: string) {
+  async setSession(session: {
+    access_token: string;
+    refresh_token: string;
+    user_id: string;
+    user_email: string;
+  }) {
     if (!this.client) {
       throw new Error("Supabase 클라이언트가 초기화되지 않았습니다.");
     }
 
-    const { data, error } = await this.client.auth.signInWithPassword({
-      email,
-      password,
+    const { error } = await this.client.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
     });
 
     if (error) {
-      console.error("Supabase 로그인 실패:", error);
+      console.error("Supabase 세션 설정 실패:", error);
       throw error;
     }
 
-    return data;
+    console.log("✅ Supabase 세션이 설정되었습니다.");
   }
 
   /**

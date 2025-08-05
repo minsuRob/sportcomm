@@ -120,7 +120,7 @@ export const TOGGLE_LIKE = gql`
 
 /**
  * Logs in a user.
- * Returns an access token and user information upon successful authentication.
+ * Returns an access token, user information, and Supabase session upon successful authentication.
  */
 export const LOGIN_MUTATION = gql`
   mutation Login($input: LoginInput!) {
@@ -141,6 +141,12 @@ export const LOGIN_MUTATION = gql`
           }
         }
       }
+      supabaseSession {
+        access_token
+        refresh_token
+        user_id
+        user_email
+      }
     }
   }
 `;
@@ -148,7 +154,7 @@ export const LOGIN_MUTATION = gql`
 /**
  * Registers a new user.
  * Requires email, nickname, and password.
- * Returns an access token and user information upon successful registration.
+ * Returns an access token, user information, and Supabase session upon successful registration.
  */
 export const REGISTER_MUTATION = gql`
   mutation Register($input: RegisterInput!) {
@@ -168,6 +174,12 @@ export const REGISTER_MUTATION = gql`
             logoUrl
           }
         }
+      }
+      supabaseSession {
+        access_token
+        refresh_token
+        user_id
+        user_email
       }
     }
   }

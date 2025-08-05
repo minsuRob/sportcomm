@@ -103,6 +103,24 @@ export class UpdateProfileInput {
 }
 
 /**
+ * Supabase 세션 정보 타입
+ */
+@ObjectType()
+export class SupabaseSessionType {
+  @Field(() => String, { description: 'Supabase 액세스 토큰' })
+  access_token: string;
+
+  @Field(() => String, { description: 'Supabase 리프레시 토큰' })
+  refresh_token: string;
+
+  @Field(() => String, { description: 'Supabase 사용자 ID' })
+  user_id: string;
+
+  @Field(() => String, { description: 'Supabase 사용자 이메일' })
+  user_email: string;
+}
+
+/**
  * 인증 응답 타입
  */
 @ObjectType()
@@ -110,11 +128,17 @@ export class AuthResponseType {
   @Field(() => User, { description: '사용자 정보' })
   user: User;
 
-  @Field(() => String, { description: '액세스 토큰' })
+  @Field(() => String, { description: '액세스 토큰 (NestJS JWT)' })
   accessToken: string;
 
   @Field(() => String, { description: '토큰 만료 시간' })
   expiresIn: string;
+
+  @Field(() => SupabaseSessionType, {
+    nullable: true,
+    description: 'Supabase 세션 정보 (채팅용)',
+  })
+  supabaseSession?: SupabaseSessionType;
 }
 
 /**
@@ -166,6 +190,14 @@ export class AuthResolver {
       user: result.user,
       accessToken: result.accessToken,
       expiresIn: result.expiresIn,
+      supabaseSession: result.supabaseSession
+        ? {
+            access_token: result.supabaseSession.access_token,
+            refresh_token: result.supabaseSession.refresh_token,
+            user_id: result.supabaseSession.user?.id,
+            user_email: result.supabaseSession.user?.email,
+          }
+        : undefined,
     };
   }
 
@@ -184,6 +216,14 @@ export class AuthResolver {
       user: result.user,
       accessToken: result.accessToken,
       expiresIn: result.expiresIn,
+      supabaseSession: result.supabaseSession
+        ? {
+            access_token: result.supabaseSession.access_token,
+            refresh_token: result.supabaseSession.refresh_token,
+            user_id: result.supabaseSession.user?.id,
+            user_email: result.supabaseSession.user?.email,
+          }
+        : undefined,
     };
   }
 

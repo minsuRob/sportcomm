@@ -3,8 +3,9 @@ import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useMutation } from "@apollo/client";
 import { Button } from "./ui/button";
 import { Ionicons } from "@expo/vector-icons";
-import { saveSession, getSession, User } from "../lib/auth";
+import { saveSession, getSession, User, SupabaseSession } from "../lib/auth";
 import { LOGIN_MUTATION, REGISTER_MUTATION } from "../lib/graphql";
+import { supabaseChatClient } from "../lib/supabase-chat";
 
 const SocialLogins = () => (
   <>
@@ -78,11 +79,12 @@ export default function AuthForm({
       const result = data?.[action];
 
       if (result) {
-        const { token, user } = result;
+        const { token, user, supabaseSession } = result;
         console.log("로그인/회원가입 성공:", {
           토큰있음: !!token,
           사용자: user,
           역할: user.role,
+          Supabase세션있음: !!supabaseSession,
         });
 
         // 역할 정보가 제대로 설정되어 있는지 확인
@@ -92,14 +94,32 @@ export default function AuthForm({
           console.log("사용자 역할:", user.role);
         }
 
-        await saveSession(token, user);
+        // 세션 저장 (NestJS 토큰 + 사용자 정보 + Supabase 세션)
+        await saveSession(token, user, supabaseSession);
+
+        // Supabase 채팅 클라이언트 초기화 및 세션 설정
+        if (supabaseSession) {
+          try {
+            await supabaseChatClient.initialize();
+            await supabaseChatClient.setSession(supabaseSession);
+            console.log("✅ Supabase 채팅 클라이언트 초기화 완료");
+          } catch (error) {
+            console.error("Supabase 채팅 클라이언트 초기화 실패:", error);
+            // 채팅 기능 실패해도 로그인은 성공으로 처리
+          }
+        }
 
         // 토큰 및 사용자 정보 저장 확인을 위한 로그
-        const { token: savedToken, user: savedUser } = await getSession();
+        const {
+          token: savedToken,
+          user: savedUser,
+          supabaseSession: savedSupabaseSession,
+        } = await getSession();
         console.log("저장된 세션 확인:", {
           토큰저장됨: !!savedToken,
           사용자정보: savedUser,
           역할: savedUser?.role,
+          Supabase세션저장됨: !!savedSupabaseSession,
         });
 
         onLoginSuccess(user);

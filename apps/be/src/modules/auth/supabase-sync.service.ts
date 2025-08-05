@@ -63,12 +63,15 @@ export class SupabaseSyncService {
    *
    * @param user - 로컬 DB의 사용자 정보
    * @param password - 사용자 비밀번호 (Supabase Auth용)
-   * @returns Supabase 사용자 ID
+   * @returns Supabase 사용자 정보 및 세션
    */
   async createUserInSupabase(
     user: User,
     password: string,
-  ): Promise<string | null> {
+  ): Promise<{
+    supabaseUserId: string;
+    session: any;
+  } | null> {
     if (!this.supabase) {
       this.logger.warn('Supabase 클라이언트가 초기화되지 않았습니다.');
       return null;
@@ -126,7 +129,12 @@ export class SupabaseSyncService {
       this.logger.log(
         `사용자 ${user.nickname}의 Supabase 동기화 완료: ${supabaseUserId}`,
       );
-      return supabaseUserId;
+
+      // 세션 정보 반환
+      return {
+        supabaseUserId,
+        session: authData.session,
+      };
     } catch (error) {
       this.logger.error('Supabase 사용자 생성 중 오류 발생:', error);
       return null;
@@ -338,3 +346,109 @@ export class SupabaseSyncService {
     };
   }
 }
+
+  /**
+   * 기존 사용자의 Supabase 로그인 세션 생성
+   * 
+   * @param email - 사용자 이메일
+   * @param password - 사용자 비밀번호
+   * @returns Supabase 세션 정보
+   */
+  async signInWithSupabase(email: string, password: string): Promise<any | null> {
+    if (!this.supabase) {
+      this.logger.warn('Supabase 클라이언트가 초기화되지 않았습니다.');
+      return null;
+    }
+
+    try {
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        this.logger.error('Supabase 로그인 실패:', error);
+        return null;
+      }
+
+      return data.session;
+    } catch (error) {
+      this.logger.error('Supabase 로그인 중 오류 발생:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 사용자가 Supabase에 존재하는지 확인하고, 없으면 생성
+   * 
+   * @param user - 로컬 DB의 사용자 정보
+   * @param password - 사용자 비밀번호
+   * @returns Supabase 세션 정보
+   */
+  async ensureSupabaseUser(user: User, password: string): Promise<any | null> {
+    if (!this.supabase) {
+      return null;
+    }
+
+    try {
+      // 1. 먼저 로그인 시도
+      let session = await this.signInWithSupabase(user.email, password);
+      
+      if (session) {
+        // 로그인 성공 시 로컬 DB에 Supabase ID 업데이트 (없는 경우)
+        if (!user.supabaseUserId && session.user?.id) {
+          await this.userRepository.update(user.id, {
+            supabaseUserId: session.user.id,
+          });
+          
+          // profiles 테이블에도 정보 동기화
+          await this.syncUserProfile(session.user.id, user);
+        }
+        
+        return session;
+      }
+
+      // 2. 로그인 실패 시 사용자 생성 시도
+      this.logger.log(`Supabase에 사용자가 없어 새로 생성합니다: ${user.email}`);
+      const result = await this.createUserInSupabase(user, password);
+      
+      if (result) {
+        return result.session;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error('Supabase 사용자 확인/생성 중 오류 발생:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Supabase profiles 테이블에 사용자 정보 동기화
+   * 
+   * @param supabaseUserId - Supabase 사용자 ID
+   * @param user - 로컬 DB 사용자 정보
+   */
+  private async syncUserProfile(supabaseUserId: string, user: User): Promise<void> {
+    try {
+      const profileData = {
+        id: supabaseUserId,
+        nickname: user.nickname,
+        profile_image_url: user.profileImageUrl,
+        role: user.role,
+        is_active: user.isUserActive,
+      };
+
+      const { error } = await this.supabase
+        .from('profiles')
+        .upsert(profileData);
+
+      if (error) {
+        this.logger.error('Supabase 프로필 동기화 실패:', error);
+      } else {
+        this.logger.log(`Supabase 프로필 동기화 완료: ${user.nickname}`);
+      }
+    } catch (error) {
+      this.logger.error('Supabase 프로필 동기화 중 오류 발생:', error);
+    }
+  }

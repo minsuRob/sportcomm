@@ -190,3 +190,112 @@ const unsubscribe = supabaseChatClient.subscribeToMessages(
 ---
 
 **커밋 메시지**: `feat: Supabase 연동으로 채팅 및 실시간 기능 구현`
+
+## 🔗 새로운 통신 흐름 (업데이트됨)
+
+### 인증 흐름
+
+1. **FE**: 사용자가 로그인/회원가입 요청 → NestJS GraphQL API
+2. **BE**: 로컬 DB에서 사용자 인증 → Supabase에 사용자 동기화 → 두 토큰 반환
+   - NestJS JWT (주요 API 인증용)
+   - Supabase Session (채팅/실시간 기능용)
+3. **FE**: 두 토큰 모두 저장 → Supabase 채팅 클라이언트 초기화
+
+### 기능별 통신 흐름
+
+- **게시글, 댓글, 팔로우 등**: FE → NestJS API → 로컬 PostgreSQL
+- **채팅 메시지**: FE → Supabase Realtime → chat_messages 테이블
+- **실시간 알림**: Supabase Realtime 구독
+- **사용자 프로필 동기화**: NestJS → 로컬 DB + Supabase profiles 테이블
+
+### 📌 구현된 주요 특징
+
+#### ✅ 이중 인증 시스템
+
+- **NestJS JWT**: 주요 비즈니스 로직 API 인증
+- **Supabase Session**: 채팅 및 실시간 기능 전용
+
+#### ✅ 자동 사용자 동기화
+
+- 회원가입/로그인 시 Supabase에 자동 동기화
+- 프로필 업데이트 시 양방향 동기화
+- 기존 사용자 마이그레이션 지원
+
+#### ✅ 세션 관리
+
+- 앱 시작 시 저장된 세션 자동 복원
+- Supabase 토큰 만료 시 자동 새로고침
+- 로그아웃 시 모든 세션 정리
+
+#### ✅ 채팅 기능 분리
+
+- 채팅 실패 시에도 메인 기능 정상 동작
+- 독립적인 채팅 클라이언트 관리
+- 실시간 메시지 구독/발송
+
+## 🚀 사용 방법
+
+### 1. 프론트엔드에서 인증 사용
+
+```typescript
+// AuthForm.tsx에서 이미 구현됨
+import { useAuth } from '../hooks/useAuth';
+
+const MyComponent = () => {
+  const { isAuthenticated, user, hasChatAccess, login, logout } = useAuth();
+
+  if (!isAuthenticated) {
+    return <AuthForm onLoginSuccess={login} />;
+  }
+
+  return (
+    <View>
+      <Text>환영합니다, {user?.nickname}님!</Text>
+      {hasChatAccess ? (
+        <Text>채팅 기능 사용 가능</Text>
+      ) : (
+        <Text>채팅 기능 사용 불가</Text>
+      )}
+    </View>
+  );
+};
+```
+
+### 2. 채팅 기능 사용
+
+```typescript
+import { supabaseChatClient } from "../lib/supabase-chat";
+
+// 채팅방 목록 조회
+const rooms = await supabaseChatClient.getChatRooms(userId);
+
+// 메시지 전송
+await supabaseChatClient.sendMessage(roomId, "안녕하세요!");
+
+// 실시간 메시지 구독
+const unsubscribe = supabaseChatClient.subscribeToMessages(
+  roomId,
+  (message) => {
+    console.log("새 메시지:", message);
+  }
+);
+```
+
+### 3. 관리자 기능 (백엔드)
+
+```graphql
+# 동기화 통계 조회
+query {
+  getSupabaseSyncStats {
+    totalUsers
+    syncedUsers
+    unsyncedUsers
+    supabaseConnected
+  }
+}
+
+# 사용자 동기화
+mutation {
+  syncUserWithSupabase(userId: "user-id")
+}
+```

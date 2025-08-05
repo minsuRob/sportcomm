@@ -42,10 +42,19 @@ export interface LoginInput {
 export interface AuthResponse {
   /** 사용자 정보 */
   user: User;
-  /** 액세스 토큰 */
+  /** 액세스 토큰 (NestJS JWT) */
   accessToken: string;
   /** 토큰 만료 시간 */
   expiresIn: string;
+  /** Supabase 세션 정보 (채팅용) */
+  supabaseSession?: {
+    access_token: string;
+    refresh_token: string;
+    user: {
+      id: string;
+      email: string;
+    };
+  };
 }
 
 /**
@@ -121,14 +130,6 @@ export class AuthService {
     // 데이터베이스에 저장
     const savedUser = await this.userRepository.save(user);
 
-    // Supabase에 사용자 동기화 (비동기로 처리하여 회원가입 속도 향상)
-    this.supabaseSyncService
-      .createUserInSupabase(savedUser, password)
-      .catch((error) => {
-        console.error('Supabase 사용자 동기화 실패:', error);
-        // 실패해도 회원가입은 성공으로 처리 (로컬 DB가 우선)
-      });
-
     // 비밀번호 제거
     savedUser.password = undefined;
 
@@ -136,10 +137,26 @@ export class AuthService {
     const accessToken = this.generateAccessToken(savedUser);
     const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '7d');
 
+    // Supabase에 사용자 생성 및 세션 획득
+    let supabaseSession = null;
+    try {
+      const result = await this.supabaseSyncService.createUserInSupabase(
+        savedUser,
+        password,
+      );
+      if (result) {
+        supabaseSession = result.session;
+      }
+    } catch (error) {
+      console.error('Supabase 사용자 동기화 실패:', error);
+      // 실패해도 회원가입은 성공으로 처리 (로컬 DB가 우선)
+    }
+
     return {
       user: savedUser,
       accessToken,
       expiresIn,
+      supabaseSession,
     };
   }
 
@@ -186,10 +203,23 @@ export class AuthService {
     const accessToken = this.generateAccessToken(user);
     const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '7d');
 
+    // Supabase 세션 획득 (채팅용)
+    let supabaseSession = null;
+    try {
+      supabaseSession = await this.supabaseSyncService.ensureSupabaseUser(
+        user,
+        password,
+      );
+    } catch (error) {
+      console.error('Supabase 세션 획득 실패:', error);
+      // 실패해도 로그인은 성공으로 처리 (로컬 DB가 우선)
+    }
+
     return {
       user,
       accessToken,
       expiresIn,
+      supabaseSession,
     };
   }
 

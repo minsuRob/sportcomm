@@ -18,28 +18,29 @@ import PostContextMenu from "./PostContextMenu";
  * 팀 ID별 스타일 매핑
  * 각 팀마다 색상, 표시 텍스트, 아이콘을 정의합니다.
  */
-const TeamInfo: Record<string, { color: string; text: string; icon: string }> = {
-  // 축구팀
-  "tottenham-id": { color: "#132257", text: "토트넘", icon: "⚽" },
-  "newcastle-id": { color: "#241F20", text: "뉴캐슬", icon: "⚽" },
-  "atletico-id": { color: "#CE2029", text: "아틀레티코", icon: "⚽" },
-  "mancity-id": { color: "#6CABDD", text: "맨시티", icon: "⚽" },
-  "liverpool-id": { color: "#C8102E", text: "리버풀", icon: "⚽" },
+const TeamInfo: Record<string, { color: string; text: string; icon: string }> =
+  {
+    // 축구팀
+    "tottenham-id": { color: "#132257", text: "토트넘", icon: "⚽" },
+    "newcastle-id": { color: "#241F20", text: "뉴캐슬", icon: "⚽" },
+    "atletico-id": { color: "#CE2029", text: "아틀레티코", icon: "⚽" },
+    "mancity-id": { color: "#6CABDD", text: "맨시티", icon: "⚽" },
+    "liverpool-id": { color: "#C8102E", text: "리버풀", icon: "⚽" },
 
-  // 야구팀
-  "doosan-id": { color: "#131230", text: "두산", icon: "⚾" },
-  "hanwha-id": { color: "#FF6600", text: "한화", icon: "⚾" },
-  "lg-id": { color: "#C30452", text: "LG", icon: "⚾" },
-  "samsung-id": { color: "#074CA1", text: "삼성", icon: "⚾" },
-  "kia-id": { color: "#EA0029", text: "KIA", icon: "⚾" },
+    // 야구팀
+    "doosan-id": { color: "#131230", text: "두산", icon: "⚾" },
+    "hanwha-id": { color: "#FF6600", text: "한화", icon: "⚾" },
+    "lg-id": { color: "#C30452", text: "LG", icon: "⚾" },
+    "samsung-id": { color: "#074CA1", text: "삼성", icon: "⚾" },
+    "kia-id": { color: "#EA0029", text: "KIA", icon: "⚾" },
 
-  // e스포츠팀
-  "t1-id": { color: "#E2012D", text: "T1", icon: "🎮" },
-  "geng-id": { color: "#AA8B56", text: "Gen.G", icon: "🎮" },
-  "drx-id": { color: "#2E5BFF", text: "DRX", icon: "🎮" },
-  "kt-id": { color: "#D4002A", text: "KT", icon: "🎮" },
-  "damwon-id": { color: "#004B9F", text: "담원", icon: "🎮" },
-};
+    // e스포츠팀
+    "t1-id": { color: "#E2012D", text: "T1", icon: "🎮" },
+    "geng-id": { color: "#AA8B56", text: "Gen.G", icon: "🎮" },
+    "drx-id": { color: "#2E5BFF", text: "DRX", icon: "🎮" },
+    "kt-id": { color: "#D4002A", text: "KT", icon: "🎮" },
+    "damwon-id": { color: "#004B9F", text: "담원", icon: "🎮" },
+  };
 
 interface PostHeaderProps {
   post: {

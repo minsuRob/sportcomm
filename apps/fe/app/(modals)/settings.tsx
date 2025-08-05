@@ -58,20 +58,20 @@ export default function SettingsScreen() {
       await clearSession();
       setCurrentUser(null);
       Toast.show({
-        type: 'success',
-        text1: '로그아웃 성공',
-        text2: '로그아웃이 완료되었습니다.',
-        position: 'bottom',
+        type: "success",
+        text1: "로그아웃 성공",
+        text2: "로그아웃이 완료되었습니다.",
+        position: "bottom",
       });
       // 피드 화면으로 이동
-      router.push('/feed');
+      router.push("/feed");
     } catch (error) {
-      console.error('로그아웃 중 오류 발생:', error);
+      console.error("로그아웃 중 오류 발생:", error);
       Toast.show({
-        type: 'error',
-        text1: '로그아웃 실패',
-        text2: '로그아웃 처리 중 오류가 발생했습니다.',
-        position: 'bottom',
+        type: "error",
+        text1: "로그아웃 실패",
+        text2: "로그아웃 처리 중 오류가 발생했습니다.",
+        position: "bottom",
       });
     }
   };

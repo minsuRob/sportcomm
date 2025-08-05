@@ -12,7 +12,8 @@
     "dev:web": "expo start -c --web",
     "ios": "expo start -c --ios",
     "postinstall": "npx tailwindcss -i ./global.css -o ./node_modules/.cache/nativewind/global.css",
-    "web": "expo start -c --web"
+    "web": "expo start -c --web",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",

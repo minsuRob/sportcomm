@@ -72,7 +72,7 @@ export default function AdminChatRoomsScreen() {
       variables: { page, limit: 20 },
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    }
+    },
   );
 
   const [createChatRoom, { loading: createLoading }] = useMutation(
@@ -100,7 +100,7 @@ export default function AdminChatRoomsScreen() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   const [updateChatRoom, { loading: updateLoading }] = useMutation(
@@ -129,7 +129,7 @@ export default function AdminChatRoomsScreen() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   const [deleteChatRoom] = useMutation(DELETE_CHAT_ROOM, {
@@ -255,7 +255,7 @@ export default function AdminChatRoomsScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -355,7 +355,7 @@ export default function AdminChatRoomsScreen() {
             <Text style={themed($statNumber)}>
               {chatRooms.reduce(
                 (sum, room) => sum + room.currentParticipants,
-                0
+                0,
               )}
             </Text>
             <Text style={themed($statLabel)}>총 참여자</Text>

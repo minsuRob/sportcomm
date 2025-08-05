@@ -54,7 +54,7 @@ export default function AdminFeedbacksScreen() {
   const [feedbacks, setFeedbacks] = useState<FeedbackInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackInfo | null>(
-    null
+    null,
   );
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [adminResponse, setAdminResponse] = useState("");
@@ -182,7 +182,7 @@ export default function AdminFeedbacksScreen() {
   // 피드백 응답 핸들러
   const handleRespondToFeedback = async (
     feedbackId: string,
-    response: string
+    response: string,
   ) => {
     try {
       // TODO: GraphQL 뮤테이션으로 피드백 응답
@@ -479,7 +479,7 @@ export default function AdminFeedbacksScreen() {
           <Text style={themed($statNumber)}>
             {
               feedbacks.filter(
-                (f) => f.priority === "URGENT" || f.priority === "HIGH"
+                (f) => f.priority === "URGENT" || f.priority === "HIGH",
               ).length
             }
           </Text>
@@ -781,7 +781,7 @@ export default function AdminFeedbacksScreen() {
                             {getFeedbackStatusDisplay(status).label}
                           </Text>
                         </TouchableOpacity>
-                      )
+                      ),
                     )}
                   </View>
                 </View>

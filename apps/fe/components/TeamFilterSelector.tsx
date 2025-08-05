@@ -47,7 +47,7 @@ export default function TeamFilterSelector({
     GET_MY_TEAMS,
     {
       fetchPolicy: "cache-and-network",
-    }
+    },
   );
 
   // 선택된 팀 정보 업데이트

@@ -157,7 +157,7 @@ export default function ChatList({
    * 메시지를 ChatMessage 컴포넌트 형식으로 변환
    */
   const convertToChatMessage = (
-    message: MessageWithIsMe
+    message: MessageWithIsMe,
   ): ChatMessageType & { isMe: boolean } => {
     return {
       id: message.id,

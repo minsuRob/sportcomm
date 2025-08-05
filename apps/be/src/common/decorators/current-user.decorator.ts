@@ -1,4 +1,8 @@
-import { createParamDecorator, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  createParamDecorator,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { User } from '../../entities/user.entity';
 
@@ -27,7 +31,9 @@ export const CurrentUser = createParamDecorator(
 
     // 사용자 정보가 없는 경우 에러 발생
     if (!user) {
-      throw new UnauthorizedException('인증되지 않은 사용자입니다. 로그인이 필요합니다.');
+      throw new UnauthorizedException(
+        '인증되지 않은 사용자입니다. 로그인이 필요합니다.',
+      );
     }
 
     // 특정 속성만 반환하는 경우
@@ -67,7 +73,9 @@ export const CurrentUserId = createParamDecorator(
 
     const user = request.user;
     if (!user) {
-      throw new UnauthorizedException('인증되지 않은 사용자입니다. 로그인이 필요합니다.');
+      throw new UnauthorizedException(
+        '인증되지 않은 사용자입니다. 로그인이 필요합니다.',
+      );
     }
 
     if (!user.id) {
@@ -104,7 +112,9 @@ export const CurrentUserRole = createParamDecorator(
 
     const user = request.user;
     if (!user) {
-      throw new UnauthorizedException('인증되지 않은 사용자입니다. 로그인이 필요합니다.');
+      throw new UnauthorizedException(
+        '인증되지 않은 사용자입니다. 로그인이 필요합니다.',
+      );
     }
 
     if (!user.role) {

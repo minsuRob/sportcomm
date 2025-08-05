@@ -96,7 +96,10 @@ export default function ProfileScreen() {
   useEffect(() => {
     const loadUserProfile = async () => {
       const { user } = await getSession();
-      console.log("세션에서 불러온 사용자 정보:", JSON.stringify(user, null, 2));
+      console.log(
+        "세션에서 불러온 사용자 정보:",
+        JSON.stringify(user, null, 2),
+      );
       if (user) setCurrentUser(user);
     };
     loadUserProfile();
@@ -119,7 +122,10 @@ export default function ProfileScreen() {
         ...currentUser,
         ...profileData.getUserById,
       };
-      console.log("업데이트된 사용자 정보:", JSON.stringify(updatedUser, null, 2));
+      console.log(
+        "업데이트된 사용자 정보:",
+        JSON.stringify(updatedUser, null, 2),
+      );
 
       // 세션 업데이트
       saveSession(updatedUser);
@@ -199,7 +205,10 @@ export default function ProfileScreen() {
       ? "아직 작성한 게시물이 없습니다"
       : "아직 북마크한 게시물이 없습니다";
   };
-  console.log("ProfileScreen - currentUser:", JSON.stringify(currentUser, null, 2));
+  console.log(
+    "ProfileScreen - currentUser:",
+    JSON.stringify(currentUser, null, 2),
+  );
 
   if (!currentUser) {
     return (
@@ -224,7 +233,12 @@ export default function ProfileScreen() {
     postCount: 0,
   };
 
-  console.log("현재 역할:", currentUser?.role, "사용자 프로필 역할:", userProfile?.role);
+  console.log(
+    "현재 역할:",
+    currentUser?.role,
+    "사용자 프로필 역할:",
+    userProfile?.role,
+  );
 
   const avatarUrl =
     userProfile.profileImageUrl ||

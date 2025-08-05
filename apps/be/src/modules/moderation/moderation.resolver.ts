@@ -19,7 +19,10 @@ import {
   GqlAuthGuard,
   OptionalGqlAuthGuard,
 } from '../../common/guards/gql-auth.guard';
-import { CurrentUser, OptionalCurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  OptionalCurrentUser,
+} from '../../common/decorators/current-user.decorator';
 
 /**
  * 신고 생성 입력 타입
@@ -133,7 +136,9 @@ export class ModerationResolver {
    */
   @UseGuards(OptionalGqlAuthGuard)
   @Query(() => [String], { description: '차단된 사용자 목록 조회' })
-  async getBlockedUsers(@OptionalCurrentUser() user: User | null): Promise<string[]> {
+  async getBlockedUsers(
+    @OptionalCurrentUser() user: User | null,
+  ): Promise<string[]> {
     // 인증되지 않은 사용자는 빈 배열 반환
     if (!user || !user.id) {
       return [];
@@ -144,8 +149,12 @@ export class ModerationResolver {
       return await this.moderationService.getBlockedUserIds(user.id);
     } catch (error) {
       // 에러 로깅 및 빈 배열 반환
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`차단된 사용자 목록 조회 오류 (사용자 ID: ${user.id}):`, errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        `차단된 사용자 목록 조회 오류 (사용자 ID: ${user.id}):`,
+        errorMessage,
+      );
       // 오류 발생 시에도 클라이언트에 빈 배열 반환하여 UX 유지
       return [];
     }

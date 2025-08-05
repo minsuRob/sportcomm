@@ -99,7 +99,7 @@ export default function AuthForm({
         console.log("저장된 세션 확인:", {
           토큰저장됨: !!savedToken,
           사용자정보: savedUser,
-          역할: savedUser?.role
+          역할: savedUser?.role,
         });
 
         onLoginSuccess(user);

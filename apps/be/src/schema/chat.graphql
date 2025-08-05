@@ -168,7 +168,9 @@ extend type Mutation {
   """
   채널 멤버 추가
   """
-  addChatChannelMembers(input: AddChannelMembersInput!): AddChannelMembersPayload!
+  addChatChannelMembers(
+    input: AddChannelMembersInput!
+  ): AddChannelMembersPayload!
 
   """
   채널 멤버 제거

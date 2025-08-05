@@ -34,7 +34,7 @@ async function bootstrap() {
     const httpAdapterHost = app.get(HttpAdapterHost);
     app.useGlobalFilters(
       new GraphQLExceptionFilter(), // GraphQL 전용 필터를 먼저 등록
-      new GlobalExceptionFilter(httpAdapterHost) // HTTP 전용 필터를 나중에 등록
+      new GlobalExceptionFilter(httpAdapterHost), // HTTP 전용 필터를 나중에 등록
     );
     Logger.log('전역 예외 필터가 등록되었습니다', 'Bootstrap');
 

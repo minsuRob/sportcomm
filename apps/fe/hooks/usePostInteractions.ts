@@ -75,7 +75,7 @@ export function usePostInteractions({
       // 개발 환경에서만 디버깅 로그
       if (process.env.NODE_ENV === "development") {
         console.log(
-          `[DEBUG] usePostInteractions 초기화 - isLiked: ${initialIsLiked}, isBookmarked: ${initialIsBookmarked}`
+          `[DEBUG] usePostInteractions 초기화 - isLiked: ${initialIsLiked}, isBookmarked: ${initialIsBookmarked}`,
         );
       }
     }
@@ -180,14 +180,14 @@ export function usePostInteractions({
         // 개발 환경에서만 디버깅 로그
         if (process.env.NODE_ENV === "development") {
           console.log(
-            `[DEBUG] 좋아요 응답 - postId: ${postId}, likeSuccessful: ${likeSuccessful}, 예상값: ${newLikedStatus}`
+            `[DEBUG] 좋아요 응답 - postId: ${postId}, likeSuccessful: ${likeSuccessful}, 예상값: ${newLikedStatus}`,
           );
         }
 
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(
-            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
           );
         }
       })

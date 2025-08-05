@@ -97,7 +97,7 @@ export default function AdminReportsScreen() {
       variables: { page, limit: 20 },
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    }
+    },
   );
 
   const [updateReportStatus, { loading: updateLoading }] = useMutation(
@@ -127,7 +127,7 @@ export default function AdminReportsScreen() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   // 데이터 처리
@@ -136,7 +136,7 @@ export default function AdminReportsScreen() {
 
   // 필터링된 신고 목록
   const filteredReports = reports.filter((report) =>
-    statusFilter === "ALL" ? true : report.status === statusFilter
+    statusFilter === "ALL" ? true : report.status === statusFilter,
   );
 
   // 에러 처리
@@ -163,7 +163,7 @@ export default function AdminReportsScreen() {
   // 신고 상태 업데이트 핸들러
   const handleUpdateReportStatus = async (
     status: ReportStatus,
-    note?: string
+    note?: string,
   ) => {
     if (!selectedReport) return;
 

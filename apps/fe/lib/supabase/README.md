@@ -96,7 +96,7 @@ chat_messages (
 
 ```typescript
 // .env
-USE_SUPABASE=false
+USE_SUPABASE = false;
 
 // 자동으로 임시 데이터 사용
 const chatService = new ChatService();
@@ -121,28 +121,25 @@ console.log(chatService.getDataSourceType()); // "supabase"
 ### 기본 사용법
 
 ```typescript
-import { chatService } from '@/lib/chat/chatService';
+import { chatService } from "@/lib/chat/chatService";
 
 // 채팅방 목록 조회
 const channels = await chatService.getUserChatRooms();
 
 // 메시지 조회
-const messages = await chatService.getChatMessages('channel-id');
+const messages = await chatService.getChatMessages("channel-id");
 
 // 메시지 전송
 const newMessage = await chatService.sendMessage(
-  'channel-id',
-  '안녕하세요!',
-  currentUser
+  "channel-id",
+  "안녕하세요!",
+  currentUser,
 );
 
 // 실시간 구독
-const unsubscribe = chatService.subscribeToMessages(
-  'channel-id',
-  (message) => {
-    console.log('새 메시지:', message);
-  }
-);
+const unsubscribe = chatService.subscribeToMessages("channel-id", (message) => {
+  console.log("새 메시지:", message);
+});
 
 // 구독 해제
 unsubscribe();
@@ -153,21 +150,21 @@ unsubscribe();
 ```typescript
 // 채팅방 생성
 const newChannel = await chatService.createChatChannel(
-  '새 채팅방',
-  '채팅방 설명',
+  "새 채팅방",
+  "채팅방 설명",
   false, // 공개 채팅방
-  'GENERAL',
-  100 // 최대 100명
+  "GENERAL",
+  100, // 최대 100명
 );
 
 // 채팅방 참여
-const success = await chatService.joinChatChannel('channel-id');
+const success = await chatService.joinChatChannel("channel-id");
 
 // 채팅방 나가기
-const left = await chatService.leaveChatChannel('channel-id');
+const left = await chatService.leaveChatChannel("channel-id");
 
 // 읽음 처리
-await chatService.markChannelAsRead('channel-id');
+await chatService.markChannelAsRead("channel-id");
 ```
 
 ### 실시간 기능
@@ -180,8 +177,8 @@ useEffect(() => {
   const unsubscribe = chatService.subscribeToMessages(
     channelId,
     (newMessage) => {
-      setMessages(prev => [...prev, newMessage]);
-    }
+      setMessages((prev) => [...prev, newMessage]);
+    },
   );
 
   return () => {
@@ -196,27 +193,27 @@ useEffect(() => {
 
 #### 메서드
 
-| 메서드 | 설명 | 반환 타입 |
-|--------|------|-----------|
-| `getUserChatRooms()` | 사용자 채팅방 목록 조회 | `Promise<ChannelInfo[]>` |
-| `getPublicChatRooms(page, limit)` | 공개 채팅방 목록 조회 | `Promise<PaginatedChannels>` |
-| `getChatMessages(channelId, limit?, before?)` | 채팅방 메시지 조회 | `Promise<Message[]>` |
-| `sendMessage(channelId, content, user, replyToId?)` | 메시지 전송 | `Promise<Message \| null>` |
-| `createChatChannel(name, description?, isPrivate?, type?, maxParticipants?)` | 채팅방 생성 | `Promise<ChannelInfo \| null>` |
-| `joinChatChannel(channelId)` | 채팅방 참여 | `Promise<boolean>` |
-| `leaveChatChannel(channelId)` | 채팅방 나가기 | `Promise<boolean>` |
-| `markChannelAsRead(channelId)` | 읽음 처리 | `Promise<boolean>` |
-| `subscribeToMessages(channelId, onMessage)` | 실시간 구독 | `() => void` |
-| `cleanup()` | 모든 구독 해제 | `void` |
+| 메서드                                                                       | 설명                    | 반환 타입                      |
+| ---------------------------------------------------------------------------- | ----------------------- | ------------------------------ |
+| `getUserChatRooms()`                                                         | 사용자 채팅방 목록 조회 | `Promise<ChannelInfo[]>`       |
+| `getPublicChatRooms(page, limit)`                                            | 공개 채팅방 목록 조회   | `Promise<PaginatedChannels>`   |
+| `getChatMessages(channelId, limit?, before?)`                                | 채팅방 메시지 조회      | `Promise<Message[]>`           |
+| `sendMessage(channelId, content, user, replyToId?)`                          | 메시지 전송             | `Promise<Message \| null>`     |
+| `createChatChannel(name, description?, isPrivate?, type?, maxParticipants?)` | 채팅방 생성             | `Promise<ChannelInfo \| null>` |
+| `joinChatChannel(channelId)`                                                 | 채팅방 참여             | `Promise<boolean>`             |
+| `leaveChatChannel(channelId)`                                                | 채팅방 나가기           | `Promise<boolean>`             |
+| `markChannelAsRead(channelId)`                                               | 읽음 처리               | `Promise<boolean>`             |
+| `subscribeToMessages(channelId, onMessage)`                                  | 실시간 구독             | `() => void`                   |
+| `cleanup()`                                                                  | 모든 구독 해제          | `void`                         |
 
 #### 유틸리티 메서드
 
-| 메서드 | 설명 | 반환 타입 |
-|--------|------|-----------|
-| `isConnected()` | 연결 상태 확인 | `boolean` |
-| `getDataSourceType()` | 현재 데이터 소스 타입 | `"supabase" \| "mock"` |
-| `switchToSupabase()` | Supabase로 전환 (개발용) | `void` |
-| `switchToMock()` | Mock 데이터로 전환 (개발용) | `void` |
+| 메서드                | 설명                        | 반환 타입              |
+| --------------------- | --------------------------- | ---------------------- |
+| `isConnected()`       | 연결 상태 확인              | `boolean`              |
+| `getDataSourceType()` | 현재 데이터 소스 타입       | `"supabase" \| "mock"` |
+| `switchToSupabase()`  | Supabase로 전환 (개발용)    | `void`                 |
+| `switchToMock()`      | Mock 데이터로 전환 (개발용) | `void`                 |
 
 ### 타입 정의
 
@@ -268,6 +265,7 @@ interface Message {
 ```
 
 **해결 방법:**
+
 - `.env` 파일의 `SUPABASE_URL`과 `SUPABASE_ANON_KEY` 확인
 - Supabase 대시보드에서 API 키 재확인
 - 네트워크 연결 상태 확인
@@ -279,6 +277,7 @@ interface Message {
 ```
 
 **해결 방법:**
+
 - Supabase 프로젝트에서 Realtime 기능 활성화 확인
 - RLS 정책이 올바르게 설정되었는지 확인
 - 사용자 인증 상태 확인
@@ -290,6 +289,7 @@ interface Message {
 ```
 
 **해결 방법:**
+
 - 사용자가 해당 채팅방의 멤버인지 확인
 - RLS 정책이 올바르게 적용되었는지 확인
 - 데이터베이스 스키마 재실행
@@ -298,10 +298,10 @@ interface Message {
 
 ```typescript
 // 현재 데이터 소스 확인
-console.log('Data Source:', chatService.getDataSourceType());
+console.log("Data Source:", chatService.getDataSourceType());
 
 // 연결 상태 확인
-console.log('Connected:', chatService.isConnected());
+console.log("Connected:", chatService.isConnected());
 
 // Mock 데이터로 임시 전환 (개발용)
 chatService.switchToMock();

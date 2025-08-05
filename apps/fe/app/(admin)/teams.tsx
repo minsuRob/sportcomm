@@ -71,7 +71,7 @@ export default function AdminTeamsScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamInfo | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   // GraphQL 쿼리 및 뮤테이션
@@ -80,7 +80,7 @@ export default function AdminTeamsScreen() {
     {
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    }
+    },
   );
 
   const [createTeam, { loading: createLoading }] = useMutation(CREATE_TEAM, {
@@ -188,7 +188,7 @@ export default function AdminTeamsScreen() {
   const categories = data?.adminGetTeamsByCategory || [];
   const totalTeams = categories.reduce(
     (sum, category) => sum + category.teams.length,
-    0
+    0,
   );
 
   // 에러 처리
@@ -294,7 +294,7 @@ export default function AdminTeamsScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -399,7 +399,7 @@ export default function AdminTeamsScreen() {
               {categories.reduce(
                 (sum, category) =>
                   sum + category.teams.filter((team) => team.isActive).length,
-                0
+                0,
               )}
             </Text>
             <Text style={themed($statLabel)}>활성 팀</Text>

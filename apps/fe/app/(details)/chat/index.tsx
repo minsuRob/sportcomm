@@ -91,7 +91,7 @@ export default function ChatScreen() {
     {
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    }
+    },
   );
 
   // 관리자 채팅방 쿼리 (공개 채팅방만)

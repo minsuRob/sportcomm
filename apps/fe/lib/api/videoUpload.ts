@@ -77,7 +77,7 @@ export interface VideoCompressionOptions {
  */
 export async function compressVideoMobile(
   uri: string,
-  options: VideoCompressionOptions = {}
+  options: VideoCompressionOptions = {},
 ): Promise<SelectedVideo> {
   if (!isReactNative()) {
     throw new Error("이 함수는 모바일 환경에서만 사용할 수 있습니다.");
@@ -112,7 +112,7 @@ export async function compressVideoMobile(
       },
       (progress) => {
         console.log(`압축 진행률: ${progress}%`);
-      }
+      },
     );
 
     console.log(`동영상 압축 완료: ${compressedUri}`);
@@ -143,7 +143,7 @@ export async function compressVideoMobile(
  */
 export async function compressVideoWeb(
   file: File,
-  options: VideoCompressionOptions = {}
+  options: VideoCompressionOptions = {},
 ): Promise<File> {
   if (!isWeb()) {
     throw new Error("이 함수는 웹 환경에서만 사용할 수 있습니다.");
@@ -168,7 +168,7 @@ export async function compressVideoWeb(
  */
 export async function uploadVideos(
   videos: Array<SelectedVideo | File>,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<UploadedMedia[]> {
   try {
     // 동영상 유효성 검증
@@ -201,7 +201,7 @@ export async function uploadVideos(
         // 웹 환경 - File 객체
         formData.append("files", video, video.name);
         console.log(
-          `웹 환경 - 동영상 추가: ${video.name}, 크기: ${video.size}바이트`
+          `웹 환경 - 동영상 추가: ${video.name}, 크기: ${video.size}바이트`,
         );
       } else {
         // 모바일 환경 - SelectedVideo 객체
@@ -216,7 +216,7 @@ export async function uploadVideos(
         });
 
         console.log(
-          `모바일 환경 - 동영상 추가: ${fileName}, URI: ${video.uri.substring(0, 30)}...`
+          `모바일 환경 - 동영상 추가: ${fileName}, URI: ${video.uri.substring(0, 30)}...`,
         );
       }
     }
@@ -246,13 +246,13 @@ export async function uploadVideos(
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const response = JSON.parse(
-              xhr.responseText
+              xhr.responseText,
             ) as VideoUploadResponse;
             if (response.success) {
               console.log(
                 "동영상 업로드 성공:",
                 response.data.totalCount,
-                "개 파일"
+                "개 파일",
               );
               resolve(response.data.files);
             } else {
@@ -260,16 +260,16 @@ export async function uploadVideos(
                 new UploadError(
                   response.message || "업로드 실패",
                   xhr.status,
-                  response
-                )
+                  response,
+                ),
               );
             }
           } catch (parseError) {
             reject(
               new UploadError(
                 `응답 파싱 오류: ${parseError.message || "알 수 없는 오류"}`,
-                xhr.status
-              )
+                xhr.status,
+              ),
             );
           }
         } else {
@@ -326,7 +326,7 @@ export async function uploadVideos(
  */
 export async function uploadSingleVideo(
   video: SelectedVideo | File,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
 ): Promise<UploadedMedia> {
   const result = await uploadVideos([video], onProgress);
   if (result.length === 0) {
@@ -474,7 +474,7 @@ export function isValidVideoFile(file: File | SelectedVideo): boolean {
  */
 export async function generateVideoThumbnail(
   videoUri: string,
-  timeStamp: number = 1
+  timeStamp: number = 1,
 ): Promise<string> {
   if (!isReactNative()) {
     throw new Error("썸네일 생성은 모바일 환경에서만 지원됩니다.");

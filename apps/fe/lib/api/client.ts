@@ -39,53 +39,55 @@ const uploadLink = new HttpLink({
 /**
  * 에러 처리 링크
  */
-const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
-  if (graphQLErrors) {
-    graphQLErrors.forEach(({ message, locations, path, extensions }) => {
-      console.error(
-        `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`
-      );
+const errorLink = onError(
+  ({ graphQLErrors, networkError, operation, forward }) => {
+    if (graphQLErrors) {
+      graphQLErrors.forEach(({ message, locations, path, extensions }) => {
+        console.error(
+          `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`,
+        );
 
-      // 인증 오류 처리
-      if (
-        message.includes('Unauthorized') ||
-        message.includes('인증') ||
-        message.includes('로그인') ||
-        message.includes('token') ||
-        message.includes('logIn') ||
-        message.includes('access denied') ||
-        message.includes('Cannot read properties of undefined') ||
-        (extensions && extensions.code === 'UNAUTHENTICATED')
-      ) {
-        console.error('인증 오류 감지:', message, {
-          operation: operation.operationName,
-          path: path
-        });
-
-        // 인증 오류 발생 시 세션 체크 (디버깅용)
-        getSession().then(({ token, user }) => {
-          console.log("인증 오류 발생 시 세션 상태:", {
-            hasToken: !!token,
-            tokenLength: token?.length || 0,
-            hasUser: !!user,
-            userId: user?.id
+        // 인증 오류 처리
+        if (
+          message.includes("Unauthorized") ||
+          message.includes("인증") ||
+          message.includes("로그인") ||
+          message.includes("token") ||
+          message.includes("logIn") ||
+          message.includes("access denied") ||
+          message.includes("Cannot read properties of undefined") ||
+          (extensions && extensions.code === "UNAUTHENTICATED")
+        ) {
+          console.error("인증 오류 감지:", message, {
+            operation: operation.operationName,
+            path: path,
           });
-        });
 
-        // 여기서 필요하다면 세션 초기화 등의 작업 수행 가능
-        // clearSession().then(() => {...});
-      }
-    });
-  }
+          // 인증 오류 발생 시 세션 체크 (디버깅용)
+          getSession().then(({ token, user }) => {
+            console.log("인증 오류 발생 시 세션 상태:", {
+              hasToken: !!token,
+              tokenLength: token?.length || 0,
+              hasUser: !!user,
+              userId: user?.id,
+            });
+          });
 
-  if (networkError) {
-    console.error(`[네트워크 에러]: ${networkError}`, {
-      operationName: operation.operationName
-    });
-  }
+          // 여기서 필요하다면 세션 초기화 등의 작업 수행 가능
+          // clearSession().then(() => {...});
+        }
+      });
+    }
 
-  return forward(operation);
-});
+    if (networkError) {
+      console.error(`[네트워크 에러]: ${networkError}`, {
+        operationName: operation.operationName,
+      });
+    }
+
+    return forward(operation);
+  },
+);
 
 /**
  * 인증 링크
@@ -102,21 +104,25 @@ const authLink = setContext(async (operation, { headers }) => {
       tokenLength: token?.length || 0,
       hasUser: !!user,
       userId: user?.id,
-      isAuthenticated
+      isAuthenticated,
     });
 
     // 인증이 필요한 operation인지 확인
-    const requiresAuth = operation.operationName && [
-      'GetMyTeams',
-      'UpdateMyTeams',
-      'SelectTeam',
-      'UnselectTeam',
-      'GetMyPrimaryTeam'
-    ].includes(operation.operationName);
+    const requiresAuth =
+      operation.operationName &&
+      [
+        "GetMyTeams",
+        "UpdateMyTeams",
+        "SelectTeam",
+        "UnselectTeam",
+        "GetMyPrimaryTeam",
+      ].includes(operation.operationName);
 
     // 인증이 필요한데 토큰이 없으면 경고 로그
     if (requiresAuth && !isAuthenticated) {
-      console.warn(`인증이 필요한 작업(${operation.operationName})에 유효한 인증 정보가 없습니다.`);
+      console.warn(
+        `인증이 필요한 작업(${operation.operationName})에 유효한 인증 정보가 없습니다.`,
+      );
     }
 
     // 헤더에 토큰 추가
@@ -124,7 +130,7 @@ const authLink = setContext(async (operation, { headers }) => {
       headers: {
         ...headers,
         authorization: token ? `Bearer ${token}` : "",
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     };
   } catch (error) {
@@ -159,7 +165,7 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
             ? "File"
             : file.uri
               ? "ReactNativeFile"
-              : "알 수 없음"
+              : "알 수 없음",
         );
         console.log(`파일[${index}] 속성:`, Object.keys(file));
       });
@@ -218,17 +224,17 @@ export const client = new ApolloClient({
             read(existing) {
               console.log("myTeams 캐시 읽기:", { hasData: !!existing });
               return existing;
-            }
+            },
           },
           // sports 캐시 정책 설정
           sports: {
             merge(existing, incoming) {
               console.log("sports 캐시 병합:", {
                 hasExisting: !!existing,
-                incomingCount: incoming?.length
+                incomingCount: incoming?.length,
               });
               return incoming;
-            }
+            },
           },
           // posts 쿼리 필드에 대한 병합 정책 (페이지네이션 지원)
           posts: {
@@ -255,25 +261,28 @@ export const client = new ApolloClient({
               if (existing) return existing;
 
               // 없으면 team.id에서 가져옴
-              const team = readField('team');
+              const team = readField("team");
               if (!team) {
-                console.warn('UserTeam에 team 객체가 없음');
+                console.warn("UserTeam에 team 객체가 없음");
                 return null;
               }
 
-              const id = readField('id', team);
-              console.log('UserTeam에서 teamId 읽기:', { teamObject: !!team, id });
+              const id = readField("id", team);
+              console.log("UserTeam에서 teamId 읽기:", {
+                teamObject: !!team,
+                id,
+              });
               return id;
-            }
+            },
           },
           // 필요할 경우 team 필드 캐싱 정책도 설정
           team: {
             merge(existing, incoming) {
               return incoming || existing;
-            }
-          }
-        }
-      }
+            },
+          },
+        },
+      },
     },
   }),
   defaultOptions: {
@@ -296,21 +305,21 @@ export const client = new ApolloClient({
             console.log("뮤테이션 인증 컨텍스트 설정:", {
               hasToken: !!token,
               tokenLength: token?.length || 0,
-              isAuthenticated
+              isAuthenticated,
             });
 
             return {
               headers: {
                 authorization: token ? `Bearer ${token}` : "",
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
               },
             };
           } catch (error) {
             console.error("뮤테이션 인증 컨텍스트 설정 오류:", error);
             return { headers: {} };
           }
-        }
-      }
+        },
+      },
     },
   },
 });

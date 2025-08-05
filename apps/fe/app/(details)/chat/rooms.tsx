@@ -67,7 +67,7 @@ export default function ChatRoomsScreen() {
       variables: { page: 1, limit: 50 },
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    }
+    },
   );
 
   const [joinChatChannel, { loading: joinLoading }] = useMutation(
@@ -92,7 +92,7 @@ export default function ChatRoomsScreen() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   // 사용자 정보 로드
@@ -125,7 +125,7 @@ export default function ChatRoomsScreen() {
       room.isRoomActive &&
       (searchQuery === "" ||
         room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.description?.toLowerCase().includes(searchQuery.toLowerCase()))
+        room.description?.toLowerCase().includes(searchQuery.toLowerCase())),
   );
 
   // 채팅방 참여 핸들러 (임시로 자동 참여 기능 비활성화)

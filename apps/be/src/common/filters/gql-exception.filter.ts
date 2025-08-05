@@ -59,12 +59,16 @@ export class GraphQLExceptionFilter implements GqlExceptionFilter {
 
       // 개발 환경에서만 스택 트레이스 포함
       if (process.env.NODE_ENV === 'development') {
-        response.stack = exception.stack?.split('\n').map((line) => line.trim());
+        response.stack = exception.stack
+          ?.split('\n')
+          .map((line) => line.trim());
       }
 
       // 인증 관련 오류 처리
-      if (exception.message.includes('인증되지 않은 사용자입니다') ||
-          exception.message.includes('로그인이 필요합니다')) {
+      if (
+        exception.message.includes('인증되지 않은 사용자입니다') ||
+        exception.message.includes('로그인이 필요합니다')
+      ) {
         response.statusCode = HttpStatus.UNAUTHORIZED;
       }
     }
@@ -85,11 +89,10 @@ export class GraphQLExceptionFilter implements GqlExceptionFilter {
     const isAuthError =
       exception instanceof UnauthorizedException ||
       response.statusCode === HttpStatus.UNAUTHORIZED ||
-      (exception instanceof Error && (
-        exception.message.includes('인증되지 않은 사용자입니다') ||
-        exception.message.includes('로그인이 필요합니다') ||
-        exception.message.includes('이메일 또는 비밀번호가 잘못되었습니다')
-      ));
+      (exception instanceof Error &&
+        (exception.message.includes('인증되지 않은 사용자입니다') ||
+          exception.message.includes('로그인이 필요합니다') ||
+          exception.message.includes('이메일 또는 비밀번호가 잘못되었습니다')));
 
     if (isAuthError) {
       this.logger.warn(`GraphQL 인증 오류: ${response.message}`, {
@@ -98,7 +101,8 @@ export class GraphQLExceptionFilter implements GqlExceptionFilter {
       });
     } else {
       this.logger.error(`GraphQL 예외 발생: ${response.message}`, {
-        exception: exception instanceof Error ? exception.stack : String(exception),
+        exception:
+          exception instanceof Error ? exception.stack : String(exception),
         context: contextInfo,
         statusCode: response.statusCode,
       });
@@ -106,7 +110,10 @@ export class GraphQLExceptionFilter implements GqlExceptionFilter {
 
     // 에러 코드 매핑
     let errorCode = 'INTERNAL_SERVER_ERROR';
-    if (exception instanceof UnauthorizedException || response.statusCode === HttpStatus.UNAUTHORIZED) {
+    if (
+      exception instanceof UnauthorizedException ||
+      response.statusCode === HttpStatus.UNAUTHORIZED
+    ) {
       errorCode = 'UNAUTHENTICATED';
     } else if (response.statusCode === HttpStatus.FORBIDDEN) {
       errorCode = 'FORBIDDEN';

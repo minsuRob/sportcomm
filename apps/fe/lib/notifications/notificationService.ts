@@ -71,7 +71,7 @@ class NotificationService {
    */
   async getNotifications(
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<Notification[]> {
     if (this.isLocalMode) {
       // 로컬 모드: 페이지네이션 시뮬레이션
@@ -100,7 +100,7 @@ class NotificationService {
       this.notifications = this.notifications.map((notification) =>
         notification.id === notificationId
           ? { ...notification, isRead: true }
-          : notification
+          : notification,
       );
       this.notifyListeners();
     } else {
@@ -142,7 +142,7 @@ class NotificationService {
     if (this.notifications.length > NOTIFICATION_CONFIG.MAX_NOTIFICATIONS) {
       this.notifications = this.notifications.slice(
         0,
-        NOTIFICATION_CONFIG.MAX_NOTIFICATIONS
+        NOTIFICATION_CONFIG.MAX_NOTIFICATIONS,
       );
     }
 
@@ -165,14 +165,14 @@ class NotificationService {
    * 신규 알림 리스너 등록
    */
   addNewNotificationListener(
-    listener: (notification: Notification) => void
+    listener: (notification: Notification) => void,
   ): () => void {
     this.newNotificationListeners.push(listener);
 
     // 언마운트 함수 반환
     return () => {
       this.newNotificationListeners = this.newNotificationListeners.filter(
-        (l) => l !== listener
+        (l) => l !== listener,
       );
     };
   }
@@ -265,13 +265,13 @@ class NotificationService {
    */
   private async fetchNotificationsFromServer(
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<Notification[]> {
     try {
       const { user } = await getSession();
       if (!user || !this.apolloClient) {
         throw new Error(
-          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다",
         );
       }
 
@@ -308,7 +308,7 @@ class NotificationService {
       const { user } = await getSession();
       if (!user || !this.apolloClient) {
         throw new Error(
-          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다",
         );
       }
 
@@ -330,7 +330,7 @@ class NotificationService {
       const { user } = await getSession();
       if (!user || !this.apolloClient) {
         throw new Error(
-          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다",
         );
       }
 
@@ -394,7 +394,7 @@ class NotificationService {
    * 신규 알림 확인 및 토스트 표시
    */
   private async checkForNewNotifications(
-    notifications: Notification[]
+    notifications: Notification[],
   ): Promise<void> {
     if (!this.lastCheckTime) {
       // 첫 실행이면 신규 알림으로 간주하지 않음
@@ -423,12 +423,12 @@ class NotificationService {
         const AsyncStorage =
           require("@react-native-async-storage/async-storage").default;
         this.lastCheckTime = await AsyncStorage.getItem(
-          "notification_last_check_time"
+          "notification_last_check_time",
         );
       } else {
         // 웹 환경에서는 localStorage 사용
         this.lastCheckTime = localStorage.getItem(
-          "notification_last_check_time"
+          "notification_last_check_time",
         );
       }
     } catch (error) {

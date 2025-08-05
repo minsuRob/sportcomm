@@ -56,7 +56,7 @@ export default function PostActions({
   return (
     <View
       style={themed(
-        variant === "detail" ? $detailActionSection : $feedActionBar
+        variant === "detail" ? $detailActionSection : $feedActionBar,
       )}
     >
       {/* 좋아요 버튼 */}

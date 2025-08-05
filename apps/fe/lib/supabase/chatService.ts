@@ -80,7 +80,7 @@ export class SupabaseChatService {
       this.isConnected = !!session;
       console.log(
         "Supabase 채팅 서비스 초기화:",
-        this.isConnected ? "성공" : "미인증 상태"
+        this.isConnected ? "성공" : "미인증 상태",
       );
     } catch (error) {
       console.error("Supabase 연결 초기화 실패:", error);
@@ -130,11 +130,11 @@ export class SupabaseChatService {
               profile_image_url
             )
           )
-        `
+        `,
         )
         .eq(
           "chat_channel_members.user_id",
-          (await supabase.auth.getUser()).data.user?.id
+          (await supabase.auth.getUser()).data.user?.id,
         )
         .eq("chat_channel_members.is_active", true)
         .order("last_message_at", { ascending: false });
@@ -156,7 +156,7 @@ export class SupabaseChatService {
    */
   async getPublicChatRooms(
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<{
     chatRooms: ChannelInfo[];
     total: number;
@@ -193,7 +193,7 @@ export class SupabaseChatService {
               profile_image_url
             )
           )
-        `
+        `,
         )
         .eq("is_private", false)
         .eq("is_room_active", true)
@@ -233,7 +233,7 @@ export class SupabaseChatService {
   async getChatMessages(
     channelId: string,
     limit: number = 50,
-    before?: string
+    before?: string,
   ): Promise<Message[]> {
     try {
       let query = supabase
@@ -253,7 +253,7 @@ export class SupabaseChatService {
               nickname
             )
           )
-        `
+        `,
         )
         .eq("channel_id", channelId)
         .eq("is_deleted", false)
@@ -271,7 +271,7 @@ export class SupabaseChatService {
       // 디버깅을 위한 로깅
       console.log(
         "Supabase 메시지 데이터:",
-        JSON.stringify(messages?.[0], null, 2)
+        JSON.stringify(messages?.[0], null, 2),
       );
 
       return this.transformMessagesToGraphQL(messages || []);
@@ -316,7 +316,7 @@ export class SupabaseChatService {
               nickname
             )
           )
-        `
+        `,
         )
         .single();
 
@@ -335,7 +335,7 @@ export class SupabaseChatService {
    * @returns 생성된 채팅방 정보
    */
   async createChatChannel(
-    input: CreateChannelInput
+    input: CreateChannelInput,
   ): Promise<ChannelInfo | null> {
     try {
       const {
@@ -387,7 +387,7 @@ export class SupabaseChatService {
               profile_image_url
             )
           )
-        `
+        `,
         )
         .eq("id", channel.id)
         .single();
@@ -490,7 +490,7 @@ export class SupabaseChatService {
    */
   subscribeToMessages(
     channelId: string,
-    onMessage: (message: Message) => void
+    onMessage: (message: Message) => void,
   ): () => void {
     const channelName = `chat_messages_${channelId}`;
 
@@ -529,7 +529,7 @@ export class SupabaseChatService {
                     nickname
                   )
                 )
-              `
+              `,
               )
               .eq("id", payload.new.id)
               .single();
@@ -542,7 +542,7 @@ export class SupabaseChatService {
           } catch (error) {
             console.error("실시간 메시지 처리 오류:", error);
           }
-        }
+        },
       )
       .subscribe();
 

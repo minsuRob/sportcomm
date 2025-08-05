@@ -124,7 +124,7 @@ export default function TeamSelectionScreen() {
       try {
         console.log(
           "MyTeams 데이터 확인:",
-          JSON.stringify(myTeamsData.myTeams, null, 2)
+          JSON.stringify(myTeamsData.myTeams, null, 2),
         );
 
         // 안전하게 팀 ID 추출
@@ -407,7 +407,7 @@ export default function TeamSelectionScreen() {
   const renderTeamGrid = (teams: Team[]) => {
     console.log(
       "렌더링할 팀 목록:",
-      teams.map((t) => ({ id: t.id, name: t.name }))
+      teams.map((t) => ({ id: t.id, name: t.name })),
     );
     console.log("현재 선택된 팀 ID 목록:", selectedTeams);
 
@@ -423,7 +423,7 @@ export default function TeamSelectionScreen() {
             const teamId = team.id;
             const isSelected = selectedTeams.includes(teamId);
             console.log(
-              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`
+              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`,
             );
 
             return (
@@ -470,7 +470,7 @@ export default function TeamSelectionScreen() {
           {rowTeams.length < teamsPerRow && (
             <View style={[themed($teamCard), { opacity: 0 }]} />
           )}
-        </View>
+        </View>,
       );
     }
 

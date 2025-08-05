@@ -115,7 +115,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     try {
       httpAdapter.reply(response, responseBody, httpStatus);
     } catch (error) {
-      this.logger.error(`응답 전송 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `응답 전송 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

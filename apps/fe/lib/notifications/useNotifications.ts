@@ -28,14 +28,14 @@ export const useNotifications = () => {
     try {
       const freshNotifications = await notificationService.getNotifications(
         1,
-        20
+        20,
       );
       setNotifications(freshNotifications);
       setPage(1);
       setHasMore(freshNotifications.length === 20);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "알림을 불러오는데 실패했습니다."
+        err instanceof Error ? err.message : "알림을 불러오는데 실패했습니다.",
       );
     } finally {
       setIsLoading(false);
@@ -54,7 +54,7 @@ export const useNotifications = () => {
       const nextPage = page + 1;
       const moreNotifications = await notificationService.getNotifications(
         nextPage,
-        20
+        20,
       );
 
       if (moreNotifications.length > 0) {
@@ -68,7 +68,7 @@ export const useNotifications = () => {
       setError(
         err instanceof Error
           ? err.message
-          : "추가 알림을 불러오는데 실패했습니다."
+          : "추가 알림을 불러오는데 실패했습니다.",
       );
     } finally {
       setIsLoading(false);
@@ -87,12 +87,12 @@ export const useNotifications = () => {
         prev.map((notification) =>
           notification.id === notificationId
             ? { ...notification, isRead: true }
-            : notification
-        )
+            : notification,
+        ),
       );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "알림 읽음 처리에 실패했습니다."
+        err instanceof Error ? err.message : "알림 읽음 처리에 실패했습니다.",
       );
     }
   }, []);
@@ -106,13 +106,13 @@ export const useNotifications = () => {
 
       // 로컬 상태 업데이트
       setNotifications((prev) =>
-        prev.map((notification) => ({ ...notification, isRead: true }))
+        prev.map((notification) => ({ ...notification, isRead: true })),
       );
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "모든 알림 읽음 처리에 실패했습니다."
+          : "모든 알림 읽음 처리에 실패했습니다.",
       );
     }
   }, []);
@@ -127,7 +127,7 @@ export const useNotifications = () => {
     const unsubscribe = notificationService.addListener(
       (updatedNotifications) => {
         setNotifications(updatedNotifications);
-      }
+      },
     );
 
     return unsubscribe;
@@ -252,7 +252,7 @@ export const useNewNotificationToast = () => {
         setTimeout(() => {
           setShowToast(false);
         }, 4000);
-      }
+      },
     );
 
     return unsubscribe;

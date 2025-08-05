@@ -255,7 +255,13 @@ export class AppModule {
       console.log(`   - GraphQL Playground: http://localhost:${port}/graphql`);
     }
 
+    const useSupabase =
+      this.configService.get<string>('USE_SUPABASE') === 'true';
+
     console.log('\n💾 데이터베이스 정보:');
+    console.log(
+      `   - 데이터베이스 타입: ${useSupabase ? 'Supabase PostgreSQL' : '로컬 PostgreSQL'}`,
+    );
     if (databaseUrl) {
       console.log(`   - 연결: DATABASE_URL 사용`);
     } else {
@@ -283,6 +289,9 @@ export class AppModule {
     console.log('   - ✅ 데이터베이스 캐싱');
     console.log(
       `   - ${supabaseConfigured ? '✅' : '⚠️'} Supabase 실시간 기능 ${supabaseConfigured ? '활성화' : '비활성화'}`,
+    );
+    console.log(
+      `   - ${useSupabase ? '✅' : '⚠️'} Supabase 주 데이터베이스 ${useSupabase ? '활성화' : '비활성화'}`,
     );
 
     console.log('\n⚡ 성능 최적화:');

@@ -19,7 +19,13 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:sports": "ts-node -r tsconfig-paths/register src/database/seeds/sports-teams.seed.ts",
-    "seed:logos": "ts-node -r tsconfig-paths/register src/database/seeds/download-team-logos.ts"
+    "seed:logos": "ts-node -r tsconfig-paths/register src/database/seeds/download-team-logos.ts",
+    "typeorm": "ts-node -r tsconfig-paths/register ../../node_modules/typeorm/cli-ts-node-commonjs.js",
+    "typeorm:migration:generate": "npm run typeorm -- migration:generate -d src/database/datasource.ts",
+    "typeorm:migration:run": "npm run typeorm -- migration:run -d src/database/datasource.ts",
+    "typeorm:migration:revert": "npm run typeorm -- migration:revert -d src/database/datasource.ts",
+    "typeorm:schema:sync": "npm run typeorm -- schema:sync -d src/database/datasource.ts",
+    "typeorm:schema:drop": "npm run typeorm -- schema:drop -d src/database/datasource.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",

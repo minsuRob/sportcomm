@@ -182,7 +182,6 @@ export class User extends BaseEntity {
     unique: true,
     comment: 'Supabase 사용자 ID (채팅 연동용)',
   })
-  @Index('idx_user_supabase_id')
   supabaseUserId?: string;
 
   // === 관계 설정 ===

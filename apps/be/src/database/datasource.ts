@@ -23,7 +23,7 @@ export const AppDataSource = new DataSource({
   entities: entities,
 
   // 마이그레이션 설정
-  migrations: ['src/database/migrations/*.ts'],
+  migrations: [__dirname + '/migrations/*.{ts,js}'],
   migrationsTableName: 'migrations',
 
   // 개발 환경에서만 스키마 동기화 활성화

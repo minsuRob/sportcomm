@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
+import { parse } from 'pg-connection-string';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -53,13 +54,49 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
         const isProduction = configService.get('NODE_ENV') === 'production';
         const isDevelopment = configService.get('NODE_ENV') === 'development';
 
+        // DATABASE_URL이 있으면 우선 사용, 없으면 개별 환경변수 사용
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+        let dbConfig: any;
+
+        if (databaseUrl) {
+          // DATABASE_URL을 파싱하여 연결 정보 추출
+          try {
+            const parsed = parse(databaseUrl);
+            dbConfig = {
+              host: parsed.host || 'localhost',
+              port: parseInt(parsed.port || '5432', 10),
+              username: parsed.user || 'postgres',
+              password: parsed.password || 'password',
+              database: parsed.database || 'sportcomm',
+            };
+            console.log('✅ DATABASE_URL을 사용하여 데이터베이스 연결 설정');
+          } catch (error) {
+            console.error('❌ DATABASE_URL 파싱 실패:', error.message);
+            console.log('🔄 개별 환경변수로 대체합니다.');
+            // 파싱 실패 시 개별 환경변수 사용
+            dbConfig = {
+              host: configService.get<string>('DB_HOST', 'localhost'),
+              port: configService.get<number>('DB_PORT', 5432),
+              username: configService.get<string>('DB_USERNAME', 'postgres'),
+              password: configService.get<string>('DB_PASSWORD', 'password'),
+              database: configService.get<string>('DB_DATABASE', 'sportcomm'),
+            };
+          }
+        } else {
+          // DATABASE_URL이 없으면 개별 환경변수 사용
+          dbConfig = {
+            host: configService.get<string>('DB_HOST', 'localhost'),
+            port: configService.get<number>('DB_PORT', 5432),
+            username: configService.get<string>('DB_USERNAME', 'postgres'),
+            password: configService.get<string>('DB_PASSWORD', 'password'),
+            database: configService.get<string>('DB_DATABASE', 'sportcomm'),
+          };
+          console.log('✅ 개별 환경변수를 사용하여 데이터베이스 연결 설정');
+        }
+
         return {
           type: 'postgres',
-          host: configService.get<string>('DB_HOST', 'localhost'),
-          port: configService.get<number>('DB_PORT', 5432),
-          username: configService.get<string>('DB_USERNAME', 'postgres'),
-          password: configService.get<string>('DB_PASSWORD', 'password'),
-          database: configService.get<string>('DB_DATABASE', 'sportcomm'),
+          ...dbConfig,
 
           // 엔티티 설정
           entities: entities,
@@ -251,15 +288,21 @@ export class AppModule {
    * 필수 환경 변수 검증
    */
   private validateConfiguration(): void {
-    const requiredEnvVars = [
-      'DB_HOST',
-      'DB_PORT',
-      'DB_USERNAME',
-      'DB_PASSWORD',
-      'DB_DATABASE',
-      'JWT_SECRET',
-      'JWT_EXPIRES_IN',
-    ];
+    const databaseUrl = this.configService.get<string>('DATABASE_URL');
+
+    // DATABASE_URL이 있으면 개별 DB 환경변수는 선택사항
+    const requiredEnvVars = ['JWT_SECRET', 'JWT_EXPIRES_IN'];
+
+    if (!databaseUrl) {
+      // DATABASE_URL이 없으면 개별 DB 환경변수들이 필수
+      requiredEnvVars.push(
+        'DB_HOST',
+        'DB_PORT',
+        'DB_USERNAME',
+        'DB_PASSWORD',
+        'DB_DATABASE',
+      );
+    }
 
     const missingEnvVars = requiredEnvVars.filter(
       (envVar) => !this.configService.get<string>(envVar),
@@ -270,6 +313,21 @@ export class AppModule {
         `❌ 다음 환경 변수들이 설정되지 않았습니다: ${missingEnvVars.join(', ')}`,
       );
       process.exit(1);
+    }
+
+    // DATABASE_URL 유효성 검증
+    if (databaseUrl) {
+      try {
+        const parsed = parse(databaseUrl);
+        if (!parsed.host || !parsed.database) {
+          throw new Error(
+            'DATABASE_URL에 호스트 또는 데이터베이스 이름이 누락되었습니다',
+          );
+        }
+      } catch (error) {
+        console.error(`❌ DATABASE_URL이 유효하지 않습니다: ${error.message}`);
+        process.exit(1);
+      }
     }
   }
 
@@ -293,7 +351,12 @@ export class AppModule {
       console.log(`   - GraphQL Playground: http://localhost:${port}/graphql`);
     }
 
+    const databaseUrl = this.configService.get<string>('DATABASE_URL');
+
     console.log('\n💾 데이터베이스 정보:');
+    console.log(
+      `   - 연결 방식: ${databaseUrl ? 'DATABASE_URL' : '개별 환경변수'}`,
+    );
     console.log(`   - 호스트: ${dbHost}:${dbPort}`);
     console.log(`   - 데이터베이스: ${dbName}`);
     console.log(

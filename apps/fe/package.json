@@ -2,6 +2,7 @@
   "name": "fe",
   "main": "index.js",
   "version": "1.0.0",
+  "homepage": "https://minsuRob.github.io/sportcomm",
   "private": true,
   "scripts": {
     "android": "expo start -c --android",
@@ -13,7 +14,9 @@
     "ios": "expo start -c --ios",
     "postinstall": "npx tailwindcss -i ./global.css -o ./node_modules/.cache/nativewind/global.css",
     "web": "expo start -c --web",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "build:web": "expo export --platform web",
+    "deploy:web": "gh-pages -d ./dist"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
@@ -71,6 +74,7 @@
     "@types/apollo-upload-client": "^17.0.5",
     "@types/multer": "^2.0.0",
     "@types/react": "~19.0.14",
+    "gh-pages": "^6.3.0",
     "typescript": "^5.8.3"
   }
 }

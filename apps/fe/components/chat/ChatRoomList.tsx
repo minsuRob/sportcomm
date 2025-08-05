@@ -99,7 +99,7 @@ export default function ChatRoomList({
   const router = useRouter();
 
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
 
   // 관리자 채팅방 쿼리 (공개 채팅방만)
@@ -157,15 +157,6 @@ export default function ChatRoomList({
     const allChatRooms = [...regularChatRooms, ...adminChatRooms, ...mockRooms];
     setChatRooms(allChatRooms);
   }, [adminData, mockRooms]); // adminData와 mockRooms만 의존성으로 설정
-
-  // 새로고침 핸들러
-  const handleRefresh = async () => {
-    if (onRefresh) {
-      setRefreshing(true);
-      await onRefresh();
-      setRefreshing(false);
-    }
-  };
 
   // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleEnterRoom = async (room: ChatRoom) => {
@@ -233,16 +224,19 @@ export default function ChatRoomList({
     };
   };
 
-  // 새로고침 핸들러
+  // 새로고침 핸들러 - 통합된 버전
   const handleRefresh = async () => {
+    // 부모 컴포넌트의 onRefresh가 있으면 실행
+    if (onRefresh) {
+      setRefreshing(true);
+      await onRefresh();
+      setRefreshing(false);
+    }
+
+    // 관리자인 경우 관리자 데이터 새로고침
     if (currentUser?.isAdmin) {
       await refetchAdmin();
     }
-    // 임시 데이터 로딩 시뮬레이션
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
   };
 
   // 채팅방 아이템 렌더링
@@ -373,7 +367,7 @@ export default function ChatRoomList({
         contentContainerStyle={themed($contentContainer)}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading || adminLoading}
+            refreshing={refreshing || isLoading || adminLoading}
             onRefresh={handleRefresh}
           />
         }
@@ -572,13 +566,13 @@ const $emptyDescription: ThemedStyle<TextStyle> = ({ colors }) => ({
   lineHeight: 20,
 });
 
-const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $emptyLoadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.xl,
   alignItems: "center",
   gap: spacing.md,
 });
 
-const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $emptyLoadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 16,
   color: colors.textDim,
   textAlign: "center",

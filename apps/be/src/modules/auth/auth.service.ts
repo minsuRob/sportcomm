@@ -95,6 +95,8 @@ export class AuthService {
    */
   async register(registerInput: RegisterInput): Promise<AuthResponse> {
     const { email, password, nickname, role = UserRole.USER } = registerInput;
+    const useSupabase =
+      this.configService.get<string>('USE_SUPABASE') === 'true';
 
     // 이메일 중복 확인
     const existingUserByEmail = await this.userRepository.findOne({
@@ -114,30 +116,39 @@ export class AuthService {
       throw new ConflictException('이미 사용 중인 닉네임입니다.');
     }
 
+    if (useSupabase) {
+      // Supabase 사용 시: Supabase를 주 데이터베이스로 사용
+      return await this.registerWithSupabase(registerInput);
+    } else {
+      // 로컬 PostgreSQL 사용 시: 로컬 DB만 사용
+      return await this.registerWithLocalDB(registerInput);
+    }
+  }
+
+  /**
+   * Supabase를 주 데이터베이스로 사용하는 회원가입
+   */
+  private async registerWithSupabase(
+    registerInput: RegisterInput,
+  ): Promise<AuthResponse> {
+    const { email, password, nickname, role = UserRole.USER } = registerInput;
+
     // 비밀번호 해시화
     const hashedPassword = await this.hashPassword(password);
 
-    // 사용자 생성
+    // 로컬 DB에 사용자 생성
     const user = this.userRepository.create({
       email,
       password: hashedPassword,
       nickname,
       role,
       isUserActive: true,
-      isEmailVerified: false, // 실제 구현에서는 이메일 인증 로직 추가
+      isEmailVerified: false,
     });
 
-    // 데이터베이스에 저장
     const savedUser = await this.userRepository.save(user);
 
-    // 비밀번호 제거
-    savedUser.password = undefined;
-
-    // 토큰 생성
-    const accessToken = this.generateAccessToken(savedUser);
-    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '7d');
-
-    // Supabase에 사용자 생성 및 세션 획득
+    // Supabase에 사용자 생성 및 동기화 (필수)
     let supabaseSession = null;
     try {
       const result = await this.supabaseSyncService.createUserInSupabase(
@@ -146,17 +157,88 @@ export class AuthService {
       );
       if (result) {
         supabaseSession = result.session;
+      } else {
+        // Supabase 생성 실패 시 로컬 사용자도 삭제
+        await this.userRepository.remove(savedUser);
+        throw new Error('Supabase 사용자 생성에 실패했습니다.');
       }
     } catch (error) {
-      console.error('Supabase 사용자 동기화 실패:', error);
-      // 실패해도 회원가입은 성공으로 처리 (로컬 DB가 우선)
+      // Supabase 생성 실패 시 로컬 사용자도 삭제
+      await this.userRepository.remove(savedUser);
+      console.error('Supabase 사용자 생성 실패:', error);
+      throw new ConflictException('회원가입 처리 중 오류가 발생했습니다.');
     }
 
+    // 관계 데이터와 함께 사용자 정보 다시 로드
+    const userWithRelations = await this.userRepository.findOne({
+      where: { id: savedUser.id },
+      relations: ['userTeams', 'userTeams.team'],
+    });
+
+    // 비밀번호 제거
+    if (userWithRelations) {
+      userWithRelations.password = undefined;
+    }
+
+    // 토큰 생성
+    const accessToken = this.generateAccessToken(savedUser);
+    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '7d');
+
+    console.log(`✅ Supabase 회원가입 완료: ${nickname}`);
+
     return {
-      user: savedUser,
+      user: userWithRelations || savedUser,
       accessToken,
       expiresIn,
       supabaseSession,
+    };
+  }
+
+  /**
+   * 로컬 PostgreSQL만 사용하는 회원가입
+   */
+  private async registerWithLocalDB(
+    registerInput: RegisterInput,
+  ): Promise<AuthResponse> {
+    const { email, password, nickname, role = UserRole.USER } = registerInput;
+
+    // 비밀번호 해시화
+    const hashedPassword = await this.hashPassword(password);
+
+    // 로컬 DB에만 사용자 생성
+    const user = this.userRepository.create({
+      email,
+      password: hashedPassword,
+      nickname,
+      role,
+      isUserActive: true,
+      isEmailVerified: false,
+    });
+
+    const savedUser = await this.userRepository.save(user);
+
+    // 관계 데이터와 함께 사용자 정보 다시 로드
+    const userWithRelations = await this.userRepository.findOne({
+      where: { id: savedUser.id },
+      relations: ['userTeams', 'userTeams.team'],
+    });
+
+    // 비밀번호 제거
+    if (userWithRelations) {
+      userWithRelations.password = undefined;
+    }
+
+    // 토큰 생성
+    const accessToken = this.generateAccessToken(savedUser);
+    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '7d');
+
+    console.log(`✅ 로컬 DB 회원가입 완료: ${nickname}`);
+
+    return {
+      user: userWithRelations || savedUser,
+      accessToken,
+      expiresIn,
+      supabaseSession: null, // 로컬 DB 사용 시에는 Supabase 세션 없음
     };
   }
 
@@ -169,6 +251,8 @@ export class AuthService {
    */
   async login(loginInput: LoginInput): Promise<AuthResponse> {
     const { email, password } = loginInput;
+    const useSupabase =
+      this.configService.get<string>('USE_SUPABASE') === 'true';
 
     // 이메일로 사용자 조회 (비밀번호 포함)
     const user = await this.usersService.findOneByEmail(email);
@@ -203,17 +287,24 @@ export class AuthService {
     const accessToken = this.generateAccessToken(user);
     const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '7d');
 
-    // Supabase 세션 획득 (채팅용)
+    // Supabase 세션 획득 (USE_SUPABASE 설정에 따라)
     let supabaseSession = null;
-    try {
-      supabaseSession = await this.supabaseSyncService.ensureSupabaseUser(
-        user,
-        password,
-      );
-    } catch (error) {
-      console.error('Supabase 세션 획득 실패:', error);
-      // 실패해도 로그인은 성공으로 처리 (로컬 DB가 우선)
+    if (useSupabase) {
+      try {
+        supabaseSession = await this.supabaseSyncService.ensureSupabaseUser(
+          user,
+          password,
+        );
+      } catch (error) {
+        console.error('Supabase 세션 획득 실패:', error);
+        // Supabase 사용 시에는 세션 획득 실패를 더 중요하게 처리
+        console.warn('Supabase 세션 없이 로그인 진행');
+      }
     }
+
+    console.log(
+      `✅ ${useSupabase ? 'Supabase' : '로컬 DB'} 로그인 완료: ${user.nickname}`,
+    );
 
     return {
       user,

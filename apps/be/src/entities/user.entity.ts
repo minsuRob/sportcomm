@@ -260,9 +260,9 @@ export class User extends BaseEntity {
    * 사용자가 선택한 팀들
    * 일대다 관계: 한 사용자는 여러 팀을 선택할 수 있습니다.
    */
-  @Field(() => [UserTeam], { description: '선택한 팀 목록' })
+  @Field(() => [UserTeam], { nullable: true, description: '선택한 팀 목록' })
   @OneToMany(() => UserTeam, (userTeam) => userTeam.user)
-  userTeams: UserTeam[];
+  userTeams?: UserTeam[];
 
   // === 헬퍼 메서드 ===
 

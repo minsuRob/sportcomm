@@ -119,61 +119,6 @@ export const TOGGLE_LIKE = gql`
 `;
 
 /**
- * Logs in a user.
- * Returns an access token and user information upon successful authentication.
- */
-export const LOGIN_MUTATION = gql`
-  mutation Login($input: LoginInput!) {
-    login(input: $input) {
-      token: accessToken
-      user {
-        id
-        nickname
-        email
-        role
-        profileImageUrl
-        myTeams: userTeams {
-          role
-          team {
-            id
-            name
-            logoUrl
-          }
-        }
-      }
-    }
-  }
-`;
-
-/**
- * Registers a new user.
- * Requires email, nickname, and password.
- * Returns an access token and user information upon successful registration.
- */
-export const REGISTER_MUTATION = gql`
-  mutation Register($input: RegisterInput!) {
-    register(input: $input) {
-      token: accessToken
-      user {
-        id
-        nickname
-        email
-        role
-        profileImageUrl
-        myTeams: userTeams {
-          role
-          team {
-            id
-            name
-            logoUrl
-          }
-        }
-      }
-    }
-  }
-`;
-
-/**
  * 게시물 상세 정보를 조회합니다.
  * 게시물의 모든 정보와 댓글 목록을 포함합니다.
  */

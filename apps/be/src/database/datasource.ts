@@ -9,15 +9,20 @@ config();
  * TypeORM 데이터소스 설정
  *
  * 데이터베이스 연결을 관리하고 마이그레이션을 실행하는 데 사용됩니다.
- * 개발, 테스트, 운영 환경에 따라 다른 설정을 사용할 수 있습니다.
+ * Supabase PostgreSQL 데이터베이스에 연결합니다.
  */
 export const AppDataSource = new DataSource({
   type: 'postgres',
+
+  // DATABASE_URL을 우선적으로 사용하고, 없으면 개별 설정 사용
+  url: process.env.DATABASE_URL,
+
+  // 개별 설정 (DATABASE_URL이 없을 때 사용)
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_DATABASE || 'sportcomm',
+  database: process.env.DB_DATABASE || 'postgres',
 
   // 엔티티 설정
   entities: entities,
@@ -26,8 +31,8 @@ export const AppDataSource = new DataSource({
   migrations: ['src/database/migrations/*.ts'],
   migrationsTableName: 'migrations',
 
-  // 개발 환경에서만 스키마 동기화 활성화
-  synchronize: process.env.NODE_ENV === 'development',
+  // Supabase는 운영 환경이므로 synchronize 비활성화
+  synchronize: false,
 
   // 로깅 설정
   logging:
@@ -40,13 +45,10 @@ export const AppDataSource = new DataSource({
     timeout: 60000,
   },
 
-  // SSL 설정 (운영 환경에서 활성화)
-  ssl:
-    process.env.NODE_ENV === 'production'
-      ? {
-          rejectUnauthorized: false,
-        }
-      : false,
+  // Supabase는 SSL 필수
+  ssl: {
+    rejectUnauthorized: false,
+  },
 
   // 메타데이터 캐싱 활성화
   cache: {

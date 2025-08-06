@@ -3,7 +3,6 @@ import { UseGuards, Logger } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
 import { User } from '../../entities/user.entity';
-import { UserInfo } from '../../entities/user-info.entity';
 import { UserSyncService } from './user-sync.service';
 import { SyncUserInput, UpdateUserProfileInput } from './dto/sync-user.input';
 
@@ -13,7 +12,7 @@ import { SyncUserInput, UpdateUserProfileInput } from './dto/sync-user.input';
  * Supabase Auth와 NestJS 간의 사용자 정보 동기화를 위한 GraphQL API를 제공합니다.
  * 회원가입 후 클라이언트에서 사용자 정보를 동기화할 때 사용합니다.
  */
-@Resolver(() => UserInfo)
+@Resolver(() => User)
 export class AuthSyncResolver {
   private readonly logger = new Logger(AuthSyncResolver.name);
 
@@ -27,20 +26,20 @@ export class AuthSyncResolver {
    *
    * @param user 현재 인증된 사용자 (JWT에서 추출)
    * @param input 동기화할 사용자 정보
-   * @returns 동기화된 UserInfo
+   * @returns 동기화된 User
    */
-  @Mutation(() => UserInfo, {
+  @Mutation(() => User, {
     description: '사용자 정보 동기화 (회원가입 후 호출)',
   })
   @UseGuards(SupabaseAuthGuard)
   async syncUser(
     @CurrentUser() user: User,
     @Args('input') input: SyncUserInput,
-  ): Promise<UserInfo> {
+  ): Promise<User> {
     this.logger.log(`사용자 동기화 요청: ${user.id} (${input.nickname})`);
 
     try {
-      const userInfo = await this.userSyncService.syncUser({
+      const syncedUser = await this.userSyncService.syncUser({
         userId: user.id,
         nickname: input.nickname,
         role: input.role,
@@ -48,8 +47,10 @@ export class AuthSyncResolver {
         bio: input.bio,
       });
 
-      this.logger.log(`사용자 동기화 성공: ${user.id} -> ${userInfo.nickname}`);
-      return userInfo;
+      this.logger.log(
+        `사용자 동기화 성공: ${user.id} -> ${syncedUser.nickname}`,
+      );
+      return syncedUser;
     } catch (error) {
       this.logger.error(`사용자 동기화 실패: ${user.id}`, error.stack);
       throw error;
@@ -63,28 +64,28 @@ export class AuthSyncResolver {
    *
    * @param user 현재 인증된 사용자
    * @param input 업데이트할 프로필 정보
-   * @returns 업데이트된 UserInfo
+   * @returns 업데이트된 User
    */
-  @Mutation(() => UserInfo, {
+  @Mutation(() => User, {
     description: '사용자 프로필 업데이트',
   })
   @UseGuards(SupabaseAuthGuard)
   async updateUserProfile(
     @CurrentUser() user: User,
     @Args('input') input: UpdateUserProfileInput,
-  ): Promise<UserInfo> {
+  ): Promise<User> {
     this.logger.log(`프로필 업데이트 요청: ${user.id}`);
 
     try {
-      const userInfo = await this.userSyncService.updateUserProfile(
+      const updatedUser = await this.userSyncService.updateUserProfile(
         user.id,
         input,
       );
 
       this.logger.log(
-        `프로필 업데이트 성공: ${user.id} -> ${userInfo.nickname}`,
+        `프로필 업데이트 성공: ${user.id} -> ${updatedUser.nickname}`,
       );
-      return userInfo;
+      return updatedUser;
     } catch (error) {
       this.logger.error(`프로필 업데이트 실패: ${user.id}`, error.stack);
       throw error;
@@ -95,16 +96,16 @@ export class AuthSyncResolver {
    * 현재 사용자 정보 조회 쿼리
    *
    * JWT 토큰을 통해 인증된 사용자의 상세 정보를 조회합니다.
-   * Supabase Auth 정보와 UserInfo를 결합한 통합 정보를 반환합니다.
+   * Supabase Auth 정보와 User를 결합한 통합 정보를 반환합니다.
    *
    * @param user 현재 인증된 사용자
    * @returns 통합 사용자 정보
    */
-  @Query(() => UserInfo, {
+  @Query(() => User, {
     description: '현재 사용자 정보 조회',
   })
   @UseGuards(SupabaseAuthGuard)
-  async getCurrentUserInfo(@CurrentUser() user: User): Promise<UserInfo> {
+  async getCurrentUserInfo(@CurrentUser() user: User): Promise<User> {
     this.logger.log(`현재 사용자 정보 조회: ${user.id}`);
 
     try {
@@ -117,14 +118,16 @@ export class AuthSyncResolver {
         throw new Error('사용자 정보를 찾을 수 없습니다.');
       }
 
-      // CombinedUserInfo를 UserInfo 형태로 변환
-      const userInfo: UserInfo = {
+      // CombinedUserInfo를 User 형태로 변환
+      const currentUser: User = {
         id: combinedInfo.id,
         nickname: combinedInfo.nickname,
+        email: combinedInfo.email || '',
         role: combinedInfo.role,
         profileImageUrl: combinedInfo.profileImageUrl,
         bio: combinedInfo.bio,
         isActive: combinedInfo.isActive,
+        isEmailVerified: !!combinedInfo.emailConfirmedAt,
         createdAt: combinedInfo.createdAt,
         updatedAt: combinedInfo.updatedAt,
         // 관계 필드들은 필요시 별도 쿼리로 로드
@@ -143,9 +146,9 @@ export class AuthSyncResolver {
         isInfluencer: () => combinedInfo.role === 'INFLUENCER',
         isUser: () => combinedInfo.role === 'USER',
         getDisplayName: () => combinedInfo.nickname,
-      } as UserInfo;
+      } as User;
 
-      return userInfo;
+      return currentUser;
     } catch (error) {
       this.logger.error(`현재 사용자 정보 조회 실패: ${user.id}`, error.stack);
       throw error;

@@ -6,7 +6,6 @@
  */
 
 import { User } from './user.entity';
-import { UserInfo } from './user-info.entity';
 import { Post } from './post.entity';
 import { PostVersion } from './post-version.entity';
 import { Comment } from './comment.entity';
@@ -28,12 +27,12 @@ import { UserTeam } from './user-team.entity';
 export { BaseEntity } from './base.entity';
 
 // 사용자 관련 엔티티
-export { User, UserRole } from './user.entity';
 export {
-  UserInfo,
+  User,
+  UserRole,
   SupabaseAuthUser,
   CombinedUserInfo,
-} from './user-info.entity';
+} from './user.entity';
 
 // 게시물 관련 엔티티
 export { Post } from './post.entity';
@@ -82,7 +81,6 @@ export { UserTeam } from './user-team.entity';
  */
 export const entities = [
   User,
-  UserInfo, // 새로운 사용자 정보 엔티티
   Post,
   PostVersion,
   Comment,
@@ -107,7 +105,6 @@ export const entities = [
  */
 export const tableNames = {
   users: 'users',
-  userInfo: 'user_info', // 새로운 사용자 정보 테이블
   posts: 'posts',
   postVersions: 'post_versions',
   postLikes: 'post_likes',

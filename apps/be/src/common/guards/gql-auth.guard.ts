@@ -30,7 +30,7 @@ export class GqlAuthGuard extends AuthGuard('jwt') {
       );
     }
 
-    if (user.isUserActive === false) {
+    if (user.isActive === false) {
       throw new UnauthorizedException(
         '비활성화된 계정입니다. 관리자에게 문의하세요.',
       );
@@ -61,7 +61,7 @@ export class OptionalGqlAuthGuard extends AuthGuard('jwt') {
       return null;
     }
 
-    if (user.isUserActive === false) {
+    if (user.isActive === false) {
       return null;
     }
 

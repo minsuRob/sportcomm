@@ -225,7 +225,7 @@ export class SearchService {
       .createQueryBuilder('user')
       .where('user.nickname ILIKE :query', { query: searchQuery })
       .orWhere('user.bio ILIKE :query', { query: searchQuery })
-      .andWhere('user.isUserActive = :isActive', { isActive: true });
+      .andWhere('user.isActive = :isActive', { isActive: true });
 
     // 정렬 방식 적용
     switch (sortBy) {

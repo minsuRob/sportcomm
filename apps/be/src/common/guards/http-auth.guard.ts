@@ -25,7 +25,7 @@ export class HttpAuthGuard extends AuthGuard('jwt') {
       );
     }
 
-    if (user.isUserActive === false) {
+    if (user.isActive === false) {
       throw new UnauthorizedException(
         '비활성화된 계정입니다. 관리자에게 문의하세요.',
       );
@@ -65,7 +65,7 @@ export class OptionalHttpAuthGuard extends AuthGuard('jwt') {
     }
 
     // 비활성화된 사용자는 null로 처리
-    if (user.isUserActive === false) {
+    if (user.isActive === false) {
       return null;
     }
 

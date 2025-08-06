@@ -2,7 +2,7 @@
  * 사용자 동기화 서비스
  *
  * Supabase Auth 회원가입 후 NestJS 백엔드에 사용자 정보를 동기화합니다.
- * GraphQL 뮤테이션을 통해 백엔드의 UserInfo 테이블에 사용자 정보를 생성/업데이트합니다.
+ * GraphQL 뮤테이션을 통해 백엔드의 User 테이블에 사용자 정보를 생성/업데이트합니다.
  */
 
 import { gql } from "@apollo/client";
@@ -93,13 +93,15 @@ export interface UpdateUserProfileInput {
 /**
  * 사용자 정보 타입
  */
-export interface UserInfo {
+export interface User {
   id: string;
   nickname: string;
+  email: string;
   role: "USER" | "INFLUENCER" | "ADMIN";
   profileImageUrl?: string;
   bio?: string;
   isActive: boolean;
+  isEmailVerified: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -118,7 +120,7 @@ export class UserSyncService {
   static async syncUser(
     input: SyncUserInput,
     accessToken: string
-  ): Promise<UserInfo> {
+  ): Promise<User> {
     try {
       console.log("🔄 사용자 정보 동기화 시작:", input);
 
@@ -161,7 +163,7 @@ export class UserSyncService {
   static async updateUserProfile(
     input: UpdateUserProfileInput,
     accessToken: string
-  ): Promise<UserInfo> {
+  ): Promise<User> {
     try {
       console.log("🔄 사용자 프로필 업데이트 시작:", input);
 
@@ -199,7 +201,7 @@ export class UserSyncService {
    * @param accessToken Supabase Auth 액세스 토큰
    * @returns 현재 사용자 정보
    */
-  static async getCurrentUserInfo(accessToken: string): Promise<UserInfo> {
+  static async getCurrentUserInfo(accessToken: string): Promise<User> {
     try {
       console.log("🔄 현재 사용자 정보 조회 시작");
 
@@ -286,7 +288,7 @@ export async function syncUserAfterSignUp(
     role?: string;
   },
   accessToken: string
-): Promise<UserInfo> {
+): Promise<User> {
   try {
     console.log("🔄 회원가입 후 자동 사용자 동기화 시작:", userProfile);
 
@@ -313,7 +315,7 @@ export async function syncUserAfterSignUp(
  */
 export async function checkAndSyncUserAfterSignIn(
   accessToken: string
-): Promise<UserInfo | null> {
+): Promise<User | null> {
   try {
     console.log("🔄 로그인 후 사용자 정보 확인 시작");
 

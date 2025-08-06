@@ -66,7 +66,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           'email',
           'nickname',
           'role',
-          'isUserActive',
+          'isActive',
           'isEmailVerified',
           'profileImageUrl',
           'createdAt',
@@ -78,7 +78,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
       }
 
-      if (!user.isUserActive) {
+      if (!user.isActive) {
         throw new UnauthorizedException(
           '비활성화된 계정입니다. 관리자에게 문의하세요.',
         );

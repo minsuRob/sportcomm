@@ -11,7 +11,6 @@ import { SupabaseJwtStrategy } from './supabase-jwt.strategy';
 import { UserSyncService } from './user-sync.service';
 import { AuthSyncResolver } from './auth-sync.resolver';
 import { User } from '../../entities/user.entity';
-import { UserInfo } from '../../entities/user-info.entity';
 import { MediaModule } from '../media/media.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -30,8 +29,8 @@ import { SupabaseModule } from '../supabase/supabase.module';
  */
 @Module({
   imports: [
-    // User 및 UserInfo 엔티티를 위한 TypeORM 모듈
-    TypeOrmModule.forFeature([User, UserInfo]),
+    // User 엔티티를 위한 TypeORM 모듈
+    TypeOrmModule.forFeature([User]),
     UsersModule,
     SupabaseModule,
 

@@ -7,8 +7,8 @@ import {
   MaxLength,
   IsEnum,
   IsUUID,
+  IsOptional,
 } from 'class-validator';
-import { BaseEntity } from './base.entity';
 import { Post } from './post.entity';
 import { Comment } from './comment.entity';
 import { Follow } from './follow.entity';
@@ -49,13 +49,19 @@ registerEnumType(UserRole, {
 });
 
 /**
- * 사용자 엔티티 (레거시 호환성 유지)
+ * 사용자 엔티티
  *
- * ⚠️ DEPRECATED: 이 엔티티는 레거시 호환성을 위해 유지됩니다.
- * 새로운 개발에서는 UserInfo 엔티티를 사용하세요.
+ * Supabase Auth와 1:1 관계를 가지는 사용자 정보 테이블입니다.
+ * Supabase Auth에서 관리하지 않는 비즈니스 로직 관련 정보를 저장합니다.
  *
- * Supabase Auth와 연동하여 사용자 ID는 Supabase에서 생성된 UUID를 사용합니다.
- * 실제 사용자 정보는 UserInfo 엔티티에서 관리됩니다.
+ * Supabase Auth 정보:
+ * - id (UUID): Supabase에서 생성된 사용자 ID
+ * - email: 이메일 주소
+ * - email_confirmed_at: 이메일 인증 시간
+ * - phone: 전화번호 (선택사항)
+ * - created_at, updated_at: 생성/수정 시간
+ * - user_metadata: 사용자 메타데이터 (nickname, role 등)
+ * - app_metadata: 앱 메타데이터 (provider 등)
  */
 @ObjectType()
 @Entity('users')
@@ -124,17 +130,16 @@ export class User {
   email: string;
 
   /**
-   * 사용자 비밀번호 (해시된 값)
-   * 보안을 위해 해시된 상태로 저장됩니다.
-   * GraphQL 스키마에는 노출되지 않습니다.
+   * 사용자 비밀번호 (해시된 값) - DEPRECATED
+   * Supabase Auth를 사용하므로 더 이상 사용하지 않습니다.
+   * 레거시 호환성을 위해 유지됩니다.
    */
   @Column({
     type: 'varchar',
     length: 255,
-    comment: '사용자 비밀번호 (해시된 값)',
+    nullable: true,
+    comment: '사용자 비밀번호 (해시된 값) - DEPRECATED',
   })
-  @IsString({ message: '비밀번호는 문자열이어야 합니다.' })
-  @MinLength(8, { message: '비밀번호는 최소 8자 이상이어야 합니다.' })
   password?: string;
 
   /**
@@ -162,6 +167,7 @@ export class User {
     nullable: true,
     comment: '프로필 이미지 URL',
   })
+  @IsOptional()
   @IsString({ message: '프로필 이미지 URL은 문자열이어야 합니다.' })
   @MaxLength(500, { message: '프로필 이미지 URL은 최대 500자까지 가능합니다.' })
   profileImageUrl?: string;
@@ -176,6 +182,7 @@ export class User {
     nullable: true,
     comment: '사용자 자기소개',
   })
+  @IsOptional()
   @IsString({ message: '자기소개는 문자열이어야 합니다.' })
   @MaxLength(500, { message: '자기소개는 최대 500자까지 가능합니다.' })
   bio?: string;
@@ -202,7 +209,7 @@ export class User {
     default: true,
     comment: '계정 활성화 여부',
   })
-  isUserActive: boolean;
+  isActive: boolean;
 
   // === 관계 설정 ===
 
@@ -318,4 +325,52 @@ export class User {
   getDisplayName(): string {
     return this.nickname || this.email.split('@')[0];
   }
+}
+
+/**
+ * Supabase Auth 사용자 정보 인터페이스
+ * Supabase Auth에서 제공하는 사용자 정보 구조
+ */
+export interface SupabaseAuthUser {
+  id: string;
+  email?: string;
+  phone?: string;
+  email_confirmed_at?: string;
+  phone_confirmed_at?: string;
+  created_at: string;
+  updated_at: string;
+  user_metadata: {
+    nickname?: string;
+    role?: UserRole;
+    [key: string]: any;
+  };
+  app_metadata: {
+    provider?: string;
+    providers?: string[];
+    [key: string]: any;
+  };
+}
+
+/**
+ * 통합 사용자 정보 인터페이스
+ * Supabase Auth 정보와 User를 결합한 완전한 사용자 정보
+ */
+export interface CombinedUserInfo {
+  // Supabase Auth 정보
+  id: string;
+  email?: string;
+  phone?: string;
+  emailConfirmedAt?: string;
+  phoneConfirmedAt?: string;
+  provider?: string;
+  providers?: string[];
+  // User 정보
+  nickname: string;
+  role: UserRole;
+  profileImageUrl?: string;
+  bio?: string;
+  isActive: boolean;
+  // 공통 정보
+  createdAt: Date;
+  updatedAt: Date;
 }

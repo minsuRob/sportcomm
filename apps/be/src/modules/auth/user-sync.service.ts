@@ -2,11 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
-  UserInfo,
+  User,
+  UserRole,
   SupabaseAuthUser,
   CombinedUserInfo,
-} from '../../entities/user-info.entity';
-import { UserRole } from '../../entities/user.entity';
+} from '../../entities/user.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
 
 /**
@@ -41,7 +41,7 @@ export interface UpdateUserProfileInput {
  * 사용자 동기화 서비스
  *
  * Supabase Auth와 NestJS 간의 사용자 정보 동기화를 담당합니다.
- * 회원가입 후 사용자 정보를 UserInfo 테이블에 생성하고,
+ * 회원가입 후 사용자 정보를 User 테이블에 생성하고,
  * 필요시 Supabase Auth의 user_metadata와 동기화합니다.
  */
 @Injectable()
@@ -49,18 +49,18 @@ export class UserSyncService {
   private readonly logger = new Logger(UserSyncService.name);
 
   constructor(
-    @InjectRepository(UserInfo)
-    private readonly userInfoRepository: Repository<UserInfo>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly supabaseService: SupabaseService,
   ) {}
 
   /**
-   * Supabase Auth 사용자를 UserInfo 테이블에 동기화
+   * Supabase Auth 사용자를 User 테이블에 동기화
    *
    * @param input 동기화할 사용자 정보
-   * @returns 생성되거나 업데이트된 UserInfo
+   * @returns 생성되거나 업데이트된 User
    */
-  async syncUser(input: SyncUserInput): Promise<UserInfo> {
+  async syncUser(input: SyncUserInput): Promise<User> {
     const {
       userId,
       nickname,
@@ -79,8 +79,8 @@ export class UserSyncService {
         );
       }
 
-      // 기존 UserInfo 조회
-      let userInfo = await this.userInfoRepository.findOne({
+      // 기존 User 조회
+      let user = await this.userRepository.findOne({
         where: { id: userId },
       });
 
@@ -95,41 +95,45 @@ export class UserSyncService {
       const finalRole =
         role || (supabaseUser.user_metadata?.role as UserRole) || UserRole.USER;
 
-      if (userInfo) {
+      if (user) {
         // 기존 사용자 정보 업데이트
         this.logger.log(`기존 사용자 정보 업데이트: ${userId}`);
 
-        userInfo.nickname = finalNickname;
-        userInfo.role = finalRole;
-        userInfo.profileImageUrl = profileImageUrl || userInfo.profileImageUrl;
-        userInfo.bio = bio || userInfo.bio;
-        userInfo.updatedAt = new Date();
+        user.nickname = finalNickname;
+        user.role = finalRole;
+        user.profileImageUrl = profileImageUrl || user.profileImageUrl;
+        user.bio = bio || user.bio;
+        user.email = supabaseUser.email || user.email;
+        user.isEmailVerified = !!supabaseUser.email_confirmed_at;
+        user.updatedAt = new Date();
 
-        userInfo = await this.userInfoRepository.save(userInfo);
+        user = await this.userRepository.save(user);
       } else {
         // 새 사용자 정보 생성
         this.logger.log(`새 사용자 정보 생성: ${userId}`);
 
-        userInfo = this.userInfoRepository.create({
+        user = this.userRepository.create({
           id: userId,
           nickname: finalNickname,
           role: finalRole,
+          email: supabaseUser.email || '',
           profileImageUrl,
           bio,
+          isEmailVerified: !!supabaseUser.email_confirmed_at,
           isActive: true,
         });
 
-        userInfo = await this.userInfoRepository.save(userInfo);
+        user = await this.userRepository.save(user);
       }
 
       // Supabase Auth의 user_metadata 업데이트
       await this.updateSupabaseMetadata(userId, {
-        nickname: userInfo.nickname,
-        role: userInfo.role,
+        nickname: user.nickname,
+        role: user.role,
       });
 
-      this.logger.log(`사용자 동기화 완료: ${userId} (${userInfo.nickname})`);
-      return userInfo;
+      this.logger.log(`사용자 동기화 완료: ${userId} (${user.nickname})`);
+      return user;
     } catch (error) {
       this.logger.error(`사용자 동기화 실패: ${userId}`, error.stack);
       throw error;
@@ -141,24 +145,24 @@ export class UserSyncService {
    *
    * @param userId 사용자 ID
    * @param input 업데이트할 프로필 정보
-   * @returns 업데이트된 UserInfo
+   * @returns 업데이트된 User
    */
   async updateUserProfile(
     userId: string,
     input: UpdateUserProfileInput,
-  ): Promise<UserInfo> {
+  ): Promise<User> {
     try {
-      const userInfo = await this.userInfoRepository.findOne({
+      const user = await this.userRepository.findOne({
         where: { id: userId },
       });
 
-      if (!userInfo) {
+      if (!user) {
         throw new Error(`사용자 정보를 찾을 수 없습니다: ${userId}`);
       }
 
       // 닉네임 중복 확인
-      if (input.nickname && input.nickname !== userInfo.nickname) {
-        const existingUser = await this.userInfoRepository.findOne({
+      if (input.nickname && input.nickname !== user.nickname) {
+        const existingUser = await this.userRepository.findOne({
           where: { nickname: input.nickname },
         });
 
@@ -168,22 +172,22 @@ export class UserSyncService {
       }
 
       // 프로필 정보 업데이트
-      if (input.nickname) userInfo.nickname = input.nickname;
+      if (input.nickname) user.nickname = input.nickname;
       if (input.profileImageUrl !== undefined)
-        userInfo.profileImageUrl = input.profileImageUrl;
-      if (input.bio !== undefined) userInfo.bio = input.bio;
-      userInfo.updatedAt = new Date();
+        user.profileImageUrl = input.profileImageUrl;
+      if (input.bio !== undefined) user.bio = input.bio;
+      user.updatedAt = new Date();
 
-      const updatedUserInfo = await this.userInfoRepository.save(userInfo);
+      const updatedUser = await this.userRepository.save(user);
 
       // Supabase Auth의 user_metadata 업데이트
       await this.updateSupabaseMetadata(userId, {
-        nickname: updatedUserInfo.nickname,
-        role: updatedUserInfo.role,
+        nickname: updatedUser.nickname,
+        role: updatedUser.role,
       });
 
       this.logger.log(`사용자 프로필 업데이트 완료: ${userId}`);
-      return updatedUserInfo;
+      return updatedUser;
     } catch (error) {
       this.logger.error(`사용자 프로필 업데이트 실패: ${userId}`, error.stack);
       throw error;
@@ -195,31 +199,31 @@ export class UserSyncService {
    *
    * @param userId 사용자 ID
    * @param role 새로운 역할
-   * @returns 업데이트된 UserInfo
+   * @returns 업데이트된 User
    */
-  async updateUserRole(userId: string, role: UserRole): Promise<UserInfo> {
+  async updateUserRole(userId: string, role: UserRole): Promise<User> {
     try {
-      const userInfo = await this.userInfoRepository.findOne({
+      const user = await this.userRepository.findOne({
         where: { id: userId },
       });
 
-      if (!userInfo) {
+      if (!user) {
         throw new Error(`사용자 정보를 찾을 수 없습니다: ${userId}`);
       }
 
-      userInfo.role = role;
-      userInfo.updatedAt = new Date();
+      user.role = role;
+      user.updatedAt = new Date();
 
-      const updatedUserInfo = await this.userInfoRepository.save(userInfo);
+      const updatedUser = await this.userRepository.save(user);
 
       // Supabase Auth의 user_metadata 업데이트
       await this.updateSupabaseMetadata(userId, {
-        nickname: updatedUserInfo.nickname,
-        role: updatedUserInfo.role,
+        nickname: updatedUser.nickname,
+        role: updatedUser.role,
       });
 
       this.logger.log(`사용자 역할 업데이트 완료: ${userId} -> ${role}`);
-      return updatedUserInfo;
+      return updatedUser;
     } catch (error) {
       this.logger.error(`사용자 역할 업데이트 실패: ${userId}`, error.stack);
       throw error;
@@ -231,27 +235,27 @@ export class UserSyncService {
    *
    * @param userId 사용자 ID
    * @param isActive 활성화 여부
-   * @returns 업데이트된 UserInfo
+   * @returns 업데이트된 User
    */
-  async updateUserStatus(userId: string, isActive: boolean): Promise<UserInfo> {
+  async updateUserStatus(userId: string, isActive: boolean): Promise<User> {
     try {
-      const userInfo = await this.userInfoRepository.findOne({
+      const user = await this.userRepository.findOne({
         where: { id: userId },
       });
 
-      if (!userInfo) {
+      if (!user) {
         throw new Error(`사용자 정보를 찾을 수 없습니다: ${userId}`);
       }
 
-      userInfo.isActive = isActive;
-      userInfo.updatedAt = new Date();
+      user.isActive = isActive;
+      user.updatedAt = new Date();
 
-      const updatedUserInfo = await this.userInfoRepository.save(userInfo);
+      const updatedUser = await this.userRepository.save(user);
 
       this.logger.log(
         `사용자 상태 업데이트 완료: ${userId} -> ${isActive ? '활성화' : '비활성화'}`,
       );
-      return updatedUserInfo;
+      return updatedUser;
     } catch (error) {
       this.logger.error(`사용자 상태 업데이트 실패: ${userId}`, error.stack);
       throw error;
@@ -260,7 +264,7 @@ export class UserSyncService {
 
   /**
    * 통합 사용자 정보 조회
-   * Supabase Auth 정보와 UserInfo를 결합하여 반환
+   * Supabase Auth 정보와 User를 결합하여 반환
    *
    * @param userId 사용자 ID
    * @returns 통합 사용자 정보
@@ -285,21 +289,18 @@ export class UserSyncService {
       // updated_at을 보정한 supabaseUser를 SupabaseAuthUser로 타입 단언
       const compatibleSupabaseUser = supabaseUser as SupabaseAuthUser;
 
-      // UserInfo 조회
-      const userInfo = await this.userInfoRepository.findOne({
+      // User 조회
+      const user = await this.userRepository.findOne({
         where: { id: userId },
       });
 
-      if (!userInfo) {
-        // UserInfo가 없으면 자동 생성
-        const syncedUserInfo = await this.syncUser({ userId });
-        return this.buildCombinedUserInfo(
-          compatibleSupabaseUser,
-          syncedUserInfo,
-        );
+      if (!user) {
+        // User가 없으면 자동 생성
+        const syncedUser = await this.syncUser({ userId });
+        return this.buildCombinedUserInfo(compatibleSupabaseUser, syncedUser);
       }
 
-      return this.buildCombinedUserInfo(compatibleSupabaseUser, userInfo);
+      return this.buildCombinedUserInfo(compatibleSupabaseUser, user);
     } catch (error) {
       this.logger.error(`통합 사용자 정보 조회 실패: ${userId}`, error.stack);
       return null;
@@ -313,7 +314,7 @@ export class UserSyncService {
    * @returns 존재 여부
    */
   async userExists(userId: string): Promise<boolean> {
-    const count = await this.userInfoRepository.count({
+    const count = await this.userRepository.count({
       where: { id: userId },
     });
     return count > 0;
@@ -330,12 +331,12 @@ export class UserSyncService {
     nickname: string,
     excludeUserId?: string,
   ): Promise<boolean> {
-    const query = this.userInfoRepository
-      .createQueryBuilder('userInfo')
-      .where('userInfo.nickname = :nickname', { nickname });
+    const query = this.userRepository
+      .createQueryBuilder('user')
+      .where('user.nickname = :nickname', { nickname });
 
     if (excludeUserId) {
-      query.andWhere('userInfo.id != :excludeUserId', { excludeUserId });
+      query.andWhere('user.id != :excludeUserId', { excludeUserId });
     }
 
     const count = await query.getCount();
@@ -368,12 +369,12 @@ export class UserSyncService {
    * 통합 사용자 정보 객체 생성
    *
    * @param supabaseUser Supabase Auth 사용자 정보
-   * @param userInfo UserInfo 엔티티
+   * @param user User 엔티티
    * @returns 통합 사용자 정보
    */
   private buildCombinedUserInfo(
     supabaseUser: SupabaseAuthUser,
-    userInfo: UserInfo,
+    user: User,
   ): CombinedUserInfo {
     return {
       // Supabase Auth 정보
@@ -385,16 +386,16 @@ export class UserSyncService {
       provider: supabaseUser.app_metadata?.provider,
       providers: supabaseUser.app_metadata?.providers,
 
-      // UserInfo 정보
-      nickname: userInfo.nickname,
-      role: userInfo.role,
-      profileImageUrl: userInfo.profileImageUrl,
-      bio: userInfo.bio,
-      isActive: userInfo.isActive,
+      // User 정보
+      nickname: user.nickname,
+      role: user.role,
+      profileImageUrl: user.profileImageUrl,
+      bio: user.bio,
+      isActive: user.isActive,
 
       // 공통 정보
-      createdAt: userInfo.createdAt,
-      updatedAt: userInfo.updatedAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 }

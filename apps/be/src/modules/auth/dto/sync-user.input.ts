@@ -6,7 +6,7 @@ import {
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { UserRole } from '../../../entities/user-info.entity';
+import { UserRole } from '../../../entities/user.entity';
 
 /**
  * 사용자 동기화 입력 DTO

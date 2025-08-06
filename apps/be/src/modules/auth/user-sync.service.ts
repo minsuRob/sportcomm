@@ -3,10 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   UserInfo,
-  UserRole,
   SupabaseAuthUser,
   CombinedUserInfo,
 } from '../../entities/user-info.entity';
+import { UserRole } from '../../entities/user.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
 
 /**
@@ -273,6 +273,18 @@ export class UserSyncService {
         return null;
       }
 
+      // Supabase User 타입의 updated_at은 string | undefined 이지만,
+      // 내부 SupabaseAuthUser 타입은 string을 기대하므로, 값이 없을 경우 현재 시간으로 설정합니다.
+      if (!supabaseUser.updated_at) {
+        this.logger.warn(
+          `Supabase 사용자(${userId}) 정보에 updated_at이 없어 현재 시간으로 설정합니다.`,
+        );
+        supabaseUser.updated_at = new Date().toISOString();
+      }
+
+      // updated_at을 보정한 supabaseUser를 SupabaseAuthUser로 타입 단언
+      const compatibleSupabaseUser = supabaseUser as SupabaseAuthUser;
+
       // UserInfo 조회
       const userInfo = await this.userInfoRepository.findOne({
         where: { id: userId },
@@ -281,10 +293,13 @@ export class UserSyncService {
       if (!userInfo) {
         // UserInfo가 없으면 자동 생성
         const syncedUserInfo = await this.syncUser({ userId });
-        return this.buildCombinedUserInfo(supabaseUser, syncedUserInfo);
+        return this.buildCombinedUserInfo(
+          compatibleSupabaseUser,
+          syncedUserInfo,
+        );
       }
 
-      return this.buildCombinedUserInfo(supabaseUser, userInfo);
+      return this.buildCombinedUserInfo(compatibleSupabaseUser, userInfo);
     } catch (error) {
       this.logger.error(`통합 사용자 정보 조회 실패: ${userId}`, error.stack);
       return null;

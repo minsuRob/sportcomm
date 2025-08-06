@@ -1,5 +1,6 @@
 import { setItem, getItem, removeItem } from "./storage/storage";
 import { UserTeam } from "./graphql/teams";
+import { getValidToken, getCurrentSession } from "./auth/token-manager";
 
 const TOKEN_KEY = "sportcomm-auth-token";
 const USER_KEY = "sportcomm-auth-user";
@@ -20,7 +21,7 @@ export interface User {
 
 export const saveSession = async (
   tokenOrUser: string | User,
-  user?: User,
+  user?: User
 ): Promise<void> => {
   try {
     // 두 개의 매개변수가 전달된 경우 (기존 방식)
@@ -69,24 +70,37 @@ export const getSession = async (): Promise<{
   isAuthenticated: boolean;
 }> => {
   try {
-    const token = await getItem(TOKEN_KEY);
+    // 토큰 매니저에서 유효한 토큰 가져오기 (자동 갱신 포함)
+    const validToken = await getValidToken();
+
+    // 로컬 스토리지에서 사용자 정보 가져오기
     const userJson = await getItem(USER_KEY);
     const user = userJson ? (JSON.parse(userJson) as User) : null;
+
+    // Supabase 세션에서 사용자 정보 동기화
+    const supabaseSession = getCurrentSession();
+    if (supabaseSession?.user && user) {
+      // 필요시 사용자 정보 업데이트
+      user.email = supabaseSession.user.email || user.email;
+    }
+
     // 사용자 객체가 있고 role이 'ADMIN'이면 isAdmin 속성 설정
     if (user && user.role === "ADMIN" && user.isAdmin === undefined) {
       user.isAdmin = true;
     }
-    const isAuthenticated = !!token && !!user;
+
+    const isAuthenticated = !!validToken && !!user;
 
     // 디버깅을 위한 로그
     console.log("세션 조회 결과:", {
-      hasToken: !!token,
+      hasValidToken: !!validToken,
       hasUser: !!user,
       isAdmin: user?.isAdmin,
       isAuthenticated,
+      supabaseUserId: supabaseSession?.user?.id,
     });
 
-    return { token, user, isAuthenticated };
+    return { token: validToken, user, isAuthenticated };
   } catch (error) {
     console.error("Failed to get session", error);
     return { token: null, user: null, isAuthenticated: false };
@@ -95,8 +109,13 @@ export const getSession = async (): Promise<{
 
 export const clearSession = async (): Promise<void> => {
   try {
+    // 로컬 스토리지 정리
     await removeItem(TOKEN_KEY);
     await removeItem(USER_KEY);
+
+    // 토큰 매니저를 통한 Supabase 로그아웃
+    const { tokenManager } = await import("./auth/token-manager");
+    await tokenManager.signOut();
     console.log("세션 정보가 모두 삭제되었습니다.");
   } catch (error) {
     console.error("Failed to clear session", error);

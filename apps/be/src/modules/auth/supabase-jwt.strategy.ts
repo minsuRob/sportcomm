@@ -52,29 +52,12 @@ export class SupabaseJwtStrategy extends PassportStrategy(
     // Supabase JWT 검증을 위한 설정
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
-      // Supabase는 자체 JWT 서명을 사용하므로 여기서는 토큰 검증을 Supabase 서비스에 위임
-      secretOrKeyProvider: async (
-        request: any,
-        rawJwtToken: string,
-        done: any,
-      ) => {
-        try {
-          // Supabase에서 토큰 검증
-          const user = await this.supabaseService.verifyToken(rawJwtToken);
-          if (!user) {
-            return done(
-              new UnauthorizedException('유효하지 않은 토큰입니다.'),
-              null,
-            );
-          }
-          // 검증 성공 시 더미 시크릿 반환 (실제로는 Supabase에서 이미 검증됨)
-          return done(null, 'dummy-secret');
-        } catch (error) {
-          return done(new UnauthorizedException('토큰 검증 실패'), null);
-        }
-      },
-      passReqToCallback: true,
+      ignoreExpiration: false, // 토큰 만료 검증 활성화
+      // Supabase JWT 시크릿 키 사용
+      secretOrKey:
+        configService.get<string>('SUPABASE_JWT_SECRET') ||
+        'IA2HIh02zsvxCW0UEjgwxQSML3CDNAcCnvd534czOUk1re65ooCWxH3pWT8oDCIyNrKgEjIdEcsnxcWHBZ3TYw==',
+      algorithms: ['HS256'],
     });
   }
 
@@ -84,40 +67,56 @@ export class SupabaseJwtStrategy extends PassportStrategy(
    * User 엔티티를 사용하여 사용자 정보를 관리하고,
    * UserSyncService를 통해 자동 동기화를 수행합니다.
    *
-   * @param request Express 요청 객체
    * @param payload JWT 페이로드
-   * @returns 인증된 사용자 객체 (레거시 호환성을 위해 User 타입 유지)
+   * @returns 인증된 사용자 객체
    */
-  async validate(request: any, payload: SupabaseJwtPayload): Promise<User> {
+  async validate(payload: any): Promise<User> {
     try {
-      const userId = payload.sub;
+      console.log('🔍 JWT 페이로드 전체:', JSON.stringify(payload, null, 2));
+
+      // Supabase JWT 페이로드 구조 확인
+      const userId = payload.sub || payload.user_id || payload.id;
 
       if (!userId) {
+        console.error('❌ 사용자 ID를 찾을 수 없음:', payload);
         throw new UnauthorizedException('토큰에 사용자 ID가 없습니다.');
       }
+
+      console.log('👤 추출된 사용자 ID:', userId);
+
+      // 토큰 만료 확인 (passport-jwt가 자동으로 처리하므로 제거)
+      // ignoreExpiration: false로 설정했으므로 만료된 토큰은 여기까지 오지 않음
 
       // User를 통해 사용자 조회
       let user = await this.userRepository.findOne({
         where: { id: userId },
       });
 
+      console.log(
+        '👤 DB에서 사용자 조회 결과:',
+        user ? `찾음 (${user.nickname})` : '없음',
+      );
+
       // 사용자가 로컬 DB에 없으면 자동 동기화
       if (!user) {
-        console.log(`새 사용자 자동 동기화 시작: ${userId}`);
+        console.log(`🔄 새 사용자 자동 동기화 시작: ${userId}`);
 
         try {
           user = await this.userSyncService.syncUser({
             userId,
             // JWT 페이로드에서 기본 정보 추출
-            nickname: payload.user_metadata?.nickname,
+            nickname:
+              payload.user_metadata?.nickname ||
+              payload.email?.split('@')[0] ||
+              `user_${userId.slice(0, 8)}`,
             role: payload.user_metadata?.role as UserRole,
           });
 
           console.log(
-            `새 사용자 동기화 완료: ${user.nickname} (ID: ${userId})`,
+            `✅ 새 사용자 동기화 완료: ${user.nickname} (ID: ${userId})`,
           );
         } catch (syncError) {
-          console.error(`사용자 동기화 실패: ${userId}`, syncError);
+          console.error(`❌ 사용자 동기화 실패: ${userId}`, syncError);
           throw new UnauthorizedException('사용자 정보 동기화에 실패했습니다.');
         }
       } else {
@@ -127,15 +126,18 @@ export class SupabaseJwtStrategy extends PassportStrategy(
           try {
             user = await this.userSyncService.syncUser({
               userId,
-              nickname: payload.user_metadata?.nickname,
+              nickname:
+                payload.user_metadata?.nickname ||
+                payload.email?.split('@')[0] ||
+                `user_${userId.slice(0, 8)}`,
               role: payload.user_metadata?.role as UserRole,
             });
             console.log(
-              `사용자 정보 동기화 완료: ${user.nickname} (ID: ${userId})`,
+              `🔄 사용자 정보 동기화 완료: ${user.nickname} (ID: ${userId})`,
             );
           } catch (syncError) {
             console.warn(
-              `사용자 동기화 실패 (계속 진행): ${userId}`,
+              `⚠️ 사용자 동기화 실패 (계속 진행): ${userId}`,
               syncError.message,
             );
             // 동기화 실패해도 기존 정보로 계속 진행
@@ -150,9 +152,13 @@ export class SupabaseJwtStrategy extends PassportStrategy(
         );
       }
 
+      console.log('✅ 인증 성공:', {
+        userId: user.id,
+        nickname: user.nickname,
+      });
       return user;
     } catch (error) {
-      console.error('JWT 검증 중 오류:', error);
+      console.error('❌ JWT 검증 중 오류:', error);
 
       if (error instanceof UnauthorizedException) {
         throw error;

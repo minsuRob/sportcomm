@@ -8,10 +8,10 @@ import { Observable, lastValueFrom } from 'rxjs';
 
 /**
  * HTTP 요청 인증 가드
- * REST API 엔드포인트에서 JWT 토큰을 검증하는 인증 가드입니다.
+ * REST API 엔드포인트에서 Supabase JWT 토큰을 검증하는 인증 가드입니다.
  */
 @Injectable()
-export class HttpAuthGuard extends AuthGuard('jwt') {
+export class HttpAuthGuard extends AuthGuard('supabase-jwt') {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {

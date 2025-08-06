@@ -9,10 +9,10 @@ import { Observable } from 'rxjs';
 
 /**
  * JWT 인증 가드
- * REST API 및 GraphQL 요청에서 JWT 토큰을 검증하는 인증 가드입니다.
+ * REST API 및 GraphQL 요청에서 Supabase JWT 토큰을 검증하는 인증 가드입니다.
  */
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {
+export class JwtAuthGuard extends AuthGuard('supabase-jwt') {
   constructor() {
     super();
   }

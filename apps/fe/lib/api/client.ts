@@ -9,6 +9,8 @@ import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
 import { Platform } from "react-native";
 import { getSession } from "@/lib/auth";
+import { getValidToken } from "@/lib/auth/token-manager";
+import { handleAuthError } from "@/lib/auth/auth-error-handler";
 // import { createHybridUploadLink } from "./fileUpload"; // 임시 비활성화
 import { logPlatformInfo, getPlatformType } from "@/lib/platform";
 import { SERVER_URL } from "@env";
@@ -44,7 +46,7 @@ const errorLink = onError(
     if (graphQLErrors) {
       graphQLErrors.forEach(({ message, locations, path, extensions }) => {
         console.error(
-          `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`,
+          `[GraphQL 에러]: 메시지: ${message}, 위치: ${locations}, 경로: ${path}`
         );
 
         // 인증 오류 처리
@@ -56,11 +58,25 @@ const errorLink = onError(
           message.includes("logIn") ||
           message.includes("access denied") ||
           message.includes("Cannot read properties of undefined") ||
+          message.includes("jwt expired") ||
+          message.includes("토큰이 만료") ||
           (extensions && extensions.code === "UNAUTHENTICATED")
         ) {
           console.error("인증 오류 감지:", message, {
             operation: operation.operationName,
             path: path,
+          });
+
+          // 인증 오류 처리 (토큰 갱신 및 재로그인 요청)
+          handleAuthError(
+            { message, extensions },
+            operation.operationName
+          ).then((canRetry) => {
+            if (canRetry) {
+              console.log("✅ 인증 오류 처리 완료, 요청 재시도 가능");
+            } else {
+              console.log("❌ 인증 오류 처리 완료, 재로그인 필요");
+            }
           });
 
           // 인증 오류 발생 시 세션 체크 (디버깅용)
@@ -72,9 +88,6 @@ const errorLink = onError(
               userId: user?.id,
             });
           });
-
-          // 여기서 필요하다면 세션 초기화 등의 작업 수행 가능
-          // clearSession().then(() => {...});
         }
       });
     }
@@ -86,7 +99,7 @@ const errorLink = onError(
     }
 
     return forward(operation);
-  },
+  }
 );
 
 /**
@@ -95,13 +108,16 @@ const errorLink = onError(
  */
 const authLink = setContext(async (operation, { headers }) => {
   try {
-    // auth.ts의 getSession을 통해 토큰 가져오기
-    const { token, user, isAuthenticated } = await getSession();
+    // 토큰 매니저를 통해 유효한 토큰 가져오기 (자동 갱신 포함)
+    const validToken = await getValidToken();
+
+    // 백업으로 기존 세션도 확인
+    const { user, isAuthenticated } = await getSession();
 
     // 디버깅을 위한 인증 상태 로그
     console.log(`[${operation.operationName}] 인증 상태:`, {
-      hasToken: !!token,
-      tokenLength: token?.length || 0,
+      hasValidToken: !!validToken,
+      tokenLength: validToken?.length || 0,
       hasUser: !!user,
       userId: user?.id,
       isAuthenticated,
@@ -116,20 +132,24 @@ const authLink = setContext(async (operation, { headers }) => {
         "SelectTeam",
         "UnselectTeam",
         "GetMyPrimaryTeam",
+        "SyncUser",
+        "UpdateUserProfile",
+        "GetCurrentUserInfo",
+        "CheckNicknameTaken",
       ].includes(operation.operationName);
 
     // 인증이 필요한데 토큰이 없으면 경고 로그
-    if (requiresAuth && !isAuthenticated) {
+    if (requiresAuth && !validToken) {
       console.warn(
-        `인증이 필요한 작업(${operation.operationName})에 유효한 인증 정보가 없습니다.`,
+        `인증이 필요한 작업(${operation.operationName})에 유효한 토큰이 없습니다.`
       );
     }
 
-    // 헤더에 토큰 추가
+    // 헤더에 유효한 토큰 추가
     return {
       headers: {
         ...headers,
-        authorization: token ? `Bearer ${token}` : "",
+        authorization: validToken ? `Bearer ${validToken}` : "",
         "Content-Type": "application/json",
       },
     };
@@ -165,7 +185,7 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
             ? "File"
             : file.uri
               ? "ReactNativeFile"
-              : "알 수 없음",
+              : "알 수 없음"
         );
         console.log(`파일[${index}] 속성:`, Object.keys(file));
       });
@@ -301,16 +321,18 @@ export const client = new ApolloClient({
       context: {
         getAuth: async () => {
           try {
-            const { token, isAuthenticated } = await getSession();
+            const validToken = await getValidToken();
+            const { isAuthenticated } = await getSession();
+
             console.log("뮤테이션 인증 컨텍스트 설정:", {
-              hasToken: !!token,
-              tokenLength: token?.length || 0,
+              hasValidToken: !!validToken,
+              tokenLength: validToken?.length || 0,
               isAuthenticated,
             });
 
             return {
               headers: {
-                authorization: token ? `Bearer ${token}` : "",
+                authorization: validToken ? `Bearer ${validToken}` : "",
                 "Content-Type": "application/json",
               },
             };

@@ -1,11 +1,12 @@
-import { Entity, Column, OneToMany, Index } from 'typeorm';
-import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
+import { Entity, Column, OneToMany, Index, PrimaryColumn } from 'typeorm';
+import { ObjectType, Field, registerEnumType, ID } from '@nestjs/graphql';
 import {
   IsEmail,
   IsString,
   MinLength,
   MaxLength,
   IsEnum,
+  IsUUID,
 } from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { Post } from './post.entity';
@@ -52,12 +53,44 @@ registerEnumType(UserRole, {
  *
  * 스포츠 커뮤니티의 모든 사용자 정보를 관리합니다.
  * 게시물 작성, 댓글, 팔로우, 채팅 등 모든 활동의 주체가 됩니다.
+ * 
+ * Supabase Auth와 연동하여 사용자 ID는 Supabase에서 생성된 UUID를 사용합니다.
  */
 @ObjectType()
 @Entity('users')
 @Index(['email'], { unique: true })
 @Index(['nickname'], { unique: true })
-export class User extends BaseEntity {
+export class User {
+  /**
+   * 사용자 고유 식별자 (Supabase Auth UUID)
+   * Supabase에서 생성된 사용자 ID를 그대로 사용합니다.
+   */
+  @Field(() => ID, { description: '사용자 고유 식별자' })
+  @PrimaryColumn('uuid')
+  @IsUUID(4, { message: '올바른 UUID 형식이어야 합니다.' })
+  id: string;
+
+  /**
+   * 생성 시간
+   */
+  @Field(() => Date, { description: '생성 시간' })
+  @Column({
+    type: 'timestamp with time zone',
+    default: () => 'CURRENT_TIMESTAMP',
+    comment: '생성 시간',
+  })
+  createdAt: Date;
+
+  /**
+   * 수정 시간
+   */
+  @Field(() => Date, { description: '수정 시간' })
+  @Column({
+    type: 'timestamp with time zone',
+    default: () => 'CURRENT_TIMESTAMP',
+    comment: '수정 시간',
+  })
+  updatedAt: Date;
   /**
    * 사용자 닉네임
    * 고유값이며 다른 사용자와 중복될 수 없습니다.

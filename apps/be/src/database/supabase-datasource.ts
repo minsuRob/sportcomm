@@ -15,7 +15,7 @@ export const SupabaseDataSource = new DataSource({
   type: 'postgres',
 
   // 실제 Supabase 프로젝트 정보 (MCP에서 확인됨)
-  host: 'db.hgekmqvscnjcuzyduchy.supabase.co',
+  host: 'db.iikgupdmnlmhycmtuqzj.supabase.co',
   port: 5432,
   username: 'postgres',
   password: process.env.DB_PASSWORD || 'YOUR_ACTUAL_PASSWORD_HERE',

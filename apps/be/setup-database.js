@@ -54,8 +54,8 @@ async function setupDatabase() {
 
     // 패스워드 업데이트
     envContent = envContent.replace(
-      /DATABASE_URL=postgresql:\/\/postgres:.*?@db\.hgekmqvscnjcuzyduchy\.supabase\.co:5432\/postgres/,
-      `DATABASE_URL=postgresql://postgres:${password}@db.hgekmqvscnjcuzyduchy.supabase.co:5432/postgres`,
+      /DATABASE_URL=postgresql:\/\/postgres:.*?@db\.iikgupdmnlmhycmtuqzj\.supabase\.co:5432\/postgres/,
+      `DATABASE_URL=postgresql://postgres:${password}@db.iikgupdmnlmhycmtuqzj.supabase.co:5432/postgres`,
     );
 
     envContent = envContent.replace(

@@ -1,11 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 
 // Supabase 연결 정보 (개발용 직접 설정)
-const SUPABASE_URL = "https://hgekmqvscnjcuzyduchy.supabase.co";
+const SUPABASE_URL = "https://iikgupdmnlmhycmtuqzj.supabase.co";
 const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhnZWttcXZzY25qY3V6eWR1Y2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNzU4NDEsImV4cCI6MjA2OTk1MTg0MX0.2iXLIfZUtA8njiglEDUnl2Nr8pTv_PFecbm6UtFR54E";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpa2d1cGRtbmxtaHljbXR1cXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NTEwMDUsImV4cCI6MjA3MDAyNzAwNX0.HYqlCpNdqGJLDRtVaXFo7pZcww1_CfC8ozitL_EIbtA";
 
-console.log("Supabase 클라이언트 초기화:", {
+console.log("환경변수로 바꾸세요!! Supabase 클라이언트 초기화:", {
   url: SUPABASE_URL,
   keyLength: SUPABASE_ANON_KEY.length,
 });
@@ -209,7 +209,7 @@ export const supabase = createClient<Database>(
         "x-application-name": "sportcomm-chat",
       },
     },
-  },
+  }
 );
 
 /**
@@ -248,7 +248,7 @@ export const getCurrentSession = () => {
  * @returns 구독 해제 함수
  */
 export const onAuthStateChange = (
-  callback: (event: string, session: any) => void,
+  callback: (event: string, session: any) => void
 ) => {
   return supabase.auth.onAuthStateChange(callback);
 };

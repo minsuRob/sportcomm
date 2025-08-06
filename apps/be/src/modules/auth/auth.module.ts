@@ -8,7 +8,10 @@ import { AuthResolver } from './auth.resolver';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { SupabaseJwtStrategy } from './supabase-jwt.strategy';
+import { UserSyncService } from './user-sync.service';
+import { AuthSyncResolver } from './auth-sync.resolver';
 import { User } from '../../entities/user.entity';
+import { UserInfo } from '../../entities/user-info.entity';
 import { MediaModule } from '../media/media.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -27,8 +30,8 @@ import { SupabaseModule } from '../supabase/supabase.module';
  */
 @Module({
   imports: [
-    // User 엔티티를 위한 TypeORM 모듈
-    TypeOrmModule.forFeature([User]),
+    // User 및 UserInfo 엔티티를 위한 TypeORM 모듈
+    TypeOrmModule.forFeature([User, UserInfo]),
     UsersModule,
     SupabaseModule,
 
@@ -88,19 +91,22 @@ import { SupabaseModule } from '../supabase/supabase.module';
 
   // 서비스 및 전략 제공
   providers: [
-    AuthService, 
-    AuthResolver, 
+    AuthService,
+    AuthResolver,
+    AuthSyncResolver, // 사용자 동기화 리졸버
+    UserSyncService, // 사용자 동기화 서비스
     JwtStrategy, // 기존 JWT 전략 (하위 호환성)
     SupabaseJwtStrategy, // 새로운 Supabase JWT 전략 (기본값)
   ],
 
   // 다른 모듈에서 사용할 수 있도록 내보내기
   exports: [
-    AuthService, 
-    JwtStrategy, 
+    AuthService,
+    UserSyncService, // 사용자 동기화 서비스 내보내기
+    JwtStrategy,
     SupabaseJwtStrategy,
-    PassportModule, 
-    JwtModule
+    PassportModule,
+    JwtModule,
   ],
 })
 export class AuthModule {

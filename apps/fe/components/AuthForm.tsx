@@ -4,6 +4,10 @@ import { Button } from "./ui/button";
 import { Ionicons } from "@expo/vector-icons";
 import { saveSession, getSession, User } from "../lib/auth";
 import { signIn, signUp } from "../lib/supabase/auth";
+import {
+  syncUserAfterSignUp,
+  checkAndSyncUserAfterSignIn,
+} from "../lib/supabase/user-sync";
 import type { AuthError } from "@supabase/supabase-js";
 
 const SocialLogins = ({
@@ -166,6 +170,35 @@ export default function AuthForm({
           사용자정보: savedUser,
           역할: savedUser?.role,
         });
+
+        // 백엔드와 사용자 정보 동기화
+        try {
+          if (isLoginAction) {
+            // 로그인 시: 사용자 정보 확인 및 동기화
+            console.log("🔄 로그인 후 사용자 정보 동기화 확인...");
+            const userInfo = await checkAndSyncUserAfterSignIn(token);
+
+            if (userInfo) {
+              console.log("✅ 사용자 정보 동기화 확인 완료:", userInfo);
+            } else {
+              console.log(
+                "⚠️ 백엔드에 사용자 정보가 없습니다. 수동 동기화가 필요할 수 있습니다."
+              );
+            }
+          } else {
+            // 회원가입 시: 사용자 정보 자동 동기화
+            console.log("🔄 회원가입 후 사용자 정보 동기화...");
+            const userInfo = await syncUserAfterSignUp(result.user, token);
+            console.log("✅ 회원가입 후 사용자 정보 동기화 완료:", userInfo);
+          }
+        } catch (syncError: any) {
+          console.warn(
+            "⚠️ 사용자 정보 동기화 실패 (로그인은 계속 진행):",
+            syncError.message
+          );
+          // 동기화 실패해도 로그인은 계속 진행
+          // 필요시 나중에 수동으로 동기화할 수 있음
+        }
 
         // 회원가입 성공 시 이메일 확인 안내
         if (!isLoginAction) {

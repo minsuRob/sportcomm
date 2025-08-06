@@ -32,7 +32,7 @@ export class AuthErrorHandler {
     const message = error.message || "";
     const code = error.extensions?.code || error.code || "";
 
-    return (
+    const isAuthRelated =
       message.includes("Unauthorized") ||
       message.includes("인증") ||
       message.includes("로그인") ||
@@ -40,9 +40,20 @@ export class AuthErrorHandler {
       message.includes("jwt expired") ||
       message.includes("토큰이 만료") ||
       message.includes("access denied") ||
+      message.includes("인증에 실패했습니다") ||
+      message.includes("사용자 정보 동기화에 실패했습니다") ||
       code === "UNAUTHENTICATED" ||
-      code === "FORBIDDEN"
-    );
+      code === "FORBIDDEN";
+
+    if (isAuthRelated) {
+      console.log("🔍 인증 관련 오류 감지:", {
+        message,
+        code,
+        isTokenExpired: this.isTokenExpiredError(error),
+      });
+    }
+
+    return isAuthRelated;
   }
 
   /**

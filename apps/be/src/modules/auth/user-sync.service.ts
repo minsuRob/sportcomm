@@ -70,13 +70,46 @@ export class UserSyncService {
     } = input;
 
     try {
+      this.logger.log(`사용자 동기화 시작: ${userId}`);
+
       // Supabase Auth에서 사용자 정보 조회
       const supabaseUser = await this.supabaseService.getUserMetadata(userId);
 
       if (!supabaseUser) {
-        throw new Error(
-          `Supabase Auth에서 사용자를 찾을 수 없습니다: ${userId}`,
+        this.logger.warn(`Supabase Auth에서 사용자를 찾을 수 없음: ${userId}`);
+
+        // 사용자가 Supabase Auth에 없어도 로컬 DB에 있으면 계속 진행
+        let existingUser = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+
+        if (existingUser) {
+          this.logger.log(
+            `로컬 DB에서 기존 사용자 발견: ${userId} (${existingUser.nickname})`,
+          );
+          return existingUser;
+        }
+
+        // 둘 다 없으면 기본 정보로 사용자 생성
+        this.logger.log(`기본 정보로 새 사용자 생성: ${userId}`);
+        const defaultNickname = nickname || `user_${userId.slice(0, 8)}`;
+
+        const newUser = this.userRepository.create({
+          id: userId,
+          nickname: defaultNickname,
+          role: role || UserRole.USER,
+          email: '',
+          profileImageUrl,
+          bio,
+          isEmailVerified: false,
+          isActive: true,
+        });
+
+        const savedUser = await this.userRepository.save(newUser);
+        this.logger.log(
+          `기본 정보로 사용자 생성 완료: ${userId} (${savedUser.nickname})`,
         );
+        return savedUser;
       }
 
       // 기존 User 조회

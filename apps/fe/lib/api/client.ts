@@ -121,7 +121,32 @@ const authLink = setContext(async (operation, { headers }) => {
       hasUser: !!user,
       userId: user?.id,
       isAuthenticated,
+      operationRequiresAuth: requiresAuth,
     });
+
+    // 토큰이 있는 경우 JWT 페이로드 디코딩 (디버깅용)
+    if (validToken) {
+      try {
+        const tokenParts = validToken.split(".");
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          console.log(`[${operation.operationName}] JWT 페이로드:`, {
+            sub: payload.sub,
+            iss: payload.iss,
+            aud: payload.aud,
+            exp: payload.exp
+              ? new Date(payload.exp * 1000).toISOString()
+              : null,
+            email: payload.email,
+          });
+        }
+      } catch (decodeError) {
+        console.warn(
+          `[${operation.operationName}] JWT 디코딩 실패:`,
+          decodeError
+        );
+      }
+    }
 
     // 인증이 필요한 operation인지 확인
     const requiresAuth =
@@ -136,6 +161,10 @@ const authLink = setContext(async (operation, { headers }) => {
         "UpdateUserProfile",
         "GetCurrentUserInfo",
         "CheckNicknameTaken",
+        "GetNotifications", // 알림 조회 추가
+        "GetUnreadNotificationCount", // 읽지 않은 알림 개수 조회 추가
+        "MarkNotificationAsRead", // 알림 읽음 처리 추가
+        "MarkAllNotificationsAsRead", // 모든 알림 읽음 처리 추가
       ].includes(operation.operationName);
 
     // 인증이 필요한데 토큰이 없으면 경고 로그

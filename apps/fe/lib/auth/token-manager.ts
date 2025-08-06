@@ -98,10 +98,32 @@ export class TokenManager {
       const expiresAt = this.currentSession.expires_at!;
       const timeUntilExpiry = expiresAt - now;
 
+      // JWT 토큰 페이로드 디코딩 (디버깅용)
+      try {
+        const tokenParts = this.currentSession.access_token.split(".");
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          console.log("🔍 클라이언트 토큰 페이로드:", {
+            sub: payload.sub,
+            iss: payload.iss,
+            aud: payload.aud,
+            exp: payload.exp,
+            iat: payload.iat,
+            email: payload.email,
+          });
+        }
+      } catch (decodeError) {
+        console.warn("⚠️ 토큰 디코딩 실패:", decodeError);
+      }
+
       console.log("🔍 토큰 상태 확인:", {
+        userId: this.currentSession.user.id,
+        email: this.currentSession.user.email,
         expiresAt: new Date(expiresAt * 1000).toISOString(),
         timeUntilExpiry: `${timeUntilExpiry}초`,
         needsRefresh: timeUntilExpiry < 300, // 5분 미만
+        tokenLength: this.currentSession.access_token.length,
+        userId: this.currentSession.user.id,
       });
 
       // 토큰이 5분 이내에 만료되면 갱신

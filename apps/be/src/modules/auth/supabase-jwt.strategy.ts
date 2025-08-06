@@ -53,10 +53,10 @@ export class SupabaseJwtStrategy extends PassportStrategy(
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false, // 토큰 만료 검증 활성화
-      // Supabase JWT 시크릿 키 사용
+      // Supabase JWT 시크릿 키 사용 (올바른 프로젝트의 JWT Secret)
       secretOrKey:
         configService.get<string>('SUPABASE_JWT_SECRET') ||
-        'IA2HIh02zsvxCW0UEjgwxQSML3CDNAcCnvd534czOUk1re65ooCWxH3pWT8oDCIyNrKgEjIdEcsnxcWHBZ3TYw==',
+        'IA2HIh02zsvxCW0UEjgwxQSML3CDNAcCnvd534czOUk1re65ooCWxH3pWT8oDCIyNrKgEjIdEcsnxcWHBZ3TYw',
       algorithms: ['HS256'],
     });
   }
@@ -73,6 +73,14 @@ export class SupabaseJwtStrategy extends PassportStrategy(
   async validate(payload: any): Promise<User> {
     try {
       console.log('🔍 JWT 페이로드 전체:', JSON.stringify(payload, null, 2));
+      console.log('🔍 JWT 토큰 발급자(iss):', payload.iss);
+      console.log('🔍 JWT 토큰 대상(aud):', payload.aud);
+      console.log(
+        '🔍 JWT 토큰 만료시간(exp):',
+        payload.exp,
+        '현재시간:',
+        Math.floor(Date.now() / 1000),
+      );
 
       // Supabase JWT 페이로드 구조 확인
       const userId = payload.sub || payload.user_id || payload.id;
@@ -83,6 +91,16 @@ export class SupabaseJwtStrategy extends PassportStrategy(
       }
 
       console.log('👤 추출된 사용자 ID:', userId);
+
+      // 토큰 발급자 검증 (올바른 Supabase 프로젝트인지 확인)
+      const expectedIssuer = 'https://hgekmqvscnjcuzyduchy.supabase.co/auth/v1';
+      if (payload.iss && payload.iss !== expectedIssuer) {
+        console.error('❌ 잘못된 토큰 발급자:', {
+          received: payload.iss,
+          expected: expectedIssuer,
+        });
+        throw new UnauthorizedException('잘못된 토큰 발급자입니다.');
+      }
 
       // 토큰 만료 확인 (passport-jwt가 자동으로 처리하므로 제거)
       // ignoreExpiration: false로 설정했으므로 만료된 토큰은 여기까지 오지 않음

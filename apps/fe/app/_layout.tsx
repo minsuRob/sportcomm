@@ -19,8 +19,7 @@ import { customFontsToLoad } from "@/lib/theme/typography";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { initializeI18n } from "@/lib/i18n";
-import { initializeSupabase } from "@/lib/supabase/client";
-import { tokenManager } from "@/lib/auth/token-manager";
+import { initializeSupabase, supabase } from "@/lib/supabase/client";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -46,71 +45,47 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts(customFontsToLoad);
-  const [i18nInitialized, setI18nInitialized] = React.useState(false);
-  const [supabaseInitialized, setSupabaseInitialized] = React.useState(false);
-  const [tokenManagerInitialized, setTokenManagerInitialized] =
-    React.useState(false);
+  const [appInitialized, setAppInitialized] = React.useState(false);
 
   React.useEffect(() => {
     // 앱의 핵심 서비스들을 초기화합니다.
     const initializeApp = async () => {
       try {
         // 병렬로 초기화 실행
-        const [i18nResult, supabaseResult] = await Promise.allSettled([
-          initializeI18n(),
-          initializeSupabase(),
-        ]);
+        await Promise.all([initializeI18n(), initializeSupabase()]);
 
-        if (i18nResult.status === "rejected") {
-          console.error("i18n 초기화 실패:", i18nResult.reason);
+        // --- DEBUG: Supabase 세션 상태 확인 ---
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          console.log("✅ [_layout.tsx] Supabase session found:", {
+            userId: session.user.id,
+            tokenExists: !!session.access_token,
+          });
+        } else {
+          console.log("❌ [_layout.tsx] No Supabase session found.");
         }
-        setI18nInitialized(true);
-
-        if (supabaseResult.status === "rejected") {
-          console.error("Supabase 초기화 실패:", supabaseResult.reason);
-        }
-        setSupabaseInitialized(true);
+        // --- END DEBUG ---
       } catch (error) {
-        console.error("앱 초기화 실패:", error);
-        // 실패 시에도 앱이 멈추지 않도록 상태를 업데이트합니다.
-        setI18nInitialized(true);
-        setSupabaseInitialized(true);
+        console.error("App initialization failed:", error);
+      } finally {
+        setAppInitialized(true);
       }
     };
 
     initializeApp();
-
-    // 앱 시작 시 토큰 매니저 초기화
-    // Supabase 클라이언트가 초기화된 후, 세션 정보를 로드합니다.
-    console.log("🚀 앱 시작 - 토큰 매니저 초기화 시도");
-    tokenManager.getCurrentSession(); // 이 호출로 내부 리스너가 설정됩니다.
-    setTokenManagerInitialized(true);
   }, []);
 
   React.useEffect(() => {
-    if (
-      fontsLoaded &&
-      i18nInitialized &&
-      supabaseInitialized &&
-      tokenManagerInitialized
-    ) {
+    if (fontsLoaded && appInitialized) {
       // 모든 초기화가 완료되면 스플래시 화면을 숨깁니다.
       SplashScreen.hideAsync();
     }
-  }, [
-    fontsLoaded,
-    i18nInitialized,
-    supabaseInitialized,
-    tokenManagerInitialized,
-  ]);
+  }, [fontsLoaded, appInitialized]);
 
   // 모든 초기화가 완료될 때까지 로딩 상태를 유지합니다.
-  if (
-    !fontsLoaded ||
-    !i18nInitialized ||
-    !supabaseInitialized ||
-    !tokenManagerInitialized
-  ) {
+  if (!fontsLoaded || !appInitialized) {
     return null;
   }
 

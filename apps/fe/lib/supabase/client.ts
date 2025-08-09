@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   SUPABASE_URL as ENV_SUPABASE_URL,
@@ -196,11 +197,9 @@ export const supabase = createClient<Database>(
   SUPABASE_ANON_KEY,
   {
     auth: {
-      // 세션 자동 새로고침 설정
+      storage: AsyncStorage,
       autoRefreshToken: true,
-      // 세션 지속성 설정 (웹: localStorage, 모바일: AsyncStorage)
       persistSession: true,
-      // 탭 간 세션 동기화 설정 (웹만 해당)
       detectSessionInUrl: false,
     },
     // 실시간 연결 설정

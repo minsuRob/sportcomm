@@ -14,7 +14,7 @@
     "ios": "expo start -c --ios",
     "postinstall": "npx tailwindcss -i ./global.css -o ./node_modules/.cache/nativewind/global.css",
     "web": "expo start -c --web",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write .",
     "deploy": "gh-pages -t -d dist",
     "predeploy": "expo export -p web"
   },

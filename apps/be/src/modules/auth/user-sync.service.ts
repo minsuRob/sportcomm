@@ -83,7 +83,7 @@ export class UserSyncService {
         this.logger.warn(`Supabase Auth에서 사용자를 찾을 수 없음: ${userId}`);
 
         // 사용자가 Supabase Auth에 없어도 로컬 DB에 있으면 계속 진행
-        let existingUser = await this.userRepository.findOne({
+        const existingUser = await this.userRepository.findOne({
           where: { id: userId },
         });
 

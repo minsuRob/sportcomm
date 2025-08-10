@@ -4,7 +4,6 @@ import {
   Text,
   Image,
   TouchableOpacity,
-  ScrollView,
   ViewStyle,
   TextStyle,
   ImageStyle,
@@ -32,6 +31,7 @@ interface UserProfile {
   nickname: string;
   email: string;
   profileImageUrl?: string;
+  role: string; // 사용자 역할 필드 추가
   isFollowing: boolean;
   followerCount: number;
   followingCount: number;
@@ -57,11 +57,9 @@ export default function ProfileScreen() {
   ];
 
   // 사용자 프로필 데이터 조회
-  const {
-    data: profileData,
-    loading: profileLoading,
-    refetch: refetchProfile,
-  } = useQuery<{ getUserById: UserProfile }>(GET_USER_PROFILE, {
+  const { data: profileData, refetch: refetchProfile } = useQuery<{
+    getUserById: UserProfile;
+  }>(GET_USER_PROFILE, {
     variables: { userId: currentUser?.id },
     skip: !currentUser?.id, // currentUser가 없으면 쿼리 중단
     fetchPolicy: "network-only", // 캐시를 사용하지 않고 항상 네트워크 요청
@@ -98,7 +96,7 @@ export default function ProfileScreen() {
       const { user } = await getSession();
       console.log(
         "세션에서 불러온 사용자 정보:",
-        JSON.stringify(user, null, 2),
+        JSON.stringify(user, null, 2)
       );
       if (user) setCurrentUser(user);
     };
@@ -124,7 +122,7 @@ export default function ProfileScreen() {
       };
       console.log(
         "업데이트된 사용자 정보:",
-        JSON.stringify(updatedUser, null, 2),
+        JSON.stringify(updatedUser, null, 2)
       );
 
       // 세션 업데이트
@@ -205,10 +203,6 @@ export default function ProfileScreen() {
       ? "아직 작성한 게시물이 없습니다"
       : "아직 북마크한 게시물이 없습니다";
   };
-  console.log(
-    "ProfileScreen - currentUser:",
-    JSON.stringify(currentUser, null, 2),
-  );
 
   if (!currentUser) {
     return (
@@ -226,19 +220,12 @@ export default function ProfileScreen() {
     nickname: currentUser.nickname,
     email: currentUser.email || "",
     profileImageUrl: currentUser.profileImageUrl,
-    role: currentUser.role,
+    role: currentUser.role || "USER", // 기본값 설정
     isFollowing: false,
     followerCount: 0,
     followingCount: 0,
     postCount: 0,
   };
-
-  console.log(
-    "현재 역할:",
-    currentUser?.role,
-    "사용자 프로필 역할:",
-    userProfile?.role,
-  );
 
   const avatarUrl =
     userProfile.profileImageUrl ||
@@ -291,7 +278,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {/* 관리자 전용 버튼 */}
-          {(currentUser?.role === "ADMIN" || userProfile?.role === "ADMIN") && (
+          {userProfile.role === "ADMIN" && (
             <TouchableOpacity
               style={themed($adminButton)}
               onPress={handleAdminDashboard}

@@ -27,7 +27,8 @@ export async function seedSportsAndTeams(
           code: 'TOTTENHAM',
           color: '#132257',
           icon: '⚽',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/tottenham.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/tottenham.webp',
           description: '토트넘 홋스퍼 FC',
           sortOrder: 1,
         },
@@ -36,7 +37,8 @@ export async function seedSportsAndTeams(
           code: 'NEWCASTLE',
           color: '#241F20',
           icon: '⚽',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/newcastle.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/newcastle.webp',
           description: '뉴캐슬 유나이티드 FC',
           sortOrder: 2,
         },
@@ -45,7 +47,8 @@ export async function seedSportsAndTeams(
           code: 'ATLETICO_MADRID',
           color: '#CE2029',
           icon: '⚽',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/atletico.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/atletico.webp',
           description: '아틀레티코 마드리드',
           sortOrder: 3,
         },
@@ -54,7 +57,8 @@ export async function seedSportsAndTeams(
           code: 'MANCHESTER_CITY',
           color: '#6CABDD',
           icon: '⚽',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/mancity.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/mancity.webp',
           description: '맨체스터 시티 FC',
           sortOrder: 4,
         },
@@ -63,7 +67,8 @@ export async function seedSportsAndTeams(
           code: 'LIVERPOOL',
           color: '#C8102E',
           icon: '⚽',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/liverpool.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/liverpool.webp',
           description: '리버풀 FC',
           sortOrder: 5,
         },
@@ -80,7 +85,8 @@ export async function seedSportsAndTeams(
           code: 'DOOSAN_BEARS',
           color: '#131230',
           icon: '⚾',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/doosan.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/doosan.webp',
           description: '두산 베어스',
           sortOrder: 1,
         },
@@ -89,7 +95,8 @@ export async function seedSportsAndTeams(
           code: 'HANWHA_EAGLES',
           color: '#FF6600',
           icon: '⚾',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/hanwha.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/hanwha.webp',
           description: '한화 이글스',
           sortOrder: 2,
         },
@@ -98,7 +105,8 @@ export async function seedSportsAndTeams(
           code: 'LG_TWINS',
           color: '#C30452',
           icon: '⚾',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/lg.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/lg.webp',
           description: 'LG 트윈스',
           sortOrder: 3,
         },
@@ -107,7 +115,8 @@ export async function seedSportsAndTeams(
           code: 'SAMSUNG_LIONS',
           color: '#074CA1',
           icon: '⚾',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/samsung.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/samsung.webp',
           description: '삼성 라이온즈',
           sortOrder: 4,
         },
@@ -116,7 +125,8 @@ export async function seedSportsAndTeams(
           code: 'KIA_TIGERS',
           color: '#EA0029',
           icon: '⚾',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/kia.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/kia.webp',
           description: 'KIA 타이거즈',
           sortOrder: 5,
         },
@@ -133,7 +143,8 @@ export async function seedSportsAndTeams(
           code: 'T1',
           color: '#E2012D',
           icon: '🎮',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/t1.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/t1.webp',
           description: 'T1 (구 SK Telecom T1)',
           sortOrder: 1,
         },
@@ -142,7 +153,8 @@ export async function seedSportsAndTeams(
           code: 'GENG',
           color: '#AA8B56',
           icon: '🎮',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/geng.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/geng.webp',
           description: 'Gen.G Esports',
           sortOrder: 2,
         },
@@ -151,7 +163,8 @@ export async function seedSportsAndTeams(
           code: 'DRX',
           color: '#2E5BFF',
           icon: '🎮',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/drx.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/drx.webp',
           description: 'DRX',
           sortOrder: 3,
         },
@@ -160,7 +173,8 @@ export async function seedSportsAndTeams(
           code: 'KT_ROLSTER',
           color: '#D4002A',
           icon: '🎮',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/kt.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/kt.webp',
           description: 'KT 롤스터',
           sortOrder: 4,
         },
@@ -169,7 +183,8 @@ export async function seedSportsAndTeams(
           code: 'DAMWON_KIA',
           color: '#004B9F',
           icon: '🎮',
-          logoUrl: 'http://localhost:3000/uploads/team-logos/damwon.webp',
+          logoUrl:
+            'https://hgekmqvscnjcuzyduchy.supabase.co/storage/v1/object/public/team-logos/damwon.webp',
           description: '담원 기아',
           sortOrder: 5,
         },

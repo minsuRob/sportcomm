@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:sports": "ts-node -r tsconfig-paths/register src/database/seeds/sports-teams.seed.ts",
     "seed:logos": "ts-node -r tsconfig-paths/register src/database/seeds/download-team-logos.ts",
+    "migrate:uploads": "ts-node -r tsconfig-paths/register src/scripts/migrate-uploads-to-supabase.ts",
     "db:setup": "node setup-database.js",
     "db:test": "node test-db-connection.js"
   },

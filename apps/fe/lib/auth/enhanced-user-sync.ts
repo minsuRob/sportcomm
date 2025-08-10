@@ -39,7 +39,7 @@ export class EnhancedUserSyncService {
   static async syncUser(
     input: SyncUserInput,
     accessToken: string,
-    forceSync: boolean = false
+    forceSync: boolean = false,
   ): Promise<SyncResult> {
     try {
       // 중복 호출 방지 확인
@@ -85,7 +85,7 @@ export class EnhancedUserSyncService {
    */
   private static async performSync(
     input: SyncUserInput,
-    accessToken: string
+    accessToken: string,
   ): Promise<SyncResult> {
     try {
       console.log("🔄 사용자 동기화 시작:", input);
@@ -136,7 +136,7 @@ export class EnhancedUserSyncService {
       email: string;
       role?: string;
     },
-    accessToken: string
+    accessToken: string,
   ): Promise<SyncResult> {
     const syncInput: SyncUserInput = {
       nickname: userProfile.nickname,
@@ -153,7 +153,7 @@ export class EnhancedUserSyncService {
    * @returns 동기화 결과
    */
   static async checkAndSyncAfterSignIn(
-    accessToken: string
+    accessToken: string,
   ): Promise<SyncResult> {
     try {
       console.log("🔄 로그인 후 사용자 정보 확인 시작");
@@ -219,7 +219,7 @@ export class EnhancedUserSyncService {
    */
   static async updateUserProfile(
     input: { nickname?: string; profileImageUrl?: string; bio?: string },
-    accessToken: string
+    accessToken: string,
   ): Promise<SyncResult> {
     try {
       console.log("🔄 사용자 프로필 업데이트 시작:", input);
@@ -230,7 +230,7 @@ export class EnhancedUserSyncService {
       // 기존 UserSyncService의 updateUserProfile 함수 활용
       const updatedUser = await UserSyncService.updateUserProfile(
         input,
-        accessToken
+        accessToken,
       );
 
       // 전역 상태의 사용자 정보 업데이트

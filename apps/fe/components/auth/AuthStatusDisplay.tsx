@@ -63,7 +63,7 @@ export function AuthStatusDisplay({
         nickname: user.nickname,
         role: user.role,
       },
-      true
+      true,
     ); // 강제 동기화
 
     console.log("🔄 수동 동기화 결과:", result);

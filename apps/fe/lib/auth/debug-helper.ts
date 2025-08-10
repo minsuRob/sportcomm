@@ -90,7 +90,7 @@ export async function debugAuthStatus(): Promise<void> {
 export function printAuthTroubleshootingTips(): void {
   console.log("💡 === 인증 문제 해결 권장사항 ===");
   console.log(
-    "1. 프론트엔드와 백엔드가 같은 Supabase 프로젝트를 사용하는지 확인"
+    "1. 프론트엔드와 백엔드가 같은 Supabase 프로젝트를 사용하는지 확인",
   );
   console.log("2. JWT 시크릿이 올바른지 확인");
   console.log("3. 토큰이 만료되지 않았는지 확인");

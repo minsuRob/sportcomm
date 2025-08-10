@@ -62,7 +62,7 @@ export default function RootLayout() {
           onSyncSuccess: (user) => {
             console.log(
               "✅ [_layout.tsx] 전역 인증 동기화 성공:",
-              user.nickname
+              user.nickname,
             );
           },
           onError: (error) => {

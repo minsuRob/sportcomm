@@ -43,7 +43,7 @@ export default function TeamFilterSelector({
   const [selectedTeams, setSelectedTeams] = useState<Team[]>([]);
   // 체크박스처럼 모달 내에서만 임시 선택 상태를 유지하고, 적용 버튼에서만 반영
   const [pendingSelectedIds, setPendingSelectedIds] = useState<string[]>(
-    selectedTeamIds ?? []
+    selectedTeamIds ?? [],
   );
 
   // 사용자가 선택한 팀 목록 조회
@@ -51,7 +51,7 @@ export default function TeamFilterSelector({
     GET_MY_TEAMS,
     {
       fetchPolicy: "cache-and-network",
-    }
+    },
   );
 
   // 선택된 팀 정보 업데이트
@@ -82,7 +82,7 @@ export default function TeamFilterSelector({
       if (pendingSelectedIds.length > 0) {
         await AsyncStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify(pendingSelectedIds)
+          JSON.stringify(pendingSelectedIds),
         );
         onTeamSelect(pendingSelectedIds);
       } else {
@@ -102,7 +102,7 @@ export default function TeamFilterSelector({
     setPendingSelectedIds((prev) =>
       prev.includes(teamId)
         ? prev.filter((id) => id !== teamId)
-        : [...prev, teamId]
+        : [...prev, teamId],
     );
   };
 

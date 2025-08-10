@@ -117,7 +117,7 @@ export default function AuthForm({
         const errorMessage = result.error.message;
         console.error(
           `${isLoginAction ? "로그인" : "회원가입"} 실패:`,
-          errorMessage
+          errorMessage,
         );
 
         // 에러 메시지에 따라 적절한 필드에 에러 설정
@@ -191,7 +191,7 @@ export default function AuthForm({
             } else {
               console.log(
                 "⚠️ 백엔드에 사용자 정보가 없습니다:",
-                syncResult.error
+                syncResult.error,
               );
             }
           } else {
@@ -202,7 +202,7 @@ export default function AuthForm({
             if (syncResult.success && syncResult.user) {
               console.log(
                 "✅ 회원가입 후 사용자 정보 동기화 완료:",
-                syncResult.user
+                syncResult.user,
               );
             } else {
               console.warn("⚠️ 회원가입 후 동기화 실패:", syncResult.error);
@@ -211,7 +211,7 @@ export default function AuthForm({
         } catch (syncError: any) {
           console.warn(
             "⚠️ 사용자 정보 동기화 실패 (로그인은 계속 진행):",
-            syncError.message
+            syncError.message,
           );
           // 동기화 실패해도 로그인은 계속 진행
           // 필요시 나중에 수동으로 동기화할 수 있음
@@ -223,7 +223,7 @@ export default function AuthForm({
           // 이메일 확인이 필요한 경우 안내 메시지 표시
           if (!result.session.user?.email_confirmed_at) {
             alert(
-              "회원가입이 완료되었습니다. 이메일을 확인하여 계정을 활성화해주세요."
+              "회원가입이 완료되었습니다. 이메일을 확인하여 계정을 활성화해주세요.",
             );
           }
         }
@@ -233,7 +233,7 @@ export default function AuthForm({
     } catch (error: any) {
       console.error(
         `${isLoginAction ? "로그인" : "회원가입"} 중 예외 발생:`,
-        error
+        error,
       );
 
       const errorMessage = error?.message || "오류가 발생했습니다";

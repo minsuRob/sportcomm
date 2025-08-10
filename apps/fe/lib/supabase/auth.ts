@@ -352,7 +352,7 @@ export class SupabaseAuthService {
    * @returns 결과
    */
   static async resetPassword(
-    email: string
+    email: string,
   ): Promise<{ error: AuthError | null }> {
     try {
       console.log("🔄 비밀번호 재설정 이메일 전송:", email);
@@ -389,7 +389,7 @@ export class SupabaseAuthService {
    * @returns 결과
    */
   static async resendConfirmation(
-    email: string
+    email: string,
   ): Promise<{ error: AuthError | null }> {
     try {
       console.log("🔄 이메일 확인 재전송:", email);

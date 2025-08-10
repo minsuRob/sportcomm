@@ -144,7 +144,7 @@ useEffect(() => {
           console.log("토큰 갱신");
           break;
       }
-    }
+    },
   );
 
   return () => unsubscribe();

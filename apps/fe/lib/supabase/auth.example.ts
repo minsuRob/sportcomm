@@ -95,7 +95,7 @@ export function setupAuthListener() {
         default:
           console.log("인증 이벤트:", event);
       }
-    }
+    },
   );
 
   // 컴포넌트 언마운트 시 구독 해제
@@ -124,7 +124,7 @@ export const AuthExampleComponent = () => {
   const handleRegister = async (
     email: string,
     password: string,
-    nickname: string
+    nickname: string,
   ) => {
     const result = await signUp({ email, password, nickname });
 

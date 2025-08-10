@@ -52,7 +52,7 @@ export class AuthEventListener {
     this.subscription = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         await this.handleAuthStateChange(event, session);
-      }
+      },
     );
   }
 
@@ -75,7 +75,7 @@ export class AuthEventListener {
    */
   private static async handleAuthStateChange(
     event: AuthChangeEvent,
-    session: Session | null
+    session: Session | null,
   ): Promise<void> {
     if (this.options.enableDebugLog) {
       console.log("🔔 Auth 상태 변화 감지:", { event, hasSession: !!session });
@@ -135,7 +135,7 @@ export class AuthEventListener {
 
     // 사용자 정보 확인 및 동기화
     const syncResult = await EnhancedUserSyncService.checkAndSyncAfterSignIn(
-      session.access_token
+      session.access_token,
     );
 
     if (syncResult.success && syncResult.user) {
@@ -168,7 +168,7 @@ export class AuthEventListener {
    * @param session 새로운 세션 정보
    */
   private static async handleTokenRefreshed(
-    session: Session | null
+    session: Session | null,
   ): Promise<void> {
     if (!session?.access_token) {
       console.warn("⚠️ TOKEN_REFRESHED 이벤트이지만 유효한 세션이 없음");
@@ -192,7 +192,7 @@ export class AuthEventListener {
    * @param session 세션 정보
    */
   private static async handleUserUpdated(
-    session: Session | null
+    session: Session | null,
   ): Promise<void> {
     if (!session?.access_token) {
       console.warn("⚠️ USER_UPDATED 이벤트이지만 유효한 세션이 없음");
@@ -208,7 +208,7 @@ export class AuthEventListener {
       try {
         const syncResult =
           await EnhancedUserSyncService.checkAndSyncAfterSignIn(
-            session.access_token
+            session.access_token,
           );
 
         if (syncResult.success && syncResult.user) {

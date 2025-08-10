@@ -119,11 +119,11 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
   const syncUser = useCallback(
     async (
       input: SyncUserInput,
-      forceSync: boolean = false
+      forceSync: boolean = false,
     ): Promise<SyncResult> => {
       if (!authState.accessToken) {
         const error = new Error(
-          "액세스 토큰이 없습니다. 다시 로그인해 주세요."
+          "액세스 토큰이 없습니다. 다시 로그인해 주세요.",
         );
         onError?.(error);
         return { success: false, error: error.message };
@@ -133,7 +133,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
         const result = await EnhancedUserSyncService.syncUser(
           input,
           authState.accessToken,
-          forceSync
+          forceSync,
         );
 
         if (result.success && result.user && onSyncSuccess) {
@@ -147,7 +147,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
         return { success: false, error: errorObj.message };
       }
     },
-    [authState.accessToken, onSyncSuccess, onError]
+    [authState.accessToken, onSyncSuccess, onError],
   );
 
   // 회원가입 후 동기화
@@ -160,7 +160,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
     }): Promise<SyncResult> => {
       if (!authState.accessToken) {
         const error = new Error(
-          "액세스 토큰이 없습니다. 다시 로그인해 주세요."
+          "액세스 토큰이 없습니다. 다시 로그인해 주세요.",
         );
         onError?.(error);
         return { success: false, error: error.message };
@@ -169,7 +169,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
       try {
         const result = await EnhancedUserSyncService.syncAfterSignUp(
           userProfile,
-          authState.accessToken
+          authState.accessToken,
         );
 
         if (result.success && result.user && onSyncSuccess) {
@@ -183,7 +183,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
         return { success: false, error: errorObj.message };
       }
     },
-    [authState.accessToken, onSyncSuccess, onError]
+    [authState.accessToken, onSyncSuccess, onError],
   );
 
   // 로그인 후 확인 및 동기화
@@ -196,7 +196,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
 
     try {
       const result = await EnhancedUserSyncService.checkAndSyncAfterSignIn(
-        authState.accessToken
+        authState.accessToken,
       );
 
       if (result.success && result.user && onSyncSuccess) {
@@ -220,7 +220,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
     }): Promise<SyncResult> => {
       if (!authState.accessToken) {
         const error = new Error(
-          "액세스 토큰이 없습니다. 다시 로그인해 주세요."
+          "액세스 토큰이 없습니다. 다시 로그인해 주세요.",
         );
         onError?.(error);
         return { success: false, error: error.message };
@@ -229,7 +229,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
       try {
         const result = await EnhancedUserSyncService.updateUserProfile(
           input,
-          authState.accessToken
+          authState.accessToken,
         );
 
         if (result.success && result.user && onSyncSuccess) {
@@ -243,7 +243,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
         return { success: false, error: errorObj.message };
       }
     },
-    [authState.accessToken, onSyncSuccess, onError]
+    [authState.accessToken, onSyncSuccess, onError],
   );
 
   // 로그아웃

@@ -155,7 +155,7 @@ export default function FeedScreen() {
     setSelectedTeamIds(allMyTeamIds.length > 0 ? allMyTeamIds : null);
     AsyncStorage.setItem(
       "selected_team_filter",
-      JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : [])
+      JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : []),
     ).catch(() => {});
     setFilterInitialized(true);
   }, [filterInitialized, myTeamsData]);
@@ -233,7 +233,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           );
         });
       }

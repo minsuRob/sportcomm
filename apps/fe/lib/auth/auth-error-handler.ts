@@ -80,7 +80,7 @@ export class AuthErrorHandler {
    */
   static async handleAuthError(
     error: any,
-    operationName?: string
+    operationName?: string,
   ): Promise<boolean> {
     console.log("🔍 인증 오류 처리 시작:", {
       operationName,
@@ -105,7 +105,7 @@ export class AuthErrorHandler {
    * 토큰 만료 오류 처리
    */
   private static async handleTokenExpiredError(
-    operationName?: string
+    operationName?: string,
   ): Promise<boolean> {
     const retryKey = operationName || "default";
     const currentAttempts = this.retryAttempts.get(retryKey) || 0;
@@ -115,7 +115,7 @@ export class AuthErrorHandler {
       console.warn("⚠️ 토큰 갱신 최대 재시도 횟수 초과, 재로그인 필요");
       this.retryAttempts.delete(retryKey);
       await this.requestReauth(
-        "토큰 갱신에 실패했습니다. 다시 로그인해주세요."
+        "토큰 갱신에 실패했습니다. 다시 로그인해주세요.",
       );
       return false;
     }
@@ -145,7 +145,7 @@ export class AuthErrorHandler {
     } catch (refreshError) {
       console.error("❌ 토큰 갱신 중 오류:", refreshError);
       await this.requestReauth(
-        "인증 오류가 발생했습니다. 다시 로그인해주세요."
+        "인증 오류가 발생했습니다. 다시 로그인해주세요.",
       );
       return false;
     }
@@ -156,7 +156,7 @@ export class AuthErrorHandler {
    */
   private static async handleGeneralAuthError(
     error: any,
-    operationName?: string
+    operationName?: string,
   ): Promise<boolean> {
     console.error("❌ 일반 인증 오류:", {
       operationName,
@@ -190,7 +190,7 @@ export class AuthErrorHandler {
             },
           },
         ],
-        { cancelable: false }
+        { cancelable: false },
       );
     } catch (error) {
       console.error("❌ 재로그인 요청 처리 중 오류:", error);

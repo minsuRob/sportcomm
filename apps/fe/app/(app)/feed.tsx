@@ -15,7 +15,7 @@ import { useRouter } from "expo-router";
 import { GET_POSTS, GET_BLOCKED_USERS } from "@/lib/graphql";
 import FeedList from "@/components/FeedList";
 import AuthForm from "@/components/AuthForm";
-import { Post, PostType } from "@/components/PostCard";
+import { Post } from "@/components/PostCard";
 import { User, getSession, clearSession } from "@/lib/auth";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -32,13 +32,17 @@ import { showToast } from "@/components/CustomToast";
 import TeamFilterSelector from "@/components/TeamFilterSelector";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { gql } from "@apollo/client";
+import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
 
 // --- Type Definitions ---
 interface GqlPost {
   id: string;
+  title?: string;
   content: string;
   createdAt: string;
-  type: PostType;
+  teamId: string;
+  isLiked: boolean;
+  isBookmarked?: boolean;
   viewCount: number;
   likeCount: number;
   commentCount: number;
@@ -74,6 +78,7 @@ export default function FeedScreen() {
   const [chatRooms, setChatRooms] = useState<any[]>([]);
   const [chatRoomsLoading, setChatRoomsLoading] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[] | null>(null);
+  const [filterInitialized, setFilterInitialized] = useState<boolean>(false);
 
   const {
     data,
@@ -91,6 +96,11 @@ export default function FeedScreen() {
     },
     notifyOnNetworkStatusChange: true,
     fetchPolicy: "cache-and-network", // 캐시와 네트워크 모두 사용하여 최신 데이터 보장
+  });
+
+  // 내 팀 목록 조회(초기 필터 기본값으로 사용)
+  const { data: myTeamsData } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
+    fetchPolicy: "cache-and-network",
   });
 
   // 차단된 사용자 목록 조회
@@ -124,6 +134,7 @@ export default function FeedScreen() {
         const savedFilter = await AsyncStorage.getItem("selected_team_filter");
         if (savedFilter) {
           setSelectedTeamIds(JSON.parse(savedFilter));
+          setFilterInitialized(true);
         }
       } catch (error) {
         console.error("팀 필터 로드 실패:", error);
@@ -134,6 +145,20 @@ export default function FeedScreen() {
     // Supabase 채팅방 데이터 로드
     loadChatRooms();
   }, []);
+
+  // 저장된 필터가 없을 때, 최초 1회 My Teams 전체를 기본 선택으로 적용
+  useEffect(() => {
+    if (filterInitialized) return; // 이미 초기화됨
+    if (!myTeamsData?.myTeams) return;
+
+    const allMyTeamIds = myTeamsData.myTeams.map((ut) => ut.team.id);
+    setSelectedTeamIds(allMyTeamIds.length > 0 ? allMyTeamIds : null);
+    AsyncStorage.setItem(
+      "selected_team_filter",
+      JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : [])
+    ).catch(() => {});
+    setFilterInitialized(true);
+  }, [filterInitialized, myTeamsData]);
 
   // Supabase 채팅방 데이터 로드 함수
   const loadChatRooms = async () => {
@@ -273,10 +298,7 @@ export default function FeedScreen() {
         params: { postId: notification.post.id },
       });
     } else if (notification.user) {
-      router.push({
-        pathname: "/(details)/profile/[userId]",
-        params: { userId: notification.user.id },
-      });
+      router.push("/(app)/profile");
     }
   };
 

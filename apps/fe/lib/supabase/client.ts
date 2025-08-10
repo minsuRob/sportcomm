@@ -7,12 +7,13 @@ import {
 } from "@env";
 
 // Supabase 연결 정보 (iikgupdmnlmhycmtuqzj 프로젝트 사용)
-const SUPABASE_URL =
-  ENV_SUPABASE_URL || "https://iikgupdmnlmhycmtuqzj.supabase.co";
-const SUPABASE_ANON_KEY =
-  ENV_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpa2d1cGRtbmxtaHljbXR1cXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NTEwMDUsImV4cCI6MjA3MDAyNzAwNX0.HYqlCpNdqGJLDRtVaXFo7pZcww1_CfC8ozitL_EIbtA";
-
+const SUPABASE_URL = ENV_SUPABASE_URL;
+const SUPABASE_ANON_KEY = ENV_SUPABASE_ANON_KEY;
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    "Supabase URL and Anon Key must be provided in environment variables."
+  );
+}
 console.log("환경변수로 바꾸세요!! Supabase 클라이언트 초기화:", {
   url: SUPABASE_URL,
   keyLength: SUPABASE_ANON_KEY.length,

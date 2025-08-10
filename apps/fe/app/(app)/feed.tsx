@@ -48,7 +48,8 @@ export default function FeedScreen() {
     handleRefresh,
     handleLoadMore,
     selectedTeamIds,
-    setSelectedTeamIds,
+    handleTeamFilterChange,
+    filterInitialized,
   } = useFeedPosts();
 
   const {
@@ -100,9 +101,7 @@ export default function FeedScreen() {
     }
   };
 
-  // 팀 필터 선택 핸들러
-  const handleTeamFilterChange = (teamIds: string[] | null) =>
-    setSelectedTeamIds(teamIds);
+  // 팀 필터 선택 핸들러는 useFeedPosts 훅에서 제공됨
 
   // 목록 재조회 효과는 훅 내부에서 처리됨
 

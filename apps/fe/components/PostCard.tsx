@@ -66,6 +66,7 @@ export interface Post {
   id: string;
   title?: string;
   content: string;
+  type: string; // PostType
   teamId: string;
   media: Media[];
   author: User;
@@ -74,6 +75,8 @@ export interface Post {
   isBookmarked?: boolean;
   createdAt: string;
   commentCount?: number;
+  viewCount?: number;
+  isMock?: boolean;
 }
 
 export interface PostCardProps {

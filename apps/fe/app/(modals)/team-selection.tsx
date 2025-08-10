@@ -18,6 +18,7 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
 import { showToast } from "@/components/CustomToast";
 import TeamLogo from "@/components/TeamLogo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -124,7 +125,7 @@ export default function TeamSelectionScreen() {
       try {
         console.log(
           "MyTeams 데이터 확인:",
-          JSON.stringify(myTeamsData.myTeams, null, 2),
+          JSON.stringify(myTeamsData.myTeams, null, 2)
         );
 
         // 안전하게 팀 ID 추출
@@ -305,13 +306,24 @@ export default function TeamSelectionScreen() {
       // 사용자 팀 목록 다시 조회
       refetchMyTeams({ fetchPolicy: "network-only" });
 
+      // My Teams 변경 시 필터를 새로운 My Teams로 재설정
+      try {
+        await AsyncStorage.setItem(
+          "selected_team_filter",
+          JSON.stringify(selectedTeams)
+        );
+        console.log("My Teams 변경에 따른 필터 재설정 완료");
+      } catch (error) {
+        console.error("필터 재설정 실패:", error);
+      }
+
       showToast({
         type: "success",
-        title: "팀 선택 완료",
+        title: "My Teams 저장 완료",
         message:
           selectedTeams.length > 0
-            ? `${selectedTeams.length}개 팀이 선택되었습니다!`
-            : "팀 선택이 저장되었습니다.",
+            ? `${selectedTeams.length}개 팀이 My Teams로 저장되었습니다!`
+            : "My Teams가 저장되었습니다.",
         duration: 2000,
       });
 
@@ -407,7 +419,7 @@ export default function TeamSelectionScreen() {
   const renderTeamGrid = (teams: Team[]) => {
     console.log(
       "렌더링할 팀 목록:",
-      teams.map((t) => ({ id: t.id, name: t.name })),
+      teams.map((t) => ({ id: t.id, name: t.name }))
     );
     console.log("현재 선택된 팀 ID 목록:", selectedTeams);
 
@@ -423,7 +435,7 @@ export default function TeamSelectionScreen() {
             const teamId = team.id;
             const isSelected = selectedTeams.includes(teamId);
             console.log(
-              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`,
+              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`
             );
 
             return (
@@ -470,7 +482,7 @@ export default function TeamSelectionScreen() {
           {rowTeams.length < teamsPerRow && (
             <View style={[themed($teamCard), { opacity: 0 }]} />
           )}
-        </View>,
+        </View>
       );
     }
 

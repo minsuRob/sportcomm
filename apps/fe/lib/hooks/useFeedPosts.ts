@@ -1,15 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@apollo/client";
 import { GET_POSTS, GET_BLOCKED_USERS } from "@/lib/graphql";
-import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
+import {
+  GET_MY_TEAMS,
+  type GetMyTeamsResult,
+  type UserTeam,
+} from "@/lib/graphql/teams";
 import type { Post } from "@/components/PostCard";
+import type { PostType } from "@/lib/supabase/types";
 
 interface GqlPost {
   id: string;
   title?: string;
   content: string;
   createdAt: string;
+  type: PostType;
   teamId: string;
   isLiked: boolean;
   isBookmarked?: boolean;
@@ -49,21 +55,6 @@ export function useFeedPosts() {
   const [filterInitialized, setFilterInitialized] = useState(false);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
 
-  // 게시물 목록
-  const {
-    data,
-    loading: fetching,
-    error,
-    refetch,
-    fetchMore,
-  } = useQuery<PostsQueryResponse>(GET_POSTS, {
-    variables: {
-      input: { page: 1, limit: PAGE_SIZE, teamIds: selectedTeamIds },
-    },
-    notifyOnNetworkStatusChange: true,
-    fetchPolicy: "cache-and-network",
-  });
-
   // 내 팀 목록 (기본 필터 초기화에 사용)
   const { data: myTeamsData } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
     fetchPolicy: "cache-and-network",
@@ -77,33 +68,60 @@ export function useFeedPosts() {
     notifyOnNetworkStatusChange: false,
   });
 
-  // 최초: 저장된 팀 필터 로드 및 채택
+  // 게시물 목록 - selectedTeamIds가 준비된 후에만 실행
+  const {
+    data,
+    loading: fetching,
+    error,
+    refetch,
+    fetchMore,
+  } = useQuery<PostsQueryResponse>(GET_POSTS, {
+    variables: {
+      input: { page: 1, limit: PAGE_SIZE, teamIds: selectedTeamIds },
+    },
+    skip: !filterInitialized, // 필터가 초기화되기 전까지는 쿼리 실행하지 않음
+    notifyOnNetworkStatusChange: true,
+    fetchPolicy: "cache-and-network",
+  });
+
+  // 필터 초기화: AsyncStorage -> My Teams 순서로 처리
   useEffect(() => {
-    const loadTeamFilter = async () => {
+    const initializeFilter = async () => {
       try {
+        // 1. AsyncStorage에서 저장된 필터 확인
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
         if (saved) {
-          setSelectedTeamIds(JSON.parse(saved));
+          const savedIds = JSON.parse(saved);
+          setSelectedTeamIds(savedIds.length > 0 ? savedIds : null);
+          setFilterInitialized(true);
+          return;
+        }
+
+        // 2. 저장된 필터가 없으면 My Teams를 기본값으로 사용
+        if (myTeamsData?.myTeams) {
+          const allMyTeamIds = myTeamsData.myTeams.map(
+            (ut: UserTeam) => ut.team.id
+          );
+          setSelectedTeamIds(allMyTeamIds.length > 0 ? allMyTeamIds : null);
+
+          // AsyncStorage에 기본값 저장
+          await AsyncStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : [])
+          );
           setFilterInitialized(true);
         }
-      } catch (e) {
-        // 무시: 필터 로드 실패는 기능에 치명적이지 않음
+      } catch (error) {
+        console.error("필터 초기화 실패:", error);
+        // 실패해도 빈 필터로라도 초기화
+        setSelectedTeamIds(null);
+        setFilterInitialized(true);
       }
     };
-    void loadTeamFilter();
-  }, []);
 
-  // 저장된 필터가 없을 경우, 내 팀 전체 선택을 기본값으로 1회 설정
-  useEffect(() => {
-    if (filterInitialized) return;
-    if (!myTeamsData?.myTeams) return;
-    const allMyTeamIds = myTeamsData.myTeams.map((ut) => ut.team.id);
-    setSelectedTeamIds(allMyTeamIds.length > 0 ? allMyTeamIds : null);
-    AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : [])
-    ).catch(() => {});
-    setFilterInitialized(true);
+    if (!filterInitialized) {
+      initializeFilter();
+    }
   }, [filterInitialized, myTeamsData]);
 
   // 차단 사용자 목록 반영
@@ -118,9 +136,17 @@ export function useFeedPosts() {
   // 게시물 결과 반영 (차단 사용자 제외 + 정렬 유지)
   useEffect(() => {
     if (!data?.posts?.posts) return;
+
     const newPosts: Post[] = data.posts.posts
       .filter((p) => !blockedUserIds.includes(p.author.id))
-      .map((p) => ({ ...p, isMock: false }) as unknown as Post);
+      .map(
+        (p) =>
+          ({
+            ...p,
+            isMock: false,
+            media: p.media || [],
+          }) as Post
+      );
 
     if (data.posts.page === 1) {
       setPosts(newPosts);
@@ -135,35 +161,20 @@ export function useFeedPosts() {
         );
       });
     }
+
     if (isRefreshing) setIsRefreshing(false);
   }, [data, isRefreshing, blockedUserIds]);
 
-  // 팀 필터가 변경될 때 첫 페이지를 네트워크로 재조회
-  useEffect(() => {
-    (async () => {
-      setPosts([]);
-      setIsRefreshing(true);
-      try {
-        await refetch({
-          input: { page: 1, limit: PAGE_SIZE, teamIds: selectedTeamIds },
-        });
-      } finally {
-        setIsRefreshing(false);
-      }
-    })();
-    // stringify로 의존성 안정화
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(selectedTeamIds)]);
-
   const handleRefresh = useCallback(() => {
+    if (!filterInitialized) return;
     setIsRefreshing(true);
     void refetch({
       input: { page: 1, limit: PAGE_SIZE, teamIds: selectedTeamIds },
     });
-  }, [refetch, selectedTeamIds]);
+  }, [refetch, selectedTeamIds, filterInitialized]);
 
   const handleLoadMore = useCallback(() => {
-    if (fetching || !data?.posts?.hasNext) return;
+    if (fetching || !data?.posts?.hasNext || !filterInitialized) return;
     const nextPage = (data?.posts?.page ?? 0) + 1;
     void fetchMore({
       variables: {
@@ -171,7 +182,49 @@ export function useFeedPosts() {
       },
       updateQuery: (prev, { fetchMoreResult }) => fetchMoreResult ?? prev,
     });
-  }, [fetching, fetchMore, data, selectedTeamIds]);
+  }, [fetching, fetchMore, data, selectedTeamIds, filterInitialized]);
+
+  /**
+   * 팀 필터 변경 핸들러 (AsyncStorage에만 저장, My Teams에는 영향 없음)
+   */
+  const handleTeamFilterChange = useCallback(
+    async (teamIds: string[] | null) => {
+      try {
+        // AsyncStorage에 저장
+        if (teamIds && teamIds.length > 0) {
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(teamIds));
+        } else {
+          await AsyncStorage.removeItem(STORAGE_KEY);
+        }
+
+        // 상태 업데이트 및 피드 새로고침
+        setSelectedTeamIds(teamIds);
+        setPosts([]); // 기존 게시물 클리어
+        setIsRefreshing(true);
+
+        // 새로운 필터로 데이터 다시 로드
+        await refetch({
+          input: { page: 1, limit: PAGE_SIZE, teamIds },
+        });
+      } catch (error) {
+        console.error("팀 필터 변경 실패:", error);
+      }
+    },
+    [refetch]
+  );
+
+  /**
+   * My Teams 변경 시 필터 재초기화 (team-selection에서 호출)
+   */
+  const refreshFilterFromMyTeams = useCallback(async () => {
+    try {
+      // My Teams 데이터 다시 조회 후 필터 재설정
+      setFilterInitialized(false);
+      // useEffect에서 자동으로 재초기화됨
+    } catch (error) {
+      console.error("My Teams 기반 필터 재초기화 실패:", error);
+    }
+  }, []);
 
   return {
     posts,
@@ -181,7 +234,9 @@ export function useFeedPosts() {
     handleRefresh,
     handleLoadMore,
     selectedTeamIds,
-    setSelectedTeamIds,
+    handleTeamFilterChange,
+    refreshFilterFromMyTeams,
+    filterInitialized,
   } as const;
 }
 

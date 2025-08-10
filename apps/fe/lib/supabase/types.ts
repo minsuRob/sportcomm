@@ -153,38 +153,33 @@ export interface Notification {
 }
 
 /**
- * 채팅 채널 타입
+ * 채팅방 타입
  */
-export interface ChatChannel {
+export interface ChatRoom {
   id: string;
   name: string;
   description?: string;
-  isPrivate: boolean;
-  type: "GENERAL" | "TEAM" | "DIRECT" | "ANNOUNCEMENT";
+  type: "PRIVATE" | "GROUP" | "PUBLIC";
   isRoomActive: boolean;
-  maxParticipants?: number;
+  maxParticipants: number;
   currentParticipants: number;
-  lastMessage?: string;
+  profileImageUrl?: string;
+  lastMessageContent?: string;
   lastMessageAt?: string;
+  totalMessages: number;
+  isPasswordProtected: boolean;
+  password?: string;
   createdAt: string;
   updatedAt: string;
-  createdBy: string;
-  members: ChatChannelMember[];
-  unreadCount?: number;
+  deletedAt?: string;
 }
 
 /**
- * 채팅 채널 멤버 타입
+ * 채팅방 참여자 타입
  */
-export interface ChatChannelMember {
-  id: string;
-  channelId: string;
+export interface ChatRoomParticipant {
+  roomId: string;
   userId: string;
-  isAdmin: boolean;
-  joinedAt: string;
-  lastReadAt?: string;
-  isActive: boolean;
-  user: UserProfile;
 }
 
 /**
@@ -192,16 +187,23 @@ export interface ChatChannelMember {
  */
 export interface ChatMessage {
   id: string;
-  channelId: string;
-  userId: string;
+  roomId: string;
+  authorId: string;
   content: string;
-  replyToId?: string;
-  isSystem: boolean;
-  isDeleted: boolean;
+  type: "TEXT" | "IMAGE" | "VIDEO" | "FILE" | "SYSTEM";
+  isRead: boolean;
+  isEdited: boolean;
+  isPinned: boolean;
+  readAt?: string;
+  editedAt?: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentSize?: number;
+  reactionCount: number;
+  replyToMessageId?: string;
   createdAt: string;
   updatedAt: string;
-  user: UserProfile;
-  replyTo?: ChatMessage;
+  deletedAt?: string;
 }
 
 /**
@@ -332,18 +334,18 @@ export interface Database {
         Insert: Omit<Notification, "id" | "createdAt">;
         Update: Partial<Pick<Notification, "isRead">>;
       };
-      chat_channels: {
-        Row: ChatChannel;
+      chat_rooms: {
+        Row: ChatRoom;
         Insert: Omit<
-          ChatChannel,
+          ChatRoom,
           "id" | "createdAt" | "updatedAt" | "currentParticipants"
         >;
-        Update: Partial<Omit<ChatChannel, "id" | "createdBy">>;
+        Update: Partial<Omit<ChatRoom, "id">>;
       };
-      chat_channel_members: {
-        Row: ChatChannelMember;
-        Insert: Omit<ChatChannelMember, "id" | "joinedAt">;
-        Update: Partial<Omit<ChatChannelMember, "id" | "channelId" | "userId">>;
+      chat_room_participants: {
+        Row: ChatRoomParticipant;
+        Insert: ChatRoomParticipant;
+        Update: Partial<ChatRoomParticipant>;
       };
       chat_messages: {
         Row: ChatMessage;

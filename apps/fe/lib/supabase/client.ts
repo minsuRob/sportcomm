@@ -11,7 +11,7 @@ const SUPABASE_URL = ENV_SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV_SUPABASE_ANON_KEY;
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error(
-    "Supabase URL and Anon Key must be provided in environment variables.",
+    "Supabase URL and Anon Key must be provided in environment variables."
   );
 }
 console.log("환경변수로 바꾸세요!! Supabase 클라이언트 초기화:", {
@@ -23,106 +23,91 @@ console.log("환경변수로 바꾸세요!! Supabase 클라이언트 초기화:"
 export interface Database {
   public: {
     Tables: {
-      chat_channels: {
+      chat_rooms: {
         Row: {
           id: string;
           name: string;
           description: string | null;
-          is_private: boolean;
           type: string;
-          is_room_active: boolean;
-          max_participants: number | null;
-          current_participants: number;
-          last_message: string | null;
-          last_message_at: string | null;
-          created_at: string;
-          updated_at: string;
-          created_by: string;
+          isRoomActive: boolean;
+          maxParticipants: number;
+          currentParticipants: number;
+          lastMessageContent: string | null;
+          lastMessageAt: string | null;
+          createdAt: string;
+          updatedAt: string;
         };
         Insert: {
           id?: string;
           name: string;
           description?: string | null;
-          is_private?: boolean;
           type?: string;
-          is_room_active?: boolean;
-          max_participants?: number | null;
-          current_participants?: number;
-          last_message?: string | null;
-          last_message_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
-          created_by: string;
+          isRoomActive?: boolean;
+          maxParticipants?: number;
+          currentParticipants?: number;
+          lastMessageContent?: string | null;
+          lastMessageAt?: string | null;
+          createdAt?: string;
+          updatedAt?: string;
         };
         Update: {
           id?: string;
           name?: string;
           description?: string | null;
-          is_private?: boolean;
           type?: string;
-          is_room_active?: boolean;
-          max_participants?: number | null;
-          current_participants?: number;
-          last_message?: string | null;
-          last_message_at?: string | null;
-          created_at?: string;
-          updated_at?: string;
-          created_by?: string;
+          isRoomActive?: boolean;
+          maxParticipants?: number;
+          currentParticipants?: number;
+          lastMessageContent?: string | null;
+          lastMessageAt?: string | null;
+          createdAt?: string;
+          updatedAt?: string;
         };
       };
       chat_messages: {
         Row: {
           id: string;
-          channel_id: string;
-          user_id: string;
+          roomId: string;
+          authorId: string;
           content: string;
-          created_at: string;
-          updated_at: string;
-          reply_to_id: string | null;
-          is_system: boolean;
-          is_deleted: boolean;
+          createdAt: string;
+          updatedAt: string;
+          replyToMessageId: string | null;
+          type: string;
         };
         Insert: {
           id?: string;
-          channel_id: string;
-          user_id: string;
+          roomId: string;
+          authorId: string;
           content: string;
-          created_at?: string;
-          updated_at?: string;
-          reply_to_id?: string | null;
-          is_system?: boolean;
-          is_deleted?: boolean;
+          createdAt?: string;
+          updatedAt?: string;
+          replyToMessageId?: string | null;
+          type?: string;
         };
         Update: {
           id?: string;
-          channel_id?: string;
-          user_id?: string;
+          roomId?: string;
+          authorId?: string;
           content?: string;
-          created_at?: string;
-          updated_at?: string;
-          reply_to_id?: string | null;
-          is_system?: boolean;
-          is_deleted?: boolean;
+          createdAt?: string;
+          updatedAt?: string;
+          replyToMessageId?: string | null;
+          type?: string;
         };
       };
-      chat_channel_members: {
+      chat_room_participants: {
         Row: {
-          id: string;
-          channel_id: string;
-          user_id: string;
-          is_admin: boolean;
-          joined_at: string;
-          last_read_at: string | null;
-          is_active: boolean;
+          roomId: string;
+          userId: string;
         };
         Insert: {
-          id?: string;
-          channel_id: string;
-          user_id: string;
-          is_admin?: boolean;
-          joined_at?: string;
-          last_read_at?: string | null;
-          is_active?: boolean;
+          roomId: string;
+          userId: string;
+        };
+        Update: {
+          roomId?: string;
+          userId?: string;
         };
         Update: {
           id?: string;
@@ -139,13 +124,11 @@ export interface Database {
           id: string;
           nickname: string;
           email: string | null;
-          profile_image_url: string | null;
+          profileImageUrl: string | null;
           bio: string | null;
-          team: string | null;
-          is_private: boolean;
           role: string;
-          created_at: string;
-          updated_at: string;
+          createdAt: string;
+          updatedAt: string;
         };
         Insert: {
           id: string;
@@ -216,7 +199,7 @@ export const supabase = createClient<Database>(
         "x-application-name": "sportcomm-chat",
       },
     },
-  },
+  }
 );
 
 /**
@@ -255,7 +238,7 @@ export const getCurrentSession = () => {
  * @returns 구독 해제 함수
  */
 export const onAuthStateChange = (
-  callback: (event: string, session: any) => void,
+  callback: (event: string, session: any) => void
 ) => {
   return supabase.auth.onAuthStateChange(callback);
 };

@@ -4,10 +4,10 @@ import { Message } from "../../components/chat/ChatList";
 import { User } from "../auth";
 
 // Supabase 데이터베이스 타입 정의
-type ChatChannel = Database["public"]["Tables"]["chat_channels"]["Row"];
+type ChatRoom = Database["public"]["Tables"]["chat_rooms"]["Row"];
 type ChatMessage = Database["public"]["Tables"]["chat_messages"]["Row"];
-type ChatChannelMember =
-  Database["public"]["Tables"]["chat_channel_members"]["Row"];
+type ChatRoomParticipant =
+  Database["public"]["Tables"]["chat_room_participants"]["Row"];
 
 // 채팅방 정보 인터페이스 (GraphQL 호환)
 export interface ChannelInfo {
@@ -29,8 +29,8 @@ export interface ChannelInfo {
       nickname: string;
       profileImageUrl?: string;
     };
-    isAdmin: boolean;
-    joinedAt: string;
+    isAdmin?: boolean;
+    joinedAt?: string;
     lastReadAt?: string;
   }[];
   createdAt: string;
@@ -80,7 +80,7 @@ export class SupabaseChatService {
       this.isConnected = !!session;
       console.log(
         "Supabase 채팅 서비스 초기화:",
-        this.isConnected ? "성공" : "미인증 상태",
+        this.isConnected ? "성공" : "미인증 상태"
       );
     } catch (error) {
       console.error("Supabase 연결 초기화 실패:", error);
@@ -115,29 +115,25 @@ export class SupabaseChatService {
   async getUserChatRooms(): Promise<ChannelInfo[]> {
     try {
       const { data: channels, error } = await supabase
-        .from("chat_channels")
+        .from("chat_rooms")
         .select(
           `
           *,
-          chat_channel_members!inner (
-            user_id,
-            is_admin,
-            joined_at,
-            last_read_at,
+          chat_room_participants!inner (
+            userId,
             users (
               id,
               nickname,
-              profile_image_url
+              profileImageUrl
             )
           )
-        `,
+        `
         )
         .eq(
-          "chat_channel_members.user_id",
-          (await supabase.auth.getUser()).data.user?.id,
+          "chat_room_participants.userId",
+          (await supabase.auth.getUser()).data.user?.id
         )
-        .eq("chat_channel_members.is_active", true)
-        .order("last_message_at", { ascending: false });
+        .order("lastMessageAt", { ascending: false });
 
       if (error) throw error;
 
@@ -156,7 +152,7 @@ export class SupabaseChatService {
    */
   async getPublicChatRooms(
     page: number = 1,
-    limit: number = 20,
+    limit: number = 20
   ): Promise<{
     chatRooms: ChannelInfo[];
     total: number;
@@ -169,35 +165,32 @@ export class SupabaseChatService {
 
       // 총 개수 조회
       const { count, error: countError } = await supabase
-        .from("chat_channels")
+        .from("chat_rooms")
         .select("*", { count: "exact", head: true })
-        .eq("is_private", false)
-        .eq("is_room_active", true);
+        .eq("type", "PUBLIC")
+        .eq("isRoomActive", true);
 
       if (countError) throw countError;
 
       // 채팅방 목록 조회
       const { data: channels, error } = await supabase
-        .from("chat_channels")
+        .from("chat_rooms")
         .select(
           `
           *,
-          chat_channel_members (
-            user_id,
-            is_admin,
-            joined_at,
-            last_read_at,
+          chat_room_participants (
+            userId,
             users (
               id,
               nickname,
-              profile_image_url
+              profileImageUrl
             )
           )
-        `,
+        `
         )
-        .eq("is_private", false)
-        .eq("is_room_active", true)
-        .order("last_message_at", { ascending: false })
+        .eq("type", "PUBLIC")
+        .eq("isRoomActive", true)
+        .order("lastMessageAt", { ascending: false })
         .range(offset, offset + limit - 1);
 
       if (error) throw error;
@@ -233,7 +226,7 @@ export class SupabaseChatService {
   async getChatMessages(
     channelId: string,
     limit: number = 50,
-    before?: string,
+    before?: string
   ): Promise<Message[]> {
     try {
       let query = supabase
@@ -244,24 +237,23 @@ export class SupabaseChatService {
           users (
             id,
             nickname,
-            profile_image_url
+            profileImageUrl
           ),
-          reply_to:chat_messages!reply_to_id (
+          reply_to:chat_messages!replyToMessageId (
             id,
             content,
             users (
               nickname
             )
           )
-        `,
+        `
         )
-        .eq("channel_id", channelId)
-        .eq("is_deleted", false)
-        .order("created_at", { ascending: true })
+        .eq("roomId", channelId)
+        .order("createdAt", { ascending: true })
         .limit(limit);
 
       if (before) {
-        query = query.lt("created_at", before);
+        query = query.lt("createdAt", before);
       }
 
       const { data: messages, error } = await query;
@@ -271,7 +263,7 @@ export class SupabaseChatService {
       // 디버깅을 위한 로깅
       console.log(
         "Supabase 메시지 데이터:",
-        JSON.stringify(messages?.[0], null, 2),
+        JSON.stringify(messages?.[0], null, 2)
       );
 
       return this.transformMessagesToGraphQL(messages || []);
@@ -296,10 +288,10 @@ export class SupabaseChatService {
       const { data: message, error } = await supabase
         .from("chat_messages")
         .insert({
-          channel_id: input.channelId,
-          user_id: user.id,
+          roomId: input.channelId,
+          authorId: user.id,
           content: input.content,
-          reply_to_id: input.replyToId || null,
+          replyToMessageId: input.replyToId || null,
         })
         .select(
           `
@@ -307,16 +299,16 @@ export class SupabaseChatService {
           users (
             id,
             nickname,
-            profile_image_url
+            profileImageUrl
           ),
-          reply_to:chat_messages!reply_to_id (
+          reply_to:chat_messages!replyToMessageId (
             id,
             content,
             users (
               nickname
             )
           )
-        `,
+        `
         )
         .single();
 
@@ -335,7 +327,7 @@ export class SupabaseChatService {
    * @returns 생성된 채팅방 정보
    */
   async createChatChannel(
-    input: CreateChannelInput,
+    input: CreateChannelInput
   ): Promise<ChannelInfo | null> {
     try {
       const {
@@ -345,49 +337,43 @@ export class SupabaseChatService {
 
       // 채팅방 생성
       const { data: channel, error: channelError } = await supabase
-        .from("chat_channels")
+        .from("chat_rooms")
         .insert({
           name: input.name,
           description: input.description || null,
-          is_private: input.isPrivate || false,
-          type: input.type || "GENERAL",
-          max_participants: input.maxParticipants || 100,
-          created_by: user.id,
+          type: input.isPrivate ? "PRIVATE" : "PUBLIC",
+          maxParticipants: input.maxParticipants || 100,
         })
         .select()
         .single();
 
       if (channelError) throw channelError;
 
-      // 생성자를 채팅방 관리자로 추가
+      // 생성자를 채팅방 참여자로 추가
       const { error: memberError } = await supabase
-        .from("chat_channel_members")
+        .from("chat_room_participants")
         .insert({
-          channel_id: channel.id,
-          user_id: user.id,
-          is_admin: true,
+          roomId: channel.id,
+          userId: user.id,
         });
 
       if (memberError) throw memberError;
 
       // 생성된 채팅방 정보 조회
       const { data: fullChannel, error: fetchError } = await supabase
-        .from("chat_channels")
+        .from("chat_rooms")
         .select(
           `
           *,
-          chat_channel_members (
-            user_id,
-            is_admin,
-            joined_at,
-            last_read_at,
+          chat_room_participants (
+            userId,
             users (
               id,
               nickname,
-              profile_image_url
+              profileImageUrl
             )
           )
-        `,
+        `
         )
         .eq("id", channel.id)
         .single();
@@ -413,10 +399,9 @@ export class SupabaseChatService {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("인증되지 않은 사용자입니다.");
 
-      const { error } = await supabase.from("chat_channel_members").upsert({
-        channel_id: channelId,
-        user_id: user.id,
-        is_active: true,
+      const { error } = await supabase.from("chat_room_participants").upsert({
+        roomId: channelId,
+        userId: user.id,
       });
 
       if (error) throw error;
@@ -441,10 +426,10 @@ export class SupabaseChatService {
       if (!user) throw new Error("인증되지 않은 사용자입니다.");
 
       const { error } = await supabase
-        .from("chat_channel_members")
-        .update({ is_active: false })
-        .eq("channel_id", channelId)
-        .eq("user_id", user.id);
+        .from("chat_room_participants")
+        .delete()
+        .eq("roomId", channelId)
+        .eq("userId", user.id);
 
       if (error) throw error;
 
@@ -462,19 +447,9 @@ export class SupabaseChatService {
    */
   async markChannelAsRead(channelId: string): Promise<boolean> {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("인증되지 않은 사용자입니다.");
-
-      const { error } = await supabase
-        .from("chat_channel_members")
-        .update({ last_read_at: new Date().toISOString() })
-        .eq("channel_id", channelId)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
+      // 현재 구현에서는 chat_room_participants 테이블에 lastReadAt 필드가 없으므로
+      // 이 기능은 나중에 구현할 수 있습니다.
+      console.log("채팅방 읽음 처리:", channelId);
       return true;
     } catch (error) {
       handleSupabaseError(error, "채팅방 읽음 처리");
@@ -490,7 +465,7 @@ export class SupabaseChatService {
    */
   subscribeToMessages(
     channelId: string,
-    onMessage: (message: Message) => void,
+    onMessage: (message: Message) => void
   ): () => void {
     const channelName = `chat_messages_${channelId}`;
 
@@ -507,7 +482,7 @@ export class SupabaseChatService {
           event: "INSERT",
           schema: "public",
           table: "chat_messages",
-          filter: `channel_id=eq.${channelId}`,
+          filter: `roomId=eq.${channelId}`,
         },
         async (payload) => {
           try {
@@ -520,16 +495,16 @@ export class SupabaseChatService {
                 users (
                   id,
                   nickname,
-                  profile_image_url
+                  profileImageUrl
                 ),
-                reply_to:chat_messages!reply_to_id (
+                reply_to:chat_messages!replyToMessageId (
                   id,
                   content,
                   users (
                     nickname
                   )
                 )
-              `,
+              `
               )
               .eq("id", payload.new.id)
               .single();
@@ -542,7 +517,7 @@ export class SupabaseChatService {
           } catch (error) {
             console.error("실시간 메시지 처리 오류:", error);
           }
-        },
+        }
       )
       .subscribe();
 
@@ -588,25 +563,27 @@ export class SupabaseChatService {
       id: channel.id,
       name: channel.name,
       description: channel.description,
-      isPrivate: channel.is_private,
+      isPrivate: channel.type === "PRIVATE",
       type: channel.type,
-      isRoomActive: channel.is_room_active,
-      maxParticipants: channel.max_participants,
-      currentParticipants: channel.current_participants,
-      lastMessage: channel.last_message,
-      lastMessageAt: channel.last_message_at,
-      members: (channel.chat_channel_members || []).map((member: any) => ({
-        userId: member.user_id,
-        user: {
-          id: member.users.id,
-          nickname: member.users.nickname,
-          profileImageUrl: member.users.profile_image_url,
-        },
-        isAdmin: member.is_admin,
-        joinedAt: member.joined_at,
-        lastReadAt: member.last_read_at,
-      })),
-      createdAt: channel.created_at,
+      isRoomActive: channel.isRoomActive,
+      maxParticipants: channel.maxParticipants,
+      currentParticipants: channel.currentParticipants,
+      lastMessage: channel.lastMessageContent,
+      lastMessageAt: channel.lastMessageAt,
+      members: (channel.chat_room_participants || []).map(
+        (participant: any) => ({
+          userId: participant.userId,
+          user: {
+            id: participant.users.id,
+            nickname: participant.users.nickname,
+            profileImageUrl: participant.users.profileImageUrl,
+          },
+          isAdmin: false, // 현재 스키마에는 isAdmin 필드가 없음
+          joinedAt: channel.createdAt, // 임시로 채팅방 생성일 사용
+          lastReadAt: null,
+        })
+      ),
+      createdAt: channel.createdAt,
     };
   }
 
@@ -625,7 +602,7 @@ export class SupabaseChatService {
     if (!message.users) {
       console.warn("메시지에 사용자 정보가 없습니다:", {
         messageId: message.id,
-        userId: message.user_id,
+        userId: message.authorId,
         hasUsers: !!message.users,
         messageKeys: Object.keys(message),
       });
@@ -634,12 +611,12 @@ export class SupabaseChatService {
     return {
       id: message.id,
       content: message.content,
-      created_at: message.created_at,
-      user_id: message.user_id,
+      created_at: message.createdAt,
+      user_id: message.authorId,
       user: {
-        id: message.users?.id || message.user_id,
+        id: message.users?.id || message.authorId,
         nickname: message.users?.nickname || "알 수 없는 사용자",
-        profileImageUrl: message.users?.profile_image_url || null,
+        profileImageUrl: message.users?.profileImageUrl || null,
       },
       replyTo: message.reply_to
         ? {
@@ -650,7 +627,7 @@ export class SupabaseChatService {
             },
           }
         : undefined,
-      isSystem: message.is_system || false,
+      isSystem: message.type === "SYSTEM",
     };
   }
 

@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   UploadedFiles,
   UseInterceptors,
   UseGuards,
@@ -15,21 +16,28 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
 import { MediaService } from '../media/media.service';
+import { SupabaseService } from '../../common/services/supabase.service';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { existsSync, mkdirSync } from 'fs';
 import { HttpAuthGuard } from 'src/common/guards/http-auth.guard';
+import { SupabaseAuthGuard } from 'src/common/guards/supabase-auth.guard';
 
 /**
  * 인증 관련 파일 업로드 컨트롤러
  * 프로필 이미지 업로드 등 인증이 필요한 파일 업로드 기능을 제공합니다.
+ * 
+ * Supabase Auth와 기존 JWT 인증을 모두 지원합니다.
  */
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly mediaService: MediaService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   /**
    * 프로필 이미지 업로드 엔드포인트
@@ -240,6 +248,110 @@ export class AuthController {
           error: error.message,
         });
       }
+    }
+  }
+
+  /**
+   * Supabase JWT 토큰으로 사용자 프로필 조회
+   * 새로운 Supabase Auth 기반 API 데모
+   */
+  @Get('profile')
+  @UseGuards(SupabaseAuthGuard)
+  async getProfile(@CurrentUser() user: User) {
+    this.logger.log(`Supabase 사용자 프로필 조회: ${user.email} (ID: ${user.id})`);
+    
+    return {
+      success: true,
+      message: 'Supabase 인증으로 프로필을 성공적으로 가져왔습니다.',
+      data: {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        profileImageUrl: user.profileImageUrl,
+        role: user.role,
+        bio: user.bio,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+      authMethod: 'Supabase JWT',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Supabase 토큰 검증 테스트 엔드포인트
+   * 토큰이 유효한지만 확인합니다.
+   */
+  @Post('verify-token')
+  async verifySupabaseToken(@Req() request: Request) {
+    try {
+      const authHeader = request.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        throw new BadRequestException('Authorization 헤더에 Bearer 토큰이 필요합니다.');
+      }
+
+      const token = authHeader.substring(7);
+      const user = await this.supabaseService.verifyToken(token);
+
+      if (!user) {
+        throw new BadRequestException('유효하지 않은 토큰입니다.');
+      }
+
+      return {
+        success: true,
+        message: 'Supabase 토큰이 유효합니다.',
+        data: {
+          userId: user.id,
+          email: user.email,
+          emailConfirmed: user.email_confirmed_at ? true : false,
+          createdAt: user.created_at,
+          lastSignIn: user.last_sign_in_at,
+        },
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error('Supabase 토큰 검증 실패:', error);
+      
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      
+      throw new InternalServerErrorException({
+        message: '토큰 검증 중 오류가 발생했습니다.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  /**
+   * Supabase 인증 시스템 상태 확인
+   * 관리자용 디버깅 엔드포인트
+   */
+  @Get('supabase-status')
+  async getSupabaseStatus() {
+    try {
+      // Supabase 클라이언트 상태 확인
+      const client = this.supabaseService.getClient();
+      
+      return {
+        success: true,
+        message: 'Supabase 연결 상태가 정상입니다.',
+        data: {
+          clientInitialized: !!client,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Supabase 상태 확인 실패:', error);
+      
+      throw new InternalServerErrorException({
+        message: 'Supabase 상태 확인 중 오류가 발생했습니다.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        timestamp: new Date().toISOString(),
+      });
     }
   }
 }

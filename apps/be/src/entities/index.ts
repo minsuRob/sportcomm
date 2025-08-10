@@ -27,7 +27,12 @@ import { UserTeam } from './user-team.entity';
 export { BaseEntity } from './base.entity';
 
 // 사용자 관련 엔티티
-export { User, UserRole } from './user.entity';
+export {
+  User,
+  UserRole,
+  SupabaseAuthUser,
+  CombinedUserInfo,
+} from './user.entity';
 
 // 게시물 관련 엔티티
 export { Post } from './post.entity';

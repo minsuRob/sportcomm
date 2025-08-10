@@ -9,10 +9,10 @@ import { Observable } from 'rxjs';
 
 /**
  * JWT 인증 가드
- * REST API 및 GraphQL 요청에서 JWT 토큰을 검증하는 인증 가드입니다.
+ * REST API 및 GraphQL 요청에서 Supabase JWT 토큰을 검증하는 인증 가드입니다.
  */
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {
+export class JwtAuthGuard extends AuthGuard('supabase-jwt') {
   constructor() {
     super();
   }
@@ -61,7 +61,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new UnauthorizedException(`인증에 실패했습니다. ${errorMessage}`);
     }
 
-    if (user.isUserActive === false) {
+    if (user.isActive === false) {
       throw new UnauthorizedException(
         '비활성화된 계정입니다. 관리자에게 문의하세요.',
       );
@@ -96,7 +96,7 @@ export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
     }
 
     // 비활성화된 사용자는 null로 처리
-    if (user.isUserActive === false) {
+    if (user.isActive === false) {
       return null;
     }
 

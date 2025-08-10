@@ -112,15 +112,15 @@ export class AuthService {
       password: hashedPassword,
       nickname,
       role,
-      isUserActive: true,
+      isActive: true,
       isEmailVerified: false, // 실제 구현에서는 이메일 인증 로직 추가
     });
 
     // 데이터베이스에 저장
     const savedUser = await this.userRepository.save(user);
 
-    // 비밀번호 제거
-    savedUser.password = undefined;
+    // 비밀번호 제거 (타입 안전성을 위해 delete 사용)
+    delete savedUser.password;
 
     // 토큰 생성
     const accessToken = this.generateAccessToken(savedUser);
@@ -151,7 +151,7 @@ export class AuthService {
     }
 
     // 비활성화된 계정 확인
-    if (!user.isUserActive) {
+    if (!user.isActive) {
       throw new UnauthorizedException(
         '비활성화된 계정입니다. 관리자에게 문의하세요.',
       );
@@ -198,7 +198,7 @@ export class AuthService {
         'email',
         'nickname',
         'role',
-        'isUserActive',
+        'isActive',
         'isEmailVerified',
         'profileImageUrl',
         'bio',
@@ -228,7 +228,7 @@ export class AuthService {
         'email',
         'nickname',
         'role',
-        'isUserActive',
+        'isActive',
         'isEmailVerified',
         'profileImageUrl',
         'bio',
@@ -339,7 +339,7 @@ export class AuthService {
    */
   async deactivateAccount(userId: string): Promise<boolean> {
     await this.userRepository.update(userId, {
-      isUserActive: false,
+      isActive: false,
     });
 
     return true;
@@ -416,7 +416,7 @@ export class AuthService {
   }> {
     const [totalUsers, activeUsers, verifiedUsers] = await Promise.all([
       this.userRepository.count(),
-      this.userRepository.count({ where: { isUserActive: true } }),
+      this.userRepository.count({ where: { isActive: true } }),
       this.userRepository.count({ where: { isEmailVerified: true } }),
     ]);
 

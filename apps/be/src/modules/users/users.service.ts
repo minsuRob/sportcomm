@@ -37,7 +37,7 @@ export class UsersService {
         'profileImageUrl',
         'bio',
         'isEmailVerified',
-        'isUserActive',
+        'isActive',
         'createdAt',
         'updatedAt',
       ],

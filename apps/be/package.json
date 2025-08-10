@@ -19,7 +19,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:sports": "ts-node -r tsconfig-paths/register src/database/seeds/sports-teams.seed.ts",
-    "seed:logos": "ts-node -r tsconfig-paths/register src/database/seeds/download-team-logos.ts"
+    "seed:logos": "ts-node -r tsconfig-paths/register src/database/seeds/download-team-logos.ts",
+    "db:setup": "node setup-database.js",
+    "db:test": "node test-db-connection.js"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",
@@ -34,9 +36,11 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@supabase/supabase-js": "^2.53.0",
     "@types/fluent-ffmpeg": "^2.1.27",
     "@types/multer": "^2.0.0",
     "@types/uuid": "^10.0.0",
+    "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
     "cache-manager": "^7.0.1",
     "class-transformer": "^0.5.1",
@@ -46,6 +50,7 @@
     "fs-extra": "^11.3.0",
     "graphql": "^16.11.0",
     "graphql-subscriptions": "^3.0.0",
+    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "passport": "^0.7.0",
@@ -72,7 +77,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^29.5.14",
     "@types/morgan": "^1.9.9",
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.17.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.15.4",
     "@types/supertest": "^6.0.2",
@@ -88,7 +93,7 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.3",
+    "typescript": "^5.9.2",
     "typescript-eslint": "^8.20.0"
   },
   "jest": {

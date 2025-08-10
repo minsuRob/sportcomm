@@ -1,13 +1,14 @@
-import { Entity, Column, OneToMany, Index } from 'typeorm';
-import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
+import { Entity, Column, OneToMany, Index, PrimaryColumn } from 'typeorm';
+import { ObjectType, Field, registerEnumType, ID } from '@nestjs/graphql';
 import {
   IsEmail,
   IsString,
   MinLength,
   MaxLength,
   IsEnum,
+  IsUUID,
+  IsOptional,
 } from 'class-validator';
-import { BaseEntity } from './base.entity';
 import { Post } from './post.entity';
 import { Comment } from './comment.entity';
 import { Follow } from './follow.entity';
@@ -50,14 +51,53 @@ registerEnumType(UserRole, {
 /**
  * 사용자 엔티티
  *
- * 스포츠 커뮤니티의 모든 사용자 정보를 관리합니다.
- * 게시물 작성, 댓글, 팔로우, 채팅 등 모든 활동의 주체가 됩니다.
+ * Supabase Auth와 1:1 관계를 가지는 사용자 정보 테이블입니다.
+ * Supabase Auth에서 관리하지 않는 비즈니스 로직 관련 정보를 저장합니다.
+ *
+ * Supabase Auth 정보:
+ * - id (UUID): Supabase에서 생성된 사용자 ID
+ * - email: 이메일 주소
+ * - email_confirmed_at: 이메일 인증 시간
+ * - phone: 전화번호 (선택사항)
+ * - created_at, updated_at: 생성/수정 시간
+ * - user_metadata: 사용자 메타데이터 (nickname, role 등)
+ * - app_metadata: 앱 메타데이터 (provider 등)
  */
 @ObjectType()
 @Entity('users')
 @Index(['email'], { unique: true })
 @Index(['nickname'], { unique: true })
-export class User extends BaseEntity {
+export class User {
+  /**
+   * 사용자 고유 식별자 (Supabase Auth UUID)
+   * Supabase에서 생성된 사용자 ID를 그대로 사용합니다.
+   */
+  @Field(() => ID, { description: '사용자 고유 식별자' })
+  @PrimaryColumn('uuid')
+  @IsUUID(4, { message: '올바른 UUID 형식이어야 합니다.' })
+  id: string;
+
+  /**
+   * 생성 시간
+   */
+  @Field(() => Date, { description: '생성 시간' })
+  @Column({
+    type: 'timestamp with time zone',
+    default: () => 'CURRENT_TIMESTAMP',
+    comment: '생성 시간',
+  })
+  createdAt: Date;
+
+  /**
+   * 수정 시간
+   */
+  @Field(() => Date, { description: '수정 시간' })
+  @Column({
+    type: 'timestamp with time zone',
+    default: () => 'CURRENT_TIMESTAMP',
+    comment: '수정 시간',
+  })
+  updatedAt: Date;
   /**
    * 사용자 닉네임
    * 고유값이며 다른 사용자와 중복될 수 없습니다.
@@ -90,17 +130,16 @@ export class User extends BaseEntity {
   email: string;
 
   /**
-   * 사용자 비밀번호 (해시된 값)
-   * 보안을 위해 해시된 상태로 저장됩니다.
-   * GraphQL 스키마에는 노출되지 않습니다.
+   * 사용자 비밀번호 (해시된 값) - DEPRECATED
+   * Supabase Auth를 사용하므로 더 이상 사용하지 않습니다.
+   * 레거시 호환성을 위해 유지됩니다.
    */
   @Column({
     type: 'varchar',
     length: 255,
-    comment: '사용자 비밀번호 (해시된 값)',
+    nullable: true,
+    comment: '사용자 비밀번호 (해시된 값) - DEPRECATED',
   })
-  @IsString({ message: '비밀번호는 문자열이어야 합니다.' })
-  @MinLength(8, { message: '비밀번호는 최소 8자 이상이어야 합니다.' })
   password?: string;
 
   /**
@@ -128,6 +167,7 @@ export class User extends BaseEntity {
     nullable: true,
     comment: '프로필 이미지 URL',
   })
+  @IsOptional()
   @IsString({ message: '프로필 이미지 URL은 문자열이어야 합니다.' })
   @MaxLength(500, { message: '프로필 이미지 URL은 최대 500자까지 가능합니다.' })
   profileImageUrl?: string;
@@ -142,6 +182,7 @@ export class User extends BaseEntity {
     nullable: true,
     comment: '사용자 자기소개',
   })
+  @IsOptional()
   @IsString({ message: '자기소개는 문자열이어야 합니다.' })
   @MaxLength(500, { message: '자기소개는 최대 500자까지 가능합니다.' })
   bio?: string;
@@ -168,7 +209,7 @@ export class User extends BaseEntity {
     default: true,
     comment: '계정 활성화 여부',
   })
-  isUserActive: boolean;
+  isActive: boolean;
 
   // === 관계 설정 ===
 
@@ -284,4 +325,52 @@ export class User extends BaseEntity {
   getDisplayName(): string {
     return this.nickname || this.email.split('@')[0];
   }
+}
+
+/**
+ * Supabase Auth 사용자 정보 인터페이스
+ * Supabase Auth에서 제공하는 사용자 정보 구조
+ */
+export interface SupabaseAuthUser {
+  id: string;
+  email?: string;
+  phone?: string;
+  email_confirmed_at?: string;
+  phone_confirmed_at?: string;
+  created_at: string;
+  updated_at: string;
+  user_metadata: {
+    nickname?: string;
+    role?: UserRole;
+    [key: string]: any;
+  };
+  app_metadata: {
+    provider?: string;
+    providers?: string[];
+    [key: string]: any;
+  };
+}
+
+/**
+ * 통합 사용자 정보 인터페이스
+ * Supabase Auth 정보와 User를 결합한 완전한 사용자 정보
+ */
+export interface CombinedUserInfo {
+  // Supabase Auth 정보
+  id: string;
+  email?: string;
+  phone?: string;
+  emailConfirmedAt?: string;
+  phoneConfirmedAt?: string;
+  provider?: string;
+  providers?: string[];
+  // User 정보
+  nickname: string;
+  role: UserRole;
+  profileImageUrl?: string;
+  bio?: string;
+  isActive: boolean;
+  // 공통 정보
+  createdAt: Date;
+  updatedAt: Date;
 }

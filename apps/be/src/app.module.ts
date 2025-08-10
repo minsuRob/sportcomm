@@ -20,6 +20,7 @@ import { BookmarkModule } from './modules/bookmarks/bookmark.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SportsModule } from './modules/sports/sports.module';
+import { SupabaseModule } from './modules/supabase/supabase.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 /**
@@ -255,6 +256,9 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     }),
 
     TypeOrmModule.forFeature([User, Post]),
+
+    // Supabase 모듈 (전역)
+    SupabaseModule,
 
     // 이벤트 시스템 모듈
     EventEmitterModule.forRoot(),

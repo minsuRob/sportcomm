@@ -1,11 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Supabase 연결 정보 (개발용 직접 설정)
-const SUPABASE_URL = "https://hgekmqvscnjcuzyduchy.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhnZWttcXZzY25qY3V6eWR1Y2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNzU4NDEsImV4cCI6MjA2OTk1MTg0MX0.2iXLIfZUtA8njiglEDUnl2Nr8pTv_PFecbm6UtFR54E";
+import {
+  SUPABASE_URL as ENV_SUPABASE_URL,
+  SUPABASE_ANON_KEY as ENV_SUPABASE_ANON_KEY,
+} from "@env";
 
-console.log("Supabase 클라이언트 초기화:", {
+// Supabase 연결 정보 (iikgupdmnlmhycmtuqzj 프로젝트 사용)
+const SUPABASE_URL = ENV_SUPABASE_URL;
+const SUPABASE_ANON_KEY = ENV_SUPABASE_ANON_KEY;
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    "Supabase URL and Anon Key must be provided in environment variables."
+  );
+}
+console.log("환경변수로 바꾸세요!! Supabase 클라이언트 초기화:", {
   url: SUPABASE_URL,
   keyLength: SUPABASE_ANON_KEY.length,
 });
@@ -189,11 +198,9 @@ export const supabase = createClient<Database>(
   SUPABASE_ANON_KEY,
   {
     auth: {
-      // 세션 자동 새로고침 설정
+      storage: AsyncStorage,
       autoRefreshToken: true,
-      // 세션 지속성 설정 (웹: localStorage, 모바일: AsyncStorage)
       persistSession: true,
-      // 탭 간 세션 동기화 설정 (웹만 해당)
       detectSessionInUrl: false,
     },
     // 실시간 연결 설정
@@ -209,7 +216,7 @@ export const supabase = createClient<Database>(
         "x-application-name": "sportcomm-chat",
       },
     },
-  },
+  }
 );
 
 /**
@@ -248,7 +255,7 @@ export const getCurrentSession = () => {
  * @returns 구독 해제 함수
  */
 export const onAuthStateChange = (
-  callback: (event: string, session: any) => void,
+  callback: (event: string, session: any) => void
 ) => {
   return supabase.auth.onAuthStateChange(callback);
 };

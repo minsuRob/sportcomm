@@ -1,334 +1,274 @@
-# Supabase 채팅 시스템 연동 가이드
+# Supabase 인증 서비스
 
-이 문서는 Sportcomm 프론트엔드 앱에서 Supabase를 사용한 실시간 채팅 시스템 구현에 대한 가이드입니다.
+이 디렉토리는 SportComm 앱의 Supabase 인증 기능을 담당합니다. 기존 GraphQL 뮤테이션 기반 인증을 Supabase Auth로 마이그레이션했습니다.
 
-## 📋 목차
+## 📁 파일 구조
 
-- [개요](#개요)
-- [설치 및 설정](#설치-및-설정)
-- [데이터베이스 스키마](#데이터베이스-스키마)
-- [환경 설정](#환경-설정)
-- [사용법](#사용법)
-- [API 참조](#api-참조)
-- [문제 해결](#문제-해결)
-
-## 🔍 개요
-
-본 채팅 시스템은 다음과 같은 특징을 가집니다:
-
-- **듀얼 모드 지원**: 개발 환경에서는 Mock 데이터, 프로덕션에서는 Supabase 사용
-- **실시간 메시징**: Supabase Realtime을 통한 즉시 메시지 전송/수신
-- **보안**: Row Level Security (RLS)를 통한 데이터 접근 제어
-- **확장성**: 채팅방, 멤버, 메시지 첨부파일 등 완전한 채팅 시스템
-
-## 🚀 설치 및 설정
-
-### 1. 환경 변수 설정
-
-`.env` 파일을 생성하고 다음 내용을 추가하세요:
-
-```bash
-# Supabase 설정
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
-
-# 기능 플래그
-USE_SUPABASE=true  # false로 설정하면 Mock 데이터 사용
+```
+apps/fe/lib/supabase/
+├── auth.ts              # 메인 인증 서비스
+├── auth.example.ts      # 사용 예시 및 마이그레이션 가이드
+├── client.ts           # Supabase 클라이언트 설정
+├── chatService.ts      # 채팅 서비스 (기존)
+├── types.ts            # 타입 정의
+└── README.md           # 이 파일
 ```
 
-### 2. Supabase 프로젝트 설정
+## 🚀 주요 변경사항
 
-1. [Supabase 대시보드](https://supabase.com/dashboard)에서 새 프로젝트 생성
-2. `lib/supabase/schema.sql` 파일의 SQL을 실행하여 데이터베이스 스키마 생성
-3. Realtime 기능 활성화 확인
-
-## 🗄️ 데이터베이스 스키마
-
-### 주요 테이블
-
-```sql
--- 사용자 테이블
-users (
-  id UUID PRIMARY KEY,
-  nickname VARCHAR(50),
-  email VARCHAR(255),
-  profile_image_url TEXT,
-  ...
-)
-
--- 채팅방 테이블
-chat_channels (
-  id UUID PRIMARY KEY,
-  name VARCHAR(100),
-  description TEXT,
-  is_private BOOLEAN,
-  type VARCHAR(20),
-  ...
-)
-
--- 채팅방 멤버 테이블
-chat_channel_members (
-  id UUID PRIMARY KEY,
-  channel_id UUID REFERENCES chat_channels(id),
-  user_id UUID REFERENCES users(id),
-  is_admin BOOLEAN,
-  ...
-)
-
--- 메시지 테이블
-chat_messages (
-  id UUID PRIMARY KEY,
-  channel_id UUID REFERENCES chat_channels(id),
-  user_id UUID REFERENCES users(id),
-  content TEXT,
-  reply_to_id UUID REFERENCES chat_messages(id),
-  ...
-)
-```
-
-### RLS 정책
-
-모든 테이블에 Row Level Security가 적용되어 있어 사용자는 자신이 참여한 채팅방의 데이터만 접근할 수 있습니다.
-
-## ⚙️ 환경 설정
-
-### 개발 환경 (Mock 데이터)
+### Before (GraphQL 뮤테이션)
 
 ```typescript
-// .env
-USE_SUPABASE = false;
+// apps/fe/lib/graphql.ts
+export const LOGIN_MUTATION = gql`
+  mutation Login($input: LoginInput!) {
+    login(input: $input) {
+      token: accessToken
+      user { ... }
+    }
+  }
+`;
 
-// 자동으로 임시 데이터 사용
-const chatService = new ChatService();
-console.log(chatService.getDataSourceType()); // "mock"
+export const REGISTER_MUTATION = gql`
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) {
+      token: accessToken
+      user { ... }
+    }
+  }
+`;
 ```
 
-### 프로덕션 환경 (Supabase)
+### After (Supabase Auth)
 
 ```typescript
-// .env
-USE_SUPABASE=true
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
+// apps/fe/lib/supabase/auth.ts
+import { signUp, signIn, signOut } from "./auth";
 
-// 자동으로 Supabase 사용
-const chatService = new ChatService();
-console.log(chatService.getDataSourceType()); // "supabase"
-```
-
-## 📚 사용법
-
-### 기본 사용법
-
-```typescript
-import { chatService } from "@/lib/chat/chatService";
-
-// 채팅방 목록 조회
-const channels = await chatService.getUserChatRooms();
-
-// 메시지 조회
-const messages = await chatService.getChatMessages("channel-id");
-
-// 메시지 전송
-const newMessage = await chatService.sendMessage(
-  "channel-id",
-  "안녕하세요!",
-  currentUser,
-);
-
-// 실시간 구독
-const unsubscribe = chatService.subscribeToMessages("channel-id", (message) => {
-  console.log("새 메시지:", message);
+// 회원가입
+const result = await signUp({
+  email: "user@example.com",
+  password: "password123",
+  nickname: "testUser",
 });
 
-// 구독 해제
-unsubscribe();
+// 로그인
+const result = await signIn({
+  email: "user@example.com",
+  password: "password123",
+});
 ```
 
-### 채팅방 관리
+## 🔧 사용법
+
+### 1. 기본 인증 기능
 
 ```typescript
-// 채팅방 생성
-const newChannel = await chatService.createChatChannel(
-  "새 채팅방",
-  "채팅방 설명",
-  false, // 공개 채팅방
-  "GENERAL",
-  100, // 최대 100명
-);
+import { signUp, signIn, signOut, getCurrentUser } from "@/lib/supabase/auth";
 
-// 채팅방 참여
-const success = await chatService.joinChatChannel("channel-id");
+// 회원가입
+const handleSignUp = async () => {
+  const result = await signUp({
+    email: "user@example.com",
+    password: "securePassword123",
+    nickname: "testUser",
+  });
 
-// 채팅방 나가기
-const left = await chatService.leaveChatChannel("channel-id");
+  if (result.error) {
+    console.error("회원가입 실패:", result.error.message);
+    return;
+  }
 
-// 읽음 처리
-await chatService.markChannelAsRead("channel-id");
+  console.log("회원가입 성공:", result.user);
+};
+
+// 로그인
+const handleSignIn = async () => {
+  const result = await signIn({
+    email: "user@example.com",
+    password: "securePassword123",
+  });
+
+  if (result.error) {
+    console.error("로그인 실패:", result.error.message);
+    return;
+  }
+
+  console.log("로그인 성공:", result.user);
+};
+
+// 로그아웃
+const handleSignOut = async () => {
+  const result = await signOut();
+
+  if (result.error) {
+    console.error("로그아웃 실패:", result.error.message);
+    return;
+  }
+
+  console.log("로그아웃 성공");
+};
+
+// 현재 사용자 확인
+const checkUser = async () => {
+  const { user, error } = await getCurrentUser();
+
+  if (error) {
+    console.error("사용자 조회 실패:", error.message);
+    return;
+  }
+
+  console.log("현재 사용자:", user);
+};
 ```
 
-### 실시간 기능
+### 2. 인증 상태 리스너
 
 ```typescript
+import { SupabaseAuthService } from "@/lib/supabase/auth";
+
+// React 컴포넌트에서 사용
 useEffect(() => {
-  if (!channelId) return;
-
-  // 실시간 메시지 구독
-  const unsubscribe = chatService.subscribeToMessages(
-    channelId,
-    (newMessage) => {
-      setMessages((prev) => [...prev, newMessage]);
-    },
+  const unsubscribe = SupabaseAuthService.onAuthStateChange(
+    (event, session) => {
+      switch (event) {
+        case "SIGNED_IN":
+          console.log("사용자 로그인:", session?.user?.id);
+          // 로그인 후 처리 로직
+          break;
+        case "SIGNED_OUT":
+          console.log("사용자 로그아웃");
+          // 로그아웃 후 처리 로직
+          break;
+        case "TOKEN_REFRESHED":
+          console.log("토큰 갱신");
+          break;
+      }
+    }
   );
 
-  return () => {
-    unsubscribe();
-  };
-}, [channelId]);
+  return () => unsubscribe();
+}, []);
 ```
 
-## 📖 API 참조
-
-### ChatService 클래스
-
-#### 메서드
-
-| 메서드                                                                       | 설명                    | 반환 타입                      |
-| ---------------------------------------------------------------------------- | ----------------------- | ------------------------------ |
-| `getUserChatRooms()`                                                         | 사용자 채팅방 목록 조회 | `Promise<ChannelInfo[]>`       |
-| `getPublicChatRooms(page, limit)`                                            | 공개 채팅방 목록 조회   | `Promise<PaginatedChannels>`   |
-| `getChatMessages(channelId, limit?, before?)`                                | 채팅방 메시지 조회      | `Promise<Message[]>`           |
-| `sendMessage(channelId, content, user, replyToId?)`                          | 메시지 전송             | `Promise<Message \| null>`     |
-| `createChatChannel(name, description?, isPrivate?, type?, maxParticipants?)` | 채팅방 생성             | `Promise<ChannelInfo \| null>` |
-| `joinChatChannel(channelId)`                                                 | 채팅방 참여             | `Promise<boolean>`             |
-| `leaveChatChannel(channelId)`                                                | 채팅방 나가기           | `Promise<boolean>`             |
-| `markChannelAsRead(channelId)`                                               | 읽음 처리               | `Promise<boolean>`             |
-| `subscribeToMessages(channelId, onMessage)`                                  | 실시간 구독             | `() => void`                   |
-| `cleanup()`                                                                  | 모든 구독 해제          | `void`                         |
-
-#### 유틸리티 메서드
-
-| 메서드                | 설명                        | 반환 타입              |
-| --------------------- | --------------------------- | ---------------------- |
-| `isConnected()`       | 연결 상태 확인              | `boolean`              |
-| `getDataSourceType()` | 현재 데이터 소스 타입       | `"supabase" \| "mock"` |
-| `switchToSupabase()`  | Supabase로 전환 (개발용)    | `void`                 |
-| `switchToMock()`      | Mock 데이터로 전환 (개발용) | `void`                 |
-
-### 타입 정의
+### 3. 추가 기능
 
 ```typescript
-interface ChannelInfo {
-  id: string;
-  name: string;
-  description?: string;
-  isPrivate: boolean;
-  type: string;
-  isRoomActive: boolean;
-  maxParticipants?: number;
-  currentParticipants: number;
-  lastMessage?: string;
-  lastMessageAt?: string;
-  members: ChannelMember[];
-  createdAt: string;
-}
+import { SupabaseAuthService } from "@/lib/supabase/auth";
 
-interface Message {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  user: {
-    id: string;
-    nickname: string;
-    profileImageUrl?: string;
-  };
-  replyTo?: {
-    id: string;
-    content: string;
-    user: {
-      nickname: string;
-    };
-  };
-  isSystem?: boolean;
-}
+// 비밀번호 재설정
+const resetPassword = async (email: string) => {
+  const result = await SupabaseAuthService.resetPassword(email);
+
+  if (result.error) {
+    console.error("비밀번호 재설정 실패:", result.error.message);
+    return;
+  }
+
+  console.log("비밀번호 재설정 이메일 전송 완료");
+};
+
+// 이메일 확인 재전송
+const resendConfirmation = async (email: string) => {
+  const result = await SupabaseAuthService.resendConfirmation(email);
+
+  if (result.error) {
+    console.error("이메일 확인 재전송 실패:", result.error.message);
+    return;
+  }
+
+  console.log("이메일 확인 재전송 완료");
+};
 ```
 
-## 🔧 문제 해결
+## 🔄 마이그레이션 가이드
 
-### 일반적인 문제
+### React 컴포넌트에서의 변경
 
-#### 1. Supabase 연결 실패
-
-```bash
-에러: "Invalid API key" 또는 "Unable to connect"
-```
-
-**해결 방법:**
-
-- `.env` 파일의 `SUPABASE_URL`과 `SUPABASE_ANON_KEY` 확인
-- Supabase 대시보드에서 API 키 재확인
-- 네트워크 연결 상태 확인
-
-#### 2. 실시간 메시지가 수신되지 않음
-
-```bash
-에러: "Realtime subscription failed"
-```
-
-**해결 방법:**
-
-- Supabase 프로젝트에서 Realtime 기능 활성화 확인
-- RLS 정책이 올바르게 설정되었는지 확인
-- 사용자 인증 상태 확인
-
-#### 3. RLS 권한 오류
-
-```bash
-에러: "Permission denied" 또는 "Row level security policy violation"
-```
-
-**해결 방법:**
-
-- 사용자가 해당 채팅방의 멤버인지 확인
-- RLS 정책이 올바르게 적용되었는지 확인
-- 데이터베이스 스키마 재실행
-
-### 디버깅 팁
+#### Before (Apollo Client + GraphQL)
 
 ```typescript
-// 현재 데이터 소스 확인
-console.log("Data Source:", chatService.getDataSourceType());
+import { useMutation } from '@apollo/client';
+import { LOGIN_MUTATION, REGISTER_MUTATION } from '@/lib/graphql';
 
-// 연결 상태 확인
-console.log("Connected:", chatService.isConnected());
+const LoginComponent = () => {
+  const [loginMutation, { loading, error }] = useMutation(LOGIN_MUTATION);
 
-// Mock 데이터로 임시 전환 (개발용)
-chatService.switchToMock();
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      const { data } = await loginMutation({
+        variables: { input: { email, password } }
+      });
 
-// 로그 레벨 조정
-// 브라우저 콘솔에서 Supabase 관련 로그 확인
+      // 성공 처리
+      console.log('로그인 성공:', data.login.user);
+    } catch (error) {
+      console.error('로그인 실패:', error);
+    }
+  };
+
+  return (
+    // JSX
+  );
+};
 ```
 
-### 성능 최적화
+#### After (Supabase Auth)
 
-1. **메시지 페이지네이션**: 한 번에 많은 메시지를 로드하지 않도록 limit 설정
-2. **구독 관리**: 컴포넌트 언마운트 시 반드시 구독 해제
-3. **캐싱**: 자주 사용되는 채팅방 정보는 클라이언트에서 캐싱
+```typescript
+import { useState } from 'react';
+import { signIn } from '@/lib/supabase/auth';
 
-## 📝 참고 자료
+const LoginComponent = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-- [Supabase 공식 문서](https://supabase.com/docs)
-- [Supabase Realtime 가이드](https://supabase.com/docs/guides/realtime)
-- [Row Level Security 가이드](https://supabase.com/docs/guides/auth/row-level-security)
+  const handleLogin = async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
 
-## 🤝 기여하기
+    const result = await signIn({ email, password });
 
-1. 새로운 기능 추가 시 Mock 데이터와 Supabase 모두 지원하도록 구현
-2. 타입 정의는 `types.ts` 파일에 별도 관리
-3. 에러 처리는 `handleSupabaseError` 함수 사용
-4. 모든 새로운 API는 문서 업데이트 필요
+    if (result.error) {
+      setError(result.error.message);
+    } else {
+      // 성공 처리
+      console.log('로그인 성공:', result.user);
+    }
 
-## 📄 라이선스
+    setLoading(false);
+  };
 
-이 프로젝트는 MIT 라이선스 하에 있습니다.
+  return (
+    // JSX
+  );
+};
+```
+
+## 🎯 장점
+
+1. **직접적인 Supabase 연동**: GraphQL 레이어 없이 직접 Supabase Auth 사용
+2. **실시간 상태 관리**: `onAuthStateChange`를 통한 실시간 인증 상태 추적
+3. **내장 기능 활용**: 비밀번호 재설정, 이메일 확인 등 Supabase 내장 기능 사용
+4. **타입 안전성**: TypeScript를 통한 완전한 타입 지원
+5. **성능 향상**: GraphQL 오버헤드 제거로 더 빠른 인증 처리
+
+## 🔒 보안 고려사항
+
+1. **JWT 토큰**: Supabase가 자동으로 JWT 토큰 관리
+2. **세션 관리**: 자동 토큰 갱신 및 세션 유지
+3. **RLS (Row Level Security)**: Supabase 데이터베이스 레벨에서 보안 정책 적용
+4. **이메일 확인**: 회원가입 시 이메일 확인 프로세스 내장
+
+## 🚨 주의사항
+
+1. **환경 변수**: `SUPABASE_URL`과 `SUPABASE_ANON_KEY`가 올바르게 설정되어야 함
+2. **에러 처리**: 모든 인증 함수는 에러 객체를 반환하므로 적절한 에러 처리 필요
+3. **세션 동기화**: 여러 탭에서 동시 사용 시 세션 동기화 고려
+4. **백엔드 연동**: 백엔드에서도 Supabase JWT 토큰 검증 로직 필요
+
+## 📚 참고 자료
+
+- [Supabase Auth 공식 문서](https://supabase.com/docs/guides/auth)
+- [Supabase JavaScript 클라이언트](https://supabase.com/docs/reference/javascript/auth-signup)
+- [React와 Supabase 연동](https://supabase.com/docs/guides/getting-started/tutorials/with-react)

@@ -19,12 +19,16 @@ import { customFontsToLoad } from "@/lib/theme/typography";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { initializeI18n } from "@/lib/i18n";
-import { initializeSupabase } from "@/lib/supabase/client";
+import { initializeSupabase, supabase } from "@/lib/supabase/client";
+import { initializeAuthListener } from "@/lib/auth/auth-listener";
 
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from "expo-router";
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { navigationTheme, themeContext } = useAppTheme();
@@ -42,54 +46,71 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts(customFontsToLoad);
-  const [i18nInitialized, setI18nInitialized] = React.useState(false);
-  const [supabaseInitialized, setSupabaseInitialized] = React.useState(false);
+  const [appInitialized, setAppInitialized] = React.useState(false);
 
   React.useEffect(() => {
-    // i18n 및 Supabase 초기화
+    // 앱의 핵심 서비스들을 초기화합니다.
     const initializeApp = async () => {
       try {
         // 병렬로 초기화 실행
-        const [i18nResult, supabaseResult] = await Promise.allSettled([
-          initializeI18n(),
-          initializeSupabase(),
-        ]);
+        await Promise.all([initializeI18n(), initializeSupabase()]);
 
-        // i18n 초기화 결과 처리
-        if (i18nResult.status === "rejected") {
-          console.error("i18n 초기화 실패:", i18nResult.reason);
-        }
-        setI18nInitialized(true);
+        // Auth 이벤트 리스너 초기화
+        initializeAuthListener({
+          enableAutoSync: true,
+          enableDebugLog: true,
+          onSyncSuccess: (user) => {
+            console.log(
+              "✅ [_layout.tsx] 전역 인증 동기화 성공:",
+              user.nickname
+            );
+          },
+          onError: (error) => {
+            console.warn("⚠️ [_layout.tsx] 전역 인증 에러:", error.message);
+          },
+        });
 
-        // Supabase 초기화 결과 처리
-        if (supabaseResult.status === "rejected") {
-          console.error("Supabase 초기화 실패:", supabaseResult.reason);
+        // --- DEBUG: Supabase 세션 상태 확인 ---
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          console.log("✅ [_layout.tsx] Supabase session found:", {
+            userId: session.user.id,
+            tokenExists: !!session.access_token,
+          });
+        } else {
+          console.log("❌ [_layout.tsx] No Supabase session found.");
         }
-        setSupabaseInitialized(true);
+        // --- END DEBUG ---
       } catch (error) {
-        console.error("앱 초기화 실패:", error);
-        // 실패해도 앱은 실행되도록
-        setI18nInitialized(true);
-        setSupabaseInitialized(true);
+        console.error("App initialization failed:", error);
+      } finally {
+        setAppInitialized(true);
       }
     };
 
     initializeApp();
+
+    // 컴포넌트 언마운트 시 Auth 리스너 정리
+    return () => {
+      // AuthEventListener는 자동으로 정리됨 (useAuth 훅에서 처리)
+    };
   }, []);
 
   React.useEffect(() => {
-    if (fontsLoaded && i18nInitialized && supabaseInitialized) {
+    if (fontsLoaded && appInitialized) {
       // 모든 초기화가 완료되면 스플래시 화면을 숨깁니다.
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, i18nInitialized, supabaseInitialized]);
+  }, [fontsLoaded, appInitialized]);
 
-  // 초기화가 완료되지 않았다면 아무것도 렌더링하지 않습니다.
-  if (!fontsLoaded || !i18nInitialized || !supabaseInitialized) {
+  // 모든 초기화가 완료될 때까지 로딩 상태를 유지합니다.
+  if (!fontsLoaded || !appInitialized) {
     return null;
   }
 
-  // The Apollo Provider wraps everything, making the client available to all screens.
+  // Apollo Provider가 모든 것을 감싸서 모든 화면에서 클라이언트를 사용할 수 있게 합니다.
   return (
     <ApolloProvider client={client}>
       <AppThemeProvider>

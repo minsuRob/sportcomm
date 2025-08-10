@@ -73,7 +73,7 @@ export class ThumbnailService {
    * @returns 생성된 썸네일 정보 배열
    */
   async generateImageThumbnails(
-    originalFilePath: string,
+    source: string | Buffer,
     originalFileName: string,
     bucket: string = 'thumbnails',
   ): Promise<ThumbnailResult[]> {
@@ -83,7 +83,7 @@ export class ThumbnailService {
       this.logger.log(`이미지 썸네일 생성 시작: ${originalFileName}`);
 
       // 원본 이미지 정보 확인
-      const originalImage = sharp(originalFilePath);
+      const originalImage = sharp(source);
       const metadata = await originalImage.metadata();
 
       this.logger.log(
@@ -102,10 +102,7 @@ export class ThumbnailService {
             }
           }
 
-          const thumbnailBuffer = await this.createImageThumbnail(
-            originalFilePath,
-            size,
-          );
+          const thumbnailBuffer = await this.createImageThumbnail(source, size);
 
           // 썸네일 파일명 생성
           const thumbnailFileName = this.generateThumbnailFileName(
@@ -252,10 +249,10 @@ export class ThumbnailService {
    * @returns 썸네일 버퍼
    */
   private async createImageThumbnail(
-    imagePath: string,
+    source: string | Buffer,
     size: ThumbnailSize,
   ): Promise<Buffer> {
-    return sharp(imagePath)
+    return sharp(source)
       .resize(size.width, size.height, {
         fit: 'cover', // 비율 유지하면서 크롭
         position: 'center',

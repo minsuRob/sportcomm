@@ -87,14 +87,6 @@ export class MediaService {
       // Supabase Storage 공개 URL 생성
       const publicUrl = this.supabaseService.getPublicUrl('avatars', fileName);
 
-      // 로컬 파일 정리
-      try {
-        await fs.promises.unlink(file.path);
-        this.logger.log(`로컬 파일 삭제 완료: ${file.path}`);
-      } catch (unlinkError) {
-        this.logger.warn(`로컬 파일 삭제 실패: ${file.path}`, unlinkError);
-      }
-
       const media = this.mediaRepository.create({
         originalName: file.originalname,
         url: publicUrl,
@@ -113,7 +105,8 @@ export class MediaService {
       );
 
       // 아바타 썸네일 생성 (백그라운드에서 비동기 처리)
-      this.generateThumbnailsAsync(savedMedia, file.path);
+      // 파일 삭제는 썸네일 생성 후 generateThumbnailsAsync에서 처리
+      this.generateThumbnailsAsync(savedMedia, fileBuffer, file.path);
 
       return savedMedia;
     } catch (error) {
@@ -150,7 +143,7 @@ export class MediaService {
   ): Promise<Media[]> {
     const mediaEntities: Media[] = [];
 
-    for (const file of files) {
+    for (const [index, file] of files.entries()) {
       try {
         console.log(`파일 정보:`, {
           originalname: file.originalname,
@@ -194,8 +187,6 @@ export class MediaService {
         const fileType = isVideo ? 'video' : 'image';
         const fileName = generatePostMediaFileName(file.originalname, fileType);
 
-        console.log(`파일명 변환: ${file.originalname} -> ${fileName}`);
-
         // Supabase Storage에 업로드
         await this.supabaseService.uploadFile(
           bucket,
@@ -206,14 +197,6 @@ export class MediaService {
 
         // Supabase Storage 공개 URL 생성
         const publicUrl = this.supabaseService.getPublicUrl(bucket, fileName);
-
-        // 로컬 파일 정리 (업로드 완료 후)
-        try {
-          await fs.promises.unlink(file.path);
-          this.logger.log(`로컬 파일 삭제 완료: ${file.path}`);
-        } catch (unlinkError) {
-          this.logger.warn(`로컬 파일 삭제 실패: ${file.path}`, unlinkError);
-        }
 
         const media = this.mediaRepository.create({
           originalName: file.originalname,
@@ -232,7 +215,14 @@ export class MediaService {
         const savedMedia = await this.mediaRepository.save(media);
 
         // 썸네일 생성 (백그라운드에서 비동기 처리)
-        this.generateThumbnailsAsync(savedMedia, file.path);
+        // 파일 삭제는 썸네일 생성 후 generateThumbnailsAsync에서 처리
+        if (isVideo) {
+          // 동영상은 파일 경로 전달
+          this.generateThumbnailsAsync(savedMedia, file.path);
+        } else {
+          // 이미지는 버퍼와 삭제할 파일 경로 전달
+          this.generateThumbnailsAsync(savedMedia, fileBuffer, file.path);
+        }
 
         mediaEntities.push(savedMedia);
       } catch (error) {
@@ -541,8 +531,6 @@ export class MediaService {
     timeStamp: number = 1,
   ): Promise<boolean> {
     try {
-      this.logger.log(`동영상 썸네일 생성 시작: ${videoPath} -> ${outputPath}`);
-
       return new Promise((resolve, reject) => {
         ffmpeg(videoPath)
           .screenshots({
@@ -552,7 +540,6 @@ export class MediaService {
             size: '320x240',
           })
           .on('end', () => {
-            this.logger.log('동영상 썸네일 생성 완료');
             resolve(true);
           })
           .on('error', (err) => {
@@ -572,24 +559,26 @@ export class MediaService {
    */
   private async generateThumbnailsAsync(
     media: Media,
-    originalFilePath: string,
+    source: string | Buffer,
+    filePathToDelete?: string,
   ): Promise<void> {
-    try {
-      this.logger.log(`썸네일 생성 시작: ${media.id}`);
+    const finalFilePathToDelete =
+      typeof source === 'string' ? source : filePathToDelete;
 
+    try {
       let thumbnailResults;
 
       if (media.type === MediaType.IMAGE) {
-        // 이미지 썸네일 생성
+        // 이미지 썸네일 생성 (버퍼 또는 경로 사용)
         thumbnailResults = await this.thumbnailService.generateImageThumbnails(
-          originalFilePath,
+          source,
           media.originalName,
           'thumbnails',
         );
       } else if (media.type === MediaType.VIDEO) {
-        // 동영상 썸네일 생성
+        // 동영상 썸네일 생성 (경로 사용)
         thumbnailResults = await this.thumbnailService.generateVideoThumbnails(
-          originalFilePath,
+          source as string,
           media.originalName,
           'thumbnails',
           1, // 1초 지점에서 썸네일 추출
@@ -642,6 +631,19 @@ export class MediaService {
     } catch (error) {
       this.logger.error(`썸네일 생성 실패: ${media.id}`, error);
       // 썸네일 생성 실패는 전체 업로드를 실패시키지 않음
+    } finally {
+      // 썸네일 처리 후 로컬 파일 정리
+      if (finalFilePathToDelete) {
+        try {
+          await fs.promises.unlink(finalFilePathToDelete);
+          this.logger.log(`로컬 파일 삭제 완료: ${finalFilePathToDelete}`);
+        } catch (unlinkError) {
+          this.logger.warn(
+            `로컬 파일 삭제 실패: ${finalFilePathToDelete}`,
+            unlinkError,
+          );
+        }
+      }
     }
   }
 

@@ -22,6 +22,7 @@ import { Feedback } from './feedback.entity';
 import { Sport } from './sport.entity';
 import { Team } from './team.entity';
 import { UserTeam } from './user-team.entity';
+import { Thumbnail } from './thumbnail.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -47,6 +48,7 @@ export { Follow } from './follow.entity';
 
 // 미디어 관련 엔티티
 export { Media, MediaType, UploadStatus } from './media.entity';
+export { Thumbnail, ThumbnailSize } from './thumbnail.entity';
 
 // 채팅 관련 엔티티
 export { ChatRoom, ChatRoomType } from './chat-room.entity';
@@ -97,6 +99,7 @@ export const entities = [
   Sport,
   Team,
   UserTeam,
+  Thumbnail,
 ];
 
 /**
@@ -112,6 +115,7 @@ export const tableNames = {
   follows: 'follows',
   media: 'media',
   chatRooms: 'chat_rooms',
+  thumbnails: 'thumbnails',
   chatMessages: 'chat_messages',
   chatRoomParticipants: 'chat_room_participants',
   reports: 'reports',
@@ -148,6 +152,7 @@ export const entityRelations = {
   },
   Media: {
     manyToOne: ['post'],
+    oneToMany: ['thumbnails'],
   },
   ChatRoom: {
     manyToMany: ['participants'],

@@ -145,6 +145,30 @@ export class SupabaseService {
     contentType: string,
   ) {
     try {
+      // 1. 버킷 존재 여부 확인
+      const { data: bucketList, error: listError } =
+        await this.supabase.storage.listBuckets();
+      if (listError) {
+        throw new Error(`버킷 목록 조회 실패: ${listError.message}`);
+      }
+
+      const bucketExists = bucketList.some((b) => b.name === bucket);
+
+      // 2. 버킷이 없으면 생성
+      if (!bucketExists) {
+        console.log(`'${bucket}' 버킷을 찾을 수 없어 새로 생성합니다.`);
+        const { error: createError } = await this.supabase.storage.createBucket(
+          bucket,
+          {
+            public: true, // 필요에 따라 공개/비공개 설정
+            fileSizeLimit: '10MB', // 파일 크기 제한
+          },
+        );
+        if (createError) {
+          throw new Error(`버킷 생성 실패: ${createError.message}`);
+        }
+      }
+
       // 파일 경로 유효성 검증 (한글 및 특수문자 처리)
       const sanitizedPath = this.sanitizeFilePath(filePath);
 

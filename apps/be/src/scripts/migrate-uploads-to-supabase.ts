@@ -1,8 +1,8 @@
-import fs from 'fs-extra';
-import path from 'path';
-import mime from 'mime';
+import * as fs from 'fs-extra';
+import * as path from 'path';
+import { lookup as lookupMimeType } from 'mime-types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '@env';
 /**
  * 로컬 업로드 디렉터리의 파일을 Supabase Storage로 마이그레이션하는 스크립트
  * - team-logos, images, videos 폴더의 파일을 각각 대응 버킷으로 업로드
@@ -19,17 +19,10 @@ type BucketPlan = {
   isPublic: boolean; // 퍼블릭 버킷 여부(공개 URL 생성)
 };
 
-function assertEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`환경변수 ${name} 가 설정되어야 합니다.`);
-  }
-  return value;
-}
-
 function buildSupabaseClient(): SupabaseClient {
-  const url = assertEnv('SUPABASE_URL');
-  const serviceKey = assertEnv('SUPABASE_SERVICE_ROLE_KEY');
+  // 환경변수 로드(.env.local -> .env)
+  const url = SUPABASE_URL;
+  const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
   return createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -48,8 +41,8 @@ async function* walkFiles(dir: string): AsyncGenerator<string> {
 }
 
 function getContentType(filePath: string): string {
-  // mime 패키지로 콘텐츠 타입 추론, 기본값은 application/octet-stream
-  return mime.getType(filePath) || 'application/octet-stream';
+  // mime-types 패키지로 콘텐츠 타입 추론, 기본값은 application/octet-stream
+  return (lookupMimeType(filePath) || 'application/octet-stream') as string;
 }
 
 function toUnixKey(localRoot: string, filePathAbs: string): string {

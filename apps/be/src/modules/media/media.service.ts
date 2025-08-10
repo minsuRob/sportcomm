@@ -29,6 +29,100 @@ export class MediaService {
   }
 
   /**
+   * 아바타 이미지 전용 업로드 함수
+   * @param file 업로드된 아바타 이미지 파일
+   * @param userId 업로드한 사용자 ID
+   * @returns 생성된 미디어 엔티티
+   */
+  async createAvatarMedia(
+    file: Express.Multer.File,
+    userId: string,
+  ): Promise<Media> {
+    try {
+      console.log(`아바타 파일 정보:`, {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: file.path,
+      });
+
+      // 파일 유효성 검사
+      if (file.size <= 0) {
+        throw new Error(`파일 크기가 0 또는 음수입니다: ${file.size} bytes`);
+      }
+
+      // 이미지 파일인지 확인
+      if (!file.mimetype.startsWith('image/')) {
+        throw new Error('아바타는 이미지 파일만 업로드 가능합니다.');
+      }
+
+      // 이미지 메타데이터 추출
+      const metadata = await this.extractImageMetadata(file.path);
+
+      // 파일을 Supabase Storage에 업로드
+      const fileBuffer = await fs.promises.readFile(file.path);
+      const fileName = `avatar_${userId}_${Date.now()}-${Math.random().toString(36).substring(2)}.${path.extname(file.originalname).substring(1)}`;
+
+      // Supabase Storage avatars 버킷에 업로드
+      await this.supabaseService.uploadFile(
+        'avatars',
+        fileName,
+        fileBuffer,
+        file.mimetype,
+      );
+
+      // Supabase Storage 공개 URL 생성
+      const publicUrl = this.supabaseService.getPublicUrl('avatars', fileName);
+
+      // 로컬 파일 정리
+      try {
+        await fs.promises.unlink(file.path);
+        this.logger.log(`로컬 파일 삭제 완료: ${file.path}`);
+      } catch (unlinkError) {
+        this.logger.warn(`로컬 파일 삭제 실패: ${file.path}`, unlinkError);
+      }
+
+      const media = this.mediaRepository.create({
+        originalName: file.originalname,
+        url: publicUrl,
+        type: MediaType.IMAGE,
+        status: UploadStatus.COMPLETED,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        extension: path.extname(file.originalname).substring(1),
+        width: metadata.width,
+        height: metadata.height,
+      });
+
+      const savedMedia = await this.mediaRepository.save(media);
+      this.logger.log(
+        `아바타 업로드 성공: ${savedMedia.id}, URL: ${publicUrl}`,
+      );
+
+      return savedMedia;
+    } catch (error) {
+      this.logger.error(`아바타 업로드 실패: ${file.originalname}`, error);
+
+      // 실패한 경우에도 DB에 기록
+      const media = this.mediaRepository.create({
+        originalName: file.originalname,
+        url: '',
+        type: MediaType.IMAGE,
+        status: UploadStatus.FAILED,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        extension: path.extname(file.originalname).substring(1),
+        width: 0,
+        height: 0,
+        failureReason: error.message || '아바타 업로드 오류',
+      });
+
+      const savedMedia = await this.mediaRepository.save(media);
+      throw new Error(`아바타 업로드 실패: ${error.message}`);
+    }
+  }
+
+  /**
    * 업로드된 파일들로부터 미디어 엔티티를 생성합니다.
    * @param files 업로드된 파일 배열
    * @param userId 업로드한 사용자 ID
@@ -69,7 +163,12 @@ export class MediaService {
           // 이미지 메타데이터 추출
           metadata = await this.extractImageMetadata(file.path);
           mediaType = MediaType.IMAGE;
-          bucket = 'post-images';
+          // 파일명에 따라 버킷 결정 (아바타 vs 일반 이미지)
+          bucket =
+            file.originalname.toLowerCase().includes('profile') ||
+            file.originalname.toLowerCase().includes('avatar')
+              ? 'avatars'
+              : 'post-images';
         }
 
         // 파일을 Supabase Storage에 업로드
@@ -117,6 +216,25 @@ export class MediaService {
         try {
           const isVideo = file.mimetype.startsWith('video/');
 
+          // 세분화된 에러 메시지 생성
+          let detailedError = error.message || '미디어 처리 오류';
+          if (error.message?.includes('ENOENT')) {
+            detailedError =
+              '파일을 찾을 수 없습니다. 업로드가 중단되었을 수 있습니다.';
+          } else if (error.message?.includes('EACCES')) {
+            detailedError = '파일 접근 권한이 없습니다.';
+          } else if (
+            error.message?.includes('EMFILE') ||
+            error.message?.includes('ENFILE')
+          ) {
+            detailedError = '시스템 리소스 부족으로 업로드에 실패했습니다.';
+          } else if (error.message?.includes('unsupported image format')) {
+            detailedError = '지원되지 않는 이미지 형식입니다.';
+          } else if (error.message?.includes('Storage')) {
+            detailedError =
+              '스토리지 업로드에 실패했습니다. 네트워크를 확인해주세요.';
+          }
+
           const media = this.mediaRepository.create({
             originalName: file.originalname,
             url: '', // 실패한 경우 빈 URL
@@ -128,7 +246,7 @@ export class MediaService {
             width: 0,
             height: 0,
             duration: isVideo ? 0 : undefined,
-            failureReason: error.message || '미디어 처리 오류',
+            failureReason: detailedError,
           });
           const savedMedia = await this.mediaRepository.save(media);
           mediaEntities.push(savedMedia);

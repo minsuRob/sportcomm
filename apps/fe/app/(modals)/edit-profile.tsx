@@ -66,10 +66,10 @@ export default function EditProfileScreen() {
 
   /**
    * 프로필 이미지 업로드 처리
-   * create-post.tsx와 동일한 패턴으로 구현
+   * 세분화된 에러 처리와 함께 구현
    */
   const uploadProfileImage = async (
-    file: File | { uri: string; name: string; type: string },
+    file: File | { uri: string; name: string; type: string }
   ): Promise<string | null> => {
     try {
       setIsImageUploading(true);
@@ -88,28 +88,88 @@ export default function EditProfileScreen() {
 
       let uploadedFiles: UploadedMedia[];
 
-      // 플랫폼별 업로드 (create-post.tsx와 동일한 패턴)
+      // 플랫폼별 업로드
       if (isWeb()) {
         uploadedFiles = await uploadFilesWeb([file as File], progressCallback);
       } else {
         uploadedFiles = await uploadFilesMobile(
           [file as { uri: string; name: string; type: string }],
-          progressCallback,
+          progressCallback
         );
       }
 
-      if (uploadedFiles.length === 0) {
-        throw new Error("파일 업로드에 실패했습니다.");
+      // 업로드 결과 검증
+      if (!uploadedFiles || uploadedFiles.length === 0) {
+        throw new Error(
+          "업로드 응답이 비어있습니다. 서버 연결을 확인해주세요."
+        );
       }
 
       const uploadedMedia = uploadedFiles[0];
-      console.log("프로필 이미지 업로드 성공:", uploadedMedia);
+      console.log("프로필 이미지 업로드 응답:", uploadedMedia);
 
-      // 업로드된 미디어의 URL 반환
+      // 업로드 상태별 처리
+      if (uploadedMedia.status === "FAILED") {
+        const errorMessage =
+          uploadedMedia.failureReason || "업로드에 실패했습니다.";
+        throw new Error(`업로드 실패: ${errorMessage}`);
+      }
+
+      // URL 유효성 검증
+      if (!uploadedMedia.url || uploadedMedia.url.trim() === "") {
+        throw new Error(
+          "업로드는 완료되었지만 이미지 URL을 받지 못했습니다. 잠시 후 다시 시도해주세요."
+        );
+      }
+
+      // URL 접근 가능성 검증 (선택적)
+      try {
+        const response = await fetch(uploadedMedia.url, { method: "HEAD" });
+        if (!response.ok) {
+          throw new Error("업로드된 이미지에 접근할 수 없습니다.");
+        }
+      } catch (fetchError) {
+        console.warn("이미지 URL 검증 실패:", fetchError);
+        // URL 검증 실패해도 계속 진행 (네트워크 문제일 수 있음)
+      }
+
+      console.log("프로필 이미지 업로드 성공:", {
+        id: uploadedMedia.id,
+        url: uploadedMedia.url,
+        status: uploadedMedia.status,
+      });
+
       return uploadedMedia.url;
     } catch (error) {
       console.error("프로필 이미지 업로드 실패:", error);
-      throw error;
+
+      // 에러 타입별 사용자 친화적 메시지 생성
+      let userMessage = "프로필 이미지 업로드에 실패했습니다.";
+
+      if (error.message?.includes("네트워크")) {
+        userMessage = "네트워크 연결을 확인하고 다시 시도해주세요.";
+      } else if (error.message?.includes("크기")) {
+        userMessage =
+          "이미지 파일 크기가 너무 큽니다. 더 작은 이미지를 선택해주세요.";
+      } else if (
+        error.message?.includes("형식") ||
+        error.message?.includes("format")
+      ) {
+        userMessage =
+          "지원되지 않는 이미지 형식입니다. JPG, PNG, GIF 파일을 사용해주세요.";
+      } else if (
+        error.message?.includes("권한") ||
+        error.message?.includes("인증")
+      ) {
+        userMessage = "업로드 권한이 없습니다. 로그인 상태를 확인해주세요.";
+      } else if (error.message?.includes("서버")) {
+        userMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      } else if (error.message?.includes("URL")) {
+        userMessage = error.message; // URL 관련 에러는 그대로 표시
+      }
+
+      // 사용자 친화적 에러로 다시 던지기
+      throw new Error(userMessage);
     } finally {
       setIsImageUploading(false);
       setUploadProgress(0);
@@ -136,8 +196,20 @@ export default function EditProfileScreen() {
         if (!selectedAsset.mimeType?.startsWith("image/")) {
           showToast({
             type: "error",
-            title: "오류",
-            message: "이미지 파일만 업로드 가능합니다.",
+            title: "파일 형식 오류",
+            message: "프로필 사진은 이미지 파일만 업로드 가능합니다.",
+            duration: 3000,
+          });
+          return;
+        }
+
+        // 파일 크기 검증 (5MB 제한)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (selectedAsset.fileSize && selectedAsset.fileSize > maxSize) {
+          showToast({
+            type: "error",
+            title: "파일 크기 초과",
+            message: "프로필 사진은 5MB 이하의 이미지만 업로드 가능합니다.",
             duration: 3000,
           });
           return;
@@ -151,15 +223,18 @@ export default function EditProfileScreen() {
             const response = await fetch(selectedAsset.uri);
             const blob = await response.blob();
             const fileName =
-              selectedAsset.fileName || `profile_${Date.now()}.jpg`;
+              selectedAsset.fileName ||
+              `avatar_${currentUser?.id}_${Date.now()}.jpg`;
             uploadFile = new File([blob], fileName, {
               type: selectedAsset.mimeType || "image/jpeg",
             });
           } else {
-            // 모바일 환경
+            // 모바일 환경 - 아바타임을 명시하는 파일명 사용
             uploadFile = {
               uri: selectedAsset.uri,
-              name: selectedAsset.fileName || `profile_${Date.now()}.jpg`,
+              name:
+                selectedAsset.fileName ||
+                `avatar_${currentUser?.id}_${Date.now()}.jpg`,
               type: selectedAsset.mimeType || "image/jpeg",
             };
           }
@@ -180,18 +255,27 @@ export default function EditProfileScreen() {
           console.error("이미지 업로드 오류:", uploadError);
           showToast({
             type: "error",
-            title: "오류",
-            message: "이미지 업로드에 실패했습니다.",
-            duration: 3000,
+            title: "업로드 실패",
+            message: uploadError.message || "이미지 업로드에 실패했습니다.",
+            duration: 4000,
           });
         }
       }
     } catch (error) {
       console.error("이미지 선택 오류:", error);
+
+      let errorMessage = "이미지를 선택할 수 없습니다.";
+      if (error.message?.includes("permission")) {
+        errorMessage =
+          "갤러리 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.";
+      } else if (error.message?.includes("cancelled")) {
+        return; // 사용자가 취소한 경우 토스트 표시하지 않음
+      }
+
       showToast({
         type: "error",
-        title: "오류",
-        message: "이미지를 선택할 수 없습니다.",
+        title: "이미지 선택 실패",
+        message: errorMessage,
         duration: 3000,
       });
     }

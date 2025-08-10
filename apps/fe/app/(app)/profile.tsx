@@ -230,7 +230,7 @@ export default function ProfileScreen() {
   const avatarUrl =
     userProfile.profileImageUrl ||
     `https://i.pravatar.cc/150?u=${userProfile.id}`;
-
+  //
   return (
     <View style={themed($container)}>
       {/* 헤더 - 전체 너비 사용 */}

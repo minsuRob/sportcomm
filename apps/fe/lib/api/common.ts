@@ -40,6 +40,7 @@ export interface UploadedMedia {
   height?: number;
   status: "UPLOADING" | "COMPLETED" | "FAILED";
   thumbnailUrl?: string;
+  failureReason?: string; // 실패 원인 추가
 }
 
 /**
@@ -64,7 +65,7 @@ export class PostCreationError extends Error {
   constructor(
     message: string,
     public phase: "upload" | "post_creation",
-    public originalError?: any,
+    public originalError?: any
   ) {
     super(message);
     this.name = "PostCreationError";
@@ -146,7 +147,7 @@ export function createReactNativeFile(
     name?: string;
     fileSize?: number;
   },
-  index: number = 0,
+  index: number = 0
 ): ReactNativeFile {
   // 파일 이름 추출 또는 생성
   const uriParts = image.uri.split("/");
@@ -212,7 +213,7 @@ export function debugFormData(formData: FormData): void {
 
         if (value instanceof File) {
           console.log(
-            `${key}: File(이름: ${value.name}, 타입: ${value.type}, 크기: ${value.size} bytes)`,
+            `${key}: File(이름: ${value.name}, 타입: ${value.type}, 크기: ${value.size} bytes)`
           );
         } else if (typeof value === "object" && value !== null) {
           console.log(`${key}: 객체`, value);
@@ -225,7 +226,7 @@ export function debugFormData(formData: FormData): void {
     }
   } else {
     console.log(
-      "FormData 항목을 나열할 수 없습니다 (entries 메서드 지원 안 함)",
+      "FormData 항목을 나열할 수 없습니다 (entries 메서드 지원 안 함)"
     );
   }
 

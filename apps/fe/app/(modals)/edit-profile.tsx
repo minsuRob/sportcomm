@@ -23,6 +23,7 @@ import { UPDATE_PROFILE } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { uploadFilesWeb } from "@/lib/api/webUpload";
 import { uploadFilesMobile } from "@/lib/api/mobileUpload";
+import { generateAvatarFileName } from "@/lib/utils/file-utils";
 import { isWeb } from "@/lib/platform";
 import { UploadedMedia, ProgressCallback } from "@/lib/api/common";
 
@@ -223,24 +224,20 @@ export default function EditProfileScreen() {
             const response = await fetch(selectedAsset.uri);
             const blob = await response.blob();
             // 한글 파일명 문제 해결: 안전한 파일명 생성
-            const timestamp = Date.now();
-            const randomId = Math.random().toString(36).substring(2, 8);
-            const extension = selectedAsset.fileName
-              ? selectedAsset.fileName.split(".").pop() || "jpg"
-              : "jpg";
-            const safeFileName = `avatar_${currentUser?.id}_${timestamp}_${randomId}.${extension}`;
+            const safeFileName = generateAvatarFileName(
+              selectedAsset.fileName || "avatar.jpg",
+              currentUser?.id || "user"
+            );
 
             uploadFile = new File([blob], safeFileName, {
               type: selectedAsset.mimeType || "image/jpeg",
             });
           } else {
             // 모바일 환경 - 한글 파일명 문제 해결
-            const timestamp = Date.now();
-            const randomId = Math.random().toString(36).substring(2, 8);
-            const extension = selectedAsset.fileName
-              ? selectedAsset.fileName.split(".").pop() || "jpg"
-              : "jpg";
-            const safeFileName = `avatar_${currentUser?.id}_${timestamp}_${randomId}.${extension}`;
+            const safeFileName = generateAvatarFileName(
+              selectedAsset.fileName || "avatar.jpg",
+              currentUser?.id || "user"
+            );
 
             uploadFile = {
               uri: selectedAsset.uri,

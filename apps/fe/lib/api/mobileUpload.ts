@@ -17,6 +17,7 @@ import {
   createReactNativeFile,
   getUploadEndpoints,
 } from "./common";
+import { generatePostMediaFileName, isImageFile } from "../utils/file-utils";
 
 // --------------------------
 // 모바일 전용 타입 정의
@@ -62,12 +63,12 @@ export interface SelectedImage {
  */
 export async function uploadFilesMobile(
   files: Array<{ uri: string; name: string; type: string }>,
-  onProgress?: ProgressCallback,
+  onProgress?: ProgressCallback
 ): Promise<UploadedMedia[]> {
   if (!isReactNative()) {
     throw new UploadError(
       "이 함수는 모바일 환경에서만 사용할 수 있습니다.",
-      400,
+      400
     );
   }
 
@@ -79,13 +80,13 @@ export async function uploadFilesMobile(
     }
 
     const validFiles = files.filter(
-      (file) => file && file.uri && file.name && file.type,
+      (file) => file && file.uri && file.name && file.type
     );
 
     if (validFiles.length === 0) {
       throw new UploadError(
         "업로드할 유효한 파일이 없습니다. 모든 파일이 비어있거나 손상되었습니다.",
-        400,
+        400
       );
     }
 
@@ -123,7 +124,13 @@ export async function uploadFilesMobile(
         "video/quicktime": "mov",
       };
       const fileExt = mimeToExt[file.type] || "jpg";
-      const fileName = `image_${index}_${Date.now()}.${fileExt}`;
+      const originalName = file.name || `file_${index}.${fileExt}`;
+      const mediaType = isImageFile(originalName) ? "image" : "video";
+      const fileName = generatePostMediaFileName(
+        originalName,
+        mediaType,
+        index
+      );
 
       // 실제 파일 데이터를 포함하는 객체 생성
       const fileObj = {
@@ -137,7 +144,7 @@ export async function uploadFilesMobile(
       // @ts-ignore: React Native의 FormData는 객체 형식 지원
       formData.append("files", fileObj);
       console.log(
-        `React Native (${Platform.OS}) - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
+        `React Native (${Platform.OS}) - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`
       );
     });
 
@@ -166,13 +173,13 @@ export async function uploadFilesMobile(
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const response = JSON.parse(
-              xhr.responseText,
+              xhr.responseText
             ) as MobileUploadResponse;
             if (response.success) {
               console.log(
                 "모바일 파일 업로드 성공:",
                 response.data.totalCount,
-                "개 파일",
+                "개 파일"
               );
               resolve(response.data.files);
             } else {
@@ -180,16 +187,16 @@ export async function uploadFilesMobile(
                 new UploadError(
                   response.message || "업로드 실패",
                   xhr.status,
-                  response,
-                ),
+                  response
+                )
               );
             }
           } catch (parseError) {
             reject(
               new UploadError(
                 `응답 파싱 오류: ${parseError.message || "알 수 없는 오류"}`,
-                xhr.status,
-              ),
+                xhr.status
+              )
             );
           }
         } else {
@@ -245,12 +252,12 @@ export async function uploadFilesMobile(
  */
 export async function uploadFileMobile(
   file: { uri: string; name: string; type: string },
-  onProgress?: ProgressCallback,
+  onProgress?: ProgressCallback
 ): Promise<UploadedMedia> {
   if (!isReactNative()) {
     throw new UploadError(
       "이 함수는 모바일 환경에서만 사용할 수 있습니다.",
-      400,
+      400
     );
   }
 
@@ -300,7 +307,7 @@ export async function uploadFileMobile(
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const response = JSON.parse(
-              xhr.responseText,
+              xhr.responseText
             ) as MobileSingleUploadResponse;
             if (response.success) {
               console.log("모바일 단일 파일 업로드 성공:", response.data.id);
@@ -310,16 +317,16 @@ export async function uploadFileMobile(
                 new UploadError(
                   response.message || "업로드 실패",
                   xhr.status,
-                  response,
-                ),
+                  response
+                )
               );
             }
           } catch (parseError) {
             reject(
               new UploadError(
                 `응답 파싱 오류: ${parseError.message || "알 수 없는 오류"}`,
-                xhr.status,
-              ),
+                xhr.status
+              )
             );
           }
         } else {
@@ -374,7 +381,7 @@ export async function compressImageMobile(
     maxWidth?: number;
     maxHeight?: number;
     quality?: number;
-  } = {},
+  } = {}
 ): Promise<SelectedImage> {
   if (!isReactNative()) {
     throw new Error("이 함수는 모바일 환경에서만 사용할 수 있습니다.");
@@ -395,7 +402,7 @@ export async function compressImageMobile(
       const fileInfo = await FileSystem.getInfoAsync(uri);
       originalFileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
       console.log(
-        `원본 이미지 크기: ${originalFileSize} bytes (${(originalFileSize / (1024 * 1024)).toFixed(2)}MB)`,
+        `원본 이미지 크기: ${originalFileSize} bytes (${(originalFileSize / (1024 * 1024)).toFixed(2)}MB)`
       );
 
       if (originalFileSize <= 0) {
@@ -420,7 +427,7 @@ export async function compressImageMobile(
           [], // 변환 작업 없음
           {
             format: ImageManipulator.SaveFormat.PNG, // 임시로 PNG 사용 (실제로는 변환되지 않음)
-          },
+          }
         );
         imageWidth = imageInfo.width;
         imageHeight = imageInfo.height;
@@ -454,7 +461,7 @@ export async function compressImageMobile(
       {
         compress: quality,
         format: ImageManipulator.SaveFormat.JPEG,
-      },
+      }
     );
 
     console.log(`이미지 압축 완료:`, {
@@ -467,13 +474,13 @@ export async function compressImageMobile(
     let compressedSize = 0;
     try {
       const compressedFileInfo = await FileSystem.getInfoAsync(
-        manipulatedImage.uri,
+        manipulatedImage.uri
       );
       compressedSize = compressedFileInfo.exists
         ? compressedFileInfo.size || 0
         : 0;
       console.log(
-        `압축된 이미지 크기: ${compressedSize} bytes (${(compressedSize / (1024 * 1024)).toFixed(2)}MB)`,
+        `압축된 이미지 크기: ${compressedSize} bytes (${(compressedSize / (1024 * 1024)).toFixed(2)}MB)`
       );
 
       // 압축된 파일이 0바이트이면 원본 사용
@@ -515,7 +522,7 @@ export async function compressImageMobile(
  */
 export async function prepareImageForUploadMobile(
   image: SelectedImage,
-  index: number,
+  index: number
 ): Promise<{ uri: string; name: string; type: string }> {
   if (!isReactNative()) {
     throw new Error("이 함수는 모바일 환경에서만 사용할 수 있습니다.");
@@ -539,7 +546,7 @@ export async function prepareImageForUploadMobile(
     const actualFileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
 
     console.log(
-      `실제 파일 크기 확인: ${actualFileSize} bytes (${(actualFileSize / 1024).toFixed(2)}KB)`,
+      `실제 파일 크기 확인: ${actualFileSize} bytes (${(actualFileSize / 1024).toFixed(2)}KB)`
     );
 
     if (!fileInfo.exists) {
@@ -548,7 +555,7 @@ export async function prepareImageForUploadMobile(
 
     if (actualFileSize <= 0) {
       throw new Error(
-        `이미지 ${index}가 손상되었습니다: ${actualFileSize} bytes`,
+        `이미지 ${index}가 손상되었습니다: ${actualFileSize} bytes`
       );
     }
   } catch (error) {

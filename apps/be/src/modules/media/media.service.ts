@@ -3,6 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Media, MediaType, UploadStatus } from '../../entities/media.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
+import {
+  generateAvatarFileName,
+  generatePostMediaFileName,
+  getMimeTypeFromFileName,
+} from '../../common/utils/file-utils';
 import * as sharp from 'sharp';
 // Sharp 옵션 조정 - 애플리케이션 시작 시 한 번 설정
 sharp.cache(false); // 캐시 비활성화로 메모리 누수 방지
@@ -63,10 +68,7 @@ export class MediaService {
       const fileBuffer = await fs.promises.readFile(file.path);
 
       // 한글 파일명 처리: 안전한 아바타 파일명 생성
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(2);
-      const extension = path.extname(file.originalname);
-      const fileName = `avatar_${userId}_${timestamp}_${randomId}${extension}`;
+      const fileName = generateAvatarFileName(file.originalname, userId);
 
       console.log(`아바타 파일명 변환: ${file.originalname} -> ${fileName}`);
 
@@ -182,10 +184,11 @@ export class MediaService {
         const fileBuffer = await fs.promises.readFile(file.path);
 
         // 한글 파일명 처리: 안전한 파일명 생성
-        const timestamp = Date.now();
-        const randomId = Math.random().toString(36).substring(2);
-        const extension = path.extname(file.originalname);
-        const fileName = `${timestamp}-${randomId}${extension}`;
+        const mediaType = isVideo ? 'video' : 'image';
+        const fileName = generatePostMediaFileName(
+          file.originalname,
+          mediaType,
+        );
 
         console.log(`파일명 변환: ${file.originalname} -> ${fileName}`);
 

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { sanitizeFileName } from '../utils/file-utils';
 
 /**
  * Supabase 클라이언트 서비스
@@ -173,11 +174,7 @@ export class SupabaseService {
    * @returns 안전한 파일 경로
    */
   private sanitizeFilePath(filePath: string): string {
-    // 한글 및 특수문자를 안전한 문자로 변환
-    return filePath
-      .replace(/[^\w\-_.]/g, '_') // 영문, 숫자, 하이픈, 언더스코어, 점만 허용
-      .replace(/_{2,}/g, '_') // 연속된 언더스코어를 하나로 변환
-      .replace(/^_+|_+$/g, ''); // 시작과 끝의 언더스코어 제거
+    return sanitizeFileName(filePath);
   }
 
   /**

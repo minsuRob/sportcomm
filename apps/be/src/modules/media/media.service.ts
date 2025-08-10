@@ -2,12 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Media, MediaType, UploadStatus } from '../../entities/media.entity';
+import { SupabaseService } from '../../common/services/supabase.service';
 import * as sharp from 'sharp';
 // Sharp 옵션 조정 - 애플리케이션 시작 시 한 번 설정
 sharp.cache(false); // 캐시 비활성화로 메모리 누수 방지
 sharp.concurrency(2); // 병렬 처리 제한
 import * as path from 'path';
 import * as ffmpeg from 'fluent-ffmpeg';
+import * as fs from 'fs';
 
 /**
  * 미디어 서비스
@@ -20,6 +22,7 @@ export class MediaService {
   constructor(
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
+    private readonly supabaseService: SupabaseService,
   ) {
     // 서비스 시작 시 Sharp 설정 로그
     this.logger.log('Sharp 이미지 처리 라이브러리 초기화 완료');
@@ -55,29 +58,46 @@ export class MediaService {
         const isVideo = file.mimetype.startsWith('video/');
         let metadata: { width: number; height: number; duration?: number };
         let mediaType: MediaType;
-        let folderPath: string;
+        let bucket: string;
 
         if (isVideo) {
           // 동영상 메타데이터 추출
           metadata = await this.extractVideoMetadata(file.path);
           mediaType = MediaType.VIDEO;
-          folderPath = 'uploads/videos/';
+          bucket = 'post-videos';
         } else {
           // 이미지 메타데이터 추출
           metadata = await this.extractImageMetadata(file.path);
           mediaType = MediaType.IMAGE;
-          folderPath = 'uploads/images/';
+          bucket = 'post-images';
         }
 
-        // 환경에 따른 기본 URL 설정
-        const baseUrl = 'http://localhost:3000';
+        // 파일을 Supabase Storage에 업로드
+        const fileBuffer = await fs.promises.readFile(file.path);
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}-${file.originalname}`;
 
-        // 파일 경로에서 업로드 폴더 이후 부분만 추출
-        const relativePath = file.path.split(folderPath)[1] || file.filename;
+        // Supabase Storage에 업로드
+        await this.supabaseService.uploadFile(
+          bucket,
+          fileName,
+          fileBuffer,
+          file.mimetype,
+        );
+
+        // Supabase Storage 공개 URL 생성
+        const publicUrl = this.supabaseService.getPublicUrl(bucket, fileName);
+
+        // 로컬 파일 정리 (업로드 완료 후)
+        try {
+          await fs.promises.unlink(file.path);
+          this.logger.log(`로컬 파일 삭제 완료: ${file.path}`);
+        } catch (unlinkError) {
+          this.logger.warn(`로컬 파일 삭제 실패: ${file.path}`, unlinkError);
+        }
 
         const media = this.mediaRepository.create({
           originalName: file.originalname,
-          url: `${baseUrl}/${folderPath}${relativePath}`,
+          url: publicUrl, // Supabase Storage 공개 URL 사용
           type: mediaType,
           status: UploadStatus.COMPLETED,
           fileSize: file.size,
@@ -85,7 +105,7 @@ export class MediaService {
           extension: path.extname(file.originalname).substring(1),
           width: metadata.width,
           height: metadata.height,
-          duration: metadata.duration, // 동영상인 경우에만 값이 있음
+          duration: metadata.duration, // 동영상인 경우에만 값이 있음 (decimal 타입으로 소수점 지원)
           // postId는 나중에 게시물 작성 시 연결됨
         });
 
@@ -96,9 +116,10 @@ export class MediaService {
         // 실패해도 DB에 기록하여 클라이언트에서 처리할 수 있게 함
         try {
           const isVideo = file.mimetype.startsWith('video/');
+
           const media = this.mediaRepository.create({
             originalName: file.originalname,
-            url: file.path,
+            url: '', // 실패한 경우 빈 URL
             type: isVideo ? MediaType.VIDEO : MediaType.IMAGE,
             status: UploadStatus.FAILED,
             fileSize: file.size,

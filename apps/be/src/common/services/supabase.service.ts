@@ -128,4 +128,71 @@ export class SupabaseService {
       throw error;
     }
   }
+
+  /**
+   * 파일을 Supabase Storage에 업로드
+   * @param bucket 버킷 이름
+   * @param filePath 파일 경로 (버킷 내)
+   * @param fileBuffer 파일 버퍼
+   * @param contentType MIME 타입
+   * @returns 업로드 결과
+   */
+  async uploadFile(
+    bucket: string,
+    filePath: string,
+    fileBuffer: Buffer,
+    contentType: string,
+  ) {
+    try {
+      const { data, error } = await this.supabase.storage
+        .from(bucket)
+        .upload(filePath, fileBuffer, {
+          contentType,
+          upsert: true, // 동일한 파일명이 있으면 덮어쓰기
+        });
+
+      if (error) {
+        throw new Error(`파일 업로드 실패: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Supabase Storage 업로드 중 오류:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Supabase Storage에서 공개 URL 생성
+   * @param bucket 버킷 이름
+   * @param filePath 파일 경로
+   * @returns 공개 URL
+   */
+  getPublicUrl(bucket: string, filePath: string): string {
+    const { data } = this.supabase.storage.from(bucket).getPublicUrl(filePath);
+    return data.publicUrl;
+  }
+
+  /**
+   * Supabase Storage에서 파일 삭제
+   * @param bucket 버킷 이름
+   * @param filePaths 삭제할 파일 경로 배열
+   * @returns 삭제 결과
+   */
+  async deleteFiles(bucket: string, filePaths: string[]) {
+    try {
+      const { data, error } = await this.supabase.storage
+        .from(bucket)
+        .remove(filePaths);
+
+      if (error) {
+        throw new Error(`파일 삭제 실패: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Supabase Storage 파일 삭제 중 오류:', error);
+      throw error;
+    }
+  }
 }

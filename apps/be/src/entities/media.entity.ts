@@ -217,7 +217,9 @@ export class Media extends BaseEntity {
    */
   @Field(() => Number, { nullable: true, description: '비디오 재생 시간 (초)' })
   @Column({
-    type: 'int',
+    type: 'decimal',
+    precision: 10,
+    scale: 3,
     nullable: true,
     comment: '비디오 재생 시간 (초)',
   })

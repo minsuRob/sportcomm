@@ -238,10 +238,10 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
+    (item) => item.type === "image" || item.type === "IMAGE"
   );
   const videoMedia = post.media.filter(
-    (item) => item.type === "video" || item.type === "VIDEO",
+    (item) => item.type === "video" || item.type === "VIDEO"
   );
 
   // 동영상 재생 상태 관리
@@ -261,7 +261,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { imageAspectRatio, imageHeight, imageLoading } =
     usePostImageDimensions(
       imageMedia.length > 0 ? imageMedia[0]?.url : null,
-      isWeb(),
+      isWeb()
     );
 
   // 현재 사용자 정보 가져오기
@@ -333,7 +333,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       console.log(`PostCard - post.id: ${post.id}`);
       console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
       console.log(
-        `PostCard - post.content: ${post.content.substring(0, 20)}...`,
+        `PostCard - post.content: ${post.content.substring(0, 20)}...`
       );
     }
   }, [post.id]);
@@ -425,7 +425,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
     return (
       categories[teamId] || {
-        name: "스포츠",
+        name: "스포츠1",
         icon: "trophy",
         colors: {
           primary: "#6C7CE7",
@@ -438,6 +438,30 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   };
 
   const categoryInfo = getCategoryInfo(post.teamId);
+
+  // 팀 이름 유도: 우선순위
+  // 1) post.team?.name
+  // 2) post.teamName
+  // 3) author.myTeams에서 post.teamId에 해당하는 팀의 name
+  // 4) fallback: "팀"
+  const deriveTeamName = (): string => {
+    const anyPost: any = post as any;
+    if (anyPost?.team?.name && typeof anyPost.team.name === "string") {
+      return anyPost.team.name as string;
+    }
+    if (typeof anyPost?.teamName === "string" && anyPost.teamName) {
+      return anyPost.teamName as string;
+    }
+    const authorMyTeams = anyPost?.author?.myTeams;
+    if (Array.isArray(authorMyTeams)) {
+      const found = authorMyTeams.find(
+        (ut: any) => ut?.team?.id === post.teamId
+      );
+      if (found?.team?.name) return found.team.name as string;
+    }
+    return "팀";
+  };
+  const teamName = deriveTeamName();
 
   return (
     <View style={themed($outerContainer)}>
@@ -571,7 +595,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                     <Text style={themed($videoDurationText)}>
                       {videoMedia[0]
                         ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
-                            ((videoMedia[0] as any).duration || 0) % 60,
+                            ((videoMedia[0] as any).duration || 0) % 60
                           )
                             .toString()
                             .padStart(2, "0")}`
@@ -686,7 +710,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                 >
                   <Text style={themed($categoryIconText)}>🏆</Text>
                 </View>
-                <Text style={themed($categoryText)}>{categoryInfo.name}</Text>
+                <Text style={themed($categoryText)}>{teamName}</Text>
               </View>
 
               {/* 더보기 버튼 */}

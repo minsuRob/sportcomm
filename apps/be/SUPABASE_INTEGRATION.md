@@ -29,6 +29,7 @@ TypeORM (Supabase Postgres)
 ## 🚀 새로 추가된 기능
 
 ### 1. Supabase 서비스 (`SupabaseService`)
+
 ```typescript
 // src/common/services/supabase.service.ts
 - JWT 토큰 검증
@@ -37,6 +38,7 @@ TypeORM (Supabase Postgres)
 ```
 
 ### 2. Supabase JWT 전략 (`SupabaseJwtStrategy`)
+
 ```typescript
 // src/modules/auth/supabase-jwt.strategy.ts
 - Passport 기반 JWT 검증
@@ -45,6 +47,7 @@ TypeORM (Supabase Postgres)
 ```
 
 ### 3. 새로운 인증 가드
+
 ```typescript
 // src/common/guards/supabase-auth.guard.ts
 - SupabaseAuthGuard: 필수 인증
@@ -52,6 +55,7 @@ TypeORM (Supabase Postgres)
 ```
 
 ### 4. 업데이트된 User 엔티티
+
 ```typescript
 // src/entities/user.entity.ts
 - Supabase UUID를 Primary Key로 사용
@@ -63,28 +67,31 @@ TypeORM (Supabase Postgres)
 
 ### 기존 JWT vs 새로운 Supabase JWT
 
-| 기능 | 기존 방식 | 새로운 방식 |
-|------|----------|------------|
-| 인증 가드 | `@UseGuards(HttpAuthGuard)` | `@UseGuards(SupabaseAuthGuard)` |
-| 전략 | `jwt` | `supabase-jwt` |
-| 토큰 발급 | NestJS 자체 | Supabase Auth |
-| 사용자 저장소 | TypeORM만 | Supabase Auth + TypeORM |
+| 기능          | 기존 방식                   | 새로운 방식                     |
+| ------------- | --------------------------- | ------------------------------- |
+| 인증 가드     | `@UseGuards(HttpAuthGuard)` | `@UseGuards(SupabaseAuthGuard)` |
+| 전략          | `jwt`                       | `supabase-jwt`                  |
+| 토큰 발급     | NestJS 자체                 | Supabase Auth                   |
+| 사용자 저장소 | TypeORM만                   | Supabase Auth + TypeORM         |
 
 ### 새로운 테스트 엔드포인트
 
 #### 1. 사용자 프로필 조회 (Supabase 인증)
+
 ```bash
 GET /auth/profile
 Authorization: Bearer <supabase_jwt_token>
 ```
 
 #### 2. 토큰 검증
+
 ```bash
 POST /auth/verify-token
 Authorization: Bearer <supabase_jwt_token>
 ```
 
 #### 3. Supabase 상태 확인
+
 ```bash
 GET /auth/supabase-status
 ```
@@ -92,6 +99,7 @@ GET /auth/supabase-status
 ## 🔧 환경 변수 설정
 
 ### 필수 환경 변수
+
 ```env
 # Supabase 설정
 SUPABASE_URL=https://your-project.supabase.co
@@ -109,23 +117,26 @@ DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabas
 ## 🧪 테스트 가이드
 
 ### 1. 프론트엔드에서 Supabase Auth로 로그인
+
 ```typescript
 // FE에서 Supabase 로그인
 const { data, error } = await supabase.auth.signInWithPassword({
   email: 'user@example.com',
-  password: 'password123'
+  password: 'password123',
 });
 
 const token = data.session?.access_token;
 ```
 
 ### 2. NestJS API 호출
+
 ```bash
 curl -X GET http://localhost:3000/auth/profile \
   -H "Authorization: Bearer YOUR_SUPABASE_JWT_TOKEN"
 ```
 
 ### 3. GraphQL에서 사용
+
 ```typescript
 // GraphQL Resolver
 @UseGuards(SupabaseAuthGuard)
@@ -154,16 +165,19 @@ async me(@CurrentUser() user: User) {
 ## 🛡️ 보안 고려사항
 
 ### 1. JWT 검증
+
 - Supabase에서 직접 토큰 검증
 - 만료 시간 자동 확인
 - 무효한 토큰 자동 거부
 
 ### 2. 사용자 동기화
+
 - 첫 로그인 시 자동 사용자 생성
 - 주기적 메타데이터 동기화 (1시간마다)
 - 중복 생성 방지
 
 ### 3. 권한 관리
+
 - Supabase user_metadata의 role 사용
 - TypeORM User 엔티티와 동기화
 - NestJS 가드에서 권한 확인
@@ -171,18 +185,21 @@ async me(@CurrentUser() user: User) {
 ## 🚨 문제 해결
 
 ### 1. 토큰 검증 실패
+
 ```typescript
 // 원인: 잘못된 Supabase 설정
 // 해결: SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY 확인
 ```
 
 ### 2. 사용자 동기화 실패
+
 ```typescript
 // 원인: TypeORM 연결 문제
 // 해결: DATABASE_URL 확인 및 migration 실행
 ```
 
 ### 3. 권한 오류
+
 ```typescript
 // 원인: 사용자 역할 불일치
 // 해결: Supabase user_metadata에서 role 확인
@@ -191,14 +208,17 @@ async me(@CurrentUser() user: User) {
 ## 📊 성능 최적화
 
 ### 1. 사용자 조회 캐싱
+
 - 1시간 동안 동기화 생략
 - 메모리 캐시 활용 고려
 
 ### 2. JWT 검증 최적화
+
 - Supabase의 내장 캐싱 활용
 - 불필요한 API 호출 최소화
 
 ### 3. 데이터베이스 최적화
+
 - TypeORM 관계 지연 로딩
 - 필요한 필드만 선택적 조회
 

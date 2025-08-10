@@ -27,7 +27,7 @@ import { SupabaseAuthGuard } from 'src/common/guards/supabase-auth.guard';
 /**
  * 인증 관련 파일 업로드 컨트롤러
  * 프로필 이미지 업로드 등 인증이 필요한 파일 업로드 기능을 제공합니다.
- * 
+ *
  * Supabase Auth와 기존 JWT 인증을 모두 지원합니다.
  */
 @Controller('auth')
@@ -258,8 +258,10 @@ export class AuthController {
   @Get('profile')
   @UseGuards(SupabaseAuthGuard)
   async getProfile(@CurrentUser() user: User) {
-    this.logger.log(`Supabase 사용자 프로필 조회: ${user.email} (ID: ${user.id})`);
-    
+    this.logger.log(
+      `Supabase 사용자 프로필 조회: ${user.email} (ID: ${user.id})`,
+    );
+
     return {
       success: true,
       message: 'Supabase 인증으로 프로필을 성공적으로 가져왔습니다.',
@@ -287,9 +289,11 @@ export class AuthController {
   async verifySupabaseToken(@Req() request: Request) {
     try {
       const authHeader = request.headers.authorization;
-      
+
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new BadRequestException('Authorization 헤더에 Bearer 토큰이 필요합니다.');
+        throw new BadRequestException(
+          'Authorization 헤더에 Bearer 토큰이 필요합니다.',
+        );
       }
 
       const token = authHeader.substring(7);
@@ -313,14 +317,15 @@ export class AuthController {
       };
     } catch (error) {
       this.logger.error('Supabase 토큰 검증 실패:', error);
-      
+
       if (error instanceof BadRequestException) {
         throw error;
       }
-      
+
       throw new InternalServerErrorException({
         message: '토큰 검증 중 오류가 발생했습니다.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error:
+          process.env.NODE_ENV === 'development' ? error.message : undefined,
         timestamp: new Date().toISOString(),
       });
     }
@@ -335,7 +340,7 @@ export class AuthController {
     try {
       // Supabase 클라이언트 상태 확인
       const client = this.supabaseService.getClient();
-      
+
       return {
         success: true,
         message: 'Supabase 연결 상태가 정상입니다.',
@@ -346,10 +351,11 @@ export class AuthController {
       };
     } catch (error) {
       this.logger.error('Supabase 상태 확인 실패:', error);
-      
+
       throw new InternalServerErrorException({
         message: 'Supabase 상태 확인 중 오류가 발생했습니다.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error:
+          process.env.NODE_ENV === 'development' ? error.message : undefined,
         timestamp: new Date().toISOString(),
       });
     }

@@ -4,7 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Supabase 클라이언트 서비스
- * 
+ *
  * Supabase와의 통신을 담당하는 중앙화된 서비스
  * 주로 JWT 토큰 검증과 사용자 메타데이터 조회에 사용
  */
@@ -14,10 +14,14 @@ export class SupabaseService {
 
   constructor(private readonly configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseKey = this.configService.get<string>(
+      'SUPABASE_SERVICE_ROLE_KEY',
+    );
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY가 환경 변수에 설정되어야 합니다.');
+      throw new Error(
+        'SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY가 환경 변수에 설정되어야 합니다.',
+      );
     }
 
     this.supabase = createClient(supabaseUrl, supabaseKey, {
@@ -42,8 +46,11 @@ export class SupabaseService {
    */
   async verifyToken(token: string) {
     try {
-      const { data: { user }, error } = await this.supabase.auth.getUser(token);
-      
+      const {
+        data: { user },
+        error,
+      } = await this.supabase.auth.getUser(token);
+
       if (error) {
         console.error('Supabase JWT 검증 실패:', error.message);
         return null;
@@ -63,8 +70,9 @@ export class SupabaseService {
    */
   async getUserMetadata(userId: string) {
     try {
-      const { data, error } = await this.supabase.auth.admin.getUserById(userId);
-      
+      const { data, error } =
+        await this.supabase.auth.admin.getUserById(userId);
+
       if (error) {
         console.error('사용자 메타데이터 조회 실패:', error.message);
         return null;
@@ -84,7 +92,7 @@ export class SupabaseService {
   async deleteUser(userId: string) {
     try {
       const { error } = await this.supabase.auth.admin.deleteUser(userId);
-      
+
       if (error) {
         throw new Error(`사용자 삭제 실패: ${error.message}`);
       }
@@ -104,14 +112,17 @@ export class SupabaseService {
   async updateUserRole(userId: string, role: string) {
     try {
       const { error } = await this.supabase.auth.admin.updateUserById(userId, {
-        user_metadata: { role }
+        user_metadata: { role },
       });
-      
+
       if (error) {
         throw new Error(`사용자 역할 업데이트 실패: ${error.message}`);
       }
 
-      return { success: true, message: '사용자 역할이 성공적으로 업데이트되었습니다.' };
+      return {
+        success: true,
+        message: '사용자 역할이 성공적으로 업데이트되었습니다.',
+      };
     } catch (error) {
       console.error('사용자 역할 업데이트 중 오류:', error);
       throw error;

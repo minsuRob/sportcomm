@@ -4,7 +4,7 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 
 /**
  * Supabase JWT 인증 가드
- * 
+ *
  * GraphQL과 REST API 모두에서 사용할 수 있는 인증 가드
  * Supabase에서 발급한 JWT 토큰을 검증합니다.
  */
@@ -22,7 +22,7 @@ export class SupabaseAuthGuard extends AuthGuard('supabase-jwt') {
 
 /**
  * 선택적 Supabase JWT 인증 가드
- * 
+ *
  * 토큰이 있으면 인증을 수행하고, 없으면 그냥 통과시킵니다.
  * 로그인한 사용자와 비로그인 사용자 모두 접근 가능한 API에서 사용합니다.
  */

@@ -55,7 +55,11 @@ export class UserSyncService {
   ) {}
 
   /**
-   * Supabase Auth 사용자를 User 테이블에 동기화
+   * Supabase Auth 사용자를 User 테이블에 동기화 (Upsert 방식)
+   *
+   * 중복 호출 방지를 위해 효율적인 처리를 수행합니다.
+   * 기존 사용자가 있으면 필요한 경우에만 업데이트하고,
+   * 없으면 새로 생성합니다.
    *
    * @param input 동기화할 사용자 정보
    * @returns 생성되거나 업데이트된 User
@@ -129,18 +133,50 @@ export class UserSyncService {
         role || (supabaseUser.user_metadata?.role as UserRole) || UserRole.USER;
 
       if (user) {
-        // 기존 사용자 정보 업데이트
-        this.logger.log(`기존 사용자 정보 업데이트: ${userId}`);
+        // 기존 사용자 정보 업데이트 (변경사항이 있을 때만)
+        let hasChanges = false;
 
-        user.nickname = finalNickname;
-        user.role = finalRole;
-        user.profileImageUrl = profileImageUrl || user.profileImageUrl;
-        user.bio = bio || user.bio;
-        user.email = supabaseUser.email || user.email;
-        user.isEmailVerified = !!supabaseUser.email_confirmed_at;
-        user.updatedAt = new Date();
+        if (user.nickname !== finalNickname) {
+          user.nickname = finalNickname;
+          hasChanges = true;
+        }
 
-        user = await this.userRepository.save(user);
+        if (user.role !== finalRole) {
+          user.role = finalRole;
+          hasChanges = true;
+        }
+
+        if (profileImageUrl && user.profileImageUrl !== profileImageUrl) {
+          user.profileImageUrl = profileImageUrl;
+          hasChanges = true;
+        }
+
+        if (bio && user.bio !== bio) {
+          user.bio = bio;
+          hasChanges = true;
+        }
+
+        const newEmail = supabaseUser.email || user.email;
+        if (user.email !== newEmail) {
+          user.email = newEmail;
+          hasChanges = true;
+        }
+
+        const newEmailVerified = !!supabaseUser.email_confirmed_at;
+        if (user.isEmailVerified !== newEmailVerified) {
+          user.isEmailVerified = newEmailVerified;
+          hasChanges = true;
+        }
+
+        if (hasChanges) {
+          this.logger.log(`기존 사용자 정보 업데이트: ${userId}`);
+          user.updatedAt = new Date();
+          user = await this.userRepository.save(user);
+        } else {
+          this.logger.log(
+            `기존 사용자 정보 변경사항 없음: ${userId} (${user.nickname})`,
+          );
+        }
       } else {
         // 새 사용자 정보 생성
         this.logger.log(`새 사용자 정보 생성: ${userId}`);

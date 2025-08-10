@@ -4,10 +4,7 @@ import { Button } from "./ui/button";
 import { Ionicons } from "@expo/vector-icons";
 import { saveSession, getSession, User } from "../lib/auth";
 import { signIn, signUp } from "../lib/supabase/auth";
-import {
-  syncUserAfterSignUp,
-  checkAndSyncUserAfterSignIn,
-} from "../lib/supabase/user-sync";
+import { useAuth } from "../lib/hooks/useAuth";
 import type { AuthError } from "@supabase/supabase-js";
 
 const SocialLogins = ({
@@ -70,6 +67,17 @@ export default function AuthForm({
   // 로딩 상태 관리
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
+
+  // 통합 인증 훅 사용
+  const { syncAfterSignUp, checkAndSyncAfterSignIn } = useAuth({
+    enableAutoListener: false, // AuthForm에서는 수동으로 처리
+    onSyncSuccess: (user) => {
+      console.log("✅ AuthForm: 사용자 동기화 성공:", user.nickname);
+    },
+    onError: (error) => {
+      console.warn("⚠️ AuthForm: 동기화 에러:", error.message);
+    },
+  });
 
   // 에러 상태 초기화
   const clearErrors = () => {
@@ -176,20 +184,29 @@ export default function AuthForm({
           if (isLoginAction) {
             // 로그인 시: 사용자 정보 확인 및 동기화
             console.log("🔄 로그인 후 사용자 정보 동기화 확인...");
-            const userInfo = await checkAndSyncUserAfterSignIn(token);
+            const syncResult = await checkAndSyncAfterSignIn();
 
-            if (userInfo) {
-              console.log("✅ 사용자 정보 동기화 확인 완료:", userInfo);
+            if (syncResult.success && syncResult.user) {
+              console.log("✅ 사용자 정보 동기화 확인 완료:", syncResult.user);
             } else {
               console.log(
-                "⚠️ 백엔드에 사용자 정보가 없습니다. 수동 동기화가 필요할 수 있습니다."
+                "⚠️ 백엔드에 사용자 정보가 없습니다:",
+                syncResult.error
               );
             }
           } else {
             // 회원가입 시: 사용자 정보 자동 동기화
             console.log("🔄 회원가입 후 사용자 정보 동기화...");
-            const userInfo = await syncUserAfterSignUp(result.user, token);
-            console.log("✅ 회원가입 후 사용자 정보 동기화 완료:", userInfo);
+            const syncResult = await syncAfterSignUp(result.user);
+
+            if (syncResult.success && syncResult.user) {
+              console.log(
+                "✅ 회원가입 후 사용자 정보 동기화 완료:",
+                syncResult.user
+              );
+            } else {
+              console.warn("⚠️ 회원가입 후 동기화 실패:", syncResult.error);
+            }
           }
         } catch (syncError: any) {
           console.warn(

@@ -20,6 +20,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { initializeI18n } from "@/lib/i18n";
 import { initializeSupabase, supabase } from "@/lib/supabase/client";
+import { initializeAuthListener } from "@/lib/auth/auth-listener";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -54,6 +55,21 @@ export default function RootLayout() {
         // 병렬로 초기화 실행
         await Promise.all([initializeI18n(), initializeSupabase()]);
 
+        // Auth 이벤트 리스너 초기화
+        initializeAuthListener({
+          enableAutoSync: true,
+          enableDebugLog: true,
+          onSyncSuccess: (user) => {
+            console.log(
+              "✅ [_layout.tsx] 전역 인증 동기화 성공:",
+              user.nickname
+            );
+          },
+          onError: (error) => {
+            console.warn("⚠️ [_layout.tsx] 전역 인증 에러:", error.message);
+          },
+        });
+
         // --- DEBUG: Supabase 세션 상태 확인 ---
         const {
           data: { session },
@@ -75,6 +91,11 @@ export default function RootLayout() {
     };
 
     initializeApp();
+
+    // 컴포넌트 언마운트 시 Auth 리스너 정리
+    return () => {
+      // AuthEventListener는 자동으로 정리됨 (useAuth 훅에서 처리)
+    };
   }, []);
 
   React.useEffect(() => {

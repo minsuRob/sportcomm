@@ -24,14 +24,14 @@ async function setupDatabase() {
   console.log('');
 
   console.log('📋 현재 프로젝트 정보:');
-  console.log('   - 프로젝트 ID: hgekmqvscnjcuzyduchy');
-  console.log('   - 프로젝트 URL: https://hgekmqvscnjcuzyduchy.supabase.co');
-  console.log('   - 데이터베이스 호스트: db.hgekmqvscnjcuzyduchy.supabase.co');
+  console.log('   - 프로젝트 ID: iikgupdmnlmhycmtuqzj');
+  console.log('   - 프로젝트 URL: https://iikgupdmnlmhycmtuqzj.supabase.co');
+  console.log('   - 데이터베이스 호스트: db.iikgupdmnlmhycmtuqzj.supabase.co');
   console.log('');
 
   console.log('🔍 데이터베이스 패스워드 확인 방법:');
   console.log('1. https://supabase.com/dashboard 접속');
-  console.log('2. 프로젝트 "hgekmqvscnjcuzyduchy" 선택');
+  console.log('2. 프로젝트 "iikgupdmnlmhycmtuqzj" 선택');
   console.log('3. Settings → Database 메뉴 이동');
   console.log('4. Connection string 섹션에서 패스워드 확인');
   console.log('5. 또는 "Reset database password" 버튼으로 새 패스워드 생성');

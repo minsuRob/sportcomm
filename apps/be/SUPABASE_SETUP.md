@@ -4,13 +4,13 @@
 
 현재 프로젝트는 다음 Supabase 프로젝트에 연결되어 있습니다:
 
-- **프로젝트 ID**: `hgekmqvscnjcuzyduchy`
-- **프로젝트 URL**: `https://hgekmqvscnjcuzyduchy.supabase.co`
-- **데이터베이스 호스트**: `db.hgekmqvscnjcuzyduchy.supabase.co`
+- **프로젝트 ID**: `iikgupdmnlmhycmtuqzj`
+- **프로젝트 URL**: `https://iikgupdmnlmhycmtuqzj.supabase.co`
+- **데이터베이스 호스트**: `db.iikgupdmnlmhycmtuqzj.supabase.co`
 
 ## ❌ 발생한 문제
 
-`getaddrinfo ENOTFOUND db.hgekmqvscnjcuzyduchy.supabase.co` 오류가 발생하고 있습니다.
+`getaddrinfo ENOTFOUND db.iikgupdmnlmhycmtuqzj.supabase.co` 오류가 발생하고 있습니다.
 
 이는 다음 중 하나의 이유 때문입니다:
 
@@ -23,7 +23,7 @@
 ### 1단계: Supabase 대시보드에서 데이터베이스 패스워드 확인
 
 1. [Supabase 대시보드](https://supabase.com/dashboard)에 로그인
-2. 프로젝트 `hgekmqvscnjcuzyduchy` 선택
+2. 프로젝트 `iikgupdmnlmhycmtuqzj` 선택
 3. 좌측 메뉴에서 **Settings** → **Database** 클릭
 4. **Connection string** 섹션에서 패스워드 확인
 5. 또는 **Reset database password** 버튼으로 새 패스워드 생성
@@ -34,11 +34,11 @@
 
 ```bash
 # 현재 설정 (수정 필요)
-DATABASE_URL=postgresql://postgres:temp_password_123@db.hgekmqvscnjcuzyduchy.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:temp_password_123@db.iikgupdmnlmhycmtuqzj.supabase.co:5432/postgres
 DB_PASSWORD=temp_password_123
 
 # 올바른 설정 (실제 패스워드로 교체)
-DATABASE_URL=postgresql://postgres:YOUR_ACTUAL_PASSWORD@db.hgekmqvscnjcuzyduchy.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:YOUR_ACTUAL_PASSWORD@db.iikgupdmnlmhycmtuqzj.supabase.co:5432/postgres
 DB_PASSWORD=YOUR_ACTUAL_PASSWORD
 ```
 

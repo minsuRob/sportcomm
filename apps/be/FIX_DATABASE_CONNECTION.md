@@ -11,7 +11,7 @@ Error: getaddrinfo ENOTFOUND db.dbrzlreebkvmifrtfpau.supabase.co
 ✅ Supabase 프로젝트 ID를 올바르게 업데이트했습니다:
 
 - 기존: `dbrzlreebkvmifrtfpau` (존재하지 않음)
-- 현재: `hgekmqvscnjcuzyduchy` (활성 프로젝트)
+- 현재: `iikgupdmnlmhycmtuqzj` (활성 프로젝트)
 
 ✅ 환경 변수를 올바른 프로젝트 정보로 업데이트했습니다.
 
@@ -34,18 +34,18 @@ node setup-database.js
 
 1. **Supabase 대시보드에서 패스워드 확인**
    - https://supabase.com/dashboard 접속
-   - 프로젝트 `hgekmqvscnjcuzyduchy` 선택
+   - 프로젝트 `iikgupdmnlmhycmtuqzj` 선택
    - Settings → Database → Connection string에서 패스워드 확인
 
 2. **apps/be/.env 파일 수정**
 
    ```bash
    # 현재 설정 (수정 필요)
-   DATABASE_URL=postgresql://postgres:temp_password_123@db.hgekmqvscnjcuzyduchy.supabase.co:5432/postgres
+   DATABASE_URL=postgresql://postgres:temp_password_123@db.iikgupdmnlmhycmtuqzj.supabase.co:5432/postgres
    DB_PASSWORD=temp_password_123
 
    # 올바른 설정 (실제 패스워드로 교체)
-   DATABASE_URL=postgresql://postgres:YOUR_ACTUAL_PASSWORD@db.hgekmqvscnjcuzyduchy.supabase.co:5432/postgres
+   DATABASE_URL=postgresql://postgres:YOUR_ACTUAL_PASSWORD@db.iikgupdmnlmhycmtuqzj.supabase.co:5432/postgres
    DB_PASSWORD=YOUR_ACTUAL_PASSWORD
    ```
 

@@ -106,17 +106,13 @@ export interface Database {
           userId: string;
         };
         Update: {
+          id?: string;
           roomId?: string;
           userId?: string;
-        };
-        Update: {
-          id?: string;
-          channel_id?: string;
-          user_id?: string;
-          is_admin?: boolean;
-          joined_at?: string;
-          last_read_at?: string | null;
-          is_active?: boolean;
+          isAdmin?: boolean;
+          joinedAt?: string;
+          lastReadAt?: string | null;
+          isActive?: boolean;
         };
       };
       users: {

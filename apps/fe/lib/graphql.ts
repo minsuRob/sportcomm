@@ -602,3 +602,170 @@ export const NOTIFICATION_UPDATED_SUBSCRIPTION = gql`
     notificationUpdated
   }
 `;
+/**
+ * 미디어 썸네일 관련 GraphQL 쿼리
+ */
+
+// 미디어의 썸네일 목록 조회
+export const GET_MEDIA_THUMBNAILS = gql`
+  query GetMediaThumbnails($mediaId: String!) {
+    getMediaThumbnails(mediaId: $mediaId) {
+      id
+      size
+      url
+      width
+      height
+      fileSize
+      quality
+    }
+  }
+`;
+
+// 최적화된 썸네일 URL 조회
+export const GET_OPTIMIZED_THUMBNAIL_URL = gql`
+  query GetOptimizedThumbnailUrl(
+    $mediaId: String!
+    $isWeb: Boolean = false
+    $isHighDPI: Boolean = false
+  ) {
+    getOptimizedThumbnailUrl(
+      mediaId: $mediaId
+      isWeb: $isWeb
+      isHighDPI: $isHighDPI
+    )
+  }
+`;
+
+// 특정 크기의 썸네일 조회
+export const GET_THUMBNAIL_BY_SIZE = gql`
+  query GetThumbnailBySize($mediaId: String!, $size: ThumbnailSize!) {
+    getThumbnailBySize(mediaId: $mediaId, size: $size) {
+      id
+      size
+      url
+      width
+      height
+      fileSize
+      quality
+    }
+  }
+`;
+
+// 미디어 정보와 썸네일을 함께 조회
+export const GET_MEDIA_WITH_THUMBNAILS = gql`
+  query GetMediaWithThumbnails($mediaId: String!) {
+    getMedia(mediaId: $mediaId) {
+      id
+      originalName
+      url
+      type
+      status
+      fileSize
+      mimeType
+      width
+      height
+      duration
+      thumbnails {
+        id
+        size
+        url
+        width
+        height
+        fileSize
+        quality
+      }
+    }
+  }
+`;
+
+// 게시물의 미디어와 썸네일을 함께 조회 (기존 쿼리 확장)
+export const GET_POST_WITH_MEDIA_THUMBNAILS = gql`
+  query GetPostWithMediaThumbnails($postId: String!) {
+    getPost(postId: $postId) {
+      id
+      title
+      content
+      type
+      createdAt
+      updatedAt
+      author {
+        id
+        nickname
+        profileImageUrl
+        role
+      }
+      media {
+        id
+        originalName
+        url
+        type
+        status
+        fileSize
+        mimeType
+        width
+        height
+        duration
+        thumbnails {
+          id
+          size
+          url
+          width
+          height
+          fileSize
+          quality
+        }
+      }
+      likeCount
+      commentCount
+      isLiked
+    }
+  }
+`;
+
+// 피드 게시물들의 미디어와 썸네일을 함께 조회 (기존 쿼리 확장)
+export const GET_POSTS_WITH_MEDIA_THUMBNAILS = gql`
+  query GetPostsWithMediaThumbnails($input: FindPostsInput!) {
+    posts(input: $input) {
+      posts {
+        id
+        title
+        content
+        type
+        createdAt
+        updatedAt
+        author {
+          id
+          nickname
+          profileImageUrl
+          role
+        }
+        media {
+          id
+          originalName
+          url
+          type
+          status
+          fileSize
+          mimeType
+          width
+          height
+          duration
+          thumbnails {
+            id
+            size
+            url
+            width
+            height
+            fileSize
+            quality
+          }
+        }
+        likeCount
+        commentCount
+        isLiked
+      }
+      totalCount
+      hasNextPage
+    }
+  }
+`;

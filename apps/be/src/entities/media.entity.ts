@@ -1,4 +1,11 @@
-import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
 import {
   IsString,
@@ -10,6 +17,7 @@ import {
 } from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { Post } from './post.entity';
+import { Thumbnail } from './thumbnail.entity';
 
 /**
  * 미디어 파일 유형 열거형
@@ -281,6 +289,14 @@ export class Media extends BaseEntity {
   })
   @JoinColumn({ name: 'postId' })
   post: Post;
+
+  /**
+   * 미디어의 썸네일들
+   * 일대다 관계: 하나의 미디어는 여러 썸네일을 가질 수 있습니다.
+   */
+  @Field(() => [Thumbnail], { description: '썸네일 목록' })
+  @OneToMany(() => Thumbnail, (thumbnail) => thumbnail.media)
+  thumbnails: Thumbnail[];
 
   // === 헬퍼 메서드 ===
 

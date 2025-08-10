@@ -2,11 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Media, MediaType, UploadStatus } from '../../entities/media.entity';
+import { Thumbnail, ThumbnailSize } from '../../entities/thumbnail.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
+import { ThumbnailService } from '../../common/services/thumbnail.service';
 import {
   generateAvatarFileName,
   generatePostMediaFileName,
-  getMimeTypeFromFileName,
 } from '../../common/utils/file-utils';
 import * as sharp from 'sharp';
 // Sharp 옵션 조정 - 애플리케이션 시작 시 한 번 설정
@@ -27,7 +28,10 @@ export class MediaService {
   constructor(
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
+    @InjectRepository(Thumbnail)
+    private readonly thumbnailRepository: Repository<Thumbnail>,
     private readonly supabaseService: SupabaseService,
+    private readonly thumbnailService: ThumbnailService,
   ) {
     // 서비스 시작 시 Sharp 설정 로그
     this.logger.log('Sharp 이미지 처리 라이브러리 초기화 완료');
@@ -108,6 +112,9 @@ export class MediaService {
         `아바타 업로드 성공: ${savedMedia.id}, URL: ${publicUrl}`,
       );
 
+      // 아바타 썸네일 생성 (백그라운드에서 비동기 처리)
+      this.generateThumbnailsAsync(savedMedia, file.path);
+
       return savedMedia;
     } catch (error) {
       this.logger.error(`아바타 업로드 실패: ${file.originalname}`, error);
@@ -184,11 +191,8 @@ export class MediaService {
         const fileBuffer = await fs.promises.readFile(file.path);
 
         // 한글 파일명 처리: 안전한 파일명 생성
-        const mediaType = isVideo ? 'video' : 'image';
-        const fileName = generatePostMediaFileName(
-          file.originalname,
-          mediaType,
-        );
+        const fileType = isVideo ? 'video' : 'image';
+        const fileName = generatePostMediaFileName(file.originalname, fileType);
 
         console.log(`파일명 변환: ${file.originalname} -> ${fileName}`);
 
@@ -226,6 +230,10 @@ export class MediaService {
         });
 
         const savedMedia = await this.mediaRepository.save(media);
+
+        // 썸네일 생성 (백그라운드에서 비동기 처리)
+        this.generateThumbnailsAsync(savedMedia, file.path);
+
         mediaEntities.push(savedMedia);
       } catch (error) {
         console.error(`파일 처리 실패: ${file.originalname}`, error);
@@ -555,6 +563,187 @@ export class MediaService {
     } catch (error) {
       this.logger.error('동영상 썸네일 생성 중 오류:', error);
       return false;
+    }
+  }
+  /**
+   * 썸네일 비동기 생성
+   * @param media 미디어 엔티티
+   * @param originalFilePath 원본 파일 경로
+   */
+  private async generateThumbnailsAsync(
+    media: Media,
+    originalFilePath: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(`썸네일 생성 시작: ${media.id}`);
+
+      let thumbnailResults;
+
+      if (media.type === MediaType.IMAGE) {
+        // 이미지 썸네일 생성
+        thumbnailResults = await this.thumbnailService.generateImageThumbnails(
+          originalFilePath,
+          media.originalName,
+          'thumbnails',
+        );
+      } else if (media.type === MediaType.VIDEO) {
+        // 동영상 썸네일 생성
+        thumbnailResults = await this.thumbnailService.generateVideoThumbnails(
+          originalFilePath,
+          media.originalName,
+          'thumbnails',
+          1, // 1초 지점에서 썸네일 추출
+        );
+      } else {
+        this.logger.warn(`지원되지 않는 미디어 타입: ${media.type}`);
+        return;
+      }
+
+      // 썸네일 정보를 데이터베이스에 저장
+      for (const result of thumbnailResults) {
+        // 썸네일 크기 문자열을 ThumbnailSize enum으로 변환
+        let thumbnailSize: ThumbnailSize;
+        switch (result.size) {
+          case 'thumbnail_small':
+            thumbnailSize = ThumbnailSize.SMALL;
+            break;
+          case 'thumbnail_medium':
+            thumbnailSize = ThumbnailSize.MEDIUM;
+            break;
+          case 'thumbnail_large':
+            thumbnailSize = ThumbnailSize.LARGE;
+            break;
+          case 'preview':
+            thumbnailSize = ThumbnailSize.PREVIEW;
+            break;
+          default:
+            this.logger.warn(
+              `알 수 없는 썸네일 크기: ${result.size}, MEDIUM으로 기본 설정`,
+            );
+            thumbnailSize = ThumbnailSize.MEDIUM;
+        }
+
+        const thumbnail = this.thumbnailRepository.create({
+          mediaId: media.id,
+          size: thumbnailSize,
+          url: result.url,
+          width: result.width,
+          height: result.height,
+          fileSize: result.fileSize,
+          quality: 80, // 기본 품질
+        });
+
+        await this.thumbnailRepository.save(thumbnail);
+      }
+
+      this.logger.log(
+        `썸네일 생성 완료: ${media.id}, ${thumbnailResults.length}개 생성`,
+      );
+    } catch (error) {
+      this.logger.error(`썸네일 생성 실패: ${media.id}`, error);
+      // 썸네일 생성 실패는 전체 업로드를 실패시키지 않음
+    }
+  }
+
+  /**
+   * 미디어의 썸네일 조회
+   * @param mediaId 미디어 ID
+   * @returns 썸네일 목록
+   */
+  async getThumbnails(mediaId: string): Promise<Thumbnail[]> {
+    return this.thumbnailRepository.find({
+      where: { mediaId },
+      order: { size: 'ASC' },
+    });
+  }
+
+  /**
+   * 특정 크기의 썸네일 조회
+   * @param mediaId 미디어 ID
+   * @param size 썸네일 크기
+   * @returns 썸네일 또는 null
+   */
+  async getThumbnailBySize(
+    mediaId: string,
+    size: ThumbnailSize,
+  ): Promise<Thumbnail | null> {
+    return this.thumbnailRepository.findOne({
+      where: { mediaId, size },
+    });
+  }
+
+  /**
+   * 플랫폼에 최적화된 썸네일 URL 반환
+   * @param mediaId 미디어 ID
+   * @param isWeb 웹 환경 여부
+   * @param isHighDPI 고해상도 디스플레이 여부
+   * @returns 최적화된 썸네일 URL
+   */
+  async getOptimizedThumbnailUrl(
+    mediaId: string,
+    isWeb: boolean = false,
+    isHighDPI: boolean = false,
+  ): Promise<string | null> {
+    let preferredSize: ThumbnailSize;
+
+    if (isWeb) {
+      // 웹 환경: 큰 썸네일 우선
+      preferredSize = isHighDPI ? ThumbnailSize.PREVIEW : ThumbnailSize.LARGE;
+    } else {
+      // 모바일 환경: 작은 썸네일 우선
+      preferredSize = isHighDPI ? ThumbnailSize.LARGE : ThumbnailSize.MEDIUM;
+    }
+
+    // 선호하는 크기의 썸네일 조회
+    let thumbnail = await this.getThumbnailBySize(mediaId, preferredSize);
+
+    // 선호하는 크기가 없으면 대체 크기 사용
+    if (!thumbnail) {
+      const thumbnails = await this.getThumbnails(mediaId);
+      if (thumbnails.length > 0) {
+        // 가장 적절한 크기 선택
+        thumbnail = isWeb
+          ? thumbnails[thumbnails.length - 1] // 가장 큰 크기
+          : thumbnails[0]; // 가장 작은 크기
+      }
+    }
+
+    return thumbnail?.url || null;
+  }
+
+  /**
+   * 미디어 삭제 시 썸네일도 함께 삭제
+   * @param mediaId 미디어 ID
+   */
+  async deleteMediaWithThumbnails(mediaId: string): Promise<void> {
+    try {
+      // 썸네일 조회
+      const thumbnails = await this.getThumbnails(mediaId);
+
+      // Supabase Storage에서 썸네일 파일 삭제
+      if (thumbnails.length > 0) {
+        const thumbnailPaths = thumbnails
+          .map((t) => {
+            const url = new URL(t.url);
+            return url.pathname.split('/').pop() || '';
+          })
+          .filter(Boolean);
+
+        if (thumbnailPaths.length > 0) {
+          await this.supabaseService.deleteFiles('thumbnails', thumbnailPaths);
+        }
+      }
+
+      // 데이터베이스에서 썸네일 삭제
+      await this.thumbnailRepository.delete({ mediaId });
+
+      // 미디어 삭제
+      await this.mediaRepository.delete(mediaId);
+
+      this.logger.log(`미디어 및 썸네일 삭제 완료: ${mediaId}`);
+    } catch (error) {
+      this.logger.error(`미디어 삭제 실패: ${mediaId}`, error);
+      throw error;
     }
   }
 }

@@ -144,9 +144,14 @@ export class SupabaseService {
     contentType: string,
   ) {
     try {
+      // 파일 경로 유효성 검증 (한글 및 특수문자 처리)
+      const sanitizedPath = this.sanitizeFilePath(filePath);
+
+      console.log(`Supabase 업로드: ${filePath} -> ${sanitizedPath}`);
+
       const { data, error } = await this.supabase.storage
         .from(bucket)
-        .upload(filePath, fileBuffer, {
+        .upload(sanitizedPath, fileBuffer, {
           contentType,
           upsert: true, // 동일한 파일명이 있으면 덮어쓰기
         });
@@ -163,13 +168,30 @@ export class SupabaseService {
   }
 
   /**
+   * 파일 경로를 Supabase Storage에 안전한 형태로 변환
+   * @param filePath 원본 파일 경로
+   * @returns 안전한 파일 경로
+   */
+  private sanitizeFilePath(filePath: string): string {
+    // 한글 및 특수문자를 안전한 문자로 변환
+    return filePath
+      .replace(/[^\w\-_.]/g, '_') // 영문, 숫자, 하이픈, 언더스코어, 점만 허용
+      .replace(/_{2,}/g, '_') // 연속된 언더스코어를 하나로 변환
+      .replace(/^_+|_+$/g, ''); // 시작과 끝의 언더스코어 제거
+  }
+
+  /**
    * Supabase Storage에서 공개 URL 생성
    * @param bucket 버킷 이름
    * @param filePath 파일 경로
    * @returns 공개 URL
    */
   getPublicUrl(bucket: string, filePath: string): string {
-    const { data } = this.supabase.storage.from(bucket).getPublicUrl(filePath);
+    // 파일 경로 정리 (업로드 시와 동일한 처리)
+    const sanitizedPath = this.sanitizeFilePath(filePath);
+    const { data } = this.supabase.storage
+      .from(bucket)
+      .getPublicUrl(sanitizedPath);
     return data.publicUrl;
   }
 

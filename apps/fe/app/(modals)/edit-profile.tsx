@@ -222,19 +222,29 @@ export default function EditProfileScreen() {
             // 웹 환경에서는 blob을 File로 변환
             const response = await fetch(selectedAsset.uri);
             const blob = await response.blob();
-            const fileName =
-              selectedAsset.fileName ||
-              `avatar_${currentUser?.id}_${Date.now()}.jpg`;
-            uploadFile = new File([blob], fileName, {
+            // 한글 파일명 문제 해결: 안전한 파일명 생성
+            const timestamp = Date.now();
+            const randomId = Math.random().toString(36).substring(2, 8);
+            const extension = selectedAsset.fileName
+              ? selectedAsset.fileName.split(".").pop() || "jpg"
+              : "jpg";
+            const safeFileName = `avatar_${currentUser?.id}_${timestamp}_${randomId}.${extension}`;
+
+            uploadFile = new File([blob], safeFileName, {
               type: selectedAsset.mimeType || "image/jpeg",
             });
           } else {
-            // 모바일 환경 - 아바타임을 명시하는 파일명 사용
+            // 모바일 환경 - 한글 파일명 문제 해결
+            const timestamp = Date.now();
+            const randomId = Math.random().toString(36).substring(2, 8);
+            const extension = selectedAsset.fileName
+              ? selectedAsset.fileName.split(".").pop() || "jpg"
+              : "jpg";
+            const safeFileName = `avatar_${currentUser?.id}_${timestamp}_${randomId}.${extension}`;
+
             uploadFile = {
               uri: selectedAsset.uri,
-              name:
-                selectedAsset.fileName ||
-                `avatar_${currentUser?.id}_${Date.now()}.jpg`,
+              name: safeFileName,
               type: selectedAsset.mimeType || "image/jpeg",
             };
           }
@@ -253,10 +263,22 @@ export default function EditProfileScreen() {
           }
         } catch (uploadError) {
           console.error("이미지 업로드 오류:", uploadError);
+
+          // 한글 파일명 관련 에러 특별 처리
+          let errorMessage =
+            uploadError.message || "이미지 업로드에 실패했습니다.";
+          if (
+            errorMessage.includes("Invalid key") ||
+            errorMessage.includes("파일명")
+          ) {
+            errorMessage =
+              "파일명에 특수문자가 포함되어 업로드에 실패했습니다. 다른 이미지를 선택해주세요.";
+          }
+
           showToast({
             type: "error",
             title: "업로드 실패",
-            message: uploadError.message || "이미지 업로드에 실패했습니다.",
+            message: errorMessage,
             duration: 4000,
           });
         }

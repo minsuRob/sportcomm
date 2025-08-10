@@ -61,7 +61,14 @@ export class MediaService {
 
       // 파일을 Supabase Storage에 업로드
       const fileBuffer = await fs.promises.readFile(file.path);
-      const fileName = `avatar_${userId}_${Date.now()}-${Math.random().toString(36).substring(2)}.${path.extname(file.originalname).substring(1)}`;
+
+      // 한글 파일명 처리: 안전한 아바타 파일명 생성
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2);
+      const extension = path.extname(file.originalname);
+      const fileName = `avatar_${userId}_${timestamp}_${randomId}${extension}`;
+
+      console.log(`아바타 파일명 변환: ${file.originalname} -> ${fileName}`);
 
       // Supabase Storage avatars 버킷에 업로드
       await this.supabaseService.uploadFile(
@@ -173,7 +180,14 @@ export class MediaService {
 
         // 파일을 Supabase Storage에 업로드
         const fileBuffer = await fs.promises.readFile(file.path);
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}-${file.originalname}`;
+
+        // 한글 파일명 처리: 안전한 파일명 생성
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2);
+        const extension = path.extname(file.originalname);
+        const fileName = `${timestamp}-${randomId}${extension}`;
+
+        console.log(`파일명 변환: ${file.originalname} -> ${fileName}`);
 
         // Supabase Storage에 업로드
         await this.supabaseService.uploadFile(

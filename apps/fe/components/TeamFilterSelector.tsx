@@ -41,13 +41,17 @@ export default function TeamFilterSelector({
   const { themed, theme } = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState<Team[]>([]);
+  // 체크박스처럼 모달 내에서만 임시 선택 상태를 유지하고, 적용 버튼에서만 반영
+  const [pendingSelectedIds, setPendingSelectedIds] = useState<string[]>(
+    selectedTeamIds ?? []
+  );
 
   // 사용자가 선택한 팀 목록 조회
   const { data: myTeamsData, loading } = useQuery<GetMyTeamsResult>(
     GET_MY_TEAMS,
     {
       fetchPolicy: "cache-and-network",
-    },
+    }
   );
 
   // 선택된 팀 정보 업데이트
@@ -62,17 +66,29 @@ export default function TeamFilterSelector({
     }
   }, [myTeamsData, selectedTeamIds]);
 
+  // 모달 오픈 시 현재 적용된 선택을 임시 상태로 복사
+  useEffect(() => {
+    if (modalVisible) {
+      setPendingSelectedIds(selectedTeamIds ?? []);
+    }
+  }, [modalVisible, selectedTeamIds]);
+
   /**
    * 팀 선택 핸들러
    */
-  const handleTeamSelect = async (teamIds: string[] | null) => {
+  // 적용 버튼: 임시 선택을 저장하고 콜백 반영
+  const applySelection = async (): Promise<void> => {
     try {
-      if (teamIds) {
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(teamIds));
+      if (pendingSelectedIds.length > 0) {
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(pendingSelectedIds)
+        );
+        onTeamSelect(pendingSelectedIds);
       } else {
         await AsyncStorage.removeItem(STORAGE_KEY);
+        onTeamSelect(null);
       }
-      onTeamSelect(teamIds);
       setModalVisible(false);
     } catch (error) {
       console.error("팀 필터 저장 실패:", error);
@@ -82,19 +98,18 @@ export default function TeamFilterSelector({
   /**
    * 개별 팀 토글
    */
-  const toggleTeam = (teamId: string) => {
-    const currentIds = selectedTeamIds || [];
-    const newIds = currentIds.includes(teamId)
-      ? currentIds.filter((id) => id !== teamId)
-      : [...currentIds, teamId];
-
-    handleTeamSelect(newIds.length > 0 ? newIds : null);
+  const toggleTeam = (teamId: string): void => {
+    setPendingSelectedIds((prev) =>
+      prev.includes(teamId)
+        ? prev.filter((id) => id !== teamId)
+        : [...prev, teamId]
+    );
   };
 
   // 표시할 텍스트 결정
-  const getDisplayText = () => {
+  const getDisplayText = (): string => {
     if (!selectedTeamIds || selectedTeamIds.length === 0) {
-      return "전체";
+      return "모든 팀";
     }
     if (selectedTeams.length === 1) {
       return selectedTeams[0].name;
@@ -105,7 +120,7 @@ export default function TeamFilterSelector({
   // 표시할 로고 결정
   const getDisplayLogo = () => {
     if (!selectedTeamIds || selectedTeamIds.length === 0) {
-      return { logoUrl: undefined, fallbackIcon: "🏆", teamName: "전체" };
+      return { logoUrl: undefined, fallbackIcon: "🏆", teamName: "모든 팀" };
     }
     if (selectedTeams.length === 1) {
       const team = selectedTeams[0];
@@ -162,30 +177,10 @@ export default function TeamFilterSelector({
             </View>
 
             <ScrollView style={themed($scrollContainer)}>
-              {/* 전체 옵션 */}
-              <TouchableOpacity
-                style={[
-                  themed($teamOption),
-                  (!selectedTeamIds || selectedTeamIds.length === 0) &&
-                    themed($selectedOption),
-                ]}
-                onPress={() => handleTeamSelect(null)}
-              >
-                <Text style={themed($teamIcon)}>🏆</Text>
-                <Text style={themed($teamName)}>전체</Text>
-                {(!selectedTeamIds || selectedTeamIds.length === 0) && (
-                  <Ionicons
-                    name="checkmark"
-                    size={20}
-                    color={theme.colors.tint}
-                  />
-                )}
-              </TouchableOpacity>
-
               {/* 팀 목록 */}
               {myTeamsData.myTeams.map((userTeam) => {
                 const team = userTeam.team;
-                const isSelected = selectedTeamIds?.includes(team.id) || false;
+                const isSelected = pendingSelectedIds.includes(team.id);
 
                 return (
                   <TouchableOpacity
@@ -219,7 +214,7 @@ export default function TeamFilterSelector({
             <View style={themed($modalFooter)}>
               <TouchableOpacity
                 style={themed($applyButton)}
-                onPress={() => setModalVisible(false)}
+                onPress={applySelection}
               >
                 <Text style={themed($applyButtonText)}>적용</Text>
               </TouchableOpacity>

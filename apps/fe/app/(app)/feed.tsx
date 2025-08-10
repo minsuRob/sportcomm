@@ -208,7 +208,7 @@ export default function FeedScreen() {
           const mergedPosts = Array.from(postMap.values());
           return mergedPosts.sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
         });
       }
@@ -284,12 +284,29 @@ export default function FeedScreen() {
    * 팀 필터 선택 핸들러
    */
   const handleTeamFilterChange = (teamIds: string[] | null) => {
+    // 선택 변경 즉시 상태만 반영하고, 실제 데이터는 아래 useEffect에서 refetch
     setSelectedTeamIds(teamIds);
-    // 팀 필터 변경 시 피드 새로고침
-    setTimeout(() => {
-      handleRefresh();
-    }, 100);
   };
+
+  // 팀 필터가 변경되면 캐시 혼합을 피하기 위해 목록 초기화 후 첫 페이지를 네트워크로 재조회
+  useEffect(() => {
+    (async () => {
+      setPosts([]);
+      setIsRefreshing(true);
+      try {
+        await refetch({
+          input: {
+            page: 1,
+            limit: PAGE_SIZE,
+            teamIds: selectedTeamIds,
+          },
+        });
+      } finally {
+        setIsRefreshing(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(selectedTeamIds)]);
 
   // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
   useEffect(() => {

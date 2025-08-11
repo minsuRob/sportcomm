@@ -9,6 +9,8 @@ import {
 import { User } from '../../entities/user.entity';
 import { Post } from '../../entities/post.entity';
 import { Comment } from '../../entities/comment.entity';
+import { PushToken } from '../../entities/push-token.entity';
+import fetch from 'node-fetch';
 
 /**
  * 알림 생성 DTO
@@ -74,6 +76,8 @@ export class NotificationsService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(Comment)
     private readonly commentRepository: Repository<Comment>,
+    @InjectRepository(PushToken)
+    private readonly pushTokenRepository: Repository<PushToken>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -103,6 +107,72 @@ export class NotificationsService {
       total,
       hasMore: total > page * limit,
     };
+  }
+
+  /**
+   * Expo Push Token 등록/업서트
+   */
+  async registerPushToken(
+    userId: string,
+    token: string,
+    device?: string,
+  ): Promise<void> {
+    try {
+      const existing = await this.pushTokenRepository.findOne({
+        where: { userId, token },
+      });
+      if (existing) {
+        existing.device = device || existing.device;
+        await this.pushTokenRepository.save(existing);
+        return;
+      }
+      const entity = this.pushTokenRepository.create({ userId, token, device });
+      await this.pushTokenRepository.save(entity);
+      this.logger.log(`Expo token 등록: user=${userId} device=${device}`);
+    } catch (e) {
+      this.logger.warn(
+        `Expo token 등록 실패: ${e instanceof Error ? e.message : e}`,
+      );
+    }
+  }
+
+  /**
+   * Expo 서버로 푸시 발송
+   */
+  async sendExpoPush(
+    toUserId: string,
+    payload: { title: string; body: string; data?: Record<string, any> },
+  ): Promise<void> {
+    try {
+      const tokens = await this.pushTokenRepository.find({
+        where: { userId: toUserId },
+      });
+      if (!tokens.length) {
+        this.logger.log(`푸시 토큰 없음: user=${toUserId}`);
+        return;
+      }
+
+      const messages = tokens.map((t) => ({
+        to: t.token,
+        title: payload.title,
+        body: payload.body,
+        data: payload.data || {},
+      }));
+
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messages),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        this.logger.warn(`Expo push 실패: ${res.status} ${text}`);
+      }
+    } catch (e) {
+      this.logger.warn(`Expo push 예외: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   /**

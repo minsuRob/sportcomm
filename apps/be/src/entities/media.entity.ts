@@ -294,6 +294,8 @@ export class Media extends BaseEntity {
 
   /**
    * 최적화 결과 목록 (thumbnail/mobile/desktop)
+   * front에서 미사용, @Field 안넣음
+   * 실제 type 판단은 사용자 기기 환경으로 판단.
    */
   @OneToMany(() => MediaOptimizer, (optimizer) => optimizer.media, {
     cascade: true,

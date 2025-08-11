@@ -228,8 +228,18 @@ export class MediaService {
         });
 
         const savedMedia = await this.mediaRepository.save(media);
-        // 이미지인 경우 WebP 최적화 3종 생성
-        if (!isVideo) {
+        // 미디어 타입별 최적화 처리
+        if (isVideo) {
+          // 동영상인 경우 썸네일 3종 생성
+          try {
+            await this.mediaOptimizerService.optimizeVideoMedia(savedMedia);
+          } catch (optError) {
+            this.logger.warn(
+              `동영상 썸네일 생성 실패: ${file.originalname} - ${optError?.message || optError}`,
+            );
+          }
+        } else {
+          // 이미지인 경우 WebP 최적화 3종 생성
           try {
             await this.mediaOptimizerService.optimizeImageMedia(savedMedia);
           } catch (optError) {

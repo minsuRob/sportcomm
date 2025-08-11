@@ -162,10 +162,13 @@ export class MediaOptimizerService {
 
   /**
    * 오브젝트 키 규칙
-   * `${mediaId}_${name}.webp`
+   * `${mediaId}.webp`
    */
   private buildObjectKey(mediaId: string, name: MediaOptimizationType): string {
-    return `${mediaId}_${name}.webp`;
+    // 버킷은 타입별(thumbnails/mobile/desktop)로 분리되어 있으므로
+    // 오브젝트 키에는 타입명을 포함하지 않고 mediaId만 사용합니다.
+    // 최종 공개 URL 예: /storage/v1/object/public/mobile/${mediaId}.webp
+    return `${mediaId}.webp`;
   }
 
   /**

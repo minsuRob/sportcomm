@@ -1,16 +1,5 @@
-import React from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  ViewStyle,
-  TextStyle,
-} from "react-native";
-import AuthForm from "@/components/AuthForm";
-import { useAppTheme } from "@/lib/theme/context";
-import type { ThemedStyle } from "@/lib/theme/types";
-import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import React, { useEffect } from "react";
+import { useRouter } from "expo-router";
 
 interface AuthModalProps {
   visible: boolean;
@@ -20,61 +9,23 @@ interface AuthModalProps {
 
 /**
  * 인증 모달 컴포넌트
- * - 로그인/회원가입 폼을 모달로 표시합니다.
+ * - 이제 독립적인 auth screen으로 라우팅합니다.
  */
 export default function AuthModal({
   visible,
   onClose,
   onLoginSuccess,
 }: AuthModalProps) {
-  const { themed } = useAppTheme();
-  const { t } = useTranslation();
+  const router = useRouter();
 
-  return (
-    <Modal
-      animationType="slide"
-      transparent
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={themed($modalOverlay)}>
-        <View style={themed($modalContent)}>
-          <AuthForm onLoginSuccess={onLoginSuccess} />
-        </View>
-        <TouchableOpacity onPress={onClose} style={themed($closeButton)}>
-          <Text style={themed($closeButtonText)}>
-            {t(TRANSLATION_KEYS.COMMON_CLOSE)}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
-  );
+  useEffect(() => {
+    if (visible) {
+      // 모달이 열리면 auth screen으로 이동
+      router.push("/(details)/auth");
+      onClose(); // 모달 상태 초기화
+    }
+  }, [visible, router, onClose]);
+
+  // 실제 모달은 렌더링하지 않음 (screen으로 대체)
+  return null;
 }
-
-const $modalOverlay: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "rgba(0, 0, 0, 0.8)",
-});
-
-const $modalContent: ThemedStyle<ViewStyle> = () => ({
-  width: "100%",
-  maxWidth: 500,
-  padding: 16,
-});
-
-const $closeButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  position: "absolute",
-  top: 40,
-  right: 20,
-  backgroundColor: colors.background,
-  borderRadius: 9999,
-  padding: 8,
-});
-
-const $closeButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontWeight: "bold",
-  fontSize: 18,
-});

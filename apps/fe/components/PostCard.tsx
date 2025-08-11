@@ -274,8 +274,6 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       isWeb()
     );
 
-  console.log("imageMedia: ", imageMedia);
-
   // 현재 사용자 정보 가져오기
   useEffect(() => {
     const loadCurrentUser = async () => {

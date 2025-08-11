@@ -104,9 +104,13 @@ export class MediaService {
         `아바타 업로드 성공: ${savedMedia.id}, URL: ${publicUrl}`,
       );
 
-      // 아바타 썸네일 생성 및 원본 파일 정리 (백그라운드에서 비동기 처리)
-      // WebP 썸네일 생성 후 원본 파일은 자동으로 삭제됨
-      this.generateThumbnailsAsync(savedMedia, fileBuffer, file.path);
+      // 아바타 압축 이미지 생성 및 최적화된 URL 업데이트 (동기 처리)
+      // 압축 이미지 생성 후 최적화된 URL을 기본 URL로 설정
+      await this.generateCompressedImageAndUpdateUrl(
+        savedMedia,
+        fileBuffer,
+        file.path,
+      );
 
       return savedMedia;
     } catch (error) {
@@ -214,14 +218,18 @@ export class MediaService {
 
         const savedMedia = await this.mediaRepository.save(media);
 
-        // 썸네일 생성 및 원본 파일 정리 (백그라운드에서 비동기 처리)
-        // WebP 썸네일 생성 후 원본 파일(로컬 + Supabase Storage)은 자동으로 삭제됨
+        // 압축 이미지 생성 및 최적화된 URL 업데이트 (동기 처리)
+        // WebP 압축 이미지 생성 후 최적화된 URL을 기본 URL로 설정
         if (isVideo) {
-          // 동영상은 파일 경로 전달
-          this.generateThumbnailsAsync(savedMedia, file.path);
+          // 동영상은 파일 경로 전달하여 썸네일 생성
+          await this.generateCompressedImageAndUpdateUrl(savedMedia, file.path);
         } else {
-          // 이미지는 버퍼와 삭제할 파일 경로 전달
-          this.generateThumbnailsAsync(savedMedia, fileBuffer, file.path);
+          // 이미지는 버퍼와 삭제할 파일 경로 전달하여 압축 이미지 생성
+          await this.generateCompressedImageAndUpdateUrl(
+            savedMedia,
+            fileBuffer,
+            file.path,
+          );
         }
 
         mediaEntities.push(savedMedia);
@@ -633,6 +641,145 @@ export class MediaService {
       // 썸네일 처리 후 원본 파일 정리 (로컬 + Supabase Storage)
       await this.cleanupOriginalFile(media, finalFilePathToDelete);
     }
+  }
+
+  /**
+   * 압축 이미지 생성 및 최적화된 URL 업데이트
+   * 웹/모바일 기준으로 최적화된 압축 이미지를 기본 URL로 설정
+   * @param media 미디어 엔티티
+   * @param source 원본 파일 경로 또는 버퍼
+   * @param filePathToDelete 삭제할 로컬 파일 경로
+   */
+  private async generateCompressedImageAndUpdateUrl(
+    media: Media,
+    source: string | Buffer,
+    filePathToDelete?: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(`압축 이미지 생성 및 URL 업데이트 시작: ${media.id}`);
+
+      let thumbnailResults;
+
+      if (media.type === MediaType.IMAGE) {
+        // 이미지 압축 썸네일 생성
+        thumbnailResults = await this.thumbnailService.generateImageThumbnails(
+          source,
+          media.originalName,
+          'thumbnails',
+        );
+      } else if (media.type === MediaType.VIDEO) {
+        // 동영상 썸네일 생성
+        thumbnailResults = await this.thumbnailService.generateVideoThumbnails(
+          source as string,
+          media.originalName,
+          'thumbnails',
+          1, // 1초 지점에서 썸네일 추출
+        );
+      } else {
+        this.logger.warn(`지원되지 않는 미디어 타입: ${media.type}`);
+        return;
+      }
+
+      // 썸네일 정보를 데이터베이스에 저장
+      const thumbnailEntities: Thumbnail[] = [];
+      for (const result of thumbnailResults) {
+        // 썸네일 크기 문자열을 ThumbnailSize enum으로 변환
+        let thumbnailSize: ThumbnailSize;
+        switch (result.size) {
+          case 'thumbnail_small':
+            thumbnailSize = ThumbnailSize.SMALL;
+            break;
+          case 'thumbnail_large':
+            thumbnailSize = ThumbnailSize.LARGE;
+            break;
+          case 'preview':
+            thumbnailSize = ThumbnailSize.PREVIEW;
+            break;
+          default:
+            this.logger.warn(
+              `알 수 없는 썸네일 크기: ${result.size}, LARGE로 기본 설정`,
+            );
+            thumbnailSize = ThumbnailSize.LARGE;
+        }
+
+        const thumbnail = this.thumbnailRepository.create({
+          mediaId: media.id,
+          size: thumbnailSize,
+          url: result.url,
+          width: result.width,
+          height: result.height,
+          fileSize: result.fileSize,
+          quality: 80, // 기본 품질
+        });
+
+        const savedThumbnail = await this.thumbnailRepository.save(thumbnail);
+        thumbnailEntities.push(savedThumbnail);
+      }
+
+      // 플랫폼별 최적화된 압축 이미지 URL을 기본 URL로 설정
+      const optimizedUrl =
+        this.selectOptimizedCompressedImageUrl(thumbnailEntities);
+      if (optimizedUrl) {
+        // 미디어 엔티티의 URL을 최적화된 압축 이미지 URL로 업데이트
+        await this.mediaRepository.update(media.id, { url: optimizedUrl });
+        this.logger.log(
+          `미디어 URL을 압축 이미지로 업데이트: ${media.id} -> ${optimizedUrl}`,
+        );
+      }
+
+      this.logger.log(
+        `압축 이미지 생성 및 URL 업데이트 완료: ${media.id}, ${thumbnailResults.length}개 생성`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `압축 이미지 생성 및 URL 업데이트 실패: ${media.id}`,
+        error,
+      );
+      // 압축 이미지 생성 실패 시에도 원본 URL 유지
+    } finally {
+      // 압축 이미지 처리 후 원본 파일 정리 (로컬 + Supabase Storage)
+      await this.cleanupOriginalFile(media, filePathToDelete);
+    }
+  }
+
+  /**
+   * 플랫폼별 최적화된 압축 이미지 URL 선택
+   * 모바일: large(600px) > preview(1200px) > small(150px)
+   * 웹: preview(1200px) > large(600px) > small(150px)
+   * @param thumbnails 썸네일 엔티티 배열
+   * @returns 최적화된 압축 이미지 URL
+   */
+  private selectOptimizedCompressedImageUrl(
+    thumbnails: Thumbnail[],
+  ): string | null {
+    if (!thumbnails || thumbnails.length === 0) {
+      return null;
+    }
+
+    // 크기별 썸네일 맵 생성
+    const thumbnailMap = new Map<ThumbnailSize, string>();
+    thumbnails.forEach((thumbnail) => {
+      thumbnailMap.set(thumbnail.size, thumbnail.url);
+    });
+
+    // 모바일 우선 최적화 (대부분의 사용자가 모바일 환경)
+    // 600px는 모바일과 웹 모두에서 적절한 품질 제공
+    // 실제 환경에서는 User-Agent나 요청 헤더로 판단할 수 있지만,
+    // 여기서는 범용적으로 사용할 수 있는 중간 크기(LARGE)를 기본으로 설정
+    const preferenceOrder = [
+      ThumbnailSize.LARGE, // 600px - 모바일 최적화, 웹에서도 적합
+      ThumbnailSize.PREVIEW, // 1200px - 고해상도 디스플레이용
+      ThumbnailSize.SMALL, // 150px - 최소 fallback
+    ];
+
+    for (const size of preferenceOrder) {
+      const url = thumbnailMap.get(size);
+      if (url) {
+        return url;
+      }
+    }
+
+    return null;
   }
 
   /**

@@ -104,8 +104,8 @@ export class MediaService {
         `아바타 업로드 성공: ${savedMedia.id}, URL: ${publicUrl}`,
       );
 
-      // 아바타 썸네일 생성 (백그라운드에서 비동기 처리)
-      // 파일 삭제는 썸네일 생성 후 generateThumbnailsAsync에서 처리
+      // 아바타 썸네일 생성 및 원본 파일 정리 (백그라운드에서 비동기 처리)
+      // WebP 썸네일 생성 후 원본 파일은 자동으로 삭제됨
       this.generateThumbnailsAsync(savedMedia, fileBuffer, file.path);
 
       return savedMedia;
@@ -214,8 +214,8 @@ export class MediaService {
 
         const savedMedia = await this.mediaRepository.save(media);
 
-        // 썸네일 생성 (백그라운드에서 비동기 처리)
-        // 파일 삭제는 썸네일 생성 후 generateThumbnailsAsync에서 처리
+        // 썸네일 생성 및 원본 파일 정리 (백그라운드에서 비동기 처리)
+        // WebP 썸네일 생성 후 원본 파일(로컬 + Supabase Storage)은 자동으로 삭제됨
         if (isVideo) {
           // 동영상은 파일 경로 전달
           this.generateThumbnailsAsync(savedMedia, file.path);
@@ -630,18 +630,58 @@ export class MediaService {
       this.logger.error(`썸네일 생성 실패: ${media.id}`, error);
       // 썸네일 생성 실패는 전체 업로드를 실패시키지 않음
     } finally {
-      // 썸네일 처리 후 로컬 파일 정리
-      if (finalFilePathToDelete) {
-        try {
-          await fs.promises.unlink(finalFilePathToDelete);
-          this.logger.log(`로컬 파일 삭제 완료: ${finalFilePathToDelete}`);
-        } catch (unlinkError) {
-          this.logger.warn(
-            `로컬 파일 삭제 실패: ${finalFilePathToDelete}`,
-            unlinkError,
-          );
-        }
+      // 썸네일 처리 후 원본 파일 정리 (로컬 + Supabase Storage)
+      await this.cleanupOriginalFile(media, finalFilePathToDelete);
+    }
+  }
+
+  /**
+   * 원본 파일 정리 (로컬 + Supabase Storage)
+   * WebP 썸네일 생성 후 원본 파일은 더 이상 필요하지 않으므로 삭제
+   * @param media 미디어 엔티티
+   * @param localFilePath 삭제할 로컬 파일 경로
+   */
+  private async cleanupOriginalFile(
+    media: Media,
+    localFilePath?: string,
+  ): Promise<void> {
+    // 1. 로컬 파일 삭제
+    if (localFilePath) {
+      try {
+        await fs.promises.unlink(localFilePath);
+        this.logger.log(`로컬 원본 파일 삭제 완료: ${localFilePath}`);
+      } catch (unlinkError) {
+        this.logger.warn(
+          `로컬 원본 파일 삭제 실패: ${localFilePath}`,
+          unlinkError,
+        );
       }
+    }
+
+    // 2. Supabase Storage 원본 파일 삭제
+    // WebP 썸네일이 생성되었으므로 원본 파일은 더 이상 필요하지 않음
+    try {
+      // URL에서 파일명 추출
+      const url = new URL(media.url);
+      const pathParts = url.pathname.split('/');
+      const fileName = pathParts[pathParts.length - 1];
+
+      // 버킷 이름 추출 (URL 패턴: /storage/v1/object/public/{bucket}/{file})
+      const bucketIndex = pathParts.indexOf('public') + 1;
+      const bucket = pathParts[bucketIndex];
+
+      if (bucket && fileName) {
+        await this.supabaseService.deleteFiles(bucket, [fileName]);
+        this.logger.log(
+          `Supabase Storage 원본 파일 삭제 완료: ${bucket}/${fileName}`,
+        );
+      }
+    } catch (storageError) {
+      this.logger.warn(
+        `Supabase Storage 원본 파일 삭제 실패: ${media.url}`,
+        storageError,
+      );
+      // 원본 파일 삭제 실패는 전체 프로세스를 중단하지 않음
     }
   }
 

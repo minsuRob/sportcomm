@@ -339,27 +339,30 @@ const $errorPlaceholder: ThemedStyle<ViewStyle> = ({ colors }) => ({
 });
 
 /**
- * 썸네일 크기별 권장 사용처
+ * WebP 기반 썸네일 크기별 권장 사용처 (3단계 최적화)
  */
 export const ThumbnailSizeGuide = {
   thumbnail_small: {
-    description: "작은 썸네일 (150x150)",
+    description: "작은 썸네일 (150x150) - WebP",
     useCases: ["프로필 이미지", "목록 아이템", "아바타"],
     maxDisplaySize: { width: 150, height: 150 },
-  },
-  thumbnail_medium: {
-    description: "중간 썸네일 (300x300)",
-    useCases: ["모바일 피드", "카드 이미지", "갤러리 그리드"],
-    maxDisplaySize: { width: 300, height: 300 },
+    format: "WebP (정사각형 크롭)",
   },
   thumbnail_large: {
-    description: "큰 썸네일 (600x600)",
-    useCases: ["웹 피드", "상세 이미지", "고해상도 디스플레이"],
+    description: "모바일 최적화 (600px 긴변) - WebP",
+    useCases: ["모바일 피드", "카드 이미지", "갤러리 그리드", "웹 피드"],
     maxDisplaySize: { width: 600, height: 600 },
+    format: "WebP (비율 유지)",
   },
   preview: {
-    description: "미리보기 (1200x1200)",
-    useCases: ["전체화면 보기", "확대 이미지", "인쇄용"],
+    description: "웹 최적화 (1200px 긴변) - WebP",
+    useCases: [
+      "상세보기",
+      "전체화면 보기",
+      "확대 이미지",
+      "고해상도 디스플레이",
+    ],
     maxDisplaySize: { width: 1200, height: 1200 },
+    format: "WebP (비율 유지)",
   },
 };

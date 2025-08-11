@@ -5,35 +5,30 @@ import { BaseEntity } from './base.entity';
 import { Media } from './media.entity';
 
 /**
- * 썸네일 크기 타입 열거형
+ * 썸네일 크기 타입 열거형 (WebP 최적화)
  */
 export enum ThumbnailSize {
   /** 작은 썸네일 (150x150) - 프로필, 목록용 */
   SMALL = 'thumbnail_small',
-  /** 중간 썸네일 (300x300) - 모바일 피드용 */
-  MEDIUM = 'thumbnail_medium',
-  /** 큰 썸네일 (600x600) - 웹 피드용 */
+  /** 모바일 최적화 (600px 긴변 기준) - 모바일 피드용 */
   LARGE = 'thumbnail_large',
-  /** 미리보기 (1200x1200) - 상세보기용 */
+  /** 웹 최적화 (1200px 긴변 기준) - 웹 상세보기용 */
   PREVIEW = 'preview',
 }
 
 // GraphQL 스키마에 ThumbnailSize enum 등록
 registerEnumType(ThumbnailSize, {
   name: 'ThumbnailSize',
-  description: '썸네일 크기 타입',
+  description: '썸네일 크기 타입 (WebP 최적화)',
   valuesMap: {
     SMALL: {
       description: '작은 썸네일 (150x150) - 프로필, 목록용',
     },
-    MEDIUM: {
-      description: '중간 썸네일 (300x300) - 모바일 피드용',
-    },
     LARGE: {
-      description: '큰 썸네일 (600x600) - 웹 피드용',
+      description: '모바일 최적화 (600px 긴변 기준) - 모바일 피드용',
     },
     PREVIEW: {
-      description: '미리보기 (1200x1200) - 상세보기용',
+      description: '웹 최적화 (1200px 긴변 기준) - 웹 상세보기용',
     },
   },
 });
@@ -152,7 +147,7 @@ export class Thumbnail extends BaseEntity {
    */
   isMobileOptimized(): boolean {
     return (
-      this.size === ThumbnailSize.SMALL || this.size === ThumbnailSize.MEDIUM
+      this.size === ThumbnailSize.SMALL || this.size === ThumbnailSize.LARGE
     );
   }
 
@@ -172,10 +167,9 @@ export class Thumbnail extends BaseEntity {
    */
   getSizeDescription(): string {
     const descriptions = {
-      [ThumbnailSize.SMALL]: '작은 썸네일 (프로필, 목록용)',
-      [ThumbnailSize.MEDIUM]: '중간 썸네일 (모바일 피드용)',
-      [ThumbnailSize.LARGE]: '큰 썸네일 (웹 피드용)',
-      [ThumbnailSize.PREVIEW]: '미리보기 (상세보기용)',
+      [ThumbnailSize.SMALL]: '작은 썸네일 (150x150) - 프로필, 목록용',
+      [ThumbnailSize.LARGE]: '모바일 최적화 (600px 긴변) - 모바일 피드용',
+      [ThumbnailSize.PREVIEW]: '웹 최적화 (1200px 긴변) - 웹 상세보기용',
     };
     return descriptions[this.size] || '알 수 없는 크기';
   }

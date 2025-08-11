@@ -596,9 +596,7 @@ export class MediaService {
           case 'thumbnail_small':
             thumbnailSize = ThumbnailSize.SMALL;
             break;
-          case 'thumbnail_medium':
-            thumbnailSize = ThumbnailSize.MEDIUM;
-            break;
+
           case 'thumbnail_large':
             thumbnailSize = ThumbnailSize.LARGE;
             break;
@@ -607,9 +605,9 @@ export class MediaService {
             break;
           default:
             this.logger.warn(
-              `알 수 없는 썸네일 크기: ${result.size}, MEDIUM으로 기본 설정`,
+              `알 수 없는 썸네일 크기: ${result.size}, LARGE로 기본 설정`,
             );
-            thumbnailSize = ThumbnailSize.MEDIUM;
+            thumbnailSize = ThumbnailSize.LARGE;
         }
 
         const thumbnail = this.thumbnailRepository.create({
@@ -693,7 +691,7 @@ export class MediaService {
       preferredSize = isHighDPI ? ThumbnailSize.PREVIEW : ThumbnailSize.LARGE;
     } else {
       // 모바일 환경: 작은 썸네일 우선
-      preferredSize = isHighDPI ? ThumbnailSize.LARGE : ThumbnailSize.MEDIUM;
+      preferredSize = isHighDPI ? ThumbnailSize.LARGE : ThumbnailSize.LARGE;
     }
 
     // 선호하는 크기의 썸네일 조회

@@ -5,6 +5,7 @@ import { Notification } from '../../entities/notification.entity';
 import { User } from '../../entities/user.entity';
 import { Post } from '../../entities/post.entity';
 import { Comment } from '../../entities/comment.entity';
+import { PushToken } from '../../entities/push-token.entity';
 import { NotificationsService } from './notifications.service';
 import { NotificationsResolver } from './notifications.resolver';
 
@@ -16,7 +17,7 @@ import { NotificationsResolver } from './notifications.resolver';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, User, Post, Comment]),
+    TypeOrmModule.forFeature([Notification, User, Post, Comment, PushToken]),
     EventEmitterModule.forRoot(), // 이벤트 시스템 활성화
   ],
   providers: [NotificationsService, NotificationsResolver],

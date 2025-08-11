@@ -23,6 +23,7 @@ import { Feedback } from './feedback.entity';
 import { Sport } from './sport.entity';
 import { Team } from './team.entity';
 import { UserTeam } from './user-team.entity';
+import { PushToken } from './push-token.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -99,6 +100,7 @@ export const entities = [
   Sport,
   Team,
   UserTeam,
+  PushToken,
 ];
 
 /**

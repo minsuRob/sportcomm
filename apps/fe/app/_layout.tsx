@@ -21,6 +21,8 @@ import * as SplashScreen from "expo-splash-screen";
 import { initializeI18n } from "@/lib/i18n";
 import { initializeSupabase, supabase } from "@/lib/supabase/client";
 import { initializeAuthListener } from "@/lib/auth/auth-listener";
+import { initExpoNotifications } from "@/lib/notifications/expoNotifications";
+import { client } from "@/lib/api/client";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -53,7 +55,25 @@ export default function RootLayout() {
     const initializeApp = async () => {
       try {
         // 병렬로 초기화 실행
-        await Promise.all([initializeI18n(), initializeSupabase()]);
+        await Promise.all([
+          initializeI18n(),
+          initializeSupabase(),
+          initExpoNotifications({
+            apolloClient: client,
+            onToken: (t) => console.log("Expo token:", t),
+            onReceive: (n) =>
+              console.log(
+                "Push received:",
+                n.request?.content?.title || n.request?.identifier
+              ),
+            onResponse: (r) =>
+              console.log(
+                "Push tapped:",
+                r.notification?.request?.content?.title ||
+                  r.notification?.request?.identifier
+              ),
+          }),
+        ]);
 
         // Auth 이벤트 리스너 초기화
         initializeAuthListener({
@@ -62,7 +82,7 @@ export default function RootLayout() {
           onSyncSuccess: (user) => {
             console.log(
               "✅ [_layout.tsx] 전역 인증 동기화 성공:",
-              user.nickname,
+              user.nickname
             );
           },
           onError: (error) => {

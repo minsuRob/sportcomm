@@ -136,6 +136,34 @@ export class NotificationsResolver {
   }
 
   /**
+   * Expo Push Token 등록
+   */
+  @Mutation(() => Boolean)
+  @UseGuards(GqlAuthGuard)
+  async registerPushToken(
+    @CurrentUser() user: User,
+    @Args('token') token: string,
+    @Args('device', { nullable: true }) device?: string,
+  ): Promise<boolean> {
+    await this.notificationsService.registerPushToken(user.id, token, device);
+    return true;
+  }
+
+  /**
+   * 특정 사용자에게 푸시 발송 (관리/테스트 용도)
+   */
+  @Mutation(() => Boolean)
+  @UseGuards(GqlAuthGuard)
+  async sendPush(
+    @Args('toUserId') toUserId: string,
+    @Args('title') title: string,
+    @Args('body') body: string,
+  ): Promise<boolean> {
+    await this.notificationsService.sendExpoPush(toUserId, { title, body });
+    return true;
+  }
+
+  /**
    * 새로운 알림 실시간 구독
    */
   @Subscription(() => Notification, {

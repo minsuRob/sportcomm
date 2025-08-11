@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { Ionicons } from "@expo/vector-icons";
+import { initExpoNotifications } from "@/lib/notifications/expoNotifications";
 
 /**
  * 알림 타입 정의
@@ -83,7 +84,7 @@ const formatTimeAgo = (dateString: string): string => {
   const now = new Date();
   const notificationDate = new Date(dateString);
   const diffMinutes = Math.floor(
-    (now.getTime() - notificationDate.getTime()) / (1000 * 60),
+    (now.getTime() - notificationDate.getTime()) / (1000 * 60)
   );
 
   if (diffMinutes < 1) return "방금 전";
@@ -110,6 +111,12 @@ export default function NotificationItem({
   const router = useRouter();
 
   const notificationStyle = getNotificationStyle(notification.type);
+
+  // 알림 시스템 초기화 (최초 1회)
+  useEffect(() => {
+    // FE 상위(App)에서 초기화하는 것이 일반적이지만, 안전망으로 한 번 더 보장
+    initExpoNotifications().catch(() => {});
+  }, []);
 
   /**
    * 알림 클릭 핸들러

@@ -162,18 +162,24 @@ export class MediaService {
         // 파일 타입에 따른 처리 분기
         const isVideo = file.mimetype.startsWith('video/');
         let metadata: { width: number; height: number; duration?: number };
+
         let mediaTypeEnum: MediaType;
+
         let bucket: string;
 
         if (isVideo) {
           // 동영상 메타데이터 추출
           metadata = await this.extractVideoMetadata(file.path);
+
           mediaTypeEnum = MediaType.VIDEO;
+
           bucket = 'post-videos';
         } else {
           // 이미지 메타데이터 추출
           metadata = await this.extractImageMetadata(file.path);
+
           mediaTypeEnum = MediaType.IMAGE;
+
           // 파일명에 따라 버킷 결정 (아바타 vs 일반 이미지)
           bucket =
             file.originalname.toLowerCase().includes('profile') ||
@@ -186,10 +192,12 @@ export class MediaService {
         const fileBuffer = await fs.promises.readFile(file.path);
 
         // 한글 파일명 처리: 안전한 파일명 생성
+
         const mediaTypeStr: 'video' | 'image' = isVideo ? 'video' : 'image';
         const fileName = generatePostMediaFileName(
           file.originalname,
           mediaTypeStr,
+
         );
 
         console.log(`파일명 변환: ${file.originalname} -> ${fileName}`);
@@ -216,6 +224,7 @@ export class MediaService {
         const media = this.mediaRepository.create({
           originalName: file.originalname,
           url: publicUrl, // Supabase Storage 공개 URL 사용
+
           type: mediaTypeEnum,
           status: UploadStatus.COMPLETED,
           fileSize: file.size,

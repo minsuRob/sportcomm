@@ -15,6 +15,7 @@ sharp.concurrency(2); // 병렬 처리 제한
 import * as path from 'path';
 import * as ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs';
+import { MediaOptimizerService } from './media-optimizer.service';
 
 /**
  * 미디어 서비스
@@ -28,6 +29,7 @@ export class MediaService {
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
     private readonly supabaseService: SupabaseService,
+    private readonly mediaOptimizerService: MediaOptimizerService,
   ) {
     // 서비스 시작 시 Sharp 설정 로그
     this.logger.log('Sharp 이미지 처리 라이브러리 초기화 완료');
@@ -160,18 +162,24 @@ export class MediaService {
         // 파일 타입에 따른 처리 분기
         const isVideo = file.mimetype.startsWith('video/');
         let metadata: { width: number; height: number; duration?: number };
-        let mediaTypeValue: MediaType;
+
+        let mediaTypeEnum: MediaType;
+
         let bucket: string;
 
         if (isVideo) {
           // 동영상 메타데이터 추출
           metadata = await this.extractVideoMetadata(file.path);
-          mediaTypeValue = MediaType.VIDEO;
+
+          mediaTypeEnum = MediaType.VIDEO;
+
           bucket = 'post-videos';
         } else {
           // 이미지 메타데이터 추출
           metadata = await this.extractImageMetadata(file.path);
-          mediaTypeValue = MediaType.IMAGE;
+
+          mediaTypeEnum = MediaType.IMAGE;
+
           // 파일명에 따라 버킷 결정 (아바타 vs 일반 이미지)
           bucket =
             file.originalname.toLowerCase().includes('profile') ||
@@ -184,10 +192,12 @@ export class MediaService {
         const fileBuffer = await fs.promises.readFile(file.path);
 
         // 한글 파일명 처리: 안전한 파일명 생성
-        const mediaKind = isVideo ? 'video' : 'image';
+
+        const mediaTypeStr: 'video' | 'image' = isVideo ? 'video' : 'image';
         const fileName = generatePostMediaFileName(
           file.originalname,
-          mediaKind,
+          mediaTypeStr,
+
         );
 
         console.log(`파일명 변환: ${file.originalname} -> ${fileName}`);
@@ -214,7 +224,8 @@ export class MediaService {
         const media = this.mediaRepository.create({
           originalName: file.originalname,
           url: publicUrl, // Supabase Storage 공개 URL 사용
-          type: mediaTypeValue,
+
+          type: mediaTypeEnum,
           status: UploadStatus.COMPLETED,
           fileSize: file.size,
           mimeType: file.mimetype,
@@ -226,6 +237,26 @@ export class MediaService {
         });
 
         const savedMedia = await this.mediaRepository.save(media);
+        // 미디어 타입별 최적화 처리
+        if (isVideo) {
+          // 동영상인 경우 썸네일 3종 생성
+          try {
+            await this.mediaOptimizerService.optimizeVideoMedia(savedMedia);
+          } catch (optError) {
+            this.logger.warn(
+              `동영상 썸네일 생성 실패: ${file.originalname} - ${optError?.message || optError}`,
+            );
+          }
+        } else {
+          // 이미지인 경우 WebP 최적화 3종 생성
+          try {
+            await this.mediaOptimizerService.optimizeImageMedia(savedMedia);
+          } catch (optError) {
+            this.logger.warn(
+              `이미지 최적화 실패: ${file.originalname} - ${optError?.message || optError}`,
+            );
+          }
+        }
         mediaEntities.push(savedMedia);
       } catch (error) {
         console.error(`파일 처리 실패: ${file.originalname}`, error);

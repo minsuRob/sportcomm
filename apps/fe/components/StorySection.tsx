@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,39 +8,106 @@ import {
   ViewStyle,
   TextStyle,
   ImageStyle,
+  ActivityIndicator,
 } from "react-native";
+import { useQuery } from "@apollo/client";
+import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { GET_STORY_POSTS } from "@/lib/graphql";
+import { selectOptimizedImageUrl } from "@/lib/image";
 
 /**
- * 스토리 데이터 타입
+ * 스토리 데이터 타입 (Post 데이터 기반)
  */
-interface Story {
+interface StoryPost {
   id: string;
-  username: string;
-  avatar: string;
-  timestamp: string;
+  title?: string;
+  content: string;
+  createdAt: string;
+  teamId: string;
+  author: {
+    id: string;
+    nickname: string;
+    profileImageUrl?: string;
+  };
+  media: Array<{
+    id: string;
+    url: string;
+    type: "IMAGE" | "VIDEO" | "image" | "video";
+    width?: number;
+    height?: number;
+  }>;
+  likeCount: number;
+  commentCount?: number;
 }
 
 interface StorySectionProps {
-  stories?: Story[];
+  onStoryPress?: (postId: string) => void;
 }
 
 /**
- * 개별 스토리 아이템 컴포넌트 (고정 크기 적용)
+ * 시간 경과를 한국어로 표시하는 함수
  */
-const StoryItem = ({ story }: { story: Story }) => {
+const formatTimeAgo = (createdAt: string): string => {
+  const now = new Date();
+  const postDate = new Date(createdAt);
+  const diffInMs = now.getTime() - postDate.getTime();
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  const diffInDays = Math.floor(diffInHours / 24);
+
+  if (diffInMinutes < 1) return "방금 전";
+  if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+  if (diffInHours < 24) return `${diffInHours}시간 전`;
+  if (diffInDays < 7) return `${diffInDays}일 전`;
+
+  return postDate.toLocaleDateString("ko-KR", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+/**
+ * 개별 스토리 아이템 컴포넌트 (Post 데이터 기반)
+ */
+const StoryItem = ({
+  post,
+  onPress,
+}: {
+  post: StoryPost;
+  onPress: (postId: string) => void;
+}) => {
   const { themed } = useAppTheme();
 
+  // 첫 번째 이미지 미디어 선택
+  const imageMedia = post.media.find(
+    (item) => item.type === "IMAGE" || item.type === "image"
+  );
+
+  // 썸네일 이미지 URL 생성
+  const thumbnailUrl = imageMedia
+    ? selectOptimizedImageUrl(imageMedia, "thumbnail")
+    : post.author.profileImageUrl || "https://via.placeholder.com/200";
+
+  // 제목을 username으로, 작성자를 timestamp로 매핑
+  const displayTitle = post.title || post.content.substring(0, 20) + "...";
+  const displayAuthor = post.author.nickname;
+  const displayTime = formatTimeAgo(post.createdAt);
+
   return (
-    <TouchableOpacity style={themed($storyItem)}>
+    <TouchableOpacity
+      style={themed($storyItem)}
+      onPress={() => onPress(post.id)}
+      activeOpacity={0.8}
+    >
       <View style={themed($storyImageContainer)}>
         <Image
-          source={{ uri: story.avatar }}
+          source={{ uri: thumbnailUrl }}
           style={themed($storyImage)}
           resizeMode="cover"
           onError={() =>
-            console.warn(`Failed to load story image: ${story.avatar}`)
+            console.warn(`Failed to load story image: ${thumbnailUrl}`)
           }
           // iOS 성능 최적화
           fadeDuration={200}
@@ -48,17 +115,20 @@ const StoryItem = ({ story }: { story: Story }) => {
             uri: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
           }}
         />
-        {story.timestamp === "Live" && (
-          <View style={themed($liveIndicator)}>
-            <Text style={themed($liveText)}>LIVE</Text>
+        {/* 좋아요 수가 많으면 인기 표시 */}
+        {post.likeCount > 10 && (
+          <View style={themed($popularIndicator)}>
+            <Text style={themed($popularText)}>인기</Text>
           </View>
         )}
       </View>
       <View style={themed($storyInfo)}>
         <Text style={themed($storyUsername)} numberOfLines={1}>
-          {story.username}
+          {displayTitle}
         </Text>
-        <Text style={themed($storyTimestamp)}>{story.timestamp}</Text>
+        <Text style={themed($storyTimestamp)}>
+          {displayAuthor} • {displayTime}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -66,44 +136,124 @@ const StoryItem = ({ story }: { story: Story }) => {
 
 /**
  * 스토리 섹션 컴포넌트
- * 가로 스크롤로 스포츠/e스포츠 주요 소식 및 사용자 스토리를 표시
+ * 가로 스크롤로 최신 게시물을 스토리 형태로 표시
+ * 무한 스크롤을 지원하며 썸네일 이미지를 사용합니다.
  */
-export default function StorySection({ stories }: StorySectionProps) {
+export default function StorySection({ onStoryPress }: StorySectionProps) {
   const { themed } = useAppTheme();
+  const router = useRouter();
 
-  // 기본 스토리 데이터 (스포츠/e스포츠 주요 소식)
-  const defaultStories: Story[] = [
-    {
-      id: "1",
-      username: "World Cup 2023",
-      avatar:
-        "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=735&auto=format&fit=crop",
-      timestamp: "Live",
-    },
-    {
-      id: "2",
-      username: "NBA Finals",
-      avatar:
-        "https://images.unsplash.com/photo-1518406432532-9cbef5697723?q=80&w=735&auto=format&fit=crop",
-      timestamp: "2h",
-    },
-    {
-      id: "3",
-      username: "League of Legends",
-      avatar:
-        "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1470&auto=format&fit=crop",
-      timestamp: "4h",
-    },
-    {
-      id: "4",
-      username: "Premier League",
-      avatar:
-        "https://images.unsplash.com/photo-1590761799834-6e87176323df?q=80&w=1473&auto=format&fit=crop",
-      timestamp: "Today",
-    },
-  ];
+  // 페이지네이션 상태
+  const [page, setPage] = useState(1);
+  const [allPosts, setAllPosts] = useState<StoryPost[]>([]);
+  const [hasMore, setHasMore] = useState(true);
 
-  const displayStories = stories || defaultStories;
+  // GraphQL 쿼리
+  const { data, loading, error, fetchMore } = useQuery(GET_STORY_POSTS, {
+    variables: {
+      input: {
+        page: 1,
+        limit: 5,
+        sortBy: "createdAt",
+        sortOrder: "DESC",
+      },
+    },
+    onCompleted: (data) => {
+      if (data?.posts?.posts) {
+        setAllPosts(data.posts.posts);
+        setHasMore(data.posts.hasNext);
+      }
+    },
+    onError: (error) => {
+      console.error("스토리 게시물 로드 실패:", error);
+    },
+  });
+
+  // 스토리 클릭 핸들러
+  const handleStoryPress = useCallback(
+    (postId: string) => {
+      if (onStoryPress) {
+        onStoryPress(postId);
+      } else {
+        // 기본 동작: 게시물 상세 페이지로 이동
+        router.push({
+          pathname: "/post/[postId]",
+          params: { postId },
+        });
+      }
+    },
+    [onStoryPress, router]
+  );
+
+  // 무한 스크롤 핸들러
+  const handleLoadMore = useCallback(async () => {
+    if (loading || !hasMore) return;
+
+    try {
+      const result = await fetchMore({
+        variables: {
+          input: {
+            page: page + 1,
+            limit: 5,
+            sortBy: "createdAt",
+            sortOrder: "DESC",
+          },
+        },
+      });
+
+      if (result.data?.posts?.posts) {
+        setAllPosts((prev) => [...prev, ...result.data.posts.posts]);
+        setPage((prev) => prev + 1);
+        setHasMore(result.data.posts.hasNext);
+      }
+    } catch (error) {
+      console.error("추가 스토리 로드 실패:", error);
+    }
+  }, [loading, hasMore, page, fetchMore]);
+
+  // 스크롤 끝 감지
+  const handleScrollEnd = useCallback(() => {
+    if (hasMore && !loading) {
+      handleLoadMore();
+    }
+  }, [hasMore, loading, handleLoadMore]);
+
+  // 로딩 상태
+  if (loading && allPosts.length === 0) {
+    return (
+      <View style={themed($container)}>
+        <View style={themed($loadingContainer)}>
+          <ActivityIndicator
+            size="small"
+            color={themed($loadingContainer).color}
+          />
+          <Text style={themed($loadingText)}>스토리 로딩 중...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // 에러 상태
+  if (error && allPosts.length === 0) {
+    return (
+      <View style={themed($container)}>
+        <View style={themed($errorContainer)}>
+          <Text style={themed($errorText)}>스토리를 불러올 수 없습니다</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // 데이터가 없는 경우
+  if (allPosts.length === 0) {
+    return (
+      <View style={themed($container)}>
+        <View style={themed($emptyContainer)}>
+          <Text style={themed($emptyText)}>아직 스토리가 없습니다</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={themed($container)}>
@@ -111,10 +261,22 @@ export default function StorySection({ stories }: StorySectionProps) {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={themed($scrollContent)}
+        onMomentumScrollEnd={handleScrollEnd}
+        scrollEventThrottle={16}
       >
-        {displayStories.map((story) => (
-          <StoryItem key={story.id} story={story} />
+        {allPosts.map((post) => (
+          <StoryItem key={post.id} post={post} onPress={handleStoryPress} />
         ))}
+
+        {/* 로딩 인디케이터 (추가 로드 중) */}
+        {loading && allPosts.length > 0 && (
+          <View style={themed($loadMoreIndicator)}>
+            <ActivityIndicator
+              size="small"
+              color={themed($loadingContainer).color}
+            />
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -135,7 +297,7 @@ const $scrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   // gap 제거 - marginRight로 간격 조정
 });
 
-const $liveIndicator: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $popularIndicator: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",
   top: spacing.xs,
   right: spacing.xs,
@@ -145,11 +307,61 @@ const $liveIndicator: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderRadius: 4,
 });
 
-const $liveText: ThemedStyle<TextStyle> = () => ({
+const $popularText: ThemedStyle<TextStyle> = () => ({
   color: "white",
   fontSize: 10,
   fontWeight: "800",
   letterSpacing: 0.5,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.lg,
+  color: colors.text,
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.text,
+  fontSize: 14,
+  marginLeft: spacing.sm,
+});
+
+const $errorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.lg,
+});
+
+const $errorText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 14,
+  textAlign: "center",
+});
+
+const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.lg,
+});
+
+const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 14,
+  textAlign: "center",
+});
+
+const $loadMoreIndicator: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+  width: 140,
+  height: 120,
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: spacing.md,
+  color: colors.text,
 });
 
 const $storyItem: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({

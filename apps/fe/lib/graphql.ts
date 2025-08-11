@@ -602,3 +602,67 @@ export const NOTIFICATION_UPDATED_SUBSCRIPTION = gql`
     notificationUpdated
   }
 `;
+
+/**
+ * 스토리 섹션용 게시물 조회 쿼리
+ * 최신 게시물 5개를 가져와서 스토리 형태로 표시합니다.
+ * 무한 스크롤을 지원하며, 썸네일 이미지 최적화를 위한 미디어 정보를 포함합니다.
+ */
+export const GET_STORY_POSTS = gql`
+  query GetStoryPosts($input: FindPostsInput) {
+    posts(input: $input) {
+      posts {
+        id
+        title
+        content
+        createdAt
+        teamId
+        viewCount
+        likeCount
+        commentCount
+        isLiked
+        isBookmarked
+        author {
+          id
+          nickname
+          profileImageUrl
+          myTeams {
+            id
+            userId
+            teamId
+            priority
+            notificationEnabled
+            createdAt
+            team {
+              id
+              name
+              code
+              color
+              icon
+              logoUrl
+              description
+              sortOrder
+              isActive
+            }
+          }
+        }
+        media {
+          id
+          url
+          type
+          width
+          height
+        }
+        comments {
+          id
+        }
+      }
+      total
+      page
+      limit
+      totalPages
+      hasPrevious
+      hasNext
+    }
+  }
+`;

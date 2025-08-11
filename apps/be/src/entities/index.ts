@@ -12,6 +12,7 @@ import { Comment } from './comment.entity';
 import { Follow } from './follow.entity';
 import { Media } from './media.entity';
 import { ChatRoom } from './chat-room.entity';
+import { MediaOptimizer } from '../common/media-optimizer.entity';
 import { ChatMessage } from './chat-message.entity';
 import { PostLike } from './post-like.entity';
 import { Report } from './report.entity';
@@ -87,6 +88,7 @@ export const entities = [
   Comment,
   Follow,
   Media,
+  MediaOptimizer,
   ChatRoom,
   ChatMessage,
   PostLike,

@@ -1,4 +1,11 @@
-import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  OneToMany,
+} from 'typeorm';
 import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
 import {
   IsString,
@@ -10,6 +17,7 @@ import {
 } from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { Post } from './post.entity';
+import { MediaOptimizer } from '../common/media-optimizer.entity';
 
 /**
  * 미디어 파일 유형 열거형
@@ -283,6 +291,16 @@ export class Media extends BaseEntity {
   post: Post;
 
   // === 헬퍼 메서드 ===
+
+  /**
+   * 최적화 결과 목록 (thumbnail/mobile/desktop)
+   * front에서 미사용, @Field 안넣음
+   * 실제 type 판단은 사용자 기기 환경으로 판단.
+   */
+  @OneToMany(() => MediaOptimizer, (optimizer) => optimizer.media, {
+    cascade: true,
+  })
+  optimizer?: MediaOptimizer[];
 
   /**
    * 이미지 파일인지 확인하는 메서드

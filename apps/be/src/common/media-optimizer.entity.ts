@@ -32,7 +32,7 @@ registerEnumType(MediaOptimizationType, {
 @ObjectType()
 @Entity('media_optimizers')
 @Index(['mediaId'])
-@Index(['mediaType'])
+@Index(['mediaOptType'])
 export class MediaOptimizer extends BaseEntity {
   /**
    * 원본 미디어 ID (FK)
@@ -50,10 +50,14 @@ export class MediaOptimizer extends BaseEntity {
   /**
    * 최적화 타입 (thumbnail | mobile | desktop)
    */
-  @Field(() => MediaOptimizationType, { description: '최적화 타입' })
-  @Column({ type: 'enum', enum: MediaOptimizationType })
+  @Field(() => MediaOptimizationType, {
+    description: '최적화 타입',
+    nullable: true,
+  })
+  @Column({ type: 'enum', enum: MediaOptimizationType, nullable: true })
+  @IsOptional()
   @IsEnum(MediaOptimizationType)
-  mediaType: MediaOptimizationType;
+  mediaOptType?: MediaOptimizationType;
 
   /**
    * 최적화된 파일의 공개 URL
@@ -81,4 +85,13 @@ export class MediaOptimizer extends BaseEntity {
   @IsOptional()
   @IsNumber()
   height?: number | null;
+
+  /**
+   * 최적화된 파일의 크기 (바이트)
+   */
+  @Field(() => Number, { nullable: true })
+  @Column({ type: 'int', nullable: true })
+  @IsOptional()
+  @IsNumber()
+  fileSize?: number | null;
 }

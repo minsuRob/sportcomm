@@ -93,10 +93,11 @@ export class MediaOptimizerService {
       const entity = this.optimizerRepo.create({
         mediaId: media.id,
         media: media,
-        mediaType: size.name,
+        mediaOptType: size.name,
         url,
         width,
         height,
+        fileSize: buffer.length,
       });
       results.push(await this.optimizerRepo.save(entity));
     }

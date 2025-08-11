@@ -730,14 +730,17 @@ export const GET_POSTS_WITH_MEDIA_THUMBNAILS = gql`
         id
         title
         content
-        type
         createdAt
-        updatedAt
+        teamId
+        viewCount
+        likeCount
+        commentCount
+        isLiked
+        isBookmarked
         author {
           id
           nickname
           profileImageUrl
-          role
         }
         media {
           id
@@ -760,12 +763,16 @@ export const GET_POSTS_WITH_MEDIA_THUMBNAILS = gql`
             quality
           }
         }
-        likeCount
-        commentCount
-        isLiked
+        comments {
+          id
+        }
       }
-      totalCount
-      hasNextPage
+      total
+      page
+      limit
+      totalPages
+      hasPrevious
+      hasNext
     }
   }
 `;

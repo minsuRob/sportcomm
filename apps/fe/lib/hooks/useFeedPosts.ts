@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@apollo/client";
-import { GET_POSTS, GET_BLOCKED_USERS } from "@/lib/graphql";
+import {
+  GET_POSTS_WITH_MEDIA_THUMBNAILS,
+  GET_BLOCKED_USERS,
+} from "@/lib/graphql";
 import {
   GET_MY_TEAMS,
   type GetMyTeamsResult,
@@ -15,7 +18,6 @@ interface GqlPost {
   title?: string;
   content: string;
   createdAt: string;
-  type: PostType;
   teamId: string;
   isLiked: boolean;
   isBookmarked?: boolean;
@@ -27,15 +29,39 @@ interface GqlPost {
     nickname: string;
     profileImageUrl?: string;
   };
-  media: Array<{ id: string; url: string; type: "image" | "video" }>;
+  media: Array<{
+    id: string;
+    originalName?: string;
+    url: string;
+    type: "image" | "video";
+    status?: string;
+    fileSize?: number;
+    mimeType?: string;
+    width?: number;
+    height?: number;
+    duration?: number;
+    thumbnails?: Array<{
+      id: string;
+      size: string;
+      url: string;
+      width: number;
+      height: number;
+      fileSize?: number;
+      quality?: number;
+    }>;
+  }>;
   comments: Array<{ id: string }>;
 }
 
 interface PostsQueryResponse {
   posts: {
     posts: GqlPost[];
-    hasNext: boolean;
+    total: number;
     page: number;
+    limit: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
   };
 }
 
@@ -75,7 +101,7 @@ export function useFeedPosts() {
     error,
     refetch,
     fetchMore,
-  } = useQuery<PostsQueryResponse>(GET_POSTS, {
+  } = useQuery<PostsQueryResponse>(GET_POSTS_WITH_MEDIA_THUMBNAILS, {
     variables: {
       input: { page: 1, limit: PAGE_SIZE, teamIds: selectedTeamIds },
     },

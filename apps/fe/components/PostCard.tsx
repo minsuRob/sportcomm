@@ -60,6 +60,13 @@ export interface Media {
   width?: number;
   height?: number;
   duration?: number;
+  thumbnails?: Array<{
+    id: string;
+    size: string;
+    url: string;
+    width: number;
+    height: number;
+  }>;
 }
 
 export interface Post {
@@ -266,6 +273,8 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       imageMedia.length > 0 ? imageMedia[0]?.url : null,
       isWeb()
     );
+
+  console.log("imageMedia: ", imageMedia);
 
   // 현재 사용자 정보 가져오기
   useEffect(() => {

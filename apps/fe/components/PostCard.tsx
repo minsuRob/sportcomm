@@ -26,7 +26,7 @@ import { usePostInteractions } from "../hooks/usePostInteractions";
 import PostActions from "./shared/PostActions";
 import PostContextMenu from "./shared/PostContextMenu";
 import { isWeb } from "@/lib/platform";
-import { useOptimizedPostImageDimensions, IMAGE_CONSTANTS } from "@/lib/image";
+import { usePostImageDimensions, IMAGE_CONSTANTS } from "@/lib/image";
 import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 
@@ -267,12 +267,14 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   // 반응형 환경 감지
   const { isDesktop } = useResponsive();
 
-  // 플랫폼별 최적화된 이미지 훅 사용 (웹/모바일 환경에 맞는 썸네일 자동 선택)
+  // 공통 이미지 최적화 훅 사용 (웹/모바일 환경 고려)
   const { imageAspectRatio, imageHeight, imageLoading } =
-    useOptimizedPostImageDimensions(
-      imageMedia.length > 0 ? imageMedia[0] : null,
+    usePostImageDimensions(
+      imageMedia.length > 0 ? imageMedia[0]?.url : null,
       isWeb()
     );
+
+  console.log("imageMedia: ", imageMedia);
 
   // 현재 사용자 정보 가져오기
   useEffect(() => {

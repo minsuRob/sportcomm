@@ -11,7 +11,7 @@ export interface DisplayInfo {
   pixelRatio: number;
   screenWidth: number;
   screenHeight: number;
-  preferredThumbnailSize: "small" | "large" | "preview";
+  preferredThumbnailSize: "thumbnail_small" | "thumbnail_large" | "preview";
 }
 
 /**
@@ -23,15 +23,15 @@ export const getDisplayInfo = (): DisplayInfo => {
   const webEnv = isWeb();
   const highDPI = pixelRatio >= 2;
 
-  // 플랫폼별 최적화된 썸네일 크기 결정 (DB 형식에 맞춤)
-  let preferredThumbnailSize: "small" | "large" | "preview";
+  // 플랫폼별 최적화된 썸네일 크기 결정
+  let preferredThumbnailSize: "thumbnail_small" | "thumbnail_large" | "preview";
 
   if (webEnv) {
     // 웹 환경: 항상 고품질 이미지 사용
     preferredThumbnailSize = "preview";
   } else {
     // 모바일 환경: 해상도에 따라 선택
-    preferredThumbnailSize = highDPI ? "preview" : "large";
+    preferredThumbnailSize = highDPI ? "preview" : "thumbnail_large";
   }
 
   return {
@@ -57,21 +57,20 @@ export const selectOptimizedThumbnailUrl = (
 
   const info = displayInfo || getDisplayInfo();
 
-  // 추천 크기의 썸네일 찾기 (대소문자 구분 없이)
-  const preferredSize = info.preferredThumbnailSize.toUpperCase();
+  // 추천 크기의 썸네일 찾기
   const preferredThumbnail = thumbnails.find(
-    (thumb) => thumb.size.toUpperCase() === preferredSize
+    (thumb) => thumb.size.toLowerCase() === info.preferredThumbnailSize
   );
 
   if (preferredThumbnail) {
     return preferredThumbnail.url;
   }
 
-  // fallback 순서: PREVIEW > LARGE > SMALL (실제 DB 데이터 형식에 맞춤)
-  const fallbackOrder = ["PREVIEW", "LARGE", "SMALL"];
+  // fallback 순서: preview > thumbnail_large > thumbnail_small
+  const fallbackOrder = ["preview", "thumbnail_large", "thumbnail_small"];
   for (const size of fallbackOrder) {
     const thumbnail = thumbnails.find(
-      (thumb) => thumb.size.toUpperCase() === size
+      (thumb) => thumb.size.toLowerCase() === size
     );
     if (thumbnail) {
       return thumbnail.url;
@@ -90,28 +89,14 @@ export const getOptimizedMediaUrl = (
 ): string => {
   const info = displayInfo || getDisplayInfo();
 
-  // 디버깅 로그
-  console.log("🖼️ getOptimizedMediaUrl:", {
-    hasMedia: !!media,
-    hasThumbnails: !!(media.thumbnails && media.thumbnails.length > 0),
-    thumbnailCount: media.thumbnails?.length || 0,
-    thumbnailSizes: media.thumbnails?.map((t) => t.size) || [],
-    preferredSize: info.preferredThumbnailSize,
-    isWeb: info.isWeb,
-    isHighDPI: info.isHighDPI,
-    originalUrl: media.url,
-  });
-
   // 썸네일이 있으면 최적화된 썸네일 사용
   if (media.thumbnails && media.thumbnails.length > 0) {
     const optimizedUrl = selectOptimizedThumbnailUrl(media.thumbnails, info);
     if (optimizedUrl) {
-      console.log("✅ 최적화된 썸네일 선택:", optimizedUrl);
       return optimizedUrl;
     }
   }
 
   // 썸네일이 없으면 기본 URL 사용 (이미 압축된 이미지)
-  console.log("⚠️ 썸네일 없음, 기본 URL 사용:", media.url);
   return media.url;
 };

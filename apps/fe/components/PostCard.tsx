@@ -26,7 +26,11 @@ import { usePostInteractions } from "../hooks/usePostInteractions";
 import PostActions from "./shared/PostActions";
 import PostContextMenu from "./shared/PostContextMenu";
 import { isWeb } from "@/lib/platform";
-import { usePostImageDimensions, IMAGE_CONSTANTS } from "@/lib/image";
+import {
+  usePostImageDimensions,
+  IMAGE_CONSTANTS,
+  selectOptimizedImageUrl,
+} from "@/lib/image";
 import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 
@@ -635,7 +639,12 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                     }}
                   >
                     <Image
-                      source={{ uri: imageMedia[0]?.url }}
+                      source={{
+                        uri: selectOptimizedImageUrl(
+                          imageMedia[0],
+                          isDesktop ? "desktop" : "mobile"
+                        ),
+                      }}
                       style={{
                         ...(imageHeight &&
                         imageHeight <

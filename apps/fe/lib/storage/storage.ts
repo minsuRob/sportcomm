@@ -15,6 +15,11 @@ export const setItem = async (key: string, value: string): Promise<void> => {
   console.log(`스토리지 저장 시도: [키: ${key}], [값 존재: ${!!value}]`);
   if (Platform.OS === "web") {
     try {
+      // SSR 환경에서는 localStorage가 없을 수 있음
+      if (typeof localStorage === "undefined") {
+        console.warn("localStorage is not available in SSR environment");
+        return;
+      }
       localStorage.setItem(key, value);
       console.log(`웹 스토리지에 저장 완료: ${key}`);
     } catch (e) {
@@ -38,9 +43,14 @@ export const setItem = async (key: string, value: string): Promise<void> => {
 export const getItem = async (key: string): Promise<string | null> => {
   if (Platform.OS === "web") {
     try {
+      // SSR 환경에서는 localStorage가 없을 수 있음
+      if (typeof localStorage === "undefined") {
+        console.warn("localStorage is not available in SSR environment");
+        return null;
+      }
       const value = localStorage.getItem(key);
       console.log(
-        `웹 스토리지에서 조회: [키: ${key}], [결과: ${value ? "값 있음" : "값 없음"}]`,
+        `웹 스토리지에서 조회: [키: ${key}], [결과: ${value ? "값 있음" : "값 없음"}]`
       );
       return value;
     } catch (e) {
@@ -51,7 +61,7 @@ export const getItem = async (key: string): Promise<string | null> => {
     try {
       const value = await AsyncStorage.getItem(key);
       console.log(
-        `AsyncStorage에서 조회: [키: ${key}], [결과: ${value ? "값 있음" : "값 없음"}]`,
+        `AsyncStorage에서 조회: [키: ${key}], [결과: ${value ? "값 있음" : "값 없음"}]`
       );
       return value;
     } catch (e) {
@@ -69,6 +79,11 @@ export const removeItem = async (key: string): Promise<void> => {
   console.log(`스토리지에서 삭제: [키: ${key}]`);
   if (Platform.OS === "web") {
     try {
+      // SSR 환경에서는 localStorage가 없을 수 있음
+      if (typeof localStorage === "undefined") {
+        console.warn("localStorage is not available in SSR environment");
+        return;
+      }
       localStorage.removeItem(key);
       console.log(`웹 스토리지에서 삭제 완료: ${key}`);
     } catch (e) {

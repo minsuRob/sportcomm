@@ -13,13 +13,17 @@ import { Platform } from "react-native";
  */
 export const isWeb = (): boolean => {
   try {
+    // SSR 환경에서는 Platform.OS가 'web'으로 설정됨
+    // TODO: 검증 필요
+    if (typeof Platform !== "undefined" && Platform.OS === "web") {
+      return true;
+    }
+
     // Web 환경인지 확인: window와 document 객체가 존재하고,
     // React Native 또는 Expo 환경이 아닌 경우
     return (
       typeof window !== "undefined" &&
       typeof document !== "undefined" &&
-      // @ts-ignore - global.expo는 Expo 환경에서만 존재
-      // (typeof global === "undefined" || !("expo" in global)) &&
       // @ts-ignore - navigator.product는 React Native에서 'ReactNative'
       typeof navigator !== "undefined" &&
       navigator.product !== "ReactNative"

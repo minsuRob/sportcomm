@@ -289,3 +289,17 @@ export const usePostImageDimensions = (
     defaultAspectRatio: IMAGE_CONSTANTS.DEFAULT_ASPECT_RATIO,
   });
 };
+export type MediaItem = {
+  id: string;
+  url: string;
+  type: "IMAGE" | "VIDEO" | "image" | "video";
+};
+
+export const selectOptimizedImageUrl = (
+  media: MediaItem | null | undefined,
+  mediaOptType: string
+) => {
+  if (!media) return undefined;
+  const delimiter = "/public/";
+  return `${media?.url.split(delimiter)[0] + delimiter}/${mediaOptType}/${media.id}.webp`;
+};

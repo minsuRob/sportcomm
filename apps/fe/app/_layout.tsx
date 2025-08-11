@@ -10,6 +10,8 @@ import CustomToast from "@/components/CustomToast";
 import { ApolloProvider } from "@apollo/client";
 import GlobalWebLayout from "@/components/layout/GlobalWebLayout";
 import { client } from "@/lib/api/client";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import SafeAreaWrapper from "@/components/SafeAreaWrapper";
 
 import {
   ThemeProvider as AppThemeProvider,
@@ -39,7 +41,9 @@ function RootLayoutNav() {
     <NavigationThemeProvider value={navigationTheme}>
       <StatusBar style={themeContext === "dark" ? "light" : "dark"} />
       <GlobalWebLayout>
-        <Slot />
+        <SafeAreaWrapper edges={["top", "bottom"]}>
+          <Slot />
+        </SafeAreaWrapper>
       </GlobalWebLayout>
       <PortalHost />
     </NavigationThemeProvider>
@@ -132,12 +136,14 @@ export default function RootLayout() {
 
   // Apollo Provider가 모든 것을 감싸서 모든 화면에서 클라이언트를 사용할 수 있게 합니다.
   return (
-    <ApolloProvider client={client}>
-      <AppThemeProvider>
-        <RootLayoutNav />
-        <CustomToast />
-        <Toast />
-      </AppThemeProvider>
-    </ApolloProvider>
+    <SafeAreaProvider>
+      <ApolloProvider client={client}>
+        <AppThemeProvider>
+          <RootLayoutNav />
+          <CustomToast />
+          <Toast />
+        </AppThemeProvider>
+      </ApolloProvider>
+    </SafeAreaProvider>
   );
 }

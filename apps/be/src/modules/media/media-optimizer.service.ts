@@ -14,6 +14,9 @@ import {
 } from '../../common/media-optimizer.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
 
+import { randomUUID } from 'crypto';
+import * as os from 'os';
+
 type MediaSizeConfig = {
   name: MediaOptimizationType;
   maxSize: number;
@@ -186,7 +189,7 @@ export class MediaOptimizerService {
     await this.ensureBuckets();
 
     const results: MediaOptimizer[] = [];
-    const tempDir = path.join(process.cwd(), 'temp', 'video-thumbnails');
+    const tempDir = path.join(os.tmpdir(), 'temp', 'video-thumbnails');
 
     try {
       // 임시 디렉토리 생성
@@ -194,11 +197,17 @@ export class MediaOptimizerService {
 
       // 원본 동영상 파일을 임시 디렉토리에 다운로드
       const originalBuffer = await this.downloadPublicUrlToBuffer(media.url);
-      const tempVideoPath = path.join(tempDir, `temp_video_${Date.now()}.mp4`);
+      const tempVideoPath = path.join(
+        tempDir,
+        `temp_video_${randomUUID()}.mp4`,
+      );
       await fs.promises.writeFile(tempVideoPath, originalBuffer);
 
       // 동영상에서 프레임 추출
-      const tempImagePath = path.join(tempDir, `temp_frame_${Date.now()}.jpg`);
+      const tempImagePath = path.join(
+        tempDir,
+        `temp_frame_${randomUUID()}.jpg`,
+      );
       await this.extractVideoFrame(tempVideoPath, tempImagePath, 1);
 
       // 추출된 프레임으로 3종 썸네일 생성

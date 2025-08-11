@@ -9,7 +9,6 @@ import Toast from "react-native-toast-message";
 import CustomToast from "@/components/CustomToast";
 import { ApolloProvider } from "@apollo/client";
 import GlobalWebLayout from "@/components/layout/GlobalWebLayout";
-import { client } from "@/lib/api/client";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import SafeAreaWrapper from "@/components/SafeAreaWrapper";
 

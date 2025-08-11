@@ -175,6 +175,7 @@ export class MediaOptimizerService {
 
   /**
    * 주어진 `Media`(VIDEO)에 대해 3종 썸네일을 생성 후 저장
+   *
    */
   async optimizeVideoMedia(media: Media): Promise<MediaOptimizer[]> {
     if (media.type !== MediaType.VIDEO) {

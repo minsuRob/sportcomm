@@ -182,7 +182,7 @@ const StoryItemComponent = ({
         {(story.metadata?.isPopular ||
           (story.metadata?.likeCount && story.metadata.likeCount > 10)) && (
           <View style={themed($popularIndicator)}>
-            <Text style={themed($popularText)}>🔥</Text>
+            <Text style={themed($popularText)}>{"🔥"}</Text>
           </View>
         )}
       </View>
@@ -265,7 +265,7 @@ export default function StorySection({
       <View style={themed($container)}>
         <View style={themed($loadingContainer)}>
           <ActivityIndicator size="small" color={themed($loadingText).color} />
-          <Text style={themed($loadingText)}>스토리 로딩 중...</Text>
+          <Text style={themed($loadingText)}>{"스토리 로딩 중..."}</Text>
         </View>
       </View>
     );
@@ -276,9 +276,11 @@ export default function StorySection({
     return (
       <View style={themed($container)}>
         <View style={themed($errorContainer)}>
-          <Text style={themed($errorText)}>스토리를 불러올 수 없습니다</Text>
+          <Text style={themed($errorText)}>
+            {"스토리를 불러올 수 없습니다"}
+          </Text>
           <TouchableOpacity onPress={refresh} style={themed($retryButton)}>
-            <Text style={themed($retryButtonText)}>다시 시도</Text>
+            <Text style={themed($retryButtonText)}>{"다시 시도"}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -290,7 +292,7 @@ export default function StorySection({
     return (
       <View style={themed($container)}>
         <View style={themed($emptyContainer)}>
-          <Text style={themed($emptyText)}>아직 스토리가 없습니다</Text>
+          <Text style={themed($emptyText)}>{"아직 스토리가 없습니다"}</Text>
         </View>
       </View>
     );
@@ -300,7 +302,7 @@ export default function StorySection({
     <View style={themed($container)}>
       {/* 스토리 타입 표시 헤더 (선택사항) */}
       <View style={themed($headerContainer)}>
-        <Text style={themed($headerTitle)}>스토리</Text>
+        <Text style={themed($headerTitle)}>{"스토리"}</Text>
         {/* <Text style={themed($headerSubtitle)}>
           {storyTypes
             .map((type) => {

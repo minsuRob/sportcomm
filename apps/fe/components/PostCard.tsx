@@ -231,7 +231,10 @@ const renderContentText = ({
 };
 
 // --- 메인 컴포넌트 ---
-export default function PostCard({ post, onPostUpdated }: PostCardProps) {
+const PostCard = React.memo(function PostCard({
+  post,
+  onPostUpdated,
+}: PostCardProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -799,7 +802,9 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       />
     </View>
   );
-}
+});
+
+export default PostCard;
 
 // --- 스타일 정의 ---
 

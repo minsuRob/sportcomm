@@ -55,7 +55,7 @@ export default function NotificationTestButton() {
           style: "cancel",
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 

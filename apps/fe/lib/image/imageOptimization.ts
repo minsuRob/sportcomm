@@ -298,7 +298,7 @@ export type MediaItem = {
 
 export const selectOptimizedImageUrl = (
   media: MediaItem | null | undefined,
-  mediaOptType: string
+  mediaOptType: string,
 ) => {
   if (!media) return undefined;
   const delimiter = "/public/";

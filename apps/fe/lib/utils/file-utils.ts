@@ -40,7 +40,7 @@ export function sanitizeFileName(fileName: string): string {
 export function generateSafeFileName(
   originalName: string,
   prefix?: string,
-  userId?: string
+  userId?: string,
 ): string {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2, 8);
@@ -64,7 +64,7 @@ export function generateSafeFileName(
  */
 export function generateAvatarFileName(
   originalName: string,
-  userId: string
+  userId: string,
 ): string {
   return generateSafeFileName(originalName, "avatar", userId);
 }
@@ -79,7 +79,7 @@ export function generateAvatarFileName(
 export function generatePostMediaFileName(
   originalName: string,
   mediaType: "image" | "video",
-  index?: number
+  index?: number,
 ): string {
   const indexSuffix = typeof index === "number" ? `_${index}` : "";
   return generateSafeFileName(originalName, `post_${mediaType}${indexSuffix}`);

@@ -78,7 +78,7 @@ class NotificationService {
    */
   async getNotifications(
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<Notification[]> {
     // 항상 서버에서 실제 데이터를 가져옵니다.
     return await this.fetchNotificationsFromServer(page, limit);
@@ -100,7 +100,7 @@ class NotificationService {
     this.notifications = this.notifications.map((notification) =>
       notification.id === notificationId
         ? { ...notification, isRead: true }
-        : notification
+        : notification,
     );
     this.notifyListeners();
   }
@@ -143,14 +143,14 @@ class NotificationService {
    * 신규 알림 리스너 등록
    */
   addNewNotificationListener(
-    listener: (notification: Notification) => void
+    listener: (notification: Notification) => void,
   ): () => void {
     this.newNotificationListeners.push(listener);
 
     // 언마운트 함수 반환
     return () => {
       this.newNotificationListeners = this.newNotificationListeners.filter(
-        (l) => l !== listener
+        (l) => l !== listener,
       );
     };
   }
@@ -179,13 +179,13 @@ class NotificationService {
    */
   private async fetchNotificationsFromServer(
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<Notification[]> {
     try {
       const { user } = await getSession();
       if (!user || !this.apolloClient) {
         throw new Error(
-          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다",
         );
       }
 
@@ -222,7 +222,7 @@ class NotificationService {
       const { user } = await getSession();
       if (!user || !this.apolloClient) {
         throw new Error(
-          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다",
         );
       }
 
@@ -244,7 +244,7 @@ class NotificationService {
       const { user } = await getSession();
       if (!user || !this.apolloClient) {
         throw new Error(
-          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다"
+          "인증이 필요하거나 Apollo Client가 설정되지 않았습니다",
         );
       }
 
@@ -283,7 +283,7 @@ class NotificationService {
    * 신규 알림 확인 및 토스트 표시
    */
   private async checkForNewNotifications(
-    notifications: Notification[]
+    notifications: Notification[],
   ): Promise<void> {
     if (!this.lastCheckTime) {
       // 첫 실행이면 신규 알림으로 간주하지 않음
@@ -316,14 +316,14 @@ class NotificationService {
       // 웹 환경에서는 localStorage 사용
       if (typeof localStorage !== "undefined") {
         this.lastCheckTime = localStorage.getItem(
-          "notification_last_check_time"
+          "notification_last_check_time",
         );
       } else {
         // React Native 환경에서는 AsyncStorage 사용
         const AsyncStorage =
           require("@react-native-async-storage/async-storage").default;
         this.lastCheckTime = await AsyncStorage.getItem(
-          "notification_last_check_time"
+          "notification_last_check_time",
         );
       }
     } catch (error) {

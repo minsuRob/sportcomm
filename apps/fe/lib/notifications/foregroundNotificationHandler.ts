@@ -20,7 +20,7 @@ export interface ForegroundNotificationData {
  * 앱이 포그라운드에 있을 때만 작동합니다.
  */
 export async function showForegroundNotification(
-  notification: Notifications.Notification
+  notification: Notifications.Notification,
 ): Promise<void> {
   try {
     const { title, body, data } = notification.request.content;
@@ -45,7 +45,7 @@ export async function showForegroundNotification(
     await scheduleLocal(
       enhancedTitle,
       body || "새로운 알림이 있습니다.",
-      notificationData
+      notificationData,
     );
 
     console.log("✅ 포그라운드 알림 표시됨:", {
@@ -87,7 +87,7 @@ function getNotificationEmoji(type: string): string {
  */
 export function handleNotificationResponse(
   response: Notifications.NotificationResponse,
-  router: any
+  router: any,
 ): void {
   try {
     const data = response.notification.request.content

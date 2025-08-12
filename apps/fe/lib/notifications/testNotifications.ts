@@ -123,7 +123,7 @@ export async function listScheduledNotifications(): Promise<void> {
     console.log("📋 예약된 알림 목록:", scheduled.length, "개");
     scheduled.forEach((notification, index) => {
       console.log(
-        `${index + 1}. ${notification.content.title} - ${notification.trigger}`
+        `${index + 1}. ${notification.content.title} - ${notification.trigger}`,
       );
     });
   } catch (error) {

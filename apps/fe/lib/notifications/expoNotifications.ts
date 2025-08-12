@@ -47,7 +47,7 @@ async function getExpoPushToken(): Promise<string | null> {
 
 async function registerTokenWithBackend(
   client: ApolloClient<any> | undefined,
-  token: string
+  token: string,
 ) {
   if (!client) return;
   try {
@@ -59,13 +59,13 @@ async function registerTokenWithBackend(
     // 백엔드에 아직 스키마가 없을 수 있으므로 경고만 남김
     console.warn(
       "registerPushToken backend call skipped:",
-      (e as any)?.message || e
+      (e as any)?.message || e,
     );
   }
 }
 
 export async function initExpoNotifications(
-  options: InitOptions = {}
+  options: InitOptions = {},
 ): Promise<void> {
   if (initialized) return;
   initialized = true;
@@ -131,7 +131,7 @@ export async function initExpoNotifications(
 export async function scheduleLocal(
   title: string,
   body: string,
-  data?: Record<string, any>
+  data?: Record<string, any>,
 ) {
   await Notifications.scheduleNotificationAsync({
     content: { title, body, data: { ...data, isLocal: true } },

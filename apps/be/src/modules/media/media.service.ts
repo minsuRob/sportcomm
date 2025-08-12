@@ -197,7 +197,6 @@ export class MediaService {
         const fileName = generatePostMediaFileName(
           file.originalname,
           mediaTypeStr,
-
         );
 
         console.log(`파일명 변환: ${file.originalname} -> ${fileName}`);

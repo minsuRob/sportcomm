@@ -245,10 +245,10 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
 
   // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE"
+    (item) => item.type === "image" || item.type === "IMAGE",
   );
   const videoMedia = post.media.filter(
-    (item) => item.type === "video" || item.type === "VIDEO"
+    (item) => item.type === "video" || item.type === "VIDEO",
   );
 
   // 동영상 재생 상태 관리
@@ -268,7 +268,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
   const { imageAspectRatio, imageHeight, imageLoading } =
     usePostImageDimensions(
       imageMedia.length > 0 ? imageMedia[0]?.url : null,
-      isWeb()
+      isWeb(),
     );
 
   // 현재 사용자 정보 가져오기
@@ -340,7 +340,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
       console.log(`PostCard - post.id: ${post.id}`);
       console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
       console.log(
-        `PostCard - post.content: ${post.content.substring(0, 20)}...`
+        `PostCard - post.content: ${post.content.substring(0, 20)}...`,
       );
     }
   }, [post.id]);
@@ -462,7 +462,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
     const authorMyTeams = anyPost?.author?.myTeams;
     if (Array.isArray(authorMyTeams)) {
       const found = authorMyTeams.find(
-        (ut: any) => ut?.team?.id === post.teamId
+        (ut: any) => ut?.team?.id === post.teamId,
       );
       if (found?.team?.name) return found.team.name as string;
     }
@@ -602,7 +602,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                     <Text style={themed($videoDurationText)}>
                       {videoMedia[0]
                         ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
-                            ((videoMedia[0] as any).duration || 0) % 60
+                            ((videoMedia[0] as any).duration || 0) % 60,
                           )
                             .toString()
                             .padStart(2, "0")}`
@@ -642,7 +642,7 @@ export default function PostCard({ post, onPostUpdated }: PostCardProps) {
                       source={{
                         uri: selectOptimizedImageUrl(
                           imageMedia[0],
-                          isDesktop ? "desktop" : "mobile"
+                          isDesktop ? "desktop" : "mobile",
                         ),
                       }}
                       style={{

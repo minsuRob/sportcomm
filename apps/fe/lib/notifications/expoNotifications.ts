@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { ApolloClient, gql } from "@apollo/client";
+import { registerBackgroundNotificationTask } from "./backgroundTask";
 
 let initialized = false;
 
@@ -68,10 +69,12 @@ export async function initExpoNotifications(
   if (initialized) return;
   initialized = true;
 
-  // 알림 표시 기본 핸들러
+  // 알림 표시 기본 핸들러 - 포그라운드에서도 배너와 리스트에 표시
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: false,
       shouldSetBadge: false,
     }),
@@ -106,6 +109,10 @@ export async function initExpoNotifications(
   Notifications.addNotificationResponseReceivedListener((response) => {
     options.onResponse?.(response);
   });
+
+  // 백그라운드 알림 처리를 위한 태스크 등록
+  // 참고: Expo Go에서는 지원되지 않으며, 개발 빌드나 프로덕션에서만 작동
+  await registerBackgroundNotificationTask();
 }
 
 /** 로컬 알림 테스트용 헬퍼 */

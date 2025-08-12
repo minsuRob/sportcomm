@@ -22,6 +22,7 @@ import TabSlider from "@/components/TabSlider";
 import ChatRoomList from "@/components/chat/ChatRoomList";
 import { NotificationToast } from "@/components/notifications";
 import { showToast } from "@/components/CustomToast";
+import NotificationTestButton from "@/components/notifications/NotificationTestButton";
 import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
@@ -242,6 +243,11 @@ export default function FeedScreen() {
           duration={4000}
         />
       )}
+
+      {/* 개발용 알림 테스트 버튼 */}
+      <View style={themed($testButtonContainer)}>
+        <NotificationTestButton />
+      </View>
     </View>
   );
 }
@@ -306,6 +312,13 @@ const $loginButtonText: ThemedStyle<TextStyle> = () => ({
   color: "white",
   fontSize: 16,
   fontWeight: "700",
+});
+
+const $testButtonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  bottom: spacing.xl,
+  right: spacing.md,
+  zIndex: 1000,
 });
 
 // 헤더/모달/푸터 관련 스타일은 분리된 컴포넌트 내부로 이동

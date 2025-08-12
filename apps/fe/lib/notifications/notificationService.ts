@@ -21,7 +21,7 @@ import { ApolloClient, InMemoryCache } from "@apollo/client";
  * 알림 서비스 설정
  */
 const NOTIFICATION_CONFIG = {
-  USE_LOCAL_MODE: false, // 백엔드 연동 모드로 변경
+  // USE_LOCAL_MODE: false, // 이 옵션은 더 이상 사용하지 않음
   MAX_NOTIFICATIONS: 50, // 최대 알림 개수
   REFRESH_INTERVAL: 30000, // 30초마다 새 알림 확인
 };
@@ -31,7 +31,7 @@ const NOTIFICATION_CONFIG = {
  */
 class NotificationService {
   private notifications: Notification[] = [];
-  private isLocalMode: boolean = NOTIFICATION_CONFIG.USE_LOCAL_MODE;
+  // private isLocalMode: boolean = NOTIFICATION_CONFIG.USE_LOCAL_MODE;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private listeners: Array<(notifications: Notification[]) => void> = [];
   private apolloClient: ApolloClient<any> | null = null;
@@ -60,13 +60,14 @@ class NotificationService {
     // 마지막 확인 시점 로드
     await this.loadLastCheckTime();
 
-    if (this.isLocalMode) {
-      console.log("알림 서비스 초기화 - 로컬 모드");
-      this.notifications = this.generateMockNotifications();
-    } else {
-      console.log("알림 서비스 초기화 - 서버 모드");
-      await this.fetchNotificationsFromServer();
-    }
+    /*
+     * "백엔드와 연결 필요"
+     *
+     * 앱이 시작될 때, 로그인된 사용자의 알림 목록을 백엔드 서버로부터 가져옵니다.
+     * Apollo Client를 사용하여 GraphQL 쿼리를 실행합니다.
+     */
+    console.log("알림 서비스 초기화 - 서버 모드");
+    await this.fetchNotificationsFromServer();
 
     // 주기적으로 새 알림 확인
     this.startPeriodicRefresh();
@@ -79,15 +80,8 @@ class NotificationService {
     page: number = 1,
     limit: number = 20
   ): Promise<Notification[]> {
-    if (this.isLocalMode) {
-      // 로컬 모드: 페이지네이션 시뮬레이션
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      return this.notifications.slice(startIndex, endIndex);
-    } else {
-      // 서버 모드: 실제 API 호출
-      return await this.fetchNotificationsFromServer(page, limit);
-    }
+    // 항상 서버에서 실제 데이터를 가져옵니다.
+    return await this.fetchNotificationsFromServer(page, limit);
   }
 
   /**
@@ -101,59 +95,37 @@ class NotificationService {
    * 개별 알림 읽음 처리
    */
   async markAsRead(notificationId: string): Promise<void> {
-    if (this.isLocalMode) {
-      // 로컬 모드: 메모리에서 업데이트
-      this.notifications = this.notifications.map((notification) =>
-        notification.id === notificationId
-          ? { ...notification, isRead: true }
-          : notification
-      );
-      this.notifyListeners();
-    } else {
-      // 서버 모드: API 호출
-      await this.markAsReadOnServer(notificationId);
-    }
+    // 서버에 읽음 상태 업데이트를 요청하고, 성공하면 로컬 상태도 업데이트합니다.
+    await this.markAsReadOnServer(notificationId);
+    this.notifications = this.notifications.map((notification) =>
+      notification.id === notificationId
+        ? { ...notification, isRead: true }
+        : notification
+    );
+    this.notifyListeners();
   }
 
   /**
    * 모든 알림 읽음 처리
    */
   async markAllAsRead(): Promise<void> {
-    if (this.isLocalMode) {
-      // 로컬 모드: 메모리에서 업데이트
-      this.notifications = this.notifications.map((notification) => ({
-        ...notification,
-        isRead: true,
-      }));
-      this.notifyListeners();
-    } else {
-      // 서버 모드: API 호출
-      await this.markAllAsReadOnServer();
-    }
+    // 서버에 모든 알림 읽음 상태 업데이트를 요청하고, 성공하면 로컬 상태도 업데이트합니다.
+    await this.markAllAsReadOnServer();
+    this.notifications = this.notifications.map((notification) => ({
+      ...notification,
+      isRead: true,
+    }));
+    this.notifyListeners();
   }
 
   /**
    * 새 알림 추가 (시뮬레이션용)
    */
-  addNotification(notification: Omit<Notification, "id" | "createdAt">): void {
-    const newNotification: Notification = {
-      ...notification,
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.notifications.unshift(newNotification);
-
-    // 최대 개수 제한
-    if (this.notifications.length > NOTIFICATION_CONFIG.MAX_NOTIFICATIONS) {
-      this.notifications = this.notifications.slice(
-        0,
-        NOTIFICATION_CONFIG.MAX_NOTIFICATIONS
-      );
-    }
-
-    this.notifyListeners();
-  }
+  // 로컬에서 직접 알림을 추가하는 기능은 사용하지 않으므로 주석 처리합니다.
+  // 모든 알림은 서버로부터 받아야 합니다.
+  // addNotification(notification: Omit<Notification, "id" | "createdAt">): void {
+  //   ...
+  // }
 
   /**
    * 알림 변경 리스너 등록
@@ -199,72 +171,8 @@ class NotificationService {
   /**
    * 개발용 임시 알림 데이터 생성
    */
-  private generateMockNotifications(): Notification[] {
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    return [
-      {
-        id: "notif-1",
-        type: NotificationType.LIKE,
-        title: "새로운 좋아요",
-        message: "축구팬123님이 회원님의 게시물을 좋아합니다.",
-        createdAt: oneHourAgo.toISOString(),
-        isRead: false,
-        user: {
-          id: "user-1",
-          nickname: "축구팬123",
-          profileImageUrl: "https://i.pravatar.cc/150?u=user1",
-        },
-        post: {
-          id: "post-1",
-          content: "오늘 경기 정말 흥미진진했어요!",
-        },
-      },
-      {
-        id: "notif-2",
-        type: NotificationType.COMMENT,
-        title: "새로운 댓글",
-        message:
-          '스포츠매니아님이 회원님의 게시물에 댓글을 남겼습니다: "정말 좋은 분석이네요!"',
-        createdAt: oneHourAgo.toISOString(),
-        isRead: false,
-        user: {
-          id: "user-2",
-          nickname: "스포츠매니아",
-          profileImageUrl: "https://i.pravatar.cc/150?u=user2",
-        },
-        post: {
-          id: "post-2",
-          content: "프리미어리그 분석",
-        },
-      },
-      {
-        id: "notif-3",
-        type: NotificationType.FOLLOW,
-        title: "새로운 팔로워",
-        message: "경기분석가님이 회원님을 팔로우하기 시작했습니다.",
-        createdAt: threeDaysAgo.toISOString(),
-        isRead: true,
-        user: {
-          id: "user-3",
-          nickname: "경기분석가",
-          profileImageUrl: "https://i.pravatar.cc/150?u=user3",
-        },
-      },
-      {
-        id: "notif-4",
-        type: NotificationType.SYSTEM,
-        title: "새로운 기능 출시",
-        message:
-          "이제 GIF 파일도 업로드할 수 있습니다! 더 생생한 스포츠 순간을 공유해보세요.",
-        createdAt: oneWeekAgo.toISOString(),
-        isRead: true,
-      },
-    ];
-  }
+  // 목 데이터 생성 함수는 더 이상 사용하지 않으므로 삭제합니다.
+  // private generateMockNotifications(): Notification[] { ... }
 
   /**
    * 서버에서 알림 목록 가져오기
@@ -353,48 +261,23 @@ class NotificationService {
    * 주기적으로 새 알림 확인
    */
   private startPeriodicRefresh(): void {
-    this.refreshTimer = setInterval(async () => {
-      if (this.isLocalMode) {
-        // 로컬 모드에서는 랜덤하게 새 알림 생성 (10% 확률)
-        if (Math.random() < 0.1) {
-          this.simulateNewNotification();
-        }
-      } else {
-        // 서버 모드에서는 실제 새 알림 확인
-        await this.fetchNotificationsFromServer();
-      }
-    }, NOTIFICATION_CONFIG.REFRESH_INTERVAL);
+    /*
+     * "백엔드와 연결 필요"
+     *
+     * 주기적으로 새로운 알림이 있는지 서버에 확인하는 로직입니다.
+     * 현재는 비활성화되어 있으며, 실시간 업데이트는 WebSocket 구독으로 처리하는 것이
+     * 더 효율적일 수 있습니다. 필요시 이 로직을 활성화하거나 수정하세요.
+     */
+    // this.refreshTimer = setInterval(async () => {
+    //   await this.fetchNotificationsFromServer();
+    // }, NOTIFICATION_CONFIG.REFRESH_INTERVAL);
   }
 
   /**
    * 새 알림 시뮬레이션
    */
-  private simulateNewNotification(): void {
-    const mockNotifications = [
-      {
-        type: NotificationType.LIKE,
-        title: "새로운 좋아요",
-        message: "누군가가 회원님의 게시물을 좋아합니다.",
-        isRead: false,
-      },
-      {
-        type: NotificationType.COMMENT,
-        title: "새로운 댓글",
-        message: "회원님의 게시물에 새 댓글이 달렸습니다.",
-        isRead: false,
-      },
-      {
-        type: NotificationType.FOLLOW,
-        title: "새로운 팔로워",
-        message: "새로운 팔로워가 생겼습니다.",
-        isRead: false,
-      },
-    ];
-
-    const randomNotification =
-      mockNotifications[Math.floor(Math.random() * mockNotifications.length)];
-    this.addNotification(randomNotification);
-  }
+  // 로컬 시뮬레이션 함수는 더 이상 사용하지 않으므로 삭제합니다.
+  // private simulateNewNotification(): void { ... }
 
   /**
    * 신규 알림 확인 및 토스트 표시

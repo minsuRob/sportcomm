@@ -2,7 +2,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { ApolloClient, gql } from "@apollo/client";
-import { registerBackgroundNotificationTask } from "./backgroundTask";
+// import { registerBackgroundNotificationTask } from "./backgroundTask";
 import { showForegroundNotification } from "./foregroundNotificationHandler";
 
 let initialized = false;
@@ -117,9 +117,14 @@ export async function initExpoNotifications(
     options.onResponse?.(response);
   });
 
-  // 백그라운드 알림 처리를 위한 태스크 등록
-  // 참고: Expo Go에서는 지원되지 않으며, 개발 빌드나 프로덕션에서만 작동
-  await registerBackgroundNotificationTask();
+  /*
+   * "백엔드와 연결 필요"
+   *
+   * 아래 코드는 백그라운드 알림을 처리하기 위한 태스크를 등록하는 부분입니다.
+   * 이 기능은 Expo Go에서 동작하지 않으므로, 개발 빌드에서 테스트해야 합니다.
+   * Expo Go 환경에서는 이 부분을 주석 처리하여 오류를 방지합니다.
+   */
+  // await registerBackgroundNotificationTask();
 }
 
 /** 로컬 알림 테스트용 헬퍼 */

@@ -1,79 +1,43 @@
-import * as TaskManager from "expo-task-manager";
-import * as Notifications from "expo-notifications";
-
-/**
- * 백그라운드 알림 처리를 위한 태스크 정의
- * 참고: Expo Go에서는 지원되지 않으며, 개발 빌드나 프로덕션에서만 작동합니다.
+/*
+ * "백엔드와 연결 필요"
+ *
+ * 이 파일은 앱이 백그라운드 상태일 때 푸시 알림을 처리하기 위한 로직을 포함합니다.
+ * 이 기능은 Expo Go에서 테스트할 수 없으며, 네이티브 설정이 완료된
+ * 개발 빌드(Development Build) 또는 프로덕션 빌드에서만 정상적으로 동작합니다.
+ *
+ * --- 개발 절차 가이드 ---
+ * 1. app.config.js (또는 app.json)에 iOS/Android 백그라운드 모드 설정을 추가합니다.
+ * 2. `eas build --profile development` 명령어로 개발 빌드를 생성합니다.
+ * 3. 생성된 개발 빌드를 기기/시뮬레이터에 설치하여 테스트를 진행합니다.
+ * 4. TaskManager.defineTask 내부에 백그라운드에서 수신된 알림을 처리하는
+ *    상세 로직(예: 데이터 동기화, 뱃지 카운트 업데이트)을 구현합니다.
  */
 
-const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND-NOTIFICATION-TASK";
+// Expo Go 환경에서는 관련 코드가 오류를 발생시킬 수 있으므로 비워둡니다.
+// 개발 빌드 시 아래 주석을 해제하고 사용하세요.
 
-/**
- * 백그라운드 알림 태스크 정의
- * 앱이 백그라운드나 종료 상태일 때 알림을 처리합니다.
- */
-TaskManager.defineTask<Notifications.NotificationTaskPayload>(
-  BACKGROUND_NOTIFICATION_TASK,
-  ({ data, error, executionInfo }) => {
-    console.log("🔔 백그라운드 알림 태스크 실행:", executionInfo?.taskName);
+/*
+import * as TaskManager from 'expo-task-manager';
+import * as Notifications from 'expo-notifications';
 
-    if (error) {
-      console.error("❌ 백그라운드 알림 태스크 에러:", error);
-      return;
-    }
+export const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-NOTIFICATION-TASK';
 
-    if (data) {
-      // 알림 응답인지 직접 알림인지 구분
-      const isNotificationResponse = "actionIdentifier" in data;
-
-      if (isNotificationResponse) {
-        console.log("👆 사용자가 알림을 탭했습니다:", data);
-        // 사용자가 알림을 탭한 경우의 처리
-        // 예: 특정 화면으로 네비게이션, 데이터 동기화 등
-      } else {
-        console.log("📨 백그라운드에서 알림을 받았습니다:", data);
-        // 백그라운드에서 알림을 받은 경우의 처리
-        // 예: 데이터 동기화, 로컬 저장소 업데이트 등
-      }
-    }
+TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, ({ data, error, executionInfo }) => {
+  if (error) {
+    console.error('❌ 백그라운드 알림 태스크 오류:', error);
+    return;
   }
-);
+  if (data) {
+    console.log('📨 백그라운드 알림 수신됨:', (data as any).notification);
+  }
+});
 
-/**
- * 백그라운드 알림 태스크를 등록합니다.
- * 이 함수는 앱 초기화 시 호출되어야 합니다.
- */
-export async function registerBackgroundNotificationTask(): Promise<void> {
+export async function registerBackgroundNotificationTask() {
   try {
-    // TaskManager가 사용 가능한지 확인
-    const isTaskManagerAvailable =
-      TaskManager.isAvailableAsync && (await TaskManager.isAvailableAsync());
-
-    if (!isTaskManagerAvailable) {
-      console.log(
-        "⚠️ TaskManager를 사용할 수 없습니다 (Expo Go에서는 지원되지 않음)"
-      );
-      return;
-    }
-
-    // 백그라운드 알림 태스크 등록
     await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
-    console.log("✅ 백그라운드 알림 태스크가 등록되었습니다");
+    console.log('✅ 백그라운드 알림 태스크가 등록되었습니다.');
   } catch (error) {
-    console.warn("⚠️ 백그라운드 알림 태스크 등록 실패:", error);
+    console.error('❌ 백그라운드 알림 태스크 등록 실패:', error);
   }
 }
-
-/**
- * 백그라운드 알림 태스크를 해제합니다.
- */
-export async function unregisterBackgroundNotificationTask(): Promise<void> {
-  try {
-    await Notifications.unregisterTaskAsync(BACKGROUND_NOTIFICATION_TASK);
-    console.log("✅ 백그라운드 알림 태스크가 해제되었습니다");
-  } catch (error) {
-    console.warn("⚠️ 백그라운드 알림 태스크 해제 실패:", error);
-  }
-}
-
-export { BACKGROUND_NOTIFICATION_TASK };
+*/

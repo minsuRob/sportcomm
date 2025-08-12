@@ -184,16 +184,17 @@ export const useStoryData = ({
         }
 
         // 3. 뉴스 기사 추가
+        // 크롤링 보완 후 다시 작업.
         if (storyTypes.includes("news")) {
-          try {
-            const newsArticles = await fetchNewsArticles(3);
-            const newsStories = newsArticles.map((article, index) =>
-              transformNewsToStory(article, index)
-            );
-            combinedStories.push(...newsStories);
-          } catch (newsError) {
-            console.warn("뉴스 기사 로드 실패:", newsError);
-          }
+          // try {
+          //   const newsArticles = await fetchNewsArticles(3);
+          //   const newsStories = newsArticles.map((article, index) =>
+          //     transformNewsToStory(article, index)
+          //   );
+          //   combinedStories.push(...newsStories);
+          // } catch (newsError) {
+          //   console.warn("뉴스 기사 로드 실패:", newsError);
+          // }
         }
 
         // 4. 중복 제거 및 정렬

@@ -50,14 +50,14 @@ export default function FeedList({
         <PostCard post={item} onPostUpdated={onPostUpdated} />
       </View>
     ),
-    [themed, onPostUpdated],
+    [themed, onPostUpdated]
   );
 
   const keyExtractor = useCallback((item: Post) => item.id, []);
 
   const ItemSeparator = useCallback(
     () => <View style={themed($separator)} />,
-    [themed],
+    [themed]
   );
 
   const EmptyComponent = useCallback(
@@ -73,7 +73,7 @@ export default function FeedList({
         </View>
       </View>
     ),
-    [themed, t],
+    [themed, t]
   );
 
   // 플랫폼별 성능 최적화 설정
@@ -107,7 +107,7 @@ export default function FeedList({
       onEndReached,
       ListFooterComponent,
       optimizationProps,
-    ],
+    ]
   );
 
   if (isWeb()) {
@@ -118,13 +118,20 @@ export default function FeedList({
           {...flatListProps}
           style={themed($webFlatListContainer)}
           contentContainerStyle={themed($webContentContainer)}
+          showsVerticalScrollIndicator={true}
         />
       </View>
     );
   }
 
-  // 모바일 환경에서는 기본 FlatList
-  return <FlatList {...flatListProps} style={themed($container)} />;
+  // 모바일 환경에서는 기본 FlatList (스크롤바 표시)
+  return (
+    <FlatList
+      {...flatListProps}
+      style={themed($container)}
+      showsVerticalScrollIndicator={true}
+    />
+  );
 }
 
 // --- Styles ---

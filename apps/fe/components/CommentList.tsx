@@ -45,7 +45,7 @@ export default function CommentList({ comments }: CommentListProps) {
   // 메모이제이션된 렌더 함수들
   const renderItem = useCallback(
     ({ item }: { item: Comment }) => <CommentItem item={item} />,
-    []
+    [],
   );
 
   const keyExtractor = useCallback((item: Comment) => item.id, []);

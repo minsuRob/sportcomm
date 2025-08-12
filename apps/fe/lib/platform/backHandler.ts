@@ -66,7 +66,7 @@ export function useBackHandler({
     if (Platform.OS === "android") {
       const subscription = BackHandler.addEventListener(
         "hardwareBackPress",
-        handleBackPress
+        handleBackPress,
       );
 
       return () => subscription.remove();
@@ -81,7 +81,7 @@ export function useBackHandler({
 export function useModalBackHandler(
   isVisible: boolean,
   onClose: () => void,
-  enabled: boolean = true
+  enabled: boolean = true,
 ) {
   return useBackHandler({
     isModalOpen: isVisible,

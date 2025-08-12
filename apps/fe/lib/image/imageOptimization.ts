@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { Image, useWindowDimensions } from "react-native";
+import normalizeUrl from "normalize-url";
 
 // --- 상수 정의 ---
 export const IMAGE_CONSTANTS = {
@@ -297,9 +298,10 @@ export type MediaItem = {
 
 export const selectOptimizedImageUrl = (
   media: MediaItem | null | undefined,
-  mediaOptType: string
+  mediaOptType: string,
 ) => {
   if (!media) return undefined;
   const delimiter = "/public/";
-  return `${media?.url.split(delimiter)[0] + delimiter}/${mediaOptType}/${media.id}.webp`;
+  let url = `${media?.url.split(delimiter)[0] + delimiter}/${mediaOptType}/${media.id}.webp`;
+  return normalizeUrl(url);
 };

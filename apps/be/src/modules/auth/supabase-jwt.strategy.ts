@@ -75,9 +75,23 @@ export class SupabaseJwtStrategy extends PassportStrategy(
       console.log('🔍 JWT 토큰 대상(aud):', payload.aud);
       console.log(
         '🔍 JWT 토큰 만료시간(exp):',
-        payload.exp,
+        new Date(payload.exp * 1000).toLocaleString('ko-KR', {
+          year: '2-digit',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }),
         '현재시간:',
-        Math.floor(Date.now() / 1000),
+        new Date().toLocaleString('ko-KR', {
+          year: '2-digit',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }),
       );
 
       // Supabase JWT 페이로드 구조 확인

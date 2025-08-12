@@ -100,14 +100,14 @@ export function useFeedPosts() {
         // 2. 저장된 필터가 없으면 My Teams를 기본값으로 사용
         if (myTeamsData?.myTeams) {
           const allMyTeamIds = myTeamsData.myTeams.map(
-            (ut: UserTeam) => ut.team.id
+            (ut: UserTeam) => ut.team.id,
           );
           setSelectedTeamIds(allMyTeamIds.length > 0 ? allMyTeamIds : null);
 
           // AsyncStorage에 기본값 저장
           await AsyncStorage.setItem(
             STORAGE_KEY,
-            JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : [])
+            JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : []),
           );
           setFilterInitialized(true);
         }
@@ -145,7 +145,7 @@ export function useFeedPosts() {
             ...p,
             isMock: false,
             media: p.media || [],
-          }) as Post
+          }) as Post,
       );
 
     if (data.posts.page === 1) {
@@ -157,7 +157,7 @@ export function useFeedPosts() {
         const merged = Array.from(map.values());
         return merged.sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
       });
     }
@@ -210,7 +210,7 @@ export function useFeedPosts() {
         console.error("팀 필터 변경 실패:", error);
       }
     },
-    [refetch]
+    [refetch],
   );
 
   /**

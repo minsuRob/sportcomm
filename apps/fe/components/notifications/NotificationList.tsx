@@ -30,103 +30,16 @@ interface NotificationListProps {
 /**
  * 개발용 임시 알림 데이터
  */
-const getMockNotifications = (): Notification[] => {
-  const now = new Date();
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  return [
-    {
-      id: "notif-1",
-      type: NotificationType.LIKE,
-      title: "새로운 좋아요",
-      message: "축구팬123님이 회원님의 게시물을 좋아합니다.",
-      createdAt: oneHourAgo.toISOString(),
-      isRead: false,
-      user: {
-        id: "user-1",
-        nickname: "축구팬123",
-        profileImageUrl: "https://i.pravatar.cc/150?u=user1",
-      },
-      post: {
-        id: "post-1",
-        content: "오늘 경기 정말 흥미진진했어요!",
-      },
-    },
-    {
-      id: "notif-2",
-      type: NotificationType.COMMENT,
-      title: "새로운 댓글",
-      message:
-        '스포츠매니아님이 회원님의 게시물에 댓글을 남겼습니다: "정말 좋은 분석이네요!"',
-      createdAt: oneHourAgo.toISOString(),
-      isRead: false,
-      user: {
-        id: "user-2",
-        nickname: "스포츠매니아",
-        profileImageUrl: "https://i.pravatar.cc/150?u=user2",
-      },
-      post: {
-        id: "post-2",
-        content: "프리미어리그 분석",
-      },
-    },
-    {
-      id: "notif-3",
-      type: NotificationType.FOLLOW,
-      title: "새로운 팔로워",
-      message: "경기분석가님이 회원님을 팔로우하기 시작했습니다.",
-      createdAt: threeDaysAgo.toISOString(),
-      isRead: true,
-      user: {
-        id: "user-3",
-        nickname: "경기분석가",
-        profileImageUrl: "https://i.pravatar.cc/150?u=user3",
-      },
-    },
-    {
-      id: "notif-4",
-      type: NotificationType.MENTION,
-      title: "멘션 알림",
-      message:
-        '열정팬님이 회원님을 언급했습니다: "@김스포츠 님 의견이 궁금해요!"',
-      createdAt: threeDaysAgo.toISOString(),
-      isRead: true,
-      user: {
-        id: "user-4",
-        nickname: "열정팬",
-        profileImageUrl: "https://i.pravatar.cc/150?u=user4",
-      },
-    },
-    {
-      id: "notif-5",
-      type: NotificationType.SYSTEM,
-      title: "시스템 알림",
-      message:
-        "새로운 기능이 추가되었습니다! 이제 GIF 파일도 업로드할 수 있어요.",
-      createdAt: oneWeekAgo.toISOString(),
-      isRead: true,
-    },
-    {
-      id: "notif-6",
-      type: NotificationType.POST,
-      title: "새 게시물",
-      message: "팔로우하는 축구팬123님이 새 게시물을 작성했습니다.",
-      createdAt: oneWeekAgo.toISOString(),
-      isRead: true,
-      user: {
-        id: "user-1",
-        nickname: "축구팬123",
-        profileImageUrl: "https://i.pravatar.cc/150?u=user1",
-      },
-      post: {
-        id: "post-3",
-        content: "오늘 경기 하이라이트",
-      },
-    },
-  ];
-};
+/*
+ * "백엔드와 연결 필요"
+ *
+ * 아래 `getMockNotifications` 함수는 UI 개발 및 테스트를 위한 임시 데이터입니다.
+ * 실제 프로덕션 환경에서는 `notifications` prop을 통해 서버에서 받아온
+ * 실제 알림 데이터를 사용해야 합니다.
+ * 이 함수와 관련된 로직은 최종적으로 제거되거나, 스토리북과 같은
+ * UI 테스트 환경에서만 사용되도록 분리하는 것이 좋습니다.
+ */
+// const getMockNotifications = (): Notification[] => { ... };
 
 /**
  * 알림 목록 컴포넌트
@@ -144,12 +57,7 @@ export default function NotificationList({
   const [refreshing, setRefreshing] = useState(false);
 
   // 실제 알림이 없을 때 임시 데이터 사용 (개발 환경에서만)
-  const displayNotifications =
-    notifications && notifications.length > 0
-      ? notifications
-      : __DEV__
-        ? getMockNotifications()
-        : [];
+  const displayNotifications = notifications || [];
 
   // 읽지 않은 알림 개수 계산
   const unreadCount = displayNotifications.filter((n) => !n.isRead).length;

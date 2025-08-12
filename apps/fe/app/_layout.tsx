@@ -9,7 +9,6 @@ import Toast from "react-native-toast-message";
 import CustomToast from "@/components/CustomToast";
 import { ApolloProvider } from "@apollo/client";
 import GlobalWebLayout from "@/components/layout/GlobalWebLayout";
-import { client } from "@/lib/api/client";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import SafeAreaWrapper from "@/components/SafeAreaWrapper";
 
@@ -25,6 +24,8 @@ import { initializeSupabase, supabase } from "@/lib/supabase/client";
 import { initializeAuthListener } from "@/lib/auth/auth-listener";
 import { initExpoNotifications } from "@/lib/notifications/expoNotifications";
 import { client } from "@/lib/api/client";
+import { useRouter } from "expo-router";
+import { handleNotificationResponse } from "@/lib/notifications/foregroundNotificationHandler";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -53,6 +54,7 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const [fontsLoaded] = useFonts(customFontsToLoad);
   const [appInitialized, setAppInitialized] = React.useState(false);
+  const router = useRouter();
 
   React.useEffect(() => {
     // 앱의 핵심 서비스들을 초기화합니다.
@@ -68,14 +70,17 @@ export default function RootLayout() {
             onReceive: (n) =>
               console.log(
                 "Push received:",
-                n.request?.content?.title || n.request?.identifier
+                n.request?.content?.title || n.request?.identifier,
               ),
-            onResponse: (r) =>
+            onResponse: (r) => {
               console.log(
                 "Push tapped:",
                 r.notification?.request?.content?.title ||
-                  r.notification?.request?.identifier
-              ),
+                  r.notification?.request?.identifier,
+              );
+              // 알림 탭 시 적절한 화면으로 네비게이션
+              handleNotificationResponse(r, router);
+            },
           }),
         ]);
 
@@ -86,7 +91,7 @@ export default function RootLayout() {
           onSyncSuccess: (user) => {
             console.log(
               "✅ [_layout.tsx] 전역 인증 동기화 성공:",
-              user.nickname
+              user.nickname,
             );
           },
           onError: (error) => {

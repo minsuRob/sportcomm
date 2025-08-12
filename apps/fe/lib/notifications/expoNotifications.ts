@@ -2,6 +2,8 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { ApolloClient, gql } from "@apollo/client";
+// import { registerBackgroundNotificationTask } from "./backgroundTask";
+import { showForegroundNotification } from "./foregroundNotificationHandler";
 
 let initialized = false;
 
@@ -45,7 +47,7 @@ async function getExpoPushToken(): Promise<string | null> {
 
 async function registerTokenWithBackend(
   client: ApolloClient<any> | undefined,
-  token: string
+  token: string,
 ) {
   if (!client) return;
   try {
@@ -57,21 +59,23 @@ async function registerTokenWithBackend(
     // 백엔드에 아직 스키마가 없을 수 있으므로 경고만 남김
     console.warn(
       "registerPushToken backend call skipped:",
-      (e as any)?.message || e
+      (e as any)?.message || e,
     );
   }
 }
 
 export async function initExpoNotifications(
-  options: InitOptions = {}
+  options: InitOptions = {},
 ): Promise<void> {
   if (initialized) return;
   initialized = true;
 
-  // 알림 표시 기본 핸들러
+  // 알림 표시 기본 핸들러 - 포그라운드에서도 배너와 리스트에 표시
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: false,
       shouldSetBadge: false,
     }),
@@ -97,8 +101,14 @@ export async function initExpoNotifications(
     await registerTokenWithBackend(options.apolloClient, token);
   }
 
-  // 수신 리스너
-  Notifications.addNotificationReceivedListener((notification) => {
+  // 수신 리스너 - 포그라운드에서 받은 알림을 로컬 알림으로 표시
+  Notifications.addNotificationReceivedListener(async (notification) => {
+    console.log("📨 알림 수신됨:", notification.request.content);
+
+    // 포그라운드 알림 표시
+    await showForegroundNotification(notification);
+
+    // 기존 콜백 호출
     options.onReceive?.(notification);
   });
 
@@ -106,12 +116,25 @@ export async function initExpoNotifications(
   Notifications.addNotificationResponseReceivedListener((response) => {
     options.onResponse?.(response);
   });
+
+  /*
+   * "백엔드와 연결 필요"
+   *
+   * 아래 코드는 백그라운드 알림을 처리하기 위한 태스크를 등록하는 부분입니다.
+   * 이 기능은 Expo Go에서 동작하지 않으므로, 개발 빌드에서 테스트해야 합니다.
+   * Expo Go 환경에서는 이 부분을 주석 처리하여 오류를 방지합니다.
+   */
+  // await registerBackgroundNotificationTask();
 }
 
 /** 로컬 알림 테스트용 헬퍼 */
-export async function scheduleLocal(title: string, body: string) {
+export async function scheduleLocal(
+  title: string,
+  body: string,
+  data?: Record<string, any>,
+) {
   await Notifications.scheduleNotificationAsync({
-    content: { title, body },
+    content: { title, body, data: { ...data, isLocal: true } },
     trigger: null,
   });
 }

@@ -16,7 +16,10 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.releaseteamginger2.sportcommfernr"
+      "bundleIdentifier": "com.releaseteamginger2.sportcommfernr",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,7 +34,21 @@
       "favicon": "./assets/images/favicon.png",
       "publicPath": "/sportcomm/"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#ffffff",
+          "defaultChannel": "default",
+          "enableBackgroundRemoteNotifications": true
+        }
+      ]
+    ],
+    "notification": {
+      "iosDisplayInForeground": true
+    },
     "experiments": {
       "typedRoutes": true,
       "baseUrl": "/sportcomm"

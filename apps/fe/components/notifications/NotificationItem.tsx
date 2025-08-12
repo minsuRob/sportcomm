@@ -84,7 +84,7 @@ const formatTimeAgo = (dateString: string): string => {
   const now = new Date();
   const notificationDate = new Date(dateString);
   const diffMinutes = Math.floor(
-    (now.getTime() - notificationDate.getTime()) / (1000 * 60)
+    (now.getTime() - notificationDate.getTime()) / (1000 * 60),
   );
 
   if (diffMinutes < 1) return "방금 전";

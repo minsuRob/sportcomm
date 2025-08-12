@@ -21,7 +21,7 @@ const SUPABASE_URL = ENV_SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV_SUPABASE_ANON_KEY;
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error(
-    "Supabase URL and Anon Key must be provided in environment variables."
+    "Supabase URL and Anon Key must be provided in environment variables.",
   );
 }
 console.log("환경변수로 바꾸세요!! Supabase 클라이언트 초기화:", {
@@ -209,7 +209,7 @@ export const supabase = createClient<Database>(
         "x-application-name": "sportcomm-chat",
       },
     },
-  }
+  },
 );
 
 /**
@@ -248,7 +248,7 @@ export const getCurrentSession = () => {
  * @returns 구독 해제 함수
  */
 export const onAuthStateChange = (
-  callback: (event: string, session: any) => void
+  callback: (event: string, session: any) => void,
 ) => {
   return supabase.auth.onAuthStateChange(callback);
 };

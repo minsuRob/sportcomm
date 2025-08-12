@@ -9,6 +9,10 @@ import {
 import { showToast } from "@/components/CustomToast";
 import { getSession } from "@/lib/auth";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import {
+  triggerLikeNotification,
+  shouldTriggerDevelopmentNotifications,
+} from "@/lib/notifications/notificationTrigger";
 
 interface UsePostInteractionsProps {
   postId: string;
@@ -189,6 +193,15 @@ export function usePostInteractions({
           setLikeCount(
             likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
           );
+        }
+
+        // 개발 환경에서 즉시 알림 트리거 (실제로는 백엔드에서 푸시 알림이 와야 함)
+        if (
+          shouldTriggerDevelopmentNotifications() &&
+          likeSuccessful &&
+          currentUserId !== authorId
+        ) {
+          triggerLikeNotification(authorName, likeSuccessful);
         }
       })
       .finally(() => {

@@ -82,7 +82,7 @@ const StoryItem = ({
 
   // 첫 번째 이미지 미디어 선택
   const imageMedia = post.media.find(
-    (item) => item.type === "IMAGE" || item.type === "image"
+    (item) => item.type === "IMAGE" || item.type === "image",
   );
 
   // 썸네일 이미지 URL 생성
@@ -182,7 +182,7 @@ export default function StorySection({ onStoryPress }: StorySectionProps) {
         });
       }
     },
-    [onStoryPress, router]
+    [onStoryPress, router],
   );
 
   // 무한 스크롤 핸들러

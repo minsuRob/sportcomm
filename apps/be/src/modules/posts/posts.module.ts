@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PostsService } from './posts.service';
 import { MediaModule } from '../media/media.module';
 import { BookmarkModule } from '../bookmarks/bookmark.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { PostsResolver } from './posts.resolver';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
@@ -29,6 +30,8 @@ import { Media } from '../../entities/media.entity';
     MediaModule,
     // 북마크 관련 기능 사용을 위한 BookmarkModule 가져오기
     BookmarkModule,
+    // 알림 기능 사용을 위한 NotificationsModule 가져오기
+    NotificationsModule,
   ],
 
   // 서비스 및 리졸버 제공

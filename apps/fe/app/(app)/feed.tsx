@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 
 import FeedList from "@/components/FeedList";
-import { User, clearSession } from "@/lib/auth";
+import PostCard from "@/components/PostCard";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -182,19 +184,59 @@ export default function FeedScreen() {
       {/* 탭 슬라이더 */}
       <TabSlider tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* 스토리 섹션 (Feed 탭에서만 표시) */}
-      {activeTab === "feed" && currentUser && <StorySection />}
-
-      {/* 탭 콘텐츠 - flex: 1로 전체 공간 차지 */}
-      <View style={themed($contentContainer)}>
-        {activeTab === "feed" ? (
-          <FeedList
-            posts={posts}
+      {/* 전체 스크롤 컨테이너 - 스토리와 피드를 함께 스크롤 */}
+      <ScrollView
+        style={themed($scrollContainer)}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        refreshControl={
+          <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            onEndReached={handleLoadMore}
-            ListFooterComponent={<ListFooter loading={footerLoading} />}
+            tintColor={theme.colors.tint}
+            colors={[theme.colors.tint]}
           />
+        }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          if (
+            layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - paddingToBottom
+          ) {
+            // 스크롤이 하단에 도달했을 때 더 많은 게시물 로드
+            if (!fetching && activeTab === "feed") {
+              handleLoadMore();
+            }
+          }
+        }}
+        scrollEventThrottle={400}
+      >
+        {/* 스토리 섹션 (Feed 탭에서만 표시) */}
+        {activeTab === "feed" && currentUser && <StorySection />}
+
+        {/* 탭 콘텐츠 */}
+        {activeTab === "feed" ? (
+          <View style={themed($feedContainer)}>
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onPostUpdated={(updatedPost) => {
+                  // 게시물 업데이트 처리 (필요시 구현)
+                  console.log("Post updated:", updatedPost);
+                }}
+              />
+            ))}
+            {footerLoading && (
+              <View style={themed($loadingFooter)}>
+                <ActivityIndicator size="small" color={theme.colors.tint} />
+                <Text style={themed($loadingText)}>
+                  더 많은 게시물 로딩 중...
+                </Text>
+              </View>
+            )}
+          </View>
         ) : (
           <ChatRoomList
             currentUser={currentUser}
@@ -222,7 +264,7 @@ export default function FeedScreen() {
             onRefresh={loadChatRooms}
           />
         )}
-      </View>
+      </ScrollView>
 
       {/* 실시간 알림 토스트 */}
       {currentUser && (
@@ -309,8 +351,21 @@ const $loginButtonText: ThemedStyle<TextStyle> = () => ({
   fontWeight: "700",
 });
 
-const $contentContainer: ThemedStyle<ViewStyle> = () => ({
+const $scrollContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
+  backgroundColor: colors.background,
+});
+
+const $feedContainer: ThemedStyle<ViewStyle> = () => ({
+  // PostCard 자체에 마진이 있으므로 추가 패딩 불필요
+});
+
+const $loadingFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: spacing.lg,
+  gap: spacing.sm,
 });
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

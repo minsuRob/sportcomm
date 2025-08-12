@@ -222,7 +222,6 @@ export default function StorySection({
   const router = useRouter();
   const { currentUser } = useCurrentUser();
 
-  // 통합 스토리 데이터 훅 사용
   const { stories, loading, error, refresh, hasMore } = useStoryData({
     storyTypes,
     maxItems,
@@ -302,12 +301,18 @@ export default function StorySection({
       {/* 스토리 타입 표시 헤더 (선택사항) */}
       <View style={themed($headerContainer)}>
         <Text style={themed($headerTitle)}>스토리</Text>
-        <Text style={themed($headerSubtitle)}>
-          {storyTypes.includes("popular") && "인기 "}
-          {storyTypes.includes("myteams") && "내팀 "}
-          {storyTypes.includes("news") && "뉴스 "}
-          콘텐츠
-        </Text>
+        {/* <Text style={themed($headerSubtitle)}>
+          {storyTypes
+            .map((type) => {
+              if (type === "popular") return "인기";
+              if (type === "myteams") return "내팀";
+              if (type === "news") return "뉴스";
+              return null;
+            })
+            .filter(Boolean)
+            .join(" ")}
+          {" 콘텐츠"}
+        </Text> */}
       </View>
 
       <ScrollView

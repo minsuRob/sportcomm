@@ -12,13 +12,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { CreatePostCommand } from '../create-post.command';
-import { Post } from '../../../entities/post.entity';
-import { User } from '../../../entities/user.entity';
-import { Media } from '../../../entities/media.entity';
-import { PostCreatedEvent } from '../events/post-created.event';
-import { Transactional } from '../../../common/decorators/transactional.decorator';
+import { Post } from '../../../../entities/post.entity';
+import { User } from '../../../../entities/user.entity';
+import { Media } from '../../../../entities/media.entity';
+import { PostCreatedEvent } from '../../events/post-created.event';
+import { Transactional } from '../../../../common/decorators/transactional.decorator';
 
 @Injectable()
 @CommandHandler(CreatePostCommand)
@@ -44,7 +44,7 @@ export class CreatePostHandler implements ICommandHandler<CreatePostCommand> {
     // 1. 작성자 존재 확인
     const author = await this.userRepository.findOne({
       where: { id: authorId },
-      relations: ['myTeams', 'myTeams.team'],
+      relations: ['userTeams', 'userTeams.team'],
     });
 
     if (!author) {
@@ -52,7 +52,7 @@ export class CreatePostHandler implements ICommandHandler<CreatePostCommand> {
     }
 
     // 2. 팀 권한 확인
-    const hasTeamAccess = author.myTeams?.some(
+    const hasTeamAccess = author.userTeams?.some(
       (userTeam) => userTeam.team.id === teamId,
     );
 
@@ -65,8 +65,10 @@ export class CreatePostHandler implements ICommandHandler<CreatePostCommand> {
     // 3. 미디어 파일 확인 및 연결
     let mediaFiles: Media[] = [];
     if (mediaIds && mediaIds.length > 0) {
-      mediaFiles = await this.mediaRepository.findBy({
-        id: mediaIds as any, // TypeORM In 연산자 사용
+      mediaFiles = await this.mediaRepository.find({
+        where: {
+          id: In(mediaIds),
+        },
       });
 
       if (mediaFiles.length !== mediaIds.length) {
@@ -82,7 +84,7 @@ export class CreatePostHandler implements ICommandHandler<CreatePostCommand> {
 
     // 4. 게시물 생성
     const post = this.postRepository.create({
-      title: title?.trim() || null,
+      title: title?.trim() || undefined,
       content: content.trim(),
       type,
       teamId,
@@ -96,12 +98,12 @@ export class CreatePostHandler implements ICommandHandler<CreatePostCommand> {
     });
 
     // 5. 게시물 저장
-    const savedPost = await this.postRepository.save(post);
+    const savedPost = (await this.postRepository.save(post)) as Post;
 
     // 6. 미디어 파일에 게시물 ID 연결
-    if (mediaFiles.length > 0) {
+    if (mediaFiles.length > 0 && mediaIds) {
       await this.mediaRepository.update(
-        { id: mediaIds as any },
+        { id: In(mediaIds) },
         { postId: savedPost.id },
       );
     }
@@ -114,7 +116,7 @@ export class CreatePostHandler implements ICommandHandler<CreatePostCommand> {
       savedPost.author.id,
       savedPost.teamId,
       savedPost.type,
-      savedPost.title,
+      savedPost.title || null,
       savedPost.content,
       mediaFiles.map((m) => m.id),
     );

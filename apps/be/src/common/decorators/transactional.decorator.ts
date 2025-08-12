@@ -17,9 +17,9 @@ export interface TransactionalOptions {
    * 트랜잭션 격리 수준
    */
   isolationLevel?:
-    | 'READ_UNCOMMITTED'
-    | 'READ_COMMITTED'
-    | 'REPEATABLE_READ'
+    | 'READ UNCOMMITTED'
+    | 'READ COMMITTED'
+    | 'REPEATABLE READ'
     | 'SERIALIZABLE';
 
   /**
@@ -68,7 +68,7 @@ export const Transactional = (
   options: TransactionalOptions = {},
 ): MethodDecorator => {
   return SetMetadata(TRANSACTIONAL_KEY, {
-    isolationLevel: options.isolationLevel || 'READ_COMMITTED',
+    isolationLevel: options.isolationLevel || 'READ COMMITTED',
     readOnly: options.readOnly || false,
     timeout: options.timeout || 30000, // 30초 기본 타임아웃
     propagation: options.propagation || 'REQUIRED',

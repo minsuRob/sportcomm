@@ -9,8 +9,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PostCreatedEvent } from '../post-created.event';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../../../entities/user.entity';
-import { Notification } from '../../../entities/notification.entity';
+import { User } from '../../../../entities/user.entity';
+import {
+  Notification,
+  NotificationType,
+} from '../../../../entities/notification.entity';
 
 @Injectable()
 @EventsHandler(PostCreatedEvent)
@@ -66,11 +69,11 @@ export class PostCreatedHandler implements IEventHandler<PostCreatedEvent> {
       // 팔로워들에게 알림 생성
       const notifications = author.followers.map((follower) =>
         this.notificationRepository.create({
-          userId: follower.id,
-          type: 'NEW_POST',
+          recipientId: follower.id,
+          type: NotificationType.NEW_POST,
           title: '새 게시물 알림',
           message: `${author.nickname}님이 새 게시물을 작성했습니다.`,
-          data: {
+          metadata: {
             postId: event.postId,
             authorId: event.authorId,
             authorNickname: author.nickname,

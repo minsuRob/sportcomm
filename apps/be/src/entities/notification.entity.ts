@@ -22,6 +22,7 @@ export enum NotificationType {
   FOLLOW = 'FOLLOW', // 팔로우
   MENTION = 'MENTION', // 멘션
   POST = 'POST', // 새 게시물
+  NEW_POST = 'NEW_POST', // 새 게시물 (별칭)
   SYSTEM = 'SYSTEM', // 시스템 알림
   LIKE_MILESTONE = 'LIKE_MILESTONE', // 좋아요 마일스톤 (10개, 50개, 100개 등)
 }

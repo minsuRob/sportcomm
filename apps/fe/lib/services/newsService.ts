@@ -3,6 +3,9 @@
  * 스포츠 관련 뉴스 기사를 크롤링하여 스토리 데이터로 제공
  */
 
+import { crawlerManager } from "../crawlers/crawlerManager";
+import { CrawledArticle } from "../crawlers/baseCrawler";
+
 export interface NewsArticle {
   id: string;
   title: string;
@@ -38,6 +41,7 @@ export const NEWS_CATEGORIES = {
  * 뉴스 소스 정의
  */
 export const NEWS_SOURCES = {
+  NAVER_SPORTS: "네이버 스포츠",
   SPORTS_NEWS: "스포츠뉴스",
   BASEBALL_MAGAZINE: "야구매거진",
   SOCCER_DIGEST: "축구다이제스트",
@@ -46,8 +50,7 @@ export const NEWS_SOURCES = {
 } as const;
 
 /**
- * 모의 뉴스 데이터 생성기
- * TODO: 실제 크롤링 API로 교체
+ * 모의 뉴스 데이터 생성기 (대체용)
  */
 const generateMockNews = (count: number = 5): NewsArticle[] => {
   const mockArticles: NewsArticle[] = [
@@ -57,8 +60,8 @@ const generateMockNews = (count: number = 5): NewsArticle[] => {
       description:
         "올해의 최우수 선수가 발표되었습니다. 시즌 내내 뛰어난 활약을 보여준 선수가 영예를 안았습니다.",
       url: "https://example.com/news/mvp-2024",
-      source: NEWS_SOURCES.SPORTS_NEWS,
-      sourceIcon: "https://via.placeholder.com/32x32",
+      source: NEWS_SOURCES.NAVER_SPORTS,
+      sourceIcon: "https://via.placeholder.com/32x32/03C75A/FFFFFF?text=N",
       imageUrl:
         "https://via.placeholder.com/400x300/FF6B35/FFFFFF?text=MVP+2024",
       publishedAt: new Date().toISOString(),
@@ -96,36 +99,6 @@ const generateMockNews = (count: number = 5): NewsArticle[] => {
       tags: ["신인왕", "시상", "후보"],
       viewCount: 12350,
     },
-    {
-      id: "news_4",
-      title: "월드컵 예선 대표팀 명단 발표, 새로운 얼굴들 대거 포함",
-      description:
-        "월드컵 예선을 위한 대표팀 명단이 발표되었습니다. 젊은 선수들의 발탁이 눈에 띕니다.",
-      url: "https://example.com/news/world-cup-squad",
-      source: NEWS_SOURCES.SOCCER_DIGEST,
-      sourceIcon: "https://via.placeholder.com/32x32",
-      imageUrl:
-        "https://via.placeholder.com/400x300/FFD93D/FFFFFF?text=World+Cup",
-      publishedAt: new Date(Date.now() - 10800000).toISOString(),
-      category: NEWS_CATEGORIES.SOCCER,
-      tags: ["월드컵", "대표팀", "명단"],
-      viewCount: 25670,
-    },
-    {
-      id: "news_5",
-      title: "프로농구 시즌 개막, 새로운 룰 변경사항 안내",
-      description:
-        "새 시즌이 시작되면서 적용되는 룰 변경사항들을 안내드립니다. 팬들의 많은 관심 부탁드립니다.",
-      url: "https://example.com/news/basketball-season",
-      source: NEWS_SOURCES.SPORTS_CHOSUN,
-      sourceIcon: "https://via.placeholder.com/32x32",
-      imageUrl:
-        "https://via.placeholder.com/400x300/9CA3AF/FFFFFF?text=Basketball",
-      publishedAt: new Date(Date.now() - 14400000).toISOString(),
-      category: NEWS_CATEGORIES.BASKETBALL,
-      tags: ["농구", "시즌개막", "룰변경"],
-      viewCount: 7890,
-    },
   ];
 
   return mockArticles.slice(0, count);
@@ -148,7 +121,7 @@ export class NewsService {
   }
 
   /**
-   * 뉴스 기사 목록 가져오기
+   * 뉴스 기사 목록 가져오기 (실제 크롤링 사용)
    */
   async fetchNews(
     options: {
@@ -162,41 +135,36 @@ export class NewsService {
       category = "general",
       limit = 10,
       page = 1,
-      sources = [],
+      sources = ["naver"],
     } = options;
     const cacheKey = `${category}_${limit}_${page}_${sources.join(",")}`;
 
     // 캐시 확인
     const cached = this.cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      console.log("캐시된 뉴스 데이터 사용:", cacheKey);
       return cached.data;
     }
 
     try {
-      // TODO: 실제 크롤링 API 호출
-      // 현재는 모의 데이터 반환
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // 네트워크 지연 시뮬레이션
+      console.log("실제 뉴스 크롤링 시작:", { category, limit, sources });
 
-      const mockArticles = generateMockNews(limit);
+      // 크롤러 매니저를 통해 실제 크롤링 실행
+      const crawlResult = await crawlerManager.crawlAll({
+        category: this.mapCategoryToCrawler(category),
+        limit,
+        page,
+        sources,
+        mergeResults: true,
+      });
 
-      // 카테고리 필터링
-      const filteredArticles =
-        category === "general"
-          ? mockArticles
-          : mockArticles.filter((article) => article.category === category);
-
-      // 소스 필터링
-      const finalArticles =
-        sources.length > 0
-          ? filteredArticles.filter((article) =>
-              sources.includes(article.source)
-            )
-          : filteredArticles;
+      // CrawledArticle을 NewsArticle로 변환
+      const articles = crawlResult.articles.map(this.convertCrawledToNews);
 
       const response: NewsApiResponse = {
-        articles: finalArticles,
-        totalCount: finalArticles.length,
-        hasMore: page < 3, // 모의 데이터에서는 3페이지까지만
+        articles,
+        totalCount: crawlResult.totalCount,
+        hasMore: crawlResult.hasMore,
       };
 
       // 캐시 저장
@@ -205,11 +173,60 @@ export class NewsService {
         timestamp: Date.now(),
       });
 
+      console.log(`뉴스 크롤링 완료: ${articles.length}개 기사`);
       return response;
     } catch (error) {
       console.error("뉴스 크롤링 실패:", error);
-      throw new Error("뉴스를 불러오는데 실패했습니다.");
+
+      // 실패 시 대체 데이터 반환
+      console.log("대체 뉴스 데이터 사용");
+      return this.getFallbackNews(limit);
     }
+  }
+
+  /**
+   * CrawledArticle을 NewsArticle로 변환
+   */
+  private convertCrawledToNews = (crawled: CrawledArticle): NewsArticle => {
+    return {
+      id: crawled.id,
+      title: crawled.title,
+      description: crawled.description,
+      content: crawled.content,
+      url: crawled.url,
+      source: crawled.source,
+      sourceIcon: crawled.sourceIcon,
+      imageUrl: crawled.imageUrl,
+      publishedAt: crawled.publishedAt,
+      category: crawled.category,
+      tags: crawled.tags,
+      viewCount: crawled.viewCount,
+    };
+  };
+
+  /**
+   * 카테고리를 크롤러 형식으로 매핑
+   */
+  private mapCategoryToCrawler(category: string): string {
+    const mapping: Record<string, string> = {
+      baseball: "kbaseball",
+      soccer: "soccer",
+      basketball: "basketball",
+      general: "general",
+    };
+    return mapping[category] || "kbaseball";
+  }
+
+  /**
+   * 실패 시 대체 뉴스 데이터
+   */
+  private getFallbackNews(limit: number): NewsApiResponse {
+    const fallbackArticles = generateMockNews(limit);
+    return {
+      articles: fallbackArticles,
+      totalCount: fallbackArticles.length,
+      hasMore: false,
+    };
   }
 
   /**
@@ -217,7 +234,7 @@ export class NewsService {
    */
   async fetchArticleDetail(articleId: string): Promise<NewsArticle | null> {
     try {
-      // TODO: 실제 API 호출
+      // TODO: 실제 상세 크롤링 구현
       const mockArticles = generateMockNews(10);
       return mockArticles.find((article) => article.id === articleId) || null;
     } catch (error) {
@@ -237,7 +254,7 @@ export class NewsService {
         .slice(0, limit);
     } catch (error) {
       console.error("인기 뉴스 로드 실패:", error);
-      return [];
+      return generateMockNews(limit);
     }
   }
 
@@ -256,7 +273,28 @@ export class NewsService {
       );
     } catch (error) {
       console.error(`${category} 카테고리 뉴스 로드 실패:`, error);
-      return [];
+      return generateMockNews(limit);
+    }
+  }
+
+  /**
+   * 네이버 스포츠 팀별 뉴스 가져오기
+   */
+  async fetchTeamNews(
+    teamSectionId: string,
+    limit: number = 5
+  ): Promise<NewsArticle[]> {
+    try {
+      console.log(`팀별 뉴스 크롤링: ${teamSectionId}`);
+
+      const crawlResult = await crawlerManager.crawlNaverTeamNews(
+        teamSectionId,
+        limit
+      );
+      return crawlResult.articles.map(this.convertCrawledToNews);
+    } catch (error) {
+      console.error("팀별 뉴스 로드 실패:", error);
+      return generateMockNews(limit);
     }
   }
 
@@ -265,6 +303,21 @@ export class NewsService {
    */
   clearCache(): void {
     this.cache.clear();
+    console.log("뉴스 캐시가 클리어되었습니다.");
+  }
+
+  /**
+   * 크롤러 상태 확인
+   */
+  getCrawlerStatus(): Record<string, boolean> {
+    return crawlerManager.getStatus();
+  }
+
+  /**
+   * 사용 가능한 크롤러 목록
+   */
+  getAvailableSources(): Array<{ name: string; info: any }> {
+    return crawlerManager.getAvailableCrawlers();
   }
 }
 

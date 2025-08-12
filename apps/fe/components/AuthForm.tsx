@@ -1,11 +1,19 @@
 import React, { useRef, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Button } from "./ui/button";
 import { Ionicons } from "@expo/vector-icons";
 import { saveSession, getSession, User } from "../lib/auth";
 import { signIn, signUp } from "../lib/supabase/auth";
 import { useAuth } from "../lib/hooks/useAuth";
-import type { AuthError } from "@supabase/supabase-js";
+import { useBackHandler } from "../lib/platform/backHandler";
 
 const SocialLogins = ({
   onSocialLogin,
@@ -79,12 +87,42 @@ export default function AuthForm({
     },
   });
 
+  // Android 백 버튼 처리 (키보드가 열려있을 때 키보드 닫기)
+  useBackHandler({
+    onBackPress: () => {
+      // 키보드가 열려있으면 키보드 닫기
+      Keyboard.dismiss();
+      return true; // 기본 백 동작 막기
+    },
+    enabled: true,
+  });
+
   // 에러 상태 초기화
   const clearErrors = () => {
     setEmailError("");
     setNicknameError("");
     setPasswordError("");
     setGeneralError("");
+  };
+
+  // 실시간 유효성 검사 함수들
+  const validateEmail = (email: string): string => {
+    if (!email.trim()) return "";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email) ? "" : "올바른 이메일 주소를 입력하세요.";
+  };
+
+  const validateNickname = (nickname: string): string => {
+    if (!nickname.trim()) return "";
+    if (nickname.length < 2) return "닉네임은 2자 이상이어야 합니다.";
+    if (nickname.length > 20) return "닉네임은 20자 이하여야 합니다.";
+    return "";
+  };
+
+  const validatePassword = (password: string): string => {
+    if (!password.trim()) return "";
+    if (password.length < 6) return "비밀번호는 6자 이상이어야 합니다.";
+    return "";
   };
 
   const processAuthAction = async (action: "login" | "register") => {
@@ -328,157 +366,177 @@ export default function AuthForm({
   };
 
   return (
-    <View className="flex-1 justify-center p-8 bg-background">
-      <Text className="text-3xl font-bold text-center text-foreground mb-8">
-        {isLogin ? "다시 오신 걸 환영합니다" : "계정 만들기"}
-      </Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAwareScrollView
+        className="flex-1 bg-background"
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          padding: 32,
+        }}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
+        extraScrollHeight={20}
+      >
+        <Text className="text-3xl font-bold text-center text-foreground mb-8">
+          {isLogin ? "다시 오신 걸 환영합니다" : "계정 만들기"}
+        </Text>
 
-      {/* 이메일 입력 필드 */}
-      <View className="mb-4">
-        <TextInput
-          className={`h-12 px-4 bg-input border rounded-md text-foreground text-base ${
-            emailError ? "border-red-500" : "border-border"
-          }`}
-          placeholder="이메일 주소"
-          placeholderTextColor="hsl(var(--muted-foreground))"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            if (emailError) setEmailError(""); // 입력 시 에러 초기화
-          }}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          returnKeyType="next"
-          onSubmitEditing={() => {
-            if (isLogin) {
-              passwordInputRef.current?.focus();
-            } else {
-              nicknameInputRef.current?.focus();
-            }
-          }}
-        />
-        {emailError ? (
-          <View className="flex-row items-center mt-2">
-            <Ionicons name="alert-circle" color="#ef4444" size={16} />
-            <Text className="text-red-500 text-sm ml-2">{emailError}</Text>
-          </View>
-        ) : null}
-      </View>
-
-      {/* 닉네임 입력 필드 (회원가입 시에만) */}
-      {!isLogin && (
+        {/* 이메일 입력 필드 */}
         <View className="mb-4">
           <TextInput
-            ref={nicknameInputRef}
             className={`h-12 px-4 bg-input border rounded-md text-foreground text-base ${
-              nicknameError ? "border-red-500" : "border-border"
+              emailError ? "border-red-500" : "border-border"
             }`}
-            placeholder="닉네임"
-            placeholderTextColor="hsl(var(--muted-foreground))"
-            value={nickname}
+            placeholder="이메일 주소"
+            placeholderTextColor="#9CA3AF"
+            value={email}
             onChangeText={(text) => {
-              setNickname(text);
-              if (nicknameError) setNicknameError(""); // 입력 시 에러 초기화
+              setEmail(text);
+              // 실시간 유효성 검사
+              const error = validateEmail(text);
+              setEmailError(error);
             }}
+            keyboardType="email-address"
             autoCapitalize="none"
             returnKeyType="next"
-            onSubmitEditing={() => passwordInputRef.current?.focus()}
+            onSubmitEditing={() => {
+              if (isLogin) {
+                passwordInputRef.current?.focus();
+              } else {
+                nicknameInputRef.current?.focus();
+              }
+            }}
           />
-          {nicknameError ? (
+          {emailError ? (
             <View className="flex-row items-center mt-2">
               <Ionicons name="alert-circle" color="#ef4444" size={16} />
-              <Text className="text-red-500 text-sm ml-2">{nicknameError}</Text>
+              <Text className="text-red-500 text-sm ml-2">{emailError}</Text>
             </View>
           ) : null}
         </View>
-      )}
 
-      {/* 비밀번호 입력 필드 */}
-      <View className="mb-4">
-        <View className="relative">
-          <TextInput
-            ref={passwordInputRef}
-            className={`h-12 px-4 pr-12 bg-input border rounded-md text-foreground text-base ${
-              passwordError ? "border-red-500" : "border-border"
-            }`}
-            placeholder="비밀번호"
-            placeholderTextColor="hsl(var(--muted-foreground))"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (passwordError) setPasswordError(""); // 입력 시 에러 초기화
-            }}
-            secureTextEntry={!isPasswordVisible}
-            returnKeyType="done"
-            onSubmitEditing={handleContinue}
-          />
-          <TouchableOpacity
-            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            className="absolute right-4 top-3.5"
-          >
-            {isPasswordVisible ? (
-              <Ionicons
-                name="eye-off"
-                color="hsl(var(--muted-foreground))"
-                size={20}
-              />
-            ) : (
-              <Ionicons
-                name="eye"
-                color="hsl(var(--muted-foreground))"
-                size={20}
-              />
-            )}
-          </TouchableOpacity>
+        {/* 닉네임 입력 필드 (회원가입 시에만) */}
+        {!isLogin && (
+          <View className="mb-4">
+            <TextInput
+              ref={nicknameInputRef}
+              className={`h-12 px-4 bg-input border rounded-md text-foreground text-base ${
+                nicknameError ? "border-red-500" : "border-border"
+              }`}
+              placeholder="닉네임"
+              placeholderTextColor="#9CA3AF"
+              value={nickname}
+              onChangeText={(text) => {
+                setNickname(text);
+                // 실시간 유효성 검사
+                const error = validateNickname(text);
+                setNicknameError(error);
+              }}
+              autoCapitalize="none"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
+            />
+            {nicknameError ? (
+              <View className="flex-row items-center mt-2">
+                <Ionicons name="alert-circle" color="#ef4444" size={16} />
+                <Text className="text-red-500 text-sm ml-2">
+                  {nicknameError}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        )}
+
+        {/* 비밀번호 입력 필드 */}
+        <View className="mb-4">
+          <View className="relative">
+            <TextInput
+              ref={passwordInputRef}
+              className={`h-12 px-4 pr-12 bg-input border rounded-md text-foreground text-base ${
+                passwordError ? "border-red-500" : "border-border"
+              }`}
+              placeholder="비밀번호"
+              placeholderTextColor="#9CA3AF"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                // 실시간 유효성 검사
+                const error = validatePassword(text);
+                setPasswordError(error);
+              }}
+              secureTextEntry={!isPasswordVisible}
+              returnKeyType="done"
+              onSubmitEditing={handleContinue}
+            />
+            <TouchableOpacity
+              onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+              className="absolute right-4 top-3.5"
+            >
+              {isPasswordVisible ? (
+                <Ionicons
+                  name="eye-off"
+                  color="hsl(var(--muted-foreground))"
+                  size={20}
+                />
+              ) : (
+                <Ionicons
+                  name="eye"
+                  color="hsl(var(--muted-foreground))"
+                  size={20}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
+          {passwordError ? (
+            <View className="flex-row items-center mt-2">
+              <Ionicons name="alert-circle" color="#ef4444" size={16} />
+              <Text className="text-red-500 text-sm ml-2">{passwordError}</Text>
+            </View>
+          ) : null}
         </View>
-        {passwordError ? (
-          <View className="flex-row items-center mt-2">
+
+        {/* 일반 에러 메시지 */}
+        {generalError ? (
+          <View className="flex-row items-center mb-4">
             <Ionicons name="alert-circle" color="#ef4444" size={16} />
-            <Text className="text-red-500 text-sm ml-2">{passwordError}</Text>
+            <Text className="text-red-500 text-sm ml-2">{generalError}</Text>
           </View>
         ) : null}
-      </View>
 
-      {/* 일반 에러 메시지 */}
-      {generalError ? (
-        <View className="flex-row items-center mb-4">
-          <Ionicons name="alert-circle" color="#ef4444" size={16} />
-          <Text className="text-red-500 text-sm ml-2">{generalError}</Text>
-        </View>
-      ) : null}
+        {isLogin && (
+          <TouchableOpacity
+            className="mb-6 self-start"
+            onPress={handleForgotPassword}
+          >
+            <Text className="text-primary font-semibold">
+              비밀번호를 잊으셨나요?
+            </Text>
+          </TouchableOpacity>
+        )}
 
-      {isLogin && (
-        <TouchableOpacity
-          className="mb-6 self-start"
-          onPress={handleForgotPassword}
+        <Button
+          size="lg"
+          className="bg-foreground"
+          onPress={handleContinue}
+          disabled={loginLoading || registerLoading}
         >
-          <Text className="text-primary font-semibold">
-            비밀번호를 잊으셨나요?
+          <Text className="text-background">계속</Text>
+        </Button>
+
+        <View className="flex-row justify-center items-center my-6">
+          <Text className="text-muted-foreground">
+            {isLogin ? "계정이 없으신가요? " : "이미 계정이 있으신가요? "}
           </Text>
-        </TouchableOpacity>
-      )}
+          <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
+            <Text className="text-primary font-semibold">
+              {isLogin ? "회원 가입" : "로그인"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      <Button
-        size="lg"
-        className="bg-foreground"
-        onPress={handleContinue}
-        disabled={loginLoading || registerLoading}
-      >
-        <Text className="text-background">계속</Text>
-      </Button>
-
-      <View className="flex-row justify-center items-center my-6">
-        <Text className="text-muted-foreground">
-          {isLogin ? "계정이 없으신가요? " : "이미 계정이 있으신가요? "}
-        </Text>
-        <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
-          <Text className="text-primary font-semibold">
-            {isLogin ? "회원 가입" : "로그인"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <SocialLogins onSocialLogin={handleSocialLogin} />
-    </View>
+        <SocialLogins onSocialLogin={handleSocialLogin} />
+      </KeyboardAwareScrollView>
+    </TouchableWithoutFeedback>
   );
 }

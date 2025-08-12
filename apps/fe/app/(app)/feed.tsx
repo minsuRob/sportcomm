@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   View,
@@ -7,12 +7,13 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 
 import FeedList from "@/components/FeedList";
-import { Post } from "@/components/PostCard";
-import { User, clearSession } from "@/lib/auth";
+import PostCard from "@/components/PostCard";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -22,7 +23,7 @@ import TabSlider from "@/components/TabSlider";
 import ChatRoomList from "@/components/chat/ChatRoomList";
 import { NotificationToast } from "@/components/notifications";
 import { showToast } from "@/components/CustomToast";
-import NotificationTestButton from "@/components/notifications/NotificationTestButton";
+
 import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
@@ -31,7 +32,6 @@ import { useChatRooms } from "@/lib/hooks/useChatRooms";
 import { useFeedPosts } from "@/lib/hooks/useFeedPosts";
 
 // --- Type Definitions ---
-const PAGE_SIZE = 10; // 사용처 유지 (탭 구성 등 외부 영향 없음)
 
 export default function FeedScreen() {
   const { themed, theme } = useAppTheme();
@@ -50,7 +50,6 @@ export default function FeedScreen() {
     handleLoadMore,
     selectedTeamIds,
     handleTeamFilterChange,
-    filterInitialized,
   } = useFeedPosts();
 
   const {
@@ -71,13 +70,8 @@ export default function FeedScreen() {
     }
   }, [lastError]);
 
-  const handleLoginSuccess = (user: User) => {
+  const handleLoginSuccess = () => {
     setAuthModalVisible(false);
-  };
-
-  const handleLogout = async () => {
-    await clearSession();
-    await reloadCurrentUser();
   };
 
   /**
@@ -108,13 +102,8 @@ export default function FeedScreen() {
 
   // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
   useEffect(() => {
-    const handleFocus = () => {
-      // 페이지로 돌아왔을 때 피드 새로고침
-      handleRefresh();
-    };
-
     // 페이지 포커스 이벤트 리스너 (필요시 추가)
-    // navigation.addListener('focus', handleFocus);
+    // navigation.addListener('focus', handleRefresh);
 
     return () => {
       // cleanup
@@ -195,45 +184,87 @@ export default function FeedScreen() {
       {/* 탭 슬라이더 */}
       <TabSlider tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* 스토리 섹션 (Feed 탭에서만 표시) */}
-      {activeTab === "feed" && currentUser && <StorySection />}
-
-      {/* 탭 콘텐츠 */}
-      {activeTab === "feed" ? (
-        <FeedList
-          posts={posts}
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          onEndReached={handleLoadMore}
-          ListFooterComponent={<ListFooter loading={footerLoading} />}
-        />
-      ) : (
-        <ChatRoomList
-          currentUser={currentUser}
-          showHeader={false}
-          mockRooms={
-            currentUser?.isAdmin
-              ? []
-              : chatRooms.map((r) => ({
-                  id: r.id,
-                  name: r.name,
-                  description: r.description,
-                  isPrivate: r.isPrivate,
-                  type: r.type as "PUBLIC" | "GROUP" | "PRIVATE" | undefined,
-                  isRoomActive: r.isRoomActive ?? true,
-                  maxParticipants: r.maxParticipants ?? 0,
-                  currentParticipants: r.currentParticipants ?? 0,
-                  lastMessage: r.lastMessage ?? undefined,
-                  lastMessageAt: r.lastMessageAt ?? undefined,
-                  unreadCount: r.unreadCount ?? 0,
-                  members: [],
-                  createdAt: r.createdAt ?? new Date().toISOString(),
-                }))
+      {/* 전체 스크롤 컨테이너 - 스토리와 피드를 함께 스크롤 */}
+      <ScrollView
+        style={themed($scrollContainer)}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.tint}
+            colors={[theme.colors.tint]}
+          />
+        }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const paddingToBottom = 20;
+          if (
+            layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - paddingToBottom
+          ) {
+            // 스크롤이 하단에 도달했을 때 더 많은 게시물 로드
+            if (!fetching && activeTab === "feed") {
+              handleLoadMore();
+            }
           }
-          isLoading={chatRoomsLoading}
-          onRefresh={loadChatRooms}
-        />
-      )}
+        }}
+        scrollEventThrottle={400}
+      >
+        {/* 스토리 섹션 (Feed 탭에서만 표시) */}
+        {activeTab === "feed" && currentUser && <StorySection />}
+
+        {/* 탭 콘텐츠 */}
+        {activeTab === "feed" ? (
+          <View style={themed($feedContainer)}>
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onPostUpdated={(updatedPost) => {
+                  // 게시물 업데이트 처리 (필요시 구현)
+                  console.log("Post updated:", updatedPost);
+                }}
+              />
+            ))}
+            {footerLoading && (
+              <View style={themed($loadingFooter)}>
+                <ActivityIndicator size="small" color={theme.colors.tint} />
+                <Text style={themed($loadingText)}>
+                  더 많은 게시물 로딩 중...
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <ChatRoomList
+            currentUser={currentUser}
+            showHeader={false}
+            mockRooms={
+              currentUser?.isAdmin
+                ? []
+                : chatRooms.map((r) => ({
+                    id: r.id,
+                    name: r.name,
+                    description: r.description,
+                    isPrivate: r.isPrivate,
+                    type: r.type as "PUBLIC" | "GROUP" | "PRIVATE" | undefined,
+                    isRoomActive: r.isRoomActive ?? true,
+                    maxParticipants: r.maxParticipants ?? 0,
+                    currentParticipants: r.currentParticipants ?? 0,
+                    lastMessage: r.lastMessage ?? undefined,
+                    lastMessageAt: r.lastMessageAt ?? undefined,
+                    unreadCount: r.unreadCount ?? 0,
+                    members: [],
+                    createdAt: r.createdAt ?? new Date().toISOString(),
+                  }))
+            }
+            isLoading={chatRoomsLoading}
+            onRefresh={loadChatRooms}
+          />
+        )}
+      </ScrollView>
 
       {/* 실시간 알림 토스트 */}
       {currentUser && (
@@ -244,10 +275,16 @@ export default function FeedScreen() {
         />
       )}
 
-      {/* 개발용 알림 테스트 버튼 */}
-      <View style={themed($testButtonContainer)}>
-        <NotificationTestButton />
-      </View>
+      {/* 게시물 작성 플로팅 버튼 */}
+      {currentUser && (
+        <TouchableOpacity
+          style={themed($createPostButton)}
+          onPress={() => router.push("/(modals)/create-post")}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={28} color="white" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -314,10 +351,38 @@ const $loginButtonText: ThemedStyle<TextStyle> = () => ({
   fontWeight: "700",
 });
 
-const $testButtonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $scrollContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+});
+
+const $feedContainer: ThemedStyle<ViewStyle> = () => ({
+  // PostCard 자체에 마진이 있으므로 추가 패딩 불필요
+});
+
+const $loadingFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: spacing.lg,
+  gap: spacing.sm,
+});
+
+const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",
   bottom: spacing.xl,
   right: spacing.md,
+  width: 56,
+  height: 56,
+  borderRadius: 28,
+  backgroundColor: colors.tint,
+  justifyContent: "center",
+  alignItems: "center",
+  shadowColor: colors.tint,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 8,
+  elevation: 8,
   zIndex: 1000,
 });
 

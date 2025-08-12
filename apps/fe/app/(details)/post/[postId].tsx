@@ -251,6 +251,7 @@ export default function PostDetailScreen() {
           comments={post.comments || []}
           currentUser={currentUser}
           onCommentAdded={handleCommentAdded}
+          postAuthorId={post.author?.id}
         />
       </ScrollView>
     </KeyboardAvoidingView>

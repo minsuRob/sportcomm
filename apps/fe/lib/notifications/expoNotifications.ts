@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { ApolloClient, gql } from "@apollo/client";
 import { registerBackgroundNotificationTask } from "./backgroundTask";
+import { showForegroundNotification } from "./foregroundNotificationHandler";
 
 let initialized = false;
 
@@ -100,8 +101,14 @@ export async function initExpoNotifications(
     await registerTokenWithBackend(options.apolloClient, token);
   }
 
-  // 수신 리스너
-  Notifications.addNotificationReceivedListener((notification) => {
+  // 수신 리스너 - 포그라운드에서 받은 알림을 로컬 알림으로 표시
+  Notifications.addNotificationReceivedListener(async (notification) => {
+    console.log("📨 알림 수신됨:", notification.request.content);
+
+    // 포그라운드 알림 표시
+    await showForegroundNotification(notification);
+
+    // 기존 콜백 호출
     options.onReceive?.(notification);
   });
 

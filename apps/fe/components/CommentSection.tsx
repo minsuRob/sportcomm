@@ -15,6 +15,10 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { CREATE_COMMENT } from "@/lib/graphql";
 import { User } from "@/lib/auth";
+import {
+  triggerCommentNotification,
+  shouldTriggerDevelopmentNotifications,
+} from "@/lib/notifications/notificationTrigger";
 
 // --- 타입 정의 ---
 interface Comment {
@@ -33,6 +37,7 @@ interface CommentSectionProps {
   comments: Comment[] | null | undefined;
   currentUser: User | null;
   onCommentAdded?: () => void;
+  postAuthorId?: string; // 게시물 작성자 ID (알림용)
 }
 
 /**
@@ -44,6 +49,7 @@ export default function CommentSection({
   comments,
   currentUser,
   onCommentAdded,
+  postAuthorId,
 }: CommentSectionProps) {
   const { themed, theme } = useAppTheme();
   const [commentText, setCommentText] = useState("");
@@ -106,6 +112,16 @@ export default function CommentSection({
       if (shouldUpdateUI && onCommentAdded) {
         // 비동기로 실행하여 React 렌더링 사이클과 분리
         setTimeout(onCommentAdded, 300);
+
+        // 개발 환경에서 즉시 댓글 알림 트리거 (자신의 게시물이 아닌 경우만)
+        if (
+          shouldTriggerDevelopmentNotifications() &&
+          currentUser &&
+          postAuthorId &&
+          currentUser.id !== postAuthorId
+        ) {
+          triggerCommentNotification(currentUser.nickname, content);
+        }
       }
     }
   };

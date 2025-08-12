@@ -270,6 +270,19 @@ export class NotificationsService {
     // 실시간 알림 이벤트 발생 (WebSocket 등에서 사용)
     this.eventEmitter.emit('notification.created', fullNotification);
 
+    // Expo 푸시 알림 전송
+    await this.sendExpoPush(dto.recipientId, {
+      title,
+      body: message,
+      data: {
+        type: dto.type,
+        postId: dto.postId,
+        commentId: dto.commentId,
+        senderId: dto.senderId,
+        notificationId: fullNotification.id,
+      },
+    });
+
     return fullNotification;
   }
 

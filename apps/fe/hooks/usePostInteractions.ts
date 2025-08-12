@@ -9,6 +9,10 @@ import {
 import { showToast } from "@/components/CustomToast";
 import { getSession } from "@/lib/auth";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import {
+  triggerLikeNotification,
+  shouldTriggerDevelopmentNotifications,
+} from "@/lib/notifications/notificationTrigger";
 
 interface UsePostInteractionsProps {
   postId: string;
@@ -75,7 +79,7 @@ export function usePostInteractions({
       // 개발 환경에서만 디버깅 로그
       if (process.env.NODE_ENV === "development") {
         console.log(
-          `[DEBUG] usePostInteractions 초기화 - isLiked: ${initialIsLiked}, isBookmarked: ${initialIsBookmarked}`,
+          `[DEBUG] usePostInteractions 초기화 - isLiked: ${initialIsLiked}, isBookmarked: ${initialIsBookmarked}`
         );
       }
     }
@@ -180,15 +184,24 @@ export function usePostInteractions({
         // 개발 환경에서만 디버깅 로그
         if (process.env.NODE_ENV === "development") {
           console.log(
-            `[DEBUG] 좋아요 응답 - postId: ${postId}, likeSuccessful: ${likeSuccessful}, 예상값: ${newLikedStatus}`,
+            `[DEBUG] 좋아요 응답 - postId: ${postId}, likeSuccessful: ${likeSuccessful}, 예상값: ${newLikedStatus}`
           );
         }
 
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(
-            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1
           );
+        }
+
+        // 개발 환경에서 즉시 알림 트리거 (실제로는 백엔드에서 푸시 알림이 와야 함)
+        if (
+          shouldTriggerDevelopmentNotifications() &&
+          likeSuccessful &&
+          currentUserId !== authorId
+        ) {
+          triggerLikeNotification(authorName, likeSuccessful);
         }
       })
       .finally(() => {

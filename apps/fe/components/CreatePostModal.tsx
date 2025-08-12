@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Modal,
@@ -18,6 +18,7 @@ import { showToast } from "@/components/CustomToast";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
+import { useBackHandler } from "@/lib/platform/backHandler";
 import { CREATE_POST } from "@/lib/graphql";
 import { PostType } from "./PostCard";
 
@@ -88,26 +89,32 @@ export default function CreatePostModal({
         "작성 취소",
         "작성 중인 게시물이 있습니다. 작성을 취소하시겠습니까?",
         [
-          {
-            text: "계속 작성",
-            style: "cancel",
-          },
+          { text: "계속 작성", style: "cancel" },
           {
             text: "작성 취소",
             style: "destructive",
-            onPress: () => {
-              setContent("");
-              setSelectedMedia(null);
-              setSelectedType(null);
-              onClose();
-            },
+            onPress: resetAndClose,
           },
         ],
-        { cancelable: true },
+        { cancelable: true }
       );
     } else {
-      onClose();
+      resetAndClose();
     }
+    return true; // useBackHandler에 이벤트 처리 완료 알림
+  };
+
+  // Android 백 버튼 처리
+  useBackHandler({
+    enabled: visible,
+    onBackPress: handleCloseConfirm,
+  });
+
+  const resetAndClose = () => {
+    setContent("");
+    setSelectedMedia(null);
+    setSelectedType(null);
+    onClose();
   };
 
   /**

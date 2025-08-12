@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   ViewStyle,
   TextStyle,
   ImageStyle,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
@@ -63,21 +66,15 @@ export default function CommentSection({
   /**
    * 댓글 작성 핸들러
    */
-  const handleSubmitComment = async () => {
+  const handleSubmitComment = useCallback(async () => {
     if (!commentText.trim() || !currentUser || isSubmitting) return;
 
     setIsSubmitting(true);
-
-    // 작성할 댓글 내용 저장
     const content = commentText.trim();
-
-    // 입력창을 즉시 비웁니다. 사용자 경험 향상을 위함
     setCommentText("");
 
-    let shouldUpdateUI = false;
-
     try {
-      const { data, errors } = await executeCreateComment({
+      await executeCreateComment({
         variables: {
           input: {
             postId,
@@ -86,91 +83,96 @@ export default function CommentSection({
         },
       });
 
-      if (errors) {
-        // 네트워크 또는 GraphQL 오류가 발생했지만,
-        // 요청은 서버에 도달했고 댓글은 생성되었을 수 있음
-        console.error("댓글 작성 중 오류 발생:", errors);
+      if (onCommentAdded) {
+        onCommentAdded();
+      }
 
-        // 오류 메시지에 author 필드 관련 내용이 있으면 백엔드에 저장은 됐지만
-        // 응답에 문제가 있는 경우로 판단합니다
-        if (errors.some((error) => error.message.includes("author"))) {
-          console.log("댓글이 저장되었을 수 있습니다. UI 업데이트 예약...");
-          shouldUpdateUI = true;
-        }
-      } else if (data) {
-        // 성공적으로 댓글이 생성됨
-        shouldUpdateUI = true;
+      if (
+        shouldTriggerDevelopmentNotifications() &&
+        currentUser &&
+        postAuthorId &&
+        currentUser.id !== postAuthorId
+      ) {
+        triggerCommentNotification(currentUser.nickname, content);
       }
     } catch (error) {
       console.error("댓글 작성 처리 중 예외 발생:", error);
-      // 예외가 발생해도 서버에 댓글이 저장되었을 수 있습니다
-      shouldUpdateUI = true;
+      // 에러 발생 시 사용자에게 피드백을 주는 로직 추가 가능
     } finally {
       setIsSubmitting(false);
-
-      // 함수 종료 시점에 한 번만 UI 업데이트 호출
-      if (shouldUpdateUI && onCommentAdded) {
-        // 비동기로 실행하여 React 렌더링 사이클과 분리
-        setTimeout(onCommentAdded, 300);
-
-        // 개발 환경에서 즉시 댓글 알림 트리거 (자신의 게시물이 아닌 경우만)
-        if (
-          shouldTriggerDevelopmentNotifications() &&
-          currentUser &&
-          postAuthorId &&
-          currentUser.id !== postAuthorId
-        ) {
-          triggerCommentNotification(currentUser.nickname, content);
-        }
-      }
     }
-  };
+  }, [
+    commentText,
+    currentUser,
+    isSubmitting,
+    postId,
+    postAuthorId,
+    onCommentAdded,
+    executeCreateComment,
+  ]);
 
   return (
-    <View style={themed($container)}>
-      {/* 댓글 제목 */}
-      <Text style={themed($title)}>댓글 {safeComments.length}개</Text>
+    <KeyboardAwareScrollView
+      style={themed($container)}
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1 }}>
+          {/* 댓글 제목 */}
+          <Text style={themed($title)}>댓글 {safeComments.length}개</Text>
 
-      {/* 댓글 목록 */}
-      {safeComments.length > 0 ? (
-        safeComments.map((comment) => (
-          <View key={comment.id} style={themed($commentItem)}>
-            <Image
-              source={{
-                uri:
-                  comment.author.profileImageUrl ||
-                  `https://i.pravatar.cc/150?u=${comment.author.id}`,
-              }}
-              style={themed($commentAvatar)}
-            />
-            <View style={themed($commentContent)}>
-              <View style={themed($commentHeader)}>
-                <Text style={themed($commentAuthor)}>
-                  {comment.author.nickname}
-                </Text>
-                <Text style={themed($commentDate)}>
-                  {new Date(comment.createdAt).toLocaleDateString("ko-KR", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
+          {/* 댓글 목록 */}
+          {safeComments.length > 0 ? (
+            safeComments.map((comment) => (
+              <View key={comment.id} style={themed($commentItem)}>
+                <Image
+                  source={{
+                    uri:
+                      comment.author.profileImageUrl ||
+                      `https://i.pravatar.cc/150?u=${comment.author.id}`,
+                  }}
+                  style={themed($commentAvatar)}
+                />
+                <View style={themed($commentContent)}>
+                  <View style={themed($commentHeader)}>
+                    <Text style={themed($commentAuthor)}>
+                      {comment.author.nickname}
+                    </Text>
+                    <Text style={themed($commentDate)}>
+                      {new Date(comment.createdAt).toLocaleDateString("ko-KR", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                  </View>
+                  <Text style={themed($commentText)}>{comment.content}</Text>
+                </View>
               </View>
-              <Text style={themed($commentText)}>{comment.content}</Text>
+            ))
+          ) : (
+            /* 댓글이 없을 때 */
+            <View style={themed($emptyState)}>
+              <Text style={themed($emptyText)}>
+                아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!
+              </Text>
             </View>
-          </View>
-        ))
-      ) : (
-        /* 댓글이 없을 때 */
-        <View style={themed($emptyState)}>
-          <Text style={themed($emptyText)}>
-            아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!
-          </Text>
-        </View>
-      )}
+          )}
 
-      {/* 댓글 입력 영역 */}
+          {/* 로그인하지 않은 사용자를 위한 안내 */}
+          {!currentUser && (
+            <View style={themed($loginPrompt)}>
+              <Text style={themed($loginPromptText)}>
+                댓글을 작성하려면 로그인이 필요합니다.
+              </Text>
+            </View>
+          )}
+        </View>
+      </TouchableWithoutFeedback>
+
+      {/* 댓글 입력 영역 (KeyboardAwareScrollView 외부에 배치하여 키보드와 함께 올라오도록 함) */}
       {currentUser && (
         <View style={themed($inputSection)}>
           <Image
@@ -190,6 +192,8 @@ export default function CommentSection({
             multiline
             maxLength={500}
             editable={!isSubmitting}
+            returnKeyType="send"
+            onSubmitEditing={handleSubmitComment}
           />
           <TouchableOpacity
             style={[
@@ -203,16 +207,7 @@ export default function CommentSection({
           </TouchableOpacity>
         </View>
       )}
-
-      {/* 로그인하지 않은 사용자를 위한 안내 */}
-      {!currentUser && (
-        <View style={themed($loginPrompt)}>
-          <Text style={themed($loginPromptText)}>
-            댓글을 작성하려면 로그인이 필요합니다.
-          </Text>
-        </View>
-      )}
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 

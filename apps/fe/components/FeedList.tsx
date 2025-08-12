@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { FlatList, View, Text, ViewStyle, TextStyle } from "react-native";
 import PostCard, { Post } from "./PostCard"; // Import PostCard and the Post type from it
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
-import { getWebFeedCardStyle } from "./layout/WebCenteredLayout";
 import { isWeb } from "@/lib/platform";
+import { getFlatListOptimizationProps } from "@/lib/platform/optimization";
 
 interface FeedListProps {
   posts: Post[];
@@ -43,27 +43,71 @@ export default function FeedList({
     });
   }, []);
 
-  const renderItem = ({ item }: { item: Post }) => (
-    <View style={isWeb() ? themed($webItemContainer) : undefined}>
-      <PostCard post={item} onPostUpdated={onPostUpdated} />
-    </View>
+  // 메모이제이션된 렌더 함수들
+  const renderItem = useCallback(
+    ({ item }: { item: Post }) => (
+      <View style={isWeb() ? themed($webItemContainer) : undefined}>
+        <PostCard post={item} onPostUpdated={onPostUpdated} />
+      </View>
+    ),
+    [themed, onPostUpdated]
   );
 
-  const keyExtractor = (item: Post) => item.id;
+  const keyExtractor = useCallback((item: Post) => item.id, []);
 
-  const ItemSeparator = () => <View style={themed($separator)} />;
+  const ItemSeparator = useCallback(
+    () => <View style={themed($separator)} />,
+    [themed]
+  );
 
-  const EmptyComponent = () => (
-    <View style={isWeb() ? themed($webItemContainer) : undefined}>
-      <View style={themed($emptyContainer)}>
-        <Text style={themed($emptyTitle)}>
-          {t(TRANSLATION_KEYS.FEED_NO_POSTS)}
-        </Text>
-        <Text style={themed($emptySubtitle)}>
-          {t(TRANSLATION_KEYS.FEED_PULL_REFRESH)}
-        </Text>
+  const EmptyComponent = useCallback(
+    () => (
+      <View style={isWeb() ? themed($webItemContainer) : undefined}>
+        <View style={themed($emptyContainer)}>
+          <Text style={themed($emptyTitle)}>
+            {t(TRANSLATION_KEYS.FEED_NO_POSTS)}
+          </Text>
+          <Text style={themed($emptySubtitle)}>
+            {t(TRANSLATION_KEYS.FEED_PULL_REFRESH)}
+          </Text>
+        </View>
       </View>
-    </View>
+    ),
+    [themed, t]
+  );
+
+  // 플랫폼별 성능 최적화 설정
+  const optimizationProps = useMemo(() => getFlatListOptimizationProps(), []);
+
+  // 성능 최적화를 위한 FlatList props 메모이제이션
+  const flatListProps = useMemo(
+    () => ({
+      data: posts,
+      renderItem,
+      keyExtractor,
+      ItemSeparatorComponent: ItemSeparator,
+      ListEmptyComponent: ListEmptyComponent || EmptyComponent,
+      onRefresh,
+      refreshing,
+      onEndReached,
+      onEndReachedThreshold: 0.5,
+      ListFooterComponent,
+      // 플랫폼별 성능 최적화 props
+      ...optimizationProps,
+    }),
+    [
+      posts,
+      renderItem,
+      keyExtractor,
+      ItemSeparator,
+      ListEmptyComponent,
+      EmptyComponent,
+      onRefresh,
+      refreshing,
+      onEndReached,
+      ListFooterComponent,
+      optimizationProps,
+    ]
   );
 
   if (isWeb()) {
@@ -71,37 +115,21 @@ export default function FeedList({
     return (
       <View style={themed($webOuterContainer)}>
         <FlatList
-          data={posts}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          ItemSeparatorComponent={ItemSeparator}
-          ListEmptyComponent={ListEmptyComponent || EmptyComponent}
-          onRefresh={onRefresh}
-          refreshing={refreshing}
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={ListFooterComponent}
+          {...flatListProps}
           style={themed($webFlatListContainer)}
           contentContainerStyle={themed($webContentContainer)}
+          showsVerticalScrollIndicator={true}
         />
       </View>
     );
   }
 
-  // 모바일 환경에서는 기본 FlatList
+  // 모바일 환경에서는 기본 FlatList (스크롤바 표시)
   return (
     <FlatList
-      data={posts}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      ItemSeparatorComponent={ItemSeparator}
-      ListEmptyComponent={ListEmptyComponent || EmptyComponent}
-      onRefresh={onRefresh}
-      refreshing={refreshing}
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.5}
-      ListFooterComponent={ListFooterComponent}
+      {...flatListProps}
       style={themed($container)}
+      showsVerticalScrollIndicator={true}
     />
   );
 }
@@ -147,7 +175,7 @@ const $webItemContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderColor: colors.border + "30",
 });
 
-const $separator: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $separator: ThemedStyle<ViewStyle> = () => ({
   height: 0, // PostCard에서 marginBottom으로 간격 처리
   backgroundColor: "transparent",
 });

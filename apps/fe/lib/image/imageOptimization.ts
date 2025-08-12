@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { Image, useWindowDimensions } from "react-native";
+import normalizeUrl from "normalize-url";
 
 // --- 상수 정의 ---
 export const IMAGE_CONSTANTS = {

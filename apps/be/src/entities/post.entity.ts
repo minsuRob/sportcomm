@@ -74,6 +74,7 @@ export class Post extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 50,
+    default: 'ANALYSIS',
     comment: '게시물 타입 (ANALYSIS, CHEERING, HIGHLIGHT)',
   })
   @IsString({ message: '게시물 타입은 문자열이어야 합니다.' })

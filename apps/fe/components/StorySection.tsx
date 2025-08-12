@@ -179,12 +179,12 @@ const StoryItemComponent = ({
         <StoryTypeBadge type={story.type} />
 
         {/* 인기 표시 (인기 게시물이거나 좋아요가 많은 경우) */}
-        {(story.metadata?.isPopular ||
+        {/* {(story.metadata?.isPopular ||
           (story.metadata?.likeCount && story.metadata.likeCount > 10)) && (
           <View style={themed($popularIndicator)}>
             <Text style={themed($popularText)}>{"🔥"}</Text>
           </View>
-        )}
+        )} */}
       </View>
 
       <View style={themed($storyInfo)}>

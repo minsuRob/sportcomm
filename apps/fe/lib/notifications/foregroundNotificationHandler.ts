@@ -25,20 +25,33 @@ export async function showForegroundNotification(
   try {
     const { title, body, data } = notification.request.content;
 
-    // 알림 데이터 파싱
-    const notificationData = data as ForegroundNotificationData;
+    // 무한 루프 방지: 로컬에서 생성된 알림은 다시 처리하지 않음
+    if (data?.isLocal) {
+      return;
+    }
+
+    // 안전한 데이터 파싱 및 타입 처리
+    const notificationData = (data ||
+      {}) as unknown as ForegroundNotificationData;
+    const type = notificationData.type || "UNKNOWN";
 
     // 알림 타입에 따른 이모지 추가
-    const emoji = getNotificationEmoji(notificationData.type);
-    const enhancedTitle = `${emoji} ${title}`;
+    const emoji = getNotificationEmoji(type);
+    const enhancedTitle = title?.startsWith(emoji)
+      ? title
+      : `${emoji} ${title || ""}`;
 
-    // 로컬 알림으로 즉시 표시
-    await scheduleLocal(enhancedTitle, body || "새로운 알림이 있습니다.");
+    // 로컬 알림으로 즉시 표시 (isLocal 플래그 추가)
+    await scheduleLocal(
+      enhancedTitle,
+      body || "새로운 알림이 있습니다.",
+      notificationData
+    );
 
     console.log("✅ 포그라운드 알림 표시됨:", {
       title: enhancedTitle,
       body,
-      type: notificationData.type,
+      type: type,
     });
   } catch (error) {
     console.error("❌ 포그라운드 알림 표시 실패:", error);
@@ -61,11 +74,11 @@ function getNotificationEmoji(type: string): string {
     case "POST":
       return "📝";
     case "SYSTEM":
-      return "🔔";
+      return "🔔"; // 기본 이모지
     case "LIKE_MILESTONE":
       return "🎉";
     default:
-      return "🔔";
+      return "🔔"; // 기본 이모지
   }
 }
 
@@ -78,7 +91,7 @@ export function handleNotificationResponse(
 ): void {
   try {
     const data = response.notification.request.content
-      .data as ForegroundNotificationData;
+      .data as unknown as ForegroundNotificationData;
 
     console.log("🔔 알림 탭됨:", data);
 

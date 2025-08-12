@@ -123,9 +123,13 @@ export async function initExpoNotifications(
 }
 
 /** 로컬 알림 테스트용 헬퍼 */
-export async function scheduleLocal(title: string, body: string) {
+export async function scheduleLocal(
+  title: string,
+  body: string,
+  data?: Record<string, any>
+) {
   await Notifications.scheduleNotificationAsync({
-    content: { title, body },
+    content: { title, body, data: { ...data, isLocal: true } },
     trigger: null,
   });
 }

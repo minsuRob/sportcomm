@@ -302,7 +302,6 @@ export const selectOptimizedImageUrl = (
 ) => {
   if (!media) return undefined;
   const delimiter = "/public/";
-  return `${media?.url.split(delimiter)[0] + delimiter}/${mediaOptType}/${media.id}.webp`;
   let url = `${media?.url.split(delimiter)[0] + delimiter}/${mediaOptType}/${media.id}.webp`;
   return normalizeUrl(url);
 };

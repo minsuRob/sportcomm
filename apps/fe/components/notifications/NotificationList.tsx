@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   FlatList,
@@ -85,8 +85,11 @@ export default function NotificationList({
   /**
    * 알림 아이템 렌더링
    */
-  const renderNotificationItem = ({ item }: { item: Notification }) => (
-    <NotificationItem notification={item} onMarkAsRead={onMarkAsRead} />
+  const renderNotificationItem = useCallback(
+    ({ item }: { item: Notification }) => (
+      <NotificationItem notification={item} onMarkAsRead={onMarkAsRead} />
+    ),
+    [onMarkAsRead]
   );
 
   /**

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -84,7 +84,7 @@ const formatTimeAgo = (dateString: string): string => {
   const now = new Date();
   const notificationDate = new Date(dateString);
   const diffMinutes = Math.floor(
-    (now.getTime() - notificationDate.getTime()) / (1000 * 60),
+    (now.getTime() - notificationDate.getTime()) / (1000 * 60)
   );
 
   if (diffMinutes < 1) return "방금 전";
@@ -102,114 +102,112 @@ const formatTimeAgo = (dateString: string): string => {
 /**
  * 개별 알림 아이템 컴포넌트
  */
-export default function NotificationItem({
-  notification,
-  onPress,
-  onMarkAsRead,
-}: NotificationItemProps) {
-  const { themed, theme } = useAppTheme();
-  const router = useRouter();
+const NotificationItem = React.memo(
+  ({ notification, onPress, onMarkAsRead }: NotificationItemProps) => {
+    const { themed, theme } = useAppTheme();
+    const router = useRouter();
 
-  const notificationStyle = getNotificationStyle(notification.type);
+    const notificationStyle = getNotificationStyle(notification.type);
 
-  // 알림 시스템 초기화 (최초 1회)
-  useEffect(() => {
-    // FE 상위(App)에서 초기화하는 것이 일반적이지만, 안전망으로 한 번 더 보장
-    initExpoNotifications().catch(() => {});
-  }, []);
+    // 알림 시스템 초기화 (최초 1회)
+    useEffect(() => {
+      // FE 상위(App)에서 초기화하는 것이 일반적이지만, 안전망으로 한 번 더 보장
+      initExpoNotifications().catch(() => {});
+    }, []);
 
-  /**
-   * 알림 클릭 핸들러
-   */
-  const handlePress = () => {
-    // 읽지 않은 알림이면 읽음 처리
-    if (!notification.isRead && onMarkAsRead) {
-      onMarkAsRead(notification.id);
-    }
+    /**
+     * 알림 클릭 핸들러
+     */
+    const handlePress = useCallback(() => {
+      if (!notification.isRead && onMarkAsRead) {
+        onMarkAsRead(notification.id);
+      }
 
-    // 커스텀 핸들러가 있으면 실행
-    if (onPress) {
-      onPress(notification);
-      return;
-    }
+      if (onPress) {
+        onPress(notification);
+        return;
+      }
 
-    // 기본 네비게이션 처리
-    if (notification.actionUrl) {
-      router.push(notification.actionUrl as any);
-    } else if (notification.post) {
-      router.push({
-        pathname: "/post/[postId]",
-        params: { postId: notification.post.id },
-      });
-    } else if (notification.user) {
-      router.push({
-        pathname: "/profile/[userId]",
-        params: { userId: notification.user.id },
-      });
-    }
-  };
+      if (notification.actionUrl) {
+        router.push(notification.actionUrl as any);
+      } else if (notification.post) {
+        router.push({
+          pathname: "/post/[postId]",
+          params: { postId: notification.post.id },
+        });
+      } else if (notification.user) {
+        // TODO: Expo Router Typed Routes에 "/profile/[userId]" 경로 추가 필요
+        router.push({
+          pathname: "/(details)/profile/[userId]" as any,
+          params: { userId: notification.user.id },
+        });
+      }
+    }, [notification, onMarkAsRead, onPress, router]);
 
-  return (
-    <TouchableOpacity
-      style={[
-        themed($container),
-        !notification.isRead && themed($unreadContainer),
-      ]}
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      {/* 읽지 않은 알림 표시 점 */}
-      {!notification.isRead && <View style={themed($unreadDot)} />}
-
-      {/* 알림 아이콘 */}
-      <View
+    return (
+      <TouchableOpacity
         style={[
-          themed($iconContainer),
-          { backgroundColor: notificationStyle.color + "20" },
+          themed($container),
+          !notification.isRead && themed($unreadContainer),
         ]}
+        onPress={handlePress}
+        activeOpacity={0.7}
       >
+        {/* 읽지 않은 알림 표시 점 */}
+        {!notification.isRead && <View style={themed($unreadDot)} />}
+
+        {/* 알림 아이콘 */}
+        <View
+          style={[
+            themed($iconContainer),
+            { backgroundColor: notificationStyle.color + "20" },
+          ]}
+        >
+          <Ionicons
+            name={notificationStyle.icon as any}
+            size={20}
+            color={notificationStyle.color}
+          />
+        </View>
+
+        {/* 사용자 프로필 이미지 (있는 경우) */}
+        {notification.user && (
+          <Image
+            source={{
+              uri:
+                notification.user.profileImageUrl ||
+                `https://i.pravatar.cc/150?u=${notification.user.id}`,
+            }}
+            style={themed($profileImage)}
+          />
+        )}
+
+        {/* 알림 내용 */}
+        <View style={themed($contentContainer)}>
+          <Text style={themed($title)} numberOfLines={1}>
+            {notification.title}
+          </Text>
+          <Text style={themed($message)} numberOfLines={2}>
+            {notification.message}
+          </Text>
+          <Text style={themed($timeText)}>
+            {formatTimeAgo(notification.createdAt)}
+          </Text>
+        </View>
+
+        {/* 화살표 아이콘 */}
         <Ionicons
-          name={notificationStyle.icon as any}
-          size={20}
-          color={notificationStyle.color}
+          name="chevron-forward"
+          size={16}
+          color={theme.colors.textDim}
+          style={themed($chevron)}
         />
-      </View>
+      </TouchableOpacity>
+    );
+  }
+);
 
-      {/* 사용자 프로필 이미지 (있는 경우) */}
-      {notification.user && (
-        <Image
-          source={{
-            uri:
-              notification.user.profileImageUrl ||
-              `https://i.pravatar.cc/150?u=${notification.user.id}`,
-          }}
-          style={themed($profileImage)}
-        />
-      )}
-
-      {/* 알림 내용 */}
-      <View style={themed($contentContainer)}>
-        <Text style={themed($title)} numberOfLines={1}>
-          {notification.title}
-        </Text>
-        <Text style={themed($message)} numberOfLines={2}>
-          {notification.message}
-        </Text>
-        <Text style={themed($timeText)}>
-          {formatTimeAgo(notification.createdAt)}
-        </Text>
-      </View>
-
-      {/* 화살표 아이콘 */}
-      <Ionicons
-        name="chevron-forward"
-        size={16}
-        color={theme.colors.textDim}
-        style={themed($chevron)}
-      />
-    </TouchableOpacity>
-  );
-}
+export default NotificationItem;
 
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -279,6 +277,6 @@ const $timeText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
 });
 
-const $chevron: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $chevron: ThemedStyle<TextStyle> = ({ spacing }) => ({
   marginLeft: spacing.sm,
 });

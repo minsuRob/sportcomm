@@ -67,10 +67,8 @@ const transformPostToStory = (post: any, type: StoryType): StoryItem => {
  * 뉴스 기사 데이터를 StoryItem으로 변환
  */
 const transformNewsToStory = (article: any, index: number): StoryItem => {
-  // url, title, publishedAt을 조합하여 고유 ID 생성
-  const uniqueIdentifier = `${article.url}-${article.title}-${index}`;
   return {
-    id: `news_${uniqueIdentifier}`,
+    id: `news_${article.url || index}`,
     type: "news",
     title: article.title,
     content: article.description || article.content?.substring(0, 100) + "...",

@@ -210,9 +210,12 @@ const StoryItemComponent = ({
  * 스토리 섹션 컴포넌트 (확장된 버전)
  * 다양한 데이터 소스(인기 게시물, MyTeams, 뉴스)를 통합하여 표시
  */
+
+const DEFAULT_STORY_TYPES: StoryType[] = ["popular", "myteams", "news"];
+
 export default function StorySection({
   onStoryPress,
-  storyTypes = ["popular", "myteams", "news"],
+  storyTypes = DEFAULT_STORY_TYPES,
   maxItems = 8,
 }: StorySectionProps) {
   const { themed } = useAppTheme();
@@ -314,9 +317,9 @@ export default function StorySection({
         onMomentumScrollEnd={handleScrollEnd}
         scrollEventThrottle={16}
       >
-        {stories.map((story, index) => (
+        {stories.map((story) => (
           <StoryItemComponent
-            key={`${story.id}-${index}`}
+            key={story.id}
             story={story}
             onPress={handleStoryPress}
           />

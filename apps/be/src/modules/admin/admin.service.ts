@@ -191,13 +191,48 @@ export class AdminService {
   ) {
     this.validateAdminPermission(adminUser);
 
+    // teamId가 제공된 경우 UUID 형식인지 확인하고, 아니면 팀 코드로 간주하여 UUID 조회
+    let resolvedTeamId: string | undefined = teamId;
+
+    if (teamId) {
+      // UUID 형식 검증 (간단한 정규식 사용)
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+      if (!uuidRegex.test(teamId)) {
+        // UUID가 아닌 경우 팀 코드로 간주하여 팀 조회
+        const team = await this.teamRepository.findOne({
+          where: { code: teamId },
+        });
+
+        if (!team) {
+          throw new NotFoundException(
+            `팀 코드 '${teamId}'에 해당하는 팀을 찾을 수 없습니다.`,
+          );
+        }
+
+        resolvedTeamId = team.id;
+      } else {
+        // UUID인 경우 해당 팀이 존재하는지 확인
+        const team = await this.teamRepository.findOne({
+          where: { id: teamId },
+        });
+
+        if (!team) {
+          throw new NotFoundException(
+            `팀 ID '${teamId}'에 해당하는 팀을 찾을 수 없습니다.`,
+          );
+        }
+      }
+    }
+
     const chatRoom = this.chatRoomRepository.create({
       name,
       description,
       type,
       maxParticipants,
       isRoomActive: true,
-      teamId,
+      teamId: resolvedTeamId,
     });
 
     return await this.chatRoomRepository.save(chatRoom);

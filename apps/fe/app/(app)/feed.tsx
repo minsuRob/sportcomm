@@ -24,6 +24,7 @@ import { showToast } from "@/components/CustomToast";
 import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
+import ShopModal from "@/components/shop/ShopModal";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useChatRooms } from "@/lib/hooks/useChatRooms";
 import { useFeedPosts } from "@/lib/hooks/useFeedPosts";
@@ -35,6 +36,7 @@ export default function FeedScreen() {
   const { t } = useTranslation();
   // 목록/로딩 상태는 전담 훅에서 관리
   const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [shopModalVisible, setShopModalVisible] = useState(false);
   const router = useRouter();
   const { currentUser, reload: reloadCurrentUser } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<string>("feed");
@@ -76,6 +78,36 @@ export default function FeedScreen() {
    */
   const handleNotificationPress = () => {
     router.push("/(details)/notifications");
+  };
+
+  /**
+   * 상점 버튼 클릭 핸들러
+   */
+  const handleShopPress = () => {
+    if (!currentUser) {
+      setAuthModalVisible(true);
+      return;
+    }
+    setShopModalVisible(true);
+  };
+
+  /**
+   * 상점 아이템 구매 핸들러
+   */
+  const handleShopPurchase = async (item: any) => {
+    // 실제로는 GraphQL mutation을 호출해야 함
+    // 여기서는 시뮬레이션
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 사용자 정보 새로고침 (포인트 업데이트)
+    await reloadCurrentUser();
+
+    showToast({
+      type: "success",
+      title: "구매 완료",
+      message: `${item.name}을(를) 성공적으로 구매했습니다!`,
+      duration: 3000,
+    });
   };
 
   /**
@@ -162,6 +194,15 @@ export default function FeedScreen() {
             ? router.push("/(app)/profile")
             : setAuthModalVisible(true)
         }
+        onShopPress={handleShopPress}
+      />
+
+      {/* 상점 모달 */}
+      <ShopModal
+        visible={shopModalVisible}
+        onClose={() => setShopModalVisible(false)}
+        currentUser={currentUser}
+        onPurchase={handleShopPurchase}
       />
 
       {/* 로그인 버튼 섹션 (로그인 안 된 경우에만 표시) */}

@@ -23,6 +23,7 @@ interface FeedHeaderProps {
   onNotificationPress: () => void;
   onCreatePress: () => void;
   onProfilePress: () => void;
+  onShopPress: () => void;
 }
 
 /**
@@ -37,6 +38,7 @@ export default function FeedHeader({
   onNotificationPress,
   onCreatePress,
   onProfilePress,
+  onShopPress,
 }: FeedHeaderProps) {
   const { themed, theme } = useAppTheme();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
@@ -59,11 +61,28 @@ export default function FeedHeader({
       </View>
       <View style={themed($headerRight)}>
         {currentUser && (
-          <View style={themed($pointsBadge)}>
-            <Text style={themed($pointsText)}>
-              💰: {currentUser.points ?? 0}
-            </Text>
-          </View>
+          <>
+            <TouchableOpacity
+              style={themed($pointsBadge)}
+              onPress={onShopPress}
+              activeOpacity={0.7}
+            >
+              <Text style={themed($pointsText)}>
+                💰 {currentUser.points ?? 0}P
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themed($shopButton)}
+              onPress={onShopPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="storefront-outline"
+                size={20}
+                color={theme.colors.tint}
+              />
+            </TouchableOpacity>
+          </>
         )}
         {currentUser && (
           <>
@@ -186,4 +205,16 @@ const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontSize: 12,
   fontWeight: "700",
+});
+
+const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.tint + "15",
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+  marginRight: spacing.xs,
 });

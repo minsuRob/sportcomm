@@ -60,16 +60,6 @@ export default function FeedHeader({
               />
               <NotificationBadge size="small" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($iconButton)}
-              onPress={onCreatePress}
-            >
-              <Ionicons
-                name="add-outline"
-                size={22}
-                color={theme.colors.text}
-              />
-            </TouchableOpacity>
           </>
         )}
         <TouchableOpacity style={themed($iconButton)} onPress={onProfilePress}>

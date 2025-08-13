@@ -347,10 +347,9 @@ const PostCard = React.memo(function PostCard({
   // 디버깅용 - post 데이터 구조 확인 (개발 중에만 사용)
   useEffect(() => {
     if (__DEV__) {
-      console.log(`PostCard - post.id: ${post.id}`);
-      console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
+      // 게시물 디버깅 로그를 한 줄로 통합
       console.log(
-        `PostCard - post.content: ${post.content.substring(0, 20)}...`
+        `PostCard - post.id: ${post.id}, post.title: ${post.title || "제목 없음"}, post.content: ${post.content.substring(0, 20)}...`
       );
     }
   }, [post.id]);

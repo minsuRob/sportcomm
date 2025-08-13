@@ -101,15 +101,6 @@ export const getSession = async (): Promise<{
 
     const isAuthenticated = !!validToken && !!user;
 
-    // 디버깅을 위한 로그
-    console.log("세션 조회 결과:", {
-      hasValidToken: !!validToken,
-      hasUser: !!user,
-      isAdmin: user?.isAdmin,
-      isAuthenticated,
-      supabaseUserId: supabaseSession?.user?.id,
-    });
-
     return { token: validToken, user, isAuthenticated };
   } catch (error) {
     console.error("Failed to get session", error);

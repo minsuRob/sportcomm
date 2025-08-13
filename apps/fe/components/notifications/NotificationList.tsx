@@ -173,7 +173,7 @@ export default function NotificationList({
    */
   const ListHeaderComponent = () => {
     return (
-      <View>
+      <>
         {/* 개발용 알림 테스트 버튼 */}
         <View style={themed($testButtonContainer)}>
           <NotificationTestButton />
@@ -195,7 +195,7 @@ export default function NotificationList({
             )}
           </View>
         )}
-      </View>
+      </>
     );
   };
 

@@ -89,7 +89,7 @@ export default function TabSlider({
 
   return (
     <View style={themed($container)}>
-      <View style={themed($segmentWrapper)}>
+      <View style={themed($segmentWrapper)} onLayout={onSegmentLayout}>
         {/* 이동형 배경 인디케이터 */}
         <Animated.View
           style={[themed($indicator), indicatorStyle]}
@@ -131,8 +131,7 @@ export default function TabSlider({
           );
         })}
 
-        {/* 레이아웃 측정용 오버레이 (투명) */}
-        <View style={themed($layoutProbe)} onLayout={onSegmentLayout} />
+        {/* onLayout은 상위 컨테이너에서 측정 */}
       </View>
     </View>
   );
@@ -184,8 +183,4 @@ const $indicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
   opacity: 0.15,
 });
 
-const $layoutProbe: ThemedStyle<ViewStyle> = () => ({
-  position: "absolute",
-  inset: 0 as unknown as number,
-  opacity: 0,
-});
+// 레이아웃 프로브 제거: 웹에서 포인터 이벤트를 가로채는 문제 방지

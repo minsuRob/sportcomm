@@ -16,10 +16,12 @@ export interface ModerationTarget {
 /**
  * 신고/차단 기능을 위한 공통 훅
  */
-export function useModerationActions() {
+export function useModerationActions(
+  onBlockSuccess?: (blockedUserId: string) => void
+) {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTarget, setReportTarget] = useState<ModerationTarget | null>(
-    null,
+    null
   );
   const [executeBlockUser] = useMutation(BLOCK_USER);
 
@@ -95,6 +97,11 @@ export function useModerationActions() {
                 message: `${userName}님을 차단했습니다.`,
                 duration: 3000,
               });
+
+              // 차단 성공 시 콜백 실행
+              if (onBlockSuccess) {
+                onBlockSuccess(userId);
+              }
             } catch (error) {
               console.error("차단 실패:", error);
               showToast({
@@ -109,7 +116,7 @@ export function useModerationActions() {
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -145,7 +152,7 @@ export function useModerationActions() {
         text: option.text,
         onPress: option.onPress,
         style: option.style,
-      })),
+      }))
     );
   };
 

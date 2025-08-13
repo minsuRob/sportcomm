@@ -25,6 +25,7 @@ interface PostContextMenuProps {
   currentUserId?: string | null;
   onPostUpdated?: (updatedPost: any) => void;
   isBookmarked?: boolean;
+  onBlockUser?: (blockedUserId: string) => void;
 }
 
 /**
@@ -38,13 +39,14 @@ export default function PostContextMenu({
   currentUserId,
   onPostUpdated,
   isBookmarked = false,
+  onBlockUser,
 }: PostContextMenuProps) {
   const { theme } = useAppTheme();
   const [showEditModal, setShowEditModal] = useState(false);
   const [deletePost, { loading: deleteLoading }] = useMutation(DELETE_POST);
   const [toggleBookmark, { loading: bookmarkLoading }] =
     useMutation(TOGGLE_BOOKMARK);
-  const { blockUser } = useModerationActions();
+  const { blockUser } = useModerationActions(onBlockUser);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [executeCreateReport, { loading: reportLoading }] =
@@ -294,8 +296,9 @@ export default function PostContextMenu({
               showToast({
                 type: "success",
                 title: "신고 완료",
-                message: "신고가 접수되었습니다.",
-                duration: 2500,
+                message:
+                  "신고가 접수되었습니다. 관리자가 검토 후 조치할 예정입니다.",
+                duration: 3000,
               });
             }
             setShowReportDialog(false);

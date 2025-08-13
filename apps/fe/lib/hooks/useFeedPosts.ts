@@ -239,6 +239,16 @@ export function useFeedPosts() {
     }
   }, []);
 
+  /**
+   * 사용자를 차단하고 피드에서 해당 사용자의 게시물을 즉시 제거합니다.
+   */
+  const handleBlockUser = useCallback((blockedUserId: string) => {
+    setPosts((currentPosts) =>
+      currentPosts.filter((p) => p.author.id !== blockedUserId)
+    );
+    setBlockedUserIds((currentIds) => [...currentIds, blockedUserId]);
+  }, []);
+
   return {
     posts,
     fetching,
@@ -250,6 +260,7 @@ export function useFeedPosts() {
     handleTeamFilterChange,
     refreshFilterFromMyTeams,
     filterInitialized,
+    handleBlockUser,
   } as const;
 }
 

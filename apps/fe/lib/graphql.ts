@@ -318,9 +318,6 @@ export const BLOCK_USER = gql`
   mutation BlockUser($blockedUserId: String!) {
     blockUser(blockedUserId: $blockedUserId) {
       id
-      blockerId
-      blockedUserId
-      createdAt
     }
   }
 `;

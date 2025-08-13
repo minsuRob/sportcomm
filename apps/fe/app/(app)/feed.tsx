@@ -7,13 +7,10 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
-  ScrollView,
-  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 
 import FeedList from "@/components/FeedList";
-import PostCard from "@/components/PostCard";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -184,87 +181,46 @@ export default function FeedScreen() {
       {/* 탭 슬라이더 */}
       <TabSlider tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* 전체 스크롤 컨테이너 - 스토리와 피드를 함께 스크롤 */}
-      <ScrollView
-        style={themed($scrollContainer)}
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={theme.colors.tint}
-            colors={[theme.colors.tint]}
-          />
-        }
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          const paddingToBottom = 20;
-          if (
-            layoutMeasurement.height + contentOffset.y >=
-            contentSize.height - paddingToBottom
-          ) {
-            // 스크롤이 하단에 도달했을 때 더 많은 게시물 로드
-            if (!fetching && activeTab === "feed") {
-              handleLoadMore();
-            }
+      {/* 탭 콘텐츠 */}
+      {activeTab === "feed" ? (
+        <FeedList
+          posts={posts}
+          fetching={fetching}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          onEndReached={handleLoadMore}
+          ListHeaderComponent={currentUser ? <StorySection /> : null}
+          ListFooterComponent={
+            <ListFooter loading={footerLoading} error={error} />
           }
-        }}
-        scrollEventThrottle={400}
-      >
-        {/* 스토리 섹션 (Feed 탭에서만 표시) */}
-        {activeTab === "feed" && currentUser && <StorySection />}
-
-        {/* 탭 콘텐츠 */}
-        {activeTab === "feed" ? (
-          <View style={themed($feedContainer)}>
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onPostUpdated={(updatedPost) => {
-                  // 게시물 업데이트 처리 (필요시 구현)
-                  console.log("Post updated:", updatedPost);
-                }}
-              />
-            ))}
-            {footerLoading && (
-              <View style={themed($loadingFooter)}>
-                <ActivityIndicator size="small" color={theme.colors.tint} />
-                <Text style={themed($loadingText)}>
-                  더 많은 게시물 로딩 중...
-                </Text>
-              </View>
-            )}
-          </View>
-        ) : (
-          <ChatRoomList
-            currentUser={currentUser}
-            showHeader={false}
-            mockRooms={
-              currentUser?.isAdmin
-                ? []
-                : chatRooms.map((r) => ({
-                    id: r.id,
-                    name: r.name,
-                    description: r.description,
-                    isPrivate: r.isPrivate,
-                    type: r.type as "PUBLIC" | "GROUP" | "PRIVATE" | undefined,
-                    isRoomActive: r.isRoomActive ?? true,
-                    maxParticipants: r.maxParticipants ?? 0,
-                    currentParticipants: r.currentParticipants ?? 0,
-                    lastMessage: r.lastMessage ?? undefined,
-                    lastMessageAt: r.lastMessageAt ?? undefined,
-                    unreadCount: r.unreadCount ?? 0,
-                    members: [],
-                    createdAt: r.createdAt ?? new Date().toISOString(),
-                  }))
-            }
-            isLoading={chatRoomsLoading}
-            onRefresh={loadChatRooms}
-          />
-        )}
-      </ScrollView>
+        />
+      ) : (
+        <ChatRoomList
+          currentUser={currentUser}
+          showHeader={false}
+          mockRooms={
+            currentUser?.isAdmin
+              ? []
+              : chatRooms.map((r) => ({
+                  id: r.id,
+                  name: r.name,
+                  description: r.description,
+                  isPrivate: r.isPrivate,
+                  type: r.type as "PUBLIC" | "GROUP" | "PRIVATE" | undefined,
+                  isRoomActive: r.isRoomActive ?? true,
+                  maxParticipants: r.maxParticipants ?? 0,
+                  currentParticipants: r.currentParticipants ?? 0,
+                  lastMessage: r.lastMessage ?? undefined,
+                  lastMessageAt: r.lastMessageAt ?? undefined,
+                  unreadCount: r.unreadCount ?? 0,
+                  members: [],
+                  createdAt: r.createdAt ?? new Date().toISOString(),
+                }))
+          }
+          isLoading={chatRoomsLoading}
+          onRefresh={loadChatRooms}
+        />
+      )}
 
       {/* 실시간 알림 토스트 */}
       {currentUser && (

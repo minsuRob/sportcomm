@@ -15,8 +15,7 @@ import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User } from "@/lib/auth";
-import { JOIN_CHAT_CHANNEL } from "@/lib/graphql/chat";
-import { GET_ADMIN_CHAT_ROOMS } from "@/lib/graphql/admin";
+import { GET_USER_CHAT_ROOMS, JOIN_CHAT_ROOM } from "@/lib/graphql/user-chat";
 import { showToast } from "@/components/CustomToast";
 
 // 채팅방 정보 타입
@@ -44,34 +43,11 @@ interface ChatRoom {
     lastReadAt: string;
   }[];
   createdAt: string;
-}
-
-// GraphQL 응답 타입
-interface ChatRoomsResponse {
-  chatChannels: ChatRoom[];
-}
-
-// 관리자 채팅방 응답 타입
-interface AdminChatRoomsResponse {
-  adminGetAllChatRooms: {
-    chatRooms: {
-      id: string;
-      name: string;
-      description?: string;
-      type: "PRIVATE" | "GROUP" | "PUBLIC";
-      isRoomActive: boolean;
-      maxParticipants: number;
-      currentParticipants: number;
-      totalMessages: number;
-      createdAt: string;
-      updatedAt: string;
-      lastMessageContent?: string;
-      lastMessageAt?: string;
-    }[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+  team?: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
   };
 }
 
@@ -102,61 +78,60 @@ export default function ChatRoomList({
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
 
-  // 관리자 채팅방 쿼리 (공개 채팅방만)
-  const {
-    data: adminData,
-    loading: adminLoading,
-    error: adminError,
-    refetch: refetchAdmin,
-  } = useQuery<AdminChatRoomsResponse>(GET_ADMIN_CHAT_ROOMS, {
+  // 사용자 접근 가능한 채팅방 쿼리 (팀 채팅방 + 공용 채팅방)
+  const { data, loading, error, refetch } = useQuery(GET_USER_CHAT_ROOMS, {
     variables: { page: 1, limit: 100 },
     fetchPolicy: "cache-and-network",
     errorPolicy: "all",
-    // 오류가 발생하더라도 계속 진행
-    onError: (error) => {
-      console.log("관리자 채팅방 로드 오류(무시됨):", error.message);
-    },
-    // 일반 사용자는 접근 권한이 없으므로 오류 발생 시 무시
-    skip: !currentUser?.isAdmin,
   });
 
-  const [joinChatChannel] = useMutation(JOIN_CHAT_CHANNEL, {
+  const [joinChatRoom] = useMutation(JOIN_CHAT_ROOM, {
     refetchQueries: [
-      { query: GET_ADMIN_CHAT_ROOMS, variables: { page: 1, limit: 100 } },
+      { query: GET_USER_CHAT_ROOMS, variables: { page: 1, limit: 100 } },
     ],
   });
 
   // 에러 처리
   useEffect(() => {
-    if (adminError && currentUser?.isAdmin) {
-      console.error("관리자 채팅방 로드 실패:", adminError);
+    if (error) {
+      console.error("채팅방 목록 로드 실패:", error);
     }
-  }, [adminError, currentUser]);
+  }, [error]);
 
-  // 모든 채팅방을 합쳐서 상태로 관리
+  // 사용자 접근 가능한 채팅방 상태 관리
   useEffect(() => {
-    const regularChatRooms: ChatRoom[] = [];
-    const adminChatRooms = (adminData?.adminGetAllChatRooms?.chatRooms || [])
-      .filter((room) => room.type === "PUBLIC" && room.isRoomActive) // 공개이고 활성화된 채팅방만
-      .map((room) => ({
+    const userChatRooms = (data?.getUserChatRooms?.chatRooms || []).map(
+      (room) => ({
         id: room.id,
         name: room.name,
         description: room.description,
-        isPrivate: false,
+        isPrivate: room.type === "PRIVATE",
         type: room.type,
         isRoomActive: room.isRoomActive,
         maxParticipants: room.maxParticipants,
         currentParticipants: room.currentParticipants,
         lastMessage: room.lastMessageContent,
         lastMessageAt: room.lastMessageAt,
-        unreadCount: 0, // 관리자 채팅방은 초기에 읽지 않은 메시지 0개
-        members: [], // 빈 배열로 초기화 (자동 참여 처리)
+        unreadCount: 0, // 초기에 읽지 않은 메시지 0개
+        members: room.participants.map((p) => ({
+          userId: p.id,
+          user: {
+            id: p.id,
+            nickname: p.nickname,
+            profileImageUrl: p.profileImageUrl,
+          },
+          isAdmin: false,
+          joinedAt: room.createdAt,
+          lastReadAt: room.createdAt,
+        })),
         createdAt: room.createdAt,
-      }));
+        team: room.team, // 팀 정보 추가
+      })
+    );
 
-    const allChatRooms = [...regularChatRooms, ...adminChatRooms, ...mockRooms];
+    const allChatRooms = [...userChatRooms, ...mockRooms];
     setChatRooms(allChatRooms);
-  }, [adminData, mockRooms]); // adminData와 mockRooms만 의존성으로 설정
+  }, [data, mockRooms]);
 
   // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleEnterRoom = async (room: ChatRoom) => {
@@ -194,11 +169,21 @@ export default function ChatRoomList({
 
   // 채팅방 타입별 아이콘 및 색상 반환
   const getRoomTypeInfo = (room: ChatRoom) => {
-    // 관리자가 생성한 채팅방인 경우 type 필드 사용
+    // 팀 채팅방인 경우 팀 색상 사용
+    if (room.team) {
+      return {
+        icon: "people-outline",
+        color: room.team.color,
+        label: room.team.name,
+        teamIcon: room.team.icon,
+      };
+    }
+
+    // 공용 채팅방인 경우
     if (room.type) {
       switch (room.type) {
         case "PUBLIC":
-          return { icon: "globe-outline", color: "#3B82F6", label: "공개" };
+          return { icon: "globe-outline", color: "#3B82F6", label: "공용" };
         case "GROUP":
           return { icon: "people-outline", color: "#10B981", label: "그룹" };
         case "PRIVATE":
@@ -233,10 +218,8 @@ export default function ChatRoomList({
       setRefreshing(false);
     }
 
-    // 관리자인 경우 관리자 데이터 새로고침
-    if (currentUser?.isAdmin) {
-      await refetchAdmin();
-    }
+    // 사용자 채팅방 데이터 새로고침
+    await refetch();
   };
 
   // 채팅방 아이템 렌더링
@@ -262,11 +245,15 @@ export default function ChatRoomList({
               { backgroundColor: typeInfo.color + "20" },
             ]}
           >
-            <Ionicons
-              name={typeInfo.icon as any}
-              color={typeInfo.color}
-              size={20}
-            />
+            {typeInfo.teamIcon ? (
+              <Text style={{ fontSize: 18 }}>{typeInfo.teamIcon}</Text>
+            ) : (
+              <Ionicons
+                name={typeInfo.icon as any}
+                color={typeInfo.color}
+                size={20}
+              />
+            )}
           </View>
 
           <View style={themed($roomContent)}>
@@ -337,7 +324,7 @@ export default function ChatRoomList({
     );
   };
 
-  if ((isLoading || adminLoading) && chatRooms.length === 0) {
+  if ((isLoading || loading) && chatRooms.length === 0) {
     return (
       <View style={themed($loadingContainer)}>
         <ActivityIndicator size="large" color={theme.colors.tint} />
@@ -367,12 +354,12 @@ export default function ChatRoomList({
         contentContainerStyle={themed($contentContainer)}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing || isLoading || adminLoading}
+            refreshing={refreshing || isLoading || loading}
             onRefresh={handleRefresh}
           />
         }
         ListEmptyComponent={
-          !isLoading && !adminLoading ? (
+          !isLoading && !loading ? (
             <View style={themed($emptyContainer)}>
               <Ionicons
                 name="chatbubbles-outline"

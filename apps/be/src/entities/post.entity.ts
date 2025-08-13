@@ -8,7 +8,7 @@ import {
   RelationId,
 } from 'typeorm';
 import { ObjectType, Field } from '@nestjs/graphql';
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, MaxLength, MinLength, IsOptional } from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { Comment } from './comment.entity';
@@ -39,16 +39,18 @@ export class Post extends BaseEntity {
    * 게시물 제목
    * 게시물의 주제를 나타내는 간단한 제목입니다.
    */
-  @Field(() => String, { description: '게시물 제목' })
+  @Field(() => String, { nullable: true, description: '게시물 제목' })
   @Column({
     type: 'varchar',
     length: 200,
+    nullable: true,
     comment: '게시물 제목',
   })
+  @IsOptional()
   @IsString({ message: '제목은 문자열이어야 합니다.' })
   @MinLength(1, { message: '제목은 최소 1자 이상이어야 합니다.' })
   @MaxLength(200, { message: '제목은 최대 200자까지 가능합니다.' })
-  title: string;
+  title?: string;
 
   /**
    * 게시물 내용
@@ -63,6 +65,20 @@ export class Post extends BaseEntity {
   @MinLength(1, { message: '내용은 최소 1자 이상이어야 합니다.' })
   @MaxLength(10000, { message: '내용은 최대 10,000자까지 가능합니다.' })
   content: string;
+
+  /**
+   * 게시물 타입
+   * 게시물의 종류를 나타냅니다 (ANALYSIS, CHEERING, HIGHLIGHT 등).
+   */
+  @Field(() => String, { description: '게시물 타입' })
+  @Column({
+    type: 'varchar',
+    length: 50,
+    default: 'ANALYSIS',
+    comment: '게시물 타입 (ANALYSIS, CHEERING, HIGHLIGHT)',
+  })
+  @IsString({ message: '게시물 타입은 문자열이어야 합니다.' })
+  type: string;
 
   /**
    * 게시물 조회수

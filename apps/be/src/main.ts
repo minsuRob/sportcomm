@@ -8,6 +8,8 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { join } from 'path';
 import { json } from 'express';
 import { ensureDir } from 'fs-extra';
+import { DataSource } from 'typeorm';
+import * as helmet from 'helmet';
 // morgan 패키지가 설치되지 않았으므로 임시로 제거
 // import * as morgan from 'morgan';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -37,6 +39,19 @@ async function bootstrap() {
       new GlobalExceptionFilter(httpAdapterHost), // HTTP 전용 필터를 나중에 등록
     );
     Logger.log('전역 예외 필터가 등록되었습니다', 'Bootstrap');
+
+    // 전역 트랜잭션 인터셉터 등록
+    const { TransactionInterceptor } = await import(
+      './common/interceptors/transaction.interceptor'
+    );
+    const { Reflector } = await import('@nestjs/core');
+    const dataSource = app.get(DataSource);
+    const reflector = app.get(Reflector);
+
+    app.useGlobalInterceptors(
+      new TransactionInterceptor(dataSource, reflector),
+    );
+    Logger.log('전역 트랜잭션 인터셉터가 등록되었습니다', 'Bootstrap');
 
     // 요청 로깅 미들웨어 설정 (morgan 패키지 설치 후 활성화)
     // app.use(morgan('dev'));

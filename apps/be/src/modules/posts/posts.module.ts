@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CqrsModule } from '@nestjs/cqrs';
 import { PostsService } from './posts.service';
 import { MediaModule } from '../media/media.module';
 import { BookmarkModule } from '../bookmarks/bookmark.module';
@@ -9,6 +10,17 @@ import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
 import { Media } from '../../entities/media.entity';
+import { User } from '../../entities/user.entity';
+import { Notification } from '../../entities/notification.entity';
+
+// Command Handlers
+import { CreatePostHandler } from './commands/handlers/create-post.handler';
+
+// Query Handlers
+import { GetPostsHandler } from './queries/handlers/get-posts.handler';
+
+// Event Handlers
+import { PostCreatedHandler } from './events/handlers/post-created.handler';
 
 /**
  * 게시물 모듈
@@ -24,8 +36,19 @@ import { Media } from '../../entities/media.entity';
  */
 @Module({
   imports: [
+    // CQRS 모듈
+    CqrsModule,
+
     // 게시물 관련 엔티티를 위한 TypeORM 모듈
-    TypeOrmModule.forFeature([Post, PostVersion, PostLike, Media]),
+    TypeOrmModule.forFeature([
+      Post,
+      PostVersion,
+      PostLike,
+      Media,
+      User,
+      Notification,
+    ]),
+
     // 미디어 관련 기능 사용을 위한 MediaModule 가져오기
     MediaModule,
     // 북마크 관련 기능 사용을 위한 BookmarkModule 가져오기
@@ -34,8 +57,20 @@ import { Media } from '../../entities/media.entity';
     NotificationsModule,
   ],
 
-  // 서비스 및 리졸버 제공
-  providers: [PostsService, PostsResolver],
+  // 서비스, 리졸버, CQRS 핸들러 제공
+  providers: [
+    PostsService,
+    PostsResolver,
+
+    // Command Handlers
+    CreatePostHandler,
+
+    // Query Handlers
+    GetPostsHandler,
+
+    // Event Handlers
+    PostCreatedHandler,
+  ],
 
   // 다른 모듈에서 사용할 수 있도록 내보내기
   exports: [PostsService],

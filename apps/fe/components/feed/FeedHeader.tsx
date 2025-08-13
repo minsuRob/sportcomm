@@ -39,9 +39,8 @@ export default function FeedHeader({
   return (
     <View style={themed($header)}>
       <View style={themed($headerLeft)}>
-        <Text style={themed($logoText)}>SportComm</Text>
+        <Text style={themed($logoText)}>SportCom</Text>
       </View>
-      <Text style={themed($headerTitle)}>Home</Text>
       <View style={themed($headerRight)}>
         {currentUser && (
           <View style={themed($pointsBadge)}>

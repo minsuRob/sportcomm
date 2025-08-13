@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { Portal } from "@rn-primitives/portal";
 
 export interface ProfileContextPopoverProps {
   visible: boolean;
@@ -113,33 +114,35 @@ export default function ProfileContextPopover({
   if (!visible) return null;
 
   return (
-    <View style={themed($overlay)}>
-      {/* 바깥 영역 클릭 시 닫기 */}
-      <TouchableOpacity
-        style={themed($backdrop)}
-        activeOpacity={1}
-        onPress={onClose}
-      />
+    <Portal>
+      <View style={themed($overlay)}>
+        {/* 바깥 영역 클릭 시 닫기 */}
+        <TouchableOpacity
+          style={themed($backdrop)}
+          activeOpacity={1}
+          onPress={onClose}
+        />
 
-      {/* 앵커 위치에 표시되는 팝오버 카드 */}
-      <View style={[themed($menuContainer), anchorStyle]}>
-        {items.map((item, index) => (
-          <TouchableOpacity
-            key={item.key}
-            style={[
-              themed($menuItem),
-              index === 0 ? themed($menuItemFirst) : null,
-              index === items.length - 1 ? themed($menuItemLast) : null,
-            ]}
-            onPress={item.onPress}
-            activeOpacity={0.8}
-          >
-            <View style={themed($itemLeft)}>{item.icon}</View>
-            <Text style={themed($itemText)}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {/* 앵커 위치에 표시되는 팝오버 카드 */}
+        <View style={[themed($menuContainer), anchorStyle]}>
+          {items.map((item, index) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[
+                themed($menuItem),
+                index === 0 ? themed($menuItemFirst) : null,
+                index === items.length - 1 ? themed($menuItemLast) : null,
+              ]}
+              onPress={item.onPress}
+              activeOpacity={0.8}
+            >
+              <View style={themed($itemLeft)}>{item.icon}</View>
+              <Text style={themed($itemText)}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
-    </View>
+    </Portal>
   );
 }
 

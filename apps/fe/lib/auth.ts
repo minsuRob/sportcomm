@@ -17,11 +17,13 @@ export interface User {
   isAdmin?: boolean;
   myTeams?: UserTeam[];
   userTeams?: any[];
+  /** 유저 포인트 (가상 자산). 없으면 0으로 간주 */
+  points?: number;
 }
 
 export const saveSession = async (
   tokenOrUser: string | User,
-  user?: User,
+  user?: User
 ): Promise<void> => {
   try {
     // 두 개의 매개변수가 전달된 경우 (기존 방식)
@@ -42,6 +44,10 @@ export const saveSession = async (
         delete user.userTeams;
       }
       await setItem(TOKEN_KEY, tokenOrUser);
+      // points 기본값 보정
+      if (typeof (user as any).points !== "number") {
+        (user as any).points = 0;
+      }
       await setItem(USER_KEY, JSON.stringify(user));
       console.log("세션 저장 완료: 토큰과 사용자 정보가 모두 저장됨");
     }
@@ -54,6 +60,10 @@ export const saveSession = async (
       if (tokenOrUser.userTeams) {
         tokenOrUser.myTeams = tokenOrUser.userTeams;
         delete tokenOrUser.userTeams;
+      }
+      // points 기본값 보정
+      if (typeof (tokenOrUser as any).points !== "number") {
+        (tokenOrUser as any).points = 0;
       }
       await setItem(USER_KEY, JSON.stringify(tokenOrUser));
       console.log("세션 저장 완료: 사용자 정보만 업데이트됨");

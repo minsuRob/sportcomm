@@ -107,6 +107,7 @@ export class UserSyncService {
           bio,
           isEmailVerified: false,
           isActive: true,
+          points: 0,
         });
 
         const savedUser = await this.userRepository.save(newUser);
@@ -190,6 +191,7 @@ export class UserSyncService {
           bio,
           isEmailVerified: !!supabaseUser.email_confirmed_at,
           isActive: true,
+          points: 0,
         });
 
         user = await this.userRepository.save(user);
@@ -461,6 +463,11 @@ export class UserSyncService {
       profileImageUrl: user.profileImageUrl,
       bio: user.bio,
       isActive: user.isActive,
+      // 포인트 (백엔드 엔티티 필드)
+      // CombinedUserInfo 타입 확장 없이 안전하게 캐스팅해서 전달
+      ...(typeof (user as any).points === 'number'
+        ? { points: (user as any).points }
+        : {}),
 
       // 공통 정보
       createdAt: user.createdAt,

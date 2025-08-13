@@ -38,6 +38,7 @@ export class UsersService {
         'bio',
         'isEmailVerified',
         'isActive',
+        'points',
         'createdAt',
         'updatedAt',
       ],

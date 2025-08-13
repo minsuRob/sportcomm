@@ -44,6 +44,13 @@ export default function FeedHeader({
       <Text style={themed($headerTitle)}>Home</Text>
       <View style={themed($headerRight)}>
         {currentUser && (
+          <View style={themed($pointsBadge)}>
+            <Text style={themed($pointsText)}>
+              💰: {currentUser.points ?? 0}
+            </Text>
+          </View>
+        )}
+        {currentUser && (
           <>
             <TeamFilterSelector
               onTeamSelect={onTeamSelect}
@@ -120,4 +127,20 @@ const $iconButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
   justifyContent: "center",
   alignItems: "center",
   position: "relative",
+});
+
+const $pointsBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.sm,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: colors.backgroundAlt,
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: spacing.xs,
+});
+
+const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "700",
 });

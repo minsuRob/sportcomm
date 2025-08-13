@@ -130,6 +130,19 @@ export class User {
   email: string;
 
   /**
+   * 사용자 포인트
+   * 유료 메시지/꾸미기 등에 사용되는 가상 자산 값입니다.
+   */
+  @Field(() => Number, { description: '사용자 포인트', defaultValue: 0 })
+  @Column({
+    type: 'integer',
+    default: 0,
+    nullable: false,
+    comment: '사용자 포인트 (기본값 0)',
+  })
+  points: number;
+
+  /**
    * 사용자 비밀번호 (해시된 값) - DEPRECATED
    * Supabase Auth를 사용하므로 더 이상 사용하지 않습니다.
    * 레거시 호환성을 위해 유지됩니다.
@@ -370,6 +383,8 @@ export interface CombinedUserInfo {
   profileImageUrl?: string;
   bio?: string;
   isActive: boolean;
+  /** 사용자 포인트 (가상 자산) */
+  points?: number;
   // 공통 정보
   createdAt: Date;
   updatedAt: Date;

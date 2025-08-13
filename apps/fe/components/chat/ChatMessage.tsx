@@ -2,7 +2,6 @@ import React from "react";
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   ViewStyle,
   TextStyle,
@@ -11,6 +10,7 @@ import {
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import dayjs from "dayjs";
+import UserAvatar from "@/components/users/UserAvatar";
 
 /**
  * 메시지 타입 정의
@@ -122,18 +122,11 @@ export default function ChatMessage({
           {/* 왼쪽: 아바타 + 닉네임 (항상 표시) */}
           <View style={themed($leftSection)}>
             <View style={themed($avatarContainer)}>
-              {message.user.avatar_url ? (
-                <Image
-                  source={{ uri: message.user.avatar_url }}
-                  style={themed($avatar)}
-                />
-              ) : (
-                <View style={[themed($avatar), themed($noAvatar)]}>
-                  <Text style={themed($avatarInitial)}>
-                    {message.user.nickname.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
+              <UserAvatar
+                imageUrl={message.user.avatar_url}
+                name={message.user.nickname}
+                size={28}
+              />
             </View>
             <Text style={themed($nickname)}>{message.user.nickname}</Text>
           </View>

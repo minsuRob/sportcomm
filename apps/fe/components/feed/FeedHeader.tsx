@@ -7,6 +7,8 @@ import {
   TextStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import UserAvatar from "@/components/users/UserAvatar";
+import ProfileContextMenu from "@/components/shared/ProfileContextMenu";
 import TeamFilterSelector from "@/components/TeamFilterSelector";
 import { NotificationBadge } from "@/components/notifications";
 import { useAppTheme } from "@/lib/theme/context";
@@ -35,6 +37,17 @@ export default function FeedHeader({
   onProfilePress,
 }: FeedHeaderProps) {
   const { themed, theme } = useAppTheme();
+  const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
+
+  const handleProfilePress = () => {
+    if (currentUser) {
+      // 로그인 상태면 컨텍스트 메뉴 오픈
+      setProfileMenuVisible(true);
+    } else {
+      // 비로그인 상태면 기존 프로필(=로그인/프로필) 화면 이동
+      onProfilePress();
+    }
+  };
 
   return (
     <View style={themed($header)}>
@@ -68,14 +81,36 @@ export default function FeedHeader({
             </TouchableOpacity>
           </>
         )}
-        <TouchableOpacity style={themed($iconButton)} onPress={onProfilePress}>
-          <Ionicons
-            name={currentUser ? "person" : "person-outline"}
-            size={22}
-            color={theme.colors.text}
-          />
+        <TouchableOpacity
+          style={themed($iconButton)}
+          onPress={handleProfilePress}
+        >
+          {currentUser ? (
+            <UserAvatar
+              imageUrl={currentUser.profileImageUrl}
+              name={currentUser.nickname}
+              size={28}
+            />
+          ) : (
+            <Ionicons
+              name="person-outline"
+              size={22}
+              color={theme.colors.text}
+            />
+          )}
         </TouchableOpacity>
       </View>
+      {/* 프로필 컨텍스트 메뉴 */}
+      {currentUser && (
+        <ProfileContextMenu
+          visible={profileMenuVisible}
+          onClose={() => setProfileMenuVisible(false)}
+          onOpenProfile={() => {
+            setProfileMenuVisible(false);
+            onProfilePress();
+          }}
+        />
+      )}
     </View>
   );
 }

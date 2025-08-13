@@ -33,6 +33,7 @@ import {
 } from "@/lib/image";
 import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
+import UserAvatar from "@/components/users/UserAvatar";
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
@@ -691,13 +692,10 @@ const PostCard = React.memo(function PostCard({
 
             {/* 프로필 정보 컨테이너 */}
             <View style={themed($profileContainer)}>
-              <Image
-                source={{
-                  uri:
-                    post.author.profileImageUrl ||
-                    "https://via.placeholder.com/32",
-                }}
-                style={themed($profileImage)}
+              <UserAvatar
+                imageUrl={post.author.profileImageUrl}
+                name={post.author.nickname}
+                size={32}
               />
               <View style={themed($profileInfo)}>
                 <Text style={themed($profileName)}>{post.author.nickname}</Text>

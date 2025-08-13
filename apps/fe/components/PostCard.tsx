@@ -632,11 +632,7 @@ const PostCard = React.memo(function PostCard({
                       aspectRatio:
                         imageAspectRatio ||
                         IMAGE_CONSTANTS.DEFAULT_ASPECT_RATIO,
-                      maxHeight:
-                        screenHeight *
-                        (isWeb()
-                          ? IMAGE_CONSTANTS.WEB.MAX_HEIGHT_RATIO
-                          : IMAGE_CONSTANTS.MOBILE.MAX_HEIGHT_RATIO),
+                      maxHeight: screenHeight,
                       minHeight: isWeb()
                         ? IMAGE_CONSTANTS.WEB.MIN_HEIGHT
                         : IMAGE_CONSTANTS.MOBILE.MIN_HEIGHT,

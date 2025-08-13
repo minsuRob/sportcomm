@@ -83,8 +83,9 @@ export default function AppDialog({
   // 애니메이션 상태 관리
   const [shouldRender, setShouldRender] = useState<boolean>(visible);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const dialogScale = useRef(new Animated.Value(0.96)).current;
+  const dialogScale = useRef(new Animated.Value(0.92)).current;
   const dialogOpacity = useRef(new Animated.Value(0)).current;
+  const dialogTranslateY = useRef(new Animated.Value(8)).current;
 
   // visible 변경에 따른 페이드 인/아웃 + 스케일 애니메이션 처리
   useEffect(() => {
@@ -92,31 +93,52 @@ export default function AppDialog({
       // 렌더 먼저 수행 후 인 애니메이션 시작
       setShouldRender(true);
       Animated.parallel([
+        // 배경 페이드 인
         Animated.timing(overlayOpacity, {
           toValue: 1,
-          duration: 180,
-          easing: Easing.out(Easing.cubic),
+          duration: 220,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
+        // 다이얼로그 페이드 인
         Animated.timing(dialogOpacity, {
           toValue: 1,
           duration: 180,
-          easing: Easing.out(Easing.cubic),
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
-        Animated.timing(dialogScale, {
-          toValue: 1,
-          duration: 210,
-          easing: Easing.out(Easing.back(0.9)),
+        // 아래에서 위로 살짝 슬라이드 인
+        Animated.spring(dialogTranslateY, {
+          toValue: 0,
+          damping: 14,
+          stiffness: 180,
+          mass: 0.8,
           useNativeDriver: true,
         }),
+        // 스프링 오버슈트 → 정착으로 더 역동적인 팝 효과
+        Animated.sequence([
+          Animated.spring(dialogScale, {
+            toValue: 1.03,
+            damping: 12,
+            stiffness: 220,
+            mass: 0.6,
+            useNativeDriver: true,
+          }),
+          Animated.spring(dialogScale, {
+            toValue: 1,
+            damping: 14,
+            stiffness: 220,
+            mass: 0.6,
+            useNativeDriver: true,
+          }),
+        ]),
       ]).start();
     } else {
       // 아웃 애니메이션 후 언마운트
       Animated.parallel([
         Animated.timing(overlayOpacity, {
           toValue: 0,
-          duration: 160,
+          duration: 180,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -126,10 +148,18 @@ export default function AppDialog({
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.timing(dialogScale, {
-          toValue: 0.96,
+        // 살짝 아래로 미끄러지듯 퇴장
+        Animated.timing(dialogTranslateY, {
+          toValue: 8,
           duration: 160,
-          easing: Easing.in(Easing.cubic),
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+        // 미세 축소 후 사라짐
+        Animated.timing(dialogScale, {
+          toValue: 0.98,
+          duration: 160,
+          easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
       ]).start(({ finished }) => {
@@ -155,7 +185,13 @@ export default function AppDialog({
         <Animated.View
           style={[
             themed($container),
-            { opacity: dialogOpacity, transform: [{ scale: dialogScale }] },
+            {
+              opacity: dialogOpacity,
+              transform: [
+                { scale: dialogScale },
+                { translateY: dialogTranslateY },
+              ],
+            },
           ]}
         >
           {imageSource ? (

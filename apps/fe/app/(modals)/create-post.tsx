@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -86,6 +86,9 @@ export default function CreatePostScreen() {
   const { t } = useTranslation();
 
   // 상태 관리
+  const [layoutVariant, setLayoutVariant] = useState<
+    "modern" | "split" | "dock"
+  >("modern");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -163,12 +166,21 @@ export default function CreatePostScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ],
+        ]
       );
     } else {
       router.back();
     }
   };
+
+  // 선택된 모든 미디어 배열 (썸네일/히어로 공용)
+  const allSelectedMedia = useMemo(
+    () => [
+      ...selectedImages.map((img) => ({ type: "image" as const, ...img })),
+      ...selectedVideos.map((vid) => ({ type: "video" as const, ...vid })),
+    ],
+    [selectedImages, selectedVideos]
+  );
 
   /**
    * 팀 선택 핸들러
@@ -196,7 +208,7 @@ export default function CreatePostScreen() {
         Alert.alert(
           "권한 필요",
           "미디어를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }],
+          [{ text: "확인" }]
         );
         return;
       }
@@ -253,7 +265,7 @@ export default function CreatePostScreen() {
                   `video_${index}_${Date.now()}.mp4`,
                   {
                     type: "video/mp4",
-                  },
+                  }
                 );
 
                 // 메타데이터 추출
@@ -290,7 +302,7 @@ export default function CreatePostScreen() {
                 } catch (compressionError) {
                   console.warn(
                     "동영상 압축 실패, 원본 사용:",
-                    compressionError,
+                    compressionError
                   );
                   // 압축 실패 시 원본 정보 사용
                   processedVideo = {
@@ -648,9 +660,114 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* 레이아웃 선택 탭 (간단 토글) */}
+      <View style={themed($variantTabs)}>
+        {(["modern", "split", "dock"] as const).map((v) => (
+          <TouchableOpacity
+            key={v}
+            onPress={() => setLayoutVariant(v)}
+            style={[
+              themed($variantTab),
+              layoutVariant === v ? themed($variantTabActive) : null,
+            ]}
+          >
+            <Text style={themed($variantTabText)}>
+              {v === "modern" ? "모던" : v === "split" ? "분할" : "도크"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* 모던: 상단 고정 썸네일 바 */}
+      {layoutVariant === "modern" && allSelectedMedia.length > 0 && (
+        <View style={themed($mediaToolbar)}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={themed($mediaToolbarContent)}
+          >
+            {allSelectedMedia.map((m, idx) => (
+              <View key={`m-${idx}`} style={themed($mediaToolbarItem)}>
+                {m.type === "image" ? (
+                  <Image
+                    source={{ uri: m.uri }}
+                    style={themed($mediaToolbarThumb)}
+                  />
+                ) : (
+                  <View
+                    style={[themed($mediaToolbarThumb), themed($videoBadgeBg)]}
+                  >
+                    <Ionicons name="videocam" color="white" size={16} />
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* 분할형: 히어로 미리보기 */}
+      {layoutVariant === "split" && (
+        <View>
+          <View style={themed($heroContainer)}>
+            {allSelectedMedia[0] ? (
+              allSelectedMedia[0].type === "image" ? (
+                <Image
+                  source={{ uri: allSelectedMedia[0].uri }}
+                  style={themed($heroImage)}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={themed($heroVideoPlaceholder)}>
+                  <Ionicons name="play" color="white" size={36} />
+                </View>
+              )
+            ) : (
+              <View style={themed($heroEmpty)}>
+                <Ionicons
+                  name="image-outline"
+                  color={theme.colors.textDim}
+                  size={28}
+                />
+                <Text style={themed($heroEmptyText)}>
+                  미디어를 추가해 보세요
+                </Text>
+              </View>
+            )}
+          </View>
+          {allSelectedMedia.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={themed($heroThumbRow)}
+            >
+              {allSelectedMedia.map((m, idx) => (
+                <View key={`h-${idx}`} style={themed($heroThumb)}>
+                  {m.type === "image" ? (
+                    <Image
+                      source={{ uri: m.uri }}
+                      style={themed($heroThumbImg)}
+                    />
+                  ) : (
+                    <View
+                      style={[themed($heroThumbImg), themed($videoBadgeBg)]}
+                    >
+                      <Ionicons name="videocam" color="white" size={14} />
+                    </View>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      )}
+
       <ScrollView
         style={themed($scrollContainer)}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          layoutVariant === "dock" ? { paddingBottom: 120 } : undefined
+        }
       >
         {/* 사용자 정보 */}
         <View style={themed($userSection)}>
@@ -789,82 +906,58 @@ export default function CreatePostScreen() {
               미디어 추가 ({selectedImages.length + selectedVideos.length}/4)
             </Text>
           </TouchableOpacity>
-
-          {/* 선택된 미디어 미리보기 */}
-          {(selectedImages.length > 0 || selectedVideos.length > 0) && (
-            <View style={themed($imagePreviewContainer)}>
-              <Text style={themed($sectionTitle)}>첨부된 미디어</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={themed($imagePreviewScroll)}
-              >
-                {/* 이미지 미리보기 */}
-                {selectedImages.map((image, index) => (
-                  <View
-                    key={`image-${index}`}
-                    style={themed($imagePreviewItem)}
-                  >
-                    <Image
-                      source={{ uri: image.uri }}
-                      style={themed($imagePreview)}
-                      resizeMode="cover"
-                    />
-                    <TouchableOpacity
-                      style={themed($imageRemoveButton)}
-                      onPress={() => handleRemoveImage(index)}
-                    >
-                      <Ionicons name="close" color="white" size={16} />
-                    </TouchableOpacity>
-                    {image.fileSize && (
-                      <Text style={themed($imageSizeText)}>
-                        {(image.fileSize / 1024 / 1024).toFixed(1)}MB
-                      </Text>
-                    )}
-                    <View style={themed($mediaTypeIndicator)}>
-                      <Ionicons name="image" color="white" size={12} />
-                    </View>
-                  </View>
-                ))}
-
-                {/* 동영상 미리보기 */}
-                {selectedVideos.map((video, index) => (
-                  <View
-                    key={`video-${index}`}
-                    style={themed($imagePreviewItem)}
-                  >
-                    <View style={themed($videoPreviewContainer)}>
-                      <View style={themed($videoPlaceholder)}>
-                        <Ionicons name="play" color="white" size={24} />
-                      </View>
-                      {video.duration && (
-                        <Text style={themed($videoDurationText)}>
-                          {Math.floor(video.duration / 60)}:
-                          {(video.duration % 60).toFixed(0).padStart(2, "0")}
-                        </Text>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      style={themed($imageRemoveButton)}
-                      onPress={() => handleRemoveVideo(index)}
-                    >
-                      <Ionicons name="close" color="white" size={16} />
-                    </TouchableOpacity>
-                    {video.fileSize && (
-                      <Text style={themed($imageSizeText)}>
-                        {(video.fileSize / 1024 / 1024).toFixed(1)}MB
-                      </Text>
-                    )}
-                    <View style={themed($mediaTypeIndicator)}>
-                      <Ionicons name="videocam" color="white" size={12} />
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
+          {/* 선택된 미디어 미리보기 (modern/split은 상단에서 처리, dock에서는 여기서도 노출 생략) */}
+          {layoutVariant === "modern" && allSelectedMedia.length === 0 && (
+            <View style={themed($emptyHint)}>
+              <Text style={themed($emptyHintText)}>
+                미디어를 추가하면 상단에 표시됩니다
+              </Text>
             </View>
           )}
         </View>
       </ScrollView>
+
+      {/* 도크형: 하단 고정 썸네일 바 + 플로팅 업로드 버튼 */}
+      {layoutVariant === "dock" && (
+        <>
+          <View style={themed($dockBar)}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {allSelectedMedia.length === 0 ? (
+                <View style={themed($dockEmpty)}>
+                  <Ionicons
+                    name="images-outline"
+                    color={theme.colors.textDim}
+                    size={16}
+                  />
+                  <Text style={themed($dockEmptyText)}>미디어 없음</Text>
+                </View>
+              ) : (
+                allSelectedMedia.map((m, idx) => (
+                  <View key={`d-${idx}`} style={themed($dockItem)}>
+                    {m.type === "image" ? (
+                      <Image
+                        source={{ uri: m.uri }}
+                        style={themed($dockThumb)}
+                      />
+                    ) : (
+                      <View style={[themed($dockThumb), themed($videoBadgeBg)]}>
+                        <Ionicons name="videocam" color="white" size={14} />
+                      </View>
+                    )}
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+          <TouchableOpacity
+            onPress={handleMediaPicker}
+            style={themed($fab)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" color="white" size={22} />
+          </TouchableOpacity>
+        </>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -915,6 +1008,38 @@ const $publishButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
 
 const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
+});
+
+// 레이아웃 변형 탭
+const $variantTabs: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  gap: spacing.xs,
+  paddingHorizontal: spacing.md,
+  paddingTop: spacing.xs,
+  paddingBottom: spacing.sm,
+  backgroundColor: colors.background,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $variantTab: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 999,
+  backgroundColor: colors.backgroundAlt,
+});
+
+const $variantTabActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.tint + "15",
+  borderColor: colors.tint,
+});
+
+const $variantTabText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "600",
 });
 
 const $userSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -1206,4 +1331,139 @@ const $mediaTypeIndicator: ThemedStyle<ViewStyle> = () => ({
   height: 20,
   justifyContent: "center",
   alignItems: "center",
+});
+
+// 모던 상단바
+const $mediaToolbar: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  backgroundColor: colors.background,
+});
+
+const $mediaToolbarContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  gap: spacing.sm,
+});
+
+const $mediaToolbarItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginRight: spacing.xs,
+});
+
+const $mediaToolbarThumb: ThemedStyle<ImageStyle> = () => ({
+  width: 56,
+  height: 56,
+  borderRadius: 12,
+});
+
+const $videoBadgeBg: ThemedStyle<ViewStyle> = () => ({
+  backgroundColor: "rgba(0,0,0,0.7)",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+// 분할형 히어로
+const $heroContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.backgroundAlt,
+  height: 180,
+});
+
+const $heroImage: ThemedStyle<ImageStyle> = () => ({
+  width: "100%",
+  height: "100%",
+});
+
+const $heroVideoPlaceholder: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "center",
+});
+
+const $heroEmpty: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: colors.backgroundAlt,
+});
+
+const $heroEmptyText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.textDim,
+  marginTop: spacing.xs,
+});
+
+const $heroThumbRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+});
+
+const $heroThumb: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginRight: spacing.xs,
+});
+
+const $heroThumbImg: ThemedStyle<ImageStyle> = () => ({
+  width: 56,
+  height: 56,
+  borderRadius: 10,
+});
+
+// 도크형
+const $dockBar: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  paddingVertical: spacing.sm,
+  paddingHorizontal: spacing.md,
+  backgroundColor: colors.card,
+  borderTopWidth: 1,
+  borderTopColor: colors.border,
+});
+
+const $dockItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginRight: spacing.sm,
+});
+
+const $dockThumb: ThemedStyle<ImageStyle> = () => ({
+  width: 48,
+  height: 48,
+  borderRadius: 10,
+});
+
+const $dockEmpty: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+  paddingVertical: spacing.xs,
+});
+
+const $dockEmptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 12,
+});
+
+const $fab: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  position: "absolute",
+  right: spacing.lg,
+  bottom: spacing.xl + 8,
+  width: 48,
+  height: 48,
+  borderRadius: 24,
+  backgroundColor: colors.tint,
+  justifyContent: "center",
+  alignItems: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.2,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 6,
+});
+
+const $emptyHint: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  marginTop: spacing.md,
+});
+
+const $emptyHintText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 12,
 });

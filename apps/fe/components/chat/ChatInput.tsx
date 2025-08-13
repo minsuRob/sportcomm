@@ -123,7 +123,7 @@ export default function ChatInput({
     const calculatedHeight = height + 20;
     const newHeight = Math.max(
       minHeight,
-      Math.min(maxHeight, calculatedHeight),
+      Math.min(maxHeight, calculatedHeight)
     );
 
     // 계산된 높이가 기본 높이와 크게 다르지 않으면 기본값 유지
@@ -161,100 +161,115 @@ export default function ChatInput({
         </View>
       )}
 
+      {/* 하단 입력 바: 좌측 아이콘들 + 모드 pill + 입력 + 우측 전송 CTA */}
       <View style={themed($container)}>
-        {/* + 버튼 */}
-        <TouchableOpacity
-          style={themed($addButton)}
-          onPress={onAddOption}
-          disabled={disabled}
-        >
-          <Ionicons
-            name="add"
-            size={22}
-            color={
-              disabled ? theme.colors.textDim + "80" : theme.colors.textDim
-            }
-          />
-        </TouchableOpacity>
+        <View style={themed($bar)}>
+          {/* 좌측 + 버튼 */}
+          {onAddOption && (
+            <TouchableOpacity
+              style={themed($leftIconButton)}
+              onPress={onAddOption}
+              disabled={disabled}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="add-outline"
+                size={20}
+                color={
+                  disabled ? theme.colors.textDim + "80" : theme.colors.textDim
+                }
+              />
+            </TouchableOpacity>
+          )}
 
-        {/* 첨부 파일 버튼 */}
-        {onAttachment && (
+          {/* 좌측 첨부 버튼 */}
+          {onAttachment && (
+            <TouchableOpacity
+              style={themed($leftIconButton)}
+              onPress={onAttachment}
+              disabled={disabled}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name="attach-outline"
+                size={20}
+                color={
+                  disabled ? theme.colors.textDim + "80" : theme.colors.textDim
+                }
+              />
+            </TouchableOpacity>
+          )}
+
+          {/* 모드 토글 pill (이모지/특별 모드) */}
+          {onEmoji && (
+            <TouchableOpacity
+              style={[
+                themed($modePill),
+                isEmojiActive ? themed($modePillActive) : null,
+              ]}
+              onPress={handleEmojiToggle}
+              disabled={disabled}
+              accessibilityRole="button"
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="send-outline"
+                color={theme.colors.textDim}
+                size={16}
+              />
+              <Text style={themed($modePillText)}>자동</Text>
+              <Ionicons
+                name="chevron-down"
+                color={theme.colors.textDim}
+                size={14}
+              />
+            </TouchableOpacity>
+          )}
+
+          {/* 메시지 입력 필드 */}
+          <TextInput
+            ref={inputRef}
+            style={[themed($inputFlex), { height: inputHeight }]}
+            placeholder={
+              isEmojiActive ? "💌 특별한 메시지를 입력하세요..." : placeholder
+            }
+            placeholderTextColor={
+              isEmojiActive ? theme.colors.tint : theme.colors.textDim
+            }
+            value={message}
+            onChangeText={setMessage}
+            onContentSizeChange={handleContentSizeChange}
+            multiline={true}
+            numberOfLines={1}
+            maxLength={1000}
+            onSubmitEditing={handleSubmitEditing}
+            editable={!disabled}
+            returnKeyType="default"
+            scrollEnabled={inputHeight >= 120}
+            textBreakStrategy="simple"
+          />
+
+          {/* 전송 CTA */}
           <TouchableOpacity
-            style={themed($attachButton)}
-            onPress={onAttachment}
-            disabled={disabled}
+            style={[
+              themed($sendCta),
+              !message.trim() || disabled ? themed($sendCtaDisabled) : null,
+            ]}
+            onPress={handleSend}
+            disabled={!message.trim() || disabled}
+            accessibilityRole="button"
           >
             <Ionicons
-              name="attach"
-              size={22}
+              name="send"
+              size={18}
               color={
-                disabled ? theme.colors.textDim + "80" : theme.colors.textDim
+                !message.trim() || disabled
+                  ? theme.colors.textDim + "80"
+                  : theme.colors.card
               }
             />
           </TouchableOpacity>
-        )}
-
-        {/* 메시지 입력 필드 */}
-        <TextInput
-          ref={inputRef}
-          style={[
-            themed($input),
-            isEmojiActive ? themed($inputSpecial) : null,
-            { height: inputHeight }, // 동적 높이 적용
-          ]}
-          placeholder={
-            isEmojiActive ? "💌 특별한 메시지를 입력하세요..." : placeholder
-          }
-          placeholderTextColor={
-            isEmojiActive ? theme.colors.tint : theme.colors.textDim
-          }
-          value={message}
-          onChangeText={setMessage}
-          onContentSizeChange={handleContentSizeChange} // 내용 크기 변경 감지
-          multiline={true}
-          numberOfLines={1} // 초기 줄 수
-          maxLength={1000}
-          onSubmitEditing={handleSubmitEditing}
-          editable={!disabled}
-          returnKeyType="default" // 멀티라인에서는 default가 더 적합
-          scrollEnabled={inputHeight >= 120} // 최대 높이 도달 시만 스크롤 활성화
-          textBreakStrategy="simple" // Android에서 텍스트 줄바꿈 최적화
-        />
-
-        {/* 이모지 버튼 */}
-        {onEmoji && (
-          <TouchableOpacity
-            style={[
-              themed($emojiButton),
-              isEmojiActive ? themed($emojiButtonActive) : null,
-            ]}
-            onPress={handleEmojiToggle}
-            disabled={disabled}
-            activeOpacity={0.7}
-          >
-            <Text style={themed($emojiText)}>💌</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* 전송 버튼 */}
-        <TouchableOpacity
-          style={[
-            themed($sendButton),
-            !message.trim() || disabled ? themed($sendButtonDisabled) : null,
-          ]}
-          onPress={handleSend}
-          disabled={!message.trim() || disabled}
-        >
-          <Ionicons
-            name="send"
-            size={20}
-            color={
-              !message.trim() || disabled
-                ? theme.colors.textDim + "50"
-                : theme.colors.background
-            }
-          />
-        </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -262,93 +277,77 @@ export default function ChatInput({
 
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "flex-end", // 입력 필드 하단 기준으로 정렬
-  paddingHorizontal: spacing?.sm || 12,
-  paddingVertical: spacing?.md || 16, // 패딩 증가로 더 넓은 공간
+  paddingHorizontal: spacing?.md || 16,
+  paddingVertical: spacing?.sm || 12,
   borderTopWidth: 1,
   borderTopColor: colors.border,
   backgroundColor: colors.background,
-  position: "relative", // 절대 위치 요소들의 기준점
-  minHeight: 60, // 최소 높이 보장
 });
 
-const $input: ThemedStyle<TextStyle> = ({ colors }) => ({
-  flex: 1,
-  // height는 동적으로 설정되므로 minHeight/maxHeight 제거
+// 바 컨테이너 (둥근 입력바)
+const $bar: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.card,
+  borderRadius: 28,
   borderWidth: 1,
   borderColor: colors.border,
-  borderRadius: 20, // 더 둥근 모서리
-  paddingHorizontal: 16, // 좌우 패딩 증가
-  paddingVertical: 10, // 상하 패딩 증가
-  paddingRight: 80, // 이모지 버튼과 전송 버튼 공간 확보
-  fontSize: 16, // 폰트 크기 약간 증가
-  color: colors.text,
-  backgroundColor: colors.background,
-  textAlignVertical: "top", // 멀티라인에서 상단 정렬이 더 자연스러움
-  lineHeight: 20, // 줄 간격 설정
+  paddingHorizontal: spacing?.sm || 12,
+  paddingVertical: spacing?.xs || 8,
 });
 
-const $inputSpecial: ThemedStyle<TextStyle> = ({ colors }) => ({
-  borderColor: colors.tint,
-  borderWidth: 2,
-  backgroundColor: colors.tint + "10", // 10% 투명도로 배경색 적용
+const $leftIconButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing?.xs || 8,
+  paddingVertical: spacing?.xs || 8,
 });
 
-const $addButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing?.xs || 8,
-  marginRight: spacing?.xs || 8,
-  marginBottom: 8, // 입력 필드와 정렬을 위한 조정 (증가)
-});
-
-const $attachButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing?.xs || 8,
-  marginRight: spacing?.xs || 8,
-  marginBottom: 8, // 입력 필드와 정렬을 위한 조정 (증가)
-});
-
-const $emojiButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  position: "absolute",
-  right: 56, // 전송 버튼과 겹치지 않도록 조정
-  bottom: (spacing?.md || 16) + 8, // 입력 필드와 정렬을 위해 조정 (증가)
-  height: 32, // 버튼 크기 약간 증가
-  width: 32,
-  borderRadius: 16,
-  justifyContent: "center",
+const $modePill: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
   alignItems: "center",
+  backgroundColor: colors.backgroundAlt,
   borderWidth: 1,
-  borderColor: "transparent",
-  backgroundColor: "transparent",
-  zIndex: 10,
-  elevation: 10,
+  borderColor: colors.border,
+  paddingHorizontal: spacing?.sm || 12,
+  paddingVertical: spacing?.xs || 6,
+  borderRadius: 18,
+  marginRight: spacing?.sm || 12,
 });
 
-const $emojiButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $modePillActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderColor: colors.tint,
-  backgroundColor: colors.tint + "20", // 20% 투명도로 배경색 적용
+  backgroundColor: colors.tint + "15",
 });
 
-const $emojiText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 22, // 이모지 크기 약간 증가
+const $modePillText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 12,
+  marginHorizontal: 6,
 });
 
-const $sendButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  position: "absolute",
-  right: spacing?.md || 16,
-  bottom: (spacing?.md || 16) + 8, // 입력 필드와 정렬을 위해 조정 (증가)
-  width: 32, // 버튼 크기 약간 증가
-  height: 32,
-  borderRadius: 16,
+const $inputFlex: ThemedStyle<TextStyle> = ({ colors }) => ({
+  flex: 1,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  fontSize: 16,
+  color: colors.text,
+  backgroundColor: colors.card,
+  textAlignVertical: "top",
+  lineHeight: 20,
+});
+
+const $sendCta: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing?.md || 16,
+  paddingVertical: spacing?.sm || 10,
   backgroundColor: colors.tint,
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 5,
-  elevation: 5,
+  borderRadius: 18,
+  marginLeft: spacing?.sm || 12,
 });
 
-const $sendButtonDisabled: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $sendCtaDisabled: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.border,
 });
+
+// 답장 영역 스타일은 그대로 유지
 
 const $replyContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",

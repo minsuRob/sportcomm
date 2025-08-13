@@ -15,4 +15,3 @@ apps/fe/.env
 apps/be/uploads/images
 apps/be/uploads/videos
 apps/be/uploads/team-logos
-apps/be/src/database/migrations

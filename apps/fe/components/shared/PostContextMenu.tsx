@@ -3,12 +3,12 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { Alert } from "react-native";
 import { useMutation } from "@apollo/client";
 import ActionSheet, { ActionSheetOption } from "@/components/ActionSheet";
-import ReportModal from "@/components/ReportModal";
 import PostEditModal from "@/components/PostEditModal";
 import { useModerationActions } from "../../hooks/useModerationActions";
 import { useAppTheme } from "@/lib/theme/context";
-import { DELETE_POST, TOGGLE_BOOKMARK } from "@/lib/graphql";
+import { DELETE_POST, TOGGLE_BOOKMARK, CREATE_REPORT } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
+import AppDialog from "@/components/ui/AppDialog";
 
 interface PostContextMenuProps {
   visible: boolean;
@@ -45,13 +45,11 @@ export default function PostContextMenu({
   const [deletePost, { loading: deleteLoading }] = useMutation(DELETE_POST);
   const [toggleBookmark, { loading: bookmarkLoading }] =
     useMutation(TOGGLE_BOOKMARK);
-  const {
-    showReportModal,
-    reportTarget,
-    openReportModal,
-    closeReportModal,
-    blockUser,
-  } = useModerationActions();
+  const { blockUser } = useModerationActions();
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [executeCreateReport, { loading: reportLoading }] =
+    useMutation(CREATE_REPORT);
 
   const isOwnPost = currentUserId === post.author.id;
 
@@ -59,11 +57,7 @@ export default function PostContextMenu({
    * 신고하기 핸들러
    */
   const handleReport = () => {
-    openReportModal({
-      userId: post.author.id,
-      userName: post.author.nickname,
-      postId: post.id,
-    });
+    setShowReportDialog(true);
   };
 
   /**
@@ -170,7 +164,7 @@ export default function PostContextMenu({
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -231,7 +225,7 @@ export default function PostContextMenu({
         icon: (
           <Ionicons name="trash-outline" color={theme.colors.error} size={20} />
         ),
-      },
+      }
     );
   } else {
     // 다른 사용자의 게시물인 경우 신고/차단 옵션 추가
@@ -255,7 +249,7 @@ export default function PostContextMenu({
             size={20}
           />
         ),
-      },
+      }
     );
   }
 
@@ -272,13 +266,62 @@ export default function PostContextMenu({
         }
       />
 
-      {/* 신고 모달 */}
-      <ReportModal
-        visible={showReportModal}
-        onClose={closeReportModal}
-        postId={reportTarget?.postId}
-        reportedUserId={reportTarget?.userId}
-        reportedUserName={reportTarget?.userName}
+      {/* 신고 다이얼로그 (간단 버전) */}
+      <AppDialog
+        visible={showReportDialog}
+        onClose={() => {
+          setShowReportDialog(false);
+          setReportReason("");
+        }}
+        title="신고하기"
+        description="해당 게시물을 신고하시겠습니까? 상세 사유를 입력해 주세요."
+        inputProps={{
+          placeholder: "신고 사유 (최소 10자)",
+          value: reportReason,
+          onChangeText: setReportReason,
+          multiline: true,
+          maxLength: 500,
+        }}
+        confirmText={reportLoading ? "신고 중..." : "신고"}
+        cancelText="취소"
+        confirmDisabled={reportReason.trim().length < 10 || reportLoading}
+        onConfirm={async () => {
+          try {
+            const { data, errors } = await executeCreateReport({
+              variables: {
+                input: {
+                  type: "OTHER",
+                  reason: reportReason.trim(),
+                  postId: post.id,
+                  reportedUserId: post.author.id,
+                },
+              },
+            });
+            if (errors) throw new Error(errors[0]?.message || "신고 실패");
+            if (data?.createReport) {
+              showToast({
+                type: "success",
+                title: "신고 완료",
+                message: "신고가 접수되었습니다.",
+                duration: 2500,
+              });
+            }
+            setShowReportDialog(false);
+            setReportReason("");
+            onClose();
+          } catch (error) {
+            console.error("신고 실패:", error);
+            showToast({
+              type: "error",
+              title: "오류",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "신고 처리 중 문제가 발생했습니다.",
+              duration: 3500,
+            });
+          }
+        }}
       />
 
       {/* 수정 모달 */}

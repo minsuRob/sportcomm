@@ -114,7 +114,7 @@ export default function ProfileContextPopover({
   if (!visible) return null;
 
   return (
-    <Portal>
+    <Portal name="profile-context-popover">
       <View style={themed($overlay)}>
         {/* 바깥 영역 클릭 시 닫기 */}
         <TouchableOpacity

@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
-import ProfileContextMenu from "@/components/shared/ProfileContextMenu";
+import ProfileContextPopover from "@/components/shared/ProfileContextPopover";
 import TeamFilterSelector from "@/components/TeamFilterSelector";
 import { NotificationBadge } from "@/components/notifications";
 import { useAppTheme } from "@/lib/theme/context";
@@ -38,6 +38,7 @@ export default function FeedHeader({
 }: FeedHeaderProps) {
   const { themed, theme } = useAppTheme();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
+  const anchorRef = React.useRef<View>(null);
 
   const handleProfilePress = () => {
     if (currentUser) {
@@ -82,6 +83,7 @@ export default function FeedHeader({
           </>
         )}
         <TouchableOpacity
+          ref={anchorRef}
           style={themed($iconButton)}
           onPress={handleProfilePress}
         >
@@ -100,14 +102,18 @@ export default function FeedHeader({
           )}
         </TouchableOpacity>
       </View>
-      {/* 프로필 컨텍스트 메뉴 */}
+      {/* 프로필 컨텍스트 팝오버: 헤더 우측 아바타 아래 위치 */}
       {currentUser && (
-        <ProfileContextMenu
+        <ProfileContextPopover
           visible={profileMenuVisible}
           onClose={() => setProfileMenuVisible(false)}
           onOpenProfile={() => {
             setProfileMenuVisible(false);
             onProfilePress();
+          }}
+          anchorStyle={{
+            top: 46,
+            right: 10,
           }}
         />
       )}

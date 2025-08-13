@@ -45,6 +45,8 @@ import {
   SelectedVideo,
 } from "@/lib/api/videoUpload";
 import { UploadProgress } from "@/lib/api/common";
+import TrendyCreatePostSection from "@/components/createPost/TrendyCreatePostSection";
+import CreativeCreatePostSection from "@/components/createPost/CreativeCreatePostSection";
 
 // --- 타입 정의 ---
 interface TeamOption {
@@ -87,7 +89,7 @@ export default function CreatePostScreen() {
 
   // 상태 관리
   const [layoutVariant, setLayoutVariant] = useState<
-    "modern" | "split" | "dock"
+    "modern" | "trendy" | "creative"
   >("modern");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -660,9 +662,9 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 레이아웃 선택 탭 (간단 토글) */}
+      {/* 레이아웃 선택 탭 (하단 본문 영역 변형) */}
       <View style={themed($variantTabs)}>
-        {(["modern", "split", "dock"] as const).map((v) => (
+        {(["modern", "trendy", "creative"] as const).map((v) => (
           <TouchableOpacity
             key={v}
             onPress={() => setLayoutVariant(v)}
@@ -672,14 +674,14 @@ export default function CreatePostScreen() {
             ]}
           >
             <Text style={themed($variantTabText)}>
-              {v === "modern" ? "모던" : v === "split" ? "분할" : "도크"}
+              {v === "modern" ? "모던" : v === "trendy" ? "트렌디" : "신박"}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* 모던: 상단 고정 썸네일 바 */}
-      {layoutVariant === "modern" && allSelectedMedia.length > 0 && (
+      {/* 상단 고정 썸네일 바 (항상 모던) */}
+      {allSelectedMedia.length > 0 && (
         <View style={themed($mediaToolbar)}>
           <ScrollView
             horizontal
@@ -706,68 +708,9 @@ export default function CreatePostScreen() {
         </View>
       )}
 
-      {/* 분할형: 히어로 미리보기 */}
-      {layoutVariant === "split" && (
-        <View>
-          <View style={themed($heroContainer)}>
-            {allSelectedMedia[0] ? (
-              allSelectedMedia[0].type === "image" ? (
-                <Image
-                  source={{ uri: allSelectedMedia[0].uri }}
-                  style={themed($heroImage)}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={themed($heroVideoPlaceholder)}>
-                  <Ionicons name="play" color="white" size={36} />
-                </View>
-              )
-            ) : (
-              <View style={themed($heroEmpty)}>
-                <Ionicons
-                  name="image-outline"
-                  color={theme.colors.textDim}
-                  size={28}
-                />
-                <Text style={themed($heroEmptyText)}>
-                  미디어를 추가해 보세요
-                </Text>
-              </View>
-            )}
-          </View>
-          {allSelectedMedia.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={themed($heroThumbRow)}
-            >
-              {allSelectedMedia.map((m, idx) => (
-                <View key={`h-${idx}`} style={themed($heroThumb)}>
-                  {m.type === "image" ? (
-                    <Image
-                      source={{ uri: m.uri }}
-                      style={themed($heroThumbImg)}
-                    />
-                  ) : (
-                    <View
-                      style={[themed($heroThumbImg), themed($videoBadgeBg)]}
-                    >
-                      <Ionicons name="videocam" color="white" size={14} />
-                    </View>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-      )}
-
       <ScrollView
         style={themed($scrollContainer)}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={
-          layoutVariant === "dock" ? { paddingBottom: 120 } : undefined
-        }
       >
         {/* 사용자 정보 */}
         <View style={themed($userSection)}>
@@ -778,186 +721,191 @@ export default function CreatePostScreen() {
         </View>
 
         {/* 응원할 팀 선택 */}
-        <View style={themed($typeSection)}>
-          <View style={themed($sectionHeader)}>
-            <Text style={themed($sectionTitle)}>응원할 팀 선택</Text>
-            {teamOptions.length === 0 && !teamsLoading && (
-              <TouchableOpacity
-                style={themed($addTeamButton)}
-                onPress={handleGoToTeamSelection}
-              >
-                <Ionicons name="add" color={theme.colors.tint} size={16} />
-                <Text style={themed($addTeamText)}>팀 추가</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {teamsLoading ? (
-            <View style={themed($loadingContainer)}>
-              <Text style={themed($loadingText)}>팀 목록을 불러오는 중...</Text>
+        {layoutVariant === "modern" && (
+          <View style={themed($typeSection)}>
+            <View style={themed($sectionHeader)}>
+              <Text style={themed($sectionTitle)}>응원할 팀 선택</Text>
+              {teamOptions.length === 0 && !teamsLoading && (
+                <TouchableOpacity
+                  style={themed($addTeamButton)}
+                  onPress={handleGoToTeamSelection}
+                >
+                  <Ionicons name="add" color={theme.colors.tint} size={16} />
+                  <Text style={themed($addTeamText)}>팀 추가</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          ) : teamOptions.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={themed($typeScrollView)}
-            >
-              <View style={themed($typeOptions)}>
-                {teamOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.teamId}
-                    style={[
-                      themed($typeOption),
-                      {
-                        borderColor:
-                          selectedTeamId === option.teamId
-                            ? option.color
-                            : theme.colors.border,
-                        backgroundColor:
-                          selectedTeamId === option.teamId
-                            ? option.color + "20"
-                            : "transparent",
-                      },
-                    ]}
-                    onPress={() => handleTeamSelect(option.teamId)}
-                  >
-                    <Text style={themed($typeIcon)}>{option.icon}</Text>
-                    <Text
+
+            {teamsLoading ? (
+              <View style={themed($loadingContainer)}>
+                <Text style={themed($loadingText)}>
+                  팀 목록을 불러오는 중...
+                </Text>
+              </View>
+            ) : teamOptions.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={themed($typeScrollView)}
+              >
+                <View style={themed($typeOptions)}>
+                  {teamOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.teamId}
                       style={[
-                        themed($typeLabel),
+                        themed($typeOption),
                         {
-                          color:
+                          borderColor:
                             selectedTeamId === option.teamId
                               ? option.color
-                              : theme.colors.text,
+                              : theme.colors.border,
+                          backgroundColor:
+                            selectedTeamId === option.teamId
+                              ? option.color + "20"
+                              : "transparent",
                         },
                       ]}
+                      onPress={() => handleTeamSelect(option.teamId)}
                     >
-                      {option.label}
-                    </Text>
-                    <Text style={themed($sportLabel)}>{option.sportName}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-          ) : (
-            <View style={themed($emptyTeamsContainer)}>
-              <Text style={themed($emptyTeamsText)}>
-                응원할 팀을 먼저 선택해주세요
-              </Text>
-              <TouchableOpacity
-                style={themed($selectTeamButton)}
-                onPress={handleGoToTeamSelection}
-              >
-                <Ionicons name="heart" color="white" size={16} />
-                <Text style={themed($selectTeamButtonText)}>팀 선택하기</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* 제목 입력 영역 */}
-        <View style={themed($titleSection)}>
-          <Text style={themed($sectionTitle)}>제목</Text>
-          <TextInput
-            style={themed($titleInput)}
-            placeholder="게시물 제목을 입력하세요"
-            placeholderTextColor={theme.colors.textDim}
-            value={title}
-            onChangeText={setTitle}
-            maxLength={200}
-            editable={!isSubmitting}
-          />
-          <View style={themed($characterCount)}>
-            <Text style={themed($characterCountText)}>{title.length}/200</Text>
-          </View>
-        </View>
-
-        {/* 내용 입력 영역 */}
-        <View style={themed($contentSection)}>
-          <Text style={themed($sectionTitle)}>내용</Text>
-          <TextInput
-            style={themed($textInput)}
-            placeholder={t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER)}
-            placeholderTextColor={theme.colors.textDim}
-            value={content}
-            onChangeText={setContent}
-            multiline
-            textAlignVertical="top"
-            maxLength={10000}
-            editable={!isSubmitting}
-          />
-          <View style={themed($characterCount)}>
-            <Text style={themed($characterCountText)}>
-              {content.length}/10000
-            </Text>
-          </View>
-
-          {/* 미디어 업로드 버튼 */}
-          <TouchableOpacity
-            style={themed($imageUploadButton)}
-            onPress={handleMediaPicker}
-            disabled={
-              isSubmitting || selectedImages.length + selectedVideos.length >= 4
-            }
-          >
-            <Ionicons name="image" color={theme.colors.tint} size={20} />
-            <Text style={themed($imageUploadText)}>
-              미디어 추가 ({selectedImages.length + selectedVideos.length}/4)
-            </Text>
-          </TouchableOpacity>
-          {/* 선택된 미디어 미리보기 (modern/split은 상단에서 처리, dock에서는 여기서도 노출 생략) */}
-          {layoutVariant === "modern" && allSelectedMedia.length === 0 && (
-            <View style={themed($emptyHint)}>
-              <Text style={themed($emptyHintText)}>
-                미디어를 추가하면 상단에 표시됩니다
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* 도크형: 하단 고정 썸네일 바 + 플로팅 업로드 버튼 */}
-      {layoutVariant === "dock" && (
-        <>
-          <View style={themed($dockBar)}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {allSelectedMedia.length === 0 ? (
-                <View style={themed($dockEmpty)}>
-                  <Ionicons
-                    name="images-outline"
-                    color={theme.colors.textDim}
-                    size={16}
-                  />
-                  <Text style={themed($dockEmptyText)}>미디어 없음</Text>
+                      <Text style={themed($typeIcon)}>{option.icon}</Text>
+                      <Text
+                        style={[
+                          themed($typeLabel),
+                          {
+                            color:
+                              selectedTeamId === option.teamId
+                                ? option.color
+                                : theme.colors.text,
+                          },
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                      <Text style={themed($sportLabel)}>
+                        {option.sportName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              ) : (
-                allSelectedMedia.map((m, idx) => (
-                  <View key={`d-${idx}`} style={themed($dockItem)}>
-                    {m.type === "image" ? (
-                      <Image
-                        source={{ uri: m.uri }}
-                        style={themed($dockThumb)}
-                      />
-                    ) : (
-                      <View style={[themed($dockThumb), themed($videoBadgeBg)]}>
-                        <Ionicons name="videocam" color="white" size={14} />
-                      </View>
-                    )}
-                  </View>
-                ))
-              )}
-            </ScrollView>
+              </ScrollView>
+            ) : (
+              <View style={themed($emptyTeamsContainer)}>
+                <Text style={themed($emptyTeamsText)}>
+                  응원할 팀을 먼저 선택해주세요
+                </Text>
+                <TouchableOpacity
+                  style={themed($selectTeamButton)}
+                  onPress={handleGoToTeamSelection}
+                >
+                  <Ionicons name="heart" color="white" size={16} />
+                  <Text style={themed($selectTeamButtonText)}>팀 선택하기</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-          <TouchableOpacity
-            onPress={handleMediaPicker}
-            style={themed($fab)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add" color="white" size={22} />
-          </TouchableOpacity>
-        </>
-      )}
+        )}
+
+        {layoutVariant === "trendy" && (
+          <TrendyCreatePostSection
+            teamOptions={teamOptions}
+            teamsLoading={teamsLoading}
+            selectedTeamId={selectedTeamId}
+            onSelectTeam={handleTeamSelect}
+            onGoTeamSelection={handleGoToTeamSelection}
+            title={title}
+            setTitle={setTitle}
+            content={content}
+            setContent={setContent}
+            isSubmitting={isSubmitting}
+            onPickMedia={handleMediaPicker}
+            selectedCount={selectedImages.length + selectedVideos.length}
+          />
+        )}
+
+        {/* 제목 입력 영역 (모던) */}
+        {layoutVariant === "modern" && (
+          <View style={themed($titleSection)}>
+            <Text style={themed($sectionTitle)}>제목</Text>
+            <TextInput
+              style={themed($titleInput)}
+              placeholder="게시물 제목을 입력하세요"
+              placeholderTextColor={theme.colors.textDim}
+              value={title}
+              onChangeText={setTitle}
+              maxLength={200}
+              editable={!isSubmitting}
+            />
+            <View style={themed($characterCount)}>
+              <Text style={themed($characterCountText)}>
+                {title.length}/200
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* 내용 입력 영역 (모던) */}
+        {layoutVariant === "modern" && (
+          <View style={themed($contentSection)}>
+            <Text style={themed($sectionTitle)}>내용</Text>
+            <TextInput
+              style={themed($textInput)}
+              placeholder={t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER)}
+              placeholderTextColor={theme.colors.textDim}
+              value={content}
+              onChangeText={setContent}
+              multiline
+              textAlignVertical="top"
+              maxLength={10000}
+              editable={!isSubmitting}
+            />
+            <View style={themed($characterCount)}>
+              <Text style={themed($characterCountText)}>
+                {content.length}/10000
+              </Text>
+            </View>
+
+            {/* 미디어 업로드 버튼 */}
+            <TouchableOpacity
+              style={themed($imageUploadButton)}
+              onPress={handleMediaPicker}
+              disabled={
+                isSubmitting ||
+                selectedImages.length + selectedVideos.length >= 4
+              }
+            >
+              <Ionicons name="image" color={theme.colors.tint} size={20} />
+              <Text style={themed($imageUploadText)}>
+                미디어 추가 ({selectedImages.length + selectedVideos.length}/4)
+              </Text>
+            </TouchableOpacity>
+            {/* 선택된 미디어 미리보기 (modern/split은 상단에서 처리, dock에서는 여기서도 노출 생략) */}
+            {allSelectedMedia.length === 0 && (
+              <View style={themed($emptyHint)}>
+                <Text style={themed($emptyHintText)}>
+                  미디어를 추가하면 상단에 표시됩니다
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {layoutVariant === "creative" && (
+          <CreativeCreatePostSection
+            teamOptions={teamOptions}
+            teamsLoading={teamsLoading}
+            selectedTeamId={selectedTeamId}
+            onSelectTeam={handleTeamSelect}
+            onGoTeamSelection={handleGoToTeamSelection}
+            title={title}
+            setTitle={setTitle}
+            content={content}
+            setContent={setContent}
+            isSubmitting={isSubmitting}
+            onPickMedia={handleMediaPicker}
+            selectedCount={selectedImages.length + selectedVideos.length}
+          />
+        )}
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

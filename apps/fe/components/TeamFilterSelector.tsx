@@ -69,7 +69,20 @@ export default function TeamFilterSelector({
   const applySelection = async (): Promise<void> => {
     try {
       const next = pendingSelectedIds.length > 0 ? pendingSelectedIds : null;
-      onTeamSelect(next);
+
+      // 현재 선택과 동일한 경우 중복 호출 방지
+      const currentIds = selectedTeamIds || [];
+      const nextIds = next || [];
+
+      const isSameSelection =
+        currentIds.length === nextIds.length &&
+        currentIds.every((id) => nextIds.includes(id)) &&
+        nextIds.every((id) => currentIds.includes(id));
+
+      if (!isSameSelection) {
+        onTeamSelect(next);
+      }
+
       setModalVisible(false);
     } catch (error) {
       console.error("팀 필터 저장 실패:", error);

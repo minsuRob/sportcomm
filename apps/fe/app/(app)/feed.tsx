@@ -190,7 +190,9 @@ export default function FeedScreen() {
           refreshing={isRefreshing}
           onRefresh={handleRefresh}
           onEndReached={handleLoadMore}
-          ListHeaderComponent={currentUser ? <StorySection /> : null}
+          ListHeaderComponent={
+            currentUser ? <StorySection teamIds={selectedTeamIds} /> : null
+          }
           ListFooterComponent={
             <ListFooter loading={footerLoading} error={error} />
           }

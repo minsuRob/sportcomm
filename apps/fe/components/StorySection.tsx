@@ -80,6 +80,7 @@ interface StorySectionProps {
   onStoryPress?: (story: StoryItem) => void;
   storyTypes?: StoryType[]; // 표시할 스토리 타입들
   maxItems?: number; // 최대 표시 개수
+  teamIds?: string[] | null; // 팀 필터 (null이면 모든 팀)
 }
 
 /**
@@ -217,6 +218,7 @@ export default function StorySection({
   onStoryPress,
   storyTypes = DEFAULT_STORY_TYPES,
   maxItems = 8,
+  teamIds,
 }: StorySectionProps) {
   const { themed } = useAppTheme();
   const router = useRouter();
@@ -226,6 +228,7 @@ export default function StorySection({
     storyTypes,
     maxItems,
     userId: currentUser?.id,
+    teamIds: teamIds, // 팀 필터 전달
   });
 
   // 스토리 클릭 핸들러

@@ -81,7 +81,7 @@ export function useFeedPosts() {
     },
     skip: !filterInitialized, // 필터가 초기화되기 전까지는 쿼리 실행하지 않음
     notifyOnNetworkStatusChange: true,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first", // 캐시 우선으로 변경하여 중복 네트워크 요청 방지
   });
 
   // 필터 초기화: AsyncStorage -> My Teams 순서로 처리
@@ -100,14 +100,14 @@ export function useFeedPosts() {
         // 2. 저장된 필터가 없으면 My Teams를 기본값으로 사용
         if (myTeamsData?.myTeams) {
           const allMyTeamIds = myTeamsData.myTeams.map(
-            (ut: UserTeam) => ut.team.id,
+            (ut: UserTeam) => ut.team.id
           );
           setSelectedTeamIds(allMyTeamIds.length > 0 ? allMyTeamIds : null);
 
           // AsyncStorage에 기본값 저장
           await AsyncStorage.setItem(
             STORAGE_KEY,
-            JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : []),
+            JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : [])
           );
           setFilterInitialized(true);
         }
@@ -145,7 +145,7 @@ export function useFeedPosts() {
             ...p,
             isMock: false,
             media: p.media || [],
-          }) as Post,
+          }) as Post
       );
 
     if (data.posts.page === 1) {
@@ -157,7 +157,7 @@ export function useFeedPosts() {
         const merged = Array.from(map.values());
         return merged.sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
       });
     }
@@ -190,6 +190,19 @@ export function useFeedPosts() {
   const handleTeamFilterChange = useCallback(
     async (teamIds: string[] | null) => {
       try {
+        // 현재 선택과 동일한 경우 중복 처리 방지
+        const currentIds = selectedTeamIds || [];
+        const nextIds = teamIds || [];
+
+        const isSameSelection =
+          currentIds.length === nextIds.length &&
+          currentIds.every((id) => nextIds.includes(id)) &&
+          nextIds.every((id) => currentIds.includes(id));
+
+        if (isSameSelection) {
+          return; // 동일한 선택이면 아무것도 하지 않음
+        }
+
         // AsyncStorage에 저장
         if (teamIds && teamIds.length > 0) {
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(teamIds));
@@ -210,7 +223,7 @@ export function useFeedPosts() {
         console.error("팀 필터 변경 실패:", error);
       }
     },
-    [refetch],
+    [refetch, selectedTeamIds]
   );
 
   /**

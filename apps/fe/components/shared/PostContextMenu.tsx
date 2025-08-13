@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { Alert } from "react-native";
 import { useMutation } from "@apollo/client";
 import ActionSheet, { ActionSheetOption } from "@/components/ActionSheet";
 import PostEditModal from "@/components/PostEditModal";
@@ -50,6 +49,7 @@ export default function PostContextMenu({
   const [reportReason, setReportReason] = useState("");
   const [executeCreateReport, { loading: reportLoading }] =
     useMutation(CREATE_REPORT);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const isOwnPost = currentUserId === post.author.id;
 
@@ -121,51 +121,43 @@ export default function PostContextMenu({
    * 게시물 삭제 전 확인 대화상자를 표시하고, 확인 시 삭제 처리
    */
   const handleDelete = () => {
-    Alert.alert(
-      "게시물 삭제",
-      "이 게시물을 정말 삭제하시겠습니까?\n삭제된 게시물은 복구할 수 없습니다.",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "삭제",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // 게시물 삭제 뮤테이션 실행
-              const { data } = await deletePost({
-                variables: { id: post.id },
-              });
+    setShowDeleteDialog(true);
+  };
 
-              if (data?.deletePost) {
-                showToast({
-                  type: "success",
-                  title: "삭제 완료",
-                  message: "게시물이 성공적으로 삭제되었습니다.",
-                  duration: 3000,
-                });
+  const confirmDelete = async () => {
+    try {
+      // 게시물 삭제 뮤테이션 실행
+      const { data } = await deletePost({
+        variables: { id: post.id },
+      });
 
-                // 목록 화면으로 돌아가기 (onClose 콜백 실행)
-                onClose();
+      if (data?.deletePost) {
+        showToast({
+          type: "success",
+          title: "삭제 완료",
+          message: "게시물이 성공적으로 삭제되었습니다.",
+          duration: 3000,
+        });
 
-                // 부모 컴포넌트에 삭제 알림 (onPostUpdated 콜백을 통해)
-                if (onPostUpdated) {
-                  onPostUpdated({ id: post.id, deleted: true });
-                }
-              }
-            } catch (error) {
-              console.error("게시물 삭제 오류:", error);
-              showToast({
-                type: "error",
-                title: "오류",
-                message:
-                  "게시물 삭제 중 문제가 발생했습니다. 다시 시도해주세요.",
-                duration: 4000,
-              });
-            }
-          },
-        },
-      ]
-    );
+        // 목록 화면으로 돌아가기 (onClose 콜백 실행)
+        onClose();
+
+        // 부모 컴포넌트에 삭제 알림 (onPostUpdated 콜백을 통해)
+        if (onPostUpdated) {
+          onPostUpdated({ id: post.id, deleted: true });
+        }
+      }
+    } catch (error) {
+      console.error("게시물 삭제 오류:", error);
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "게시물 삭제 중 문제가 발생했습니다. 다시 시도해주세요.",
+        duration: 4000,
+      });
+    } finally {
+      setShowDeleteDialog(false);
+    }
   };
 
   /**
@@ -322,6 +314,17 @@ export default function PostContextMenu({
             });
           }
         }}
+      />
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AppDialog
+        visible={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        title="게시물 삭제"
+        description="이 게시물을 정말 삭제하시겠습니까? 삭제된 게시물은 복구할 수 없습니다."
+        confirmText="삭제"
+        onConfirm={confirmDelete}
+        cancelText="취소"
       />
 
       {/* 수정 모달 */}

@@ -181,7 +181,9 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   elevation: 8,
 });
 
-const $image: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+import { ImageStyle } from "react-native";
+
+const $image: ThemedStyle<ImageStyle> = ({ spacing }) => ({
   width: "100%",
   height: 140,
   borderRadius: 12,

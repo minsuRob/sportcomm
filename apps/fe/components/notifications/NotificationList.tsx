@@ -12,10 +12,7 @@ import {
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { Ionicons } from "@expo/vector-icons";
-import NotificationItem, {
-  Notification,
-  NotificationType,
-} from "./NotificationItem";
+import NotificationItem, { Notification } from "./NotificationItem";
 import {
   testForegroundNotification,
   testDelayedNotification,
@@ -24,7 +21,7 @@ import {
   listScheduledNotifications,
   checkNotificationPermissions,
 } from "@/lib/notifications/testNotifications";
-import { Alert } from "react-native";
+import AppDialog from "@/components/ui/AppDialog";
 
 interface NotificationListProps {
   notifications?: Notification[];
@@ -42,61 +39,77 @@ interface NotificationListProps {
  */
 function NotificationTestButton() {
   const { themed, theme } = useAppTheme();
+  const [isDialogVisible, setDialogVisible] = useState(false);
 
-  const showTestMenu = () => {
-    Alert.alert(
-      "🔔 알림 테스트",
-      "어떤 테스트를 실행하시겠습니까?",
-      [
-        {
-          text: "포그라운드 알림",
-          onPress: testForegroundNotification,
-        },
-        {
-          text: "5초 지연 알림",
-          onPress: testDelayedNotification,
-        },
-        {
-          text: "다양한 알림들",
-          onPress: testVariousNotifications,
-        },
-        {
-          text: "권한 확인",
-          onPress: checkNotificationPermissions,
-        },
-        {
-          text: "예약된 알림 목록",
-          onPress: listScheduledNotifications,
-        },
-        {
-          text: "모든 알림 취소",
-          onPress: cancelAllScheduledNotifications,
-          style: "destructive",
-        },
-        {
-          text: "취소",
-          style: "cancel",
-        },
-      ],
-      { cancelable: true }
-    );
-  };
+  const testActions = [
+    { text: "포그라운드 알림", onPress: testForegroundNotification },
+    { text: "5초 지연 알림", onPress: testDelayedNotification },
+    { text: "다양한 알림들", onPress: testVariousNotifications },
+    { text: "권한 확인", onPress: checkNotificationPermissions },
+    { text: "예약된 알림 목록", onPress: listScheduledNotifications },
+    {
+      text: "모든 알림 취소",
+      onPress: cancelAllScheduledNotifications,
+      isDestructive: true,
+    },
+  ];
+
+  const TestMenu = () => (
+    <View style={{ gap: 8 }}>
+      {testActions.map((action, index) => (
+        <TouchableOpacity
+          key={index}
+          style={themed(
+            action.isDestructive ? $dialogButtonDestructive : $dialogButton
+          )}
+          onPress={() => {
+            action.onPress();
+            setDialogVisible(false);
+          }}
+        >
+          <Text
+            style={themed(
+              action.isDestructive
+                ? $dialogButtonDestructiveText
+                : $dialogButtonText
+            )}
+          >
+            {action.text}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   // 개발 환경에서만 표시
   if (__DEV__) {
     return (
-      <TouchableOpacity
-        style={themed($testButton)}
-        onPress={showTestMenu}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name="notifications-outline"
-          size={20}
-          color={theme.colors.tint}
-        />
-        <Text style={themed($testButtonText)}>알림 테스트</Text>
-      </TouchableOpacity>
+      <>
+        <TouchableOpacity
+          style={themed($testButton)}
+          onPress={() => setDialogVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={20}
+            color={theme.colors.tint}
+          />
+          <Text style={themed($testButtonText)}>알림 테스트</Text>
+        </TouchableOpacity>
+
+        <AppDialog
+          visible={isDialogVisible}
+          onClose={() => setDialogVisible(false)}
+          title="🔔 알림 테스트"
+          description="어떤 테스트를 실행하시겠습니까?"
+          showCancel={false}
+          confirmText="닫기"
+          onConfirm={() => setDialogVisible(false)}
+        >
+          <TestMenu />
+        </AppDialog>
+      </>
     );
   }
 
@@ -362,4 +375,26 @@ const $testButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "500",
   color: colors.tint,
   marginLeft: 8,
+});
+
+const $dialogButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  padding: spacing.md,
+  borderRadius: 8,
+  backgroundColor: colors.backgroundAlt,
+  alignItems: "center",
+});
+
+const $dialogButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontWeight: "600",
+});
+
+const $dialogButtonDestructive: ThemedStyle<ViewStyle> = (theme) => ({
+  ...$dialogButton(theme),
+  backgroundColor: theme.colors.error + "20",
+});
+
+const $dialogButtonDestructiveText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.error,
+  fontWeight: "600",
 });

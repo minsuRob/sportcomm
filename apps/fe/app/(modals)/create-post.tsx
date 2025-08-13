@@ -9,12 +9,12 @@ import {
   Platform,
   ViewStyle,
   TextStyle,
-  Alert,
   Image,
   Dimensions,
   ImageStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AppDialog from "@/components/ui/AppDialog";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { isWeb } from "@/lib/platform";
@@ -100,6 +100,13 @@ export default function CreatePostScreen() {
   const [selectedVideos, setSelectedVideos] = useState<SelectedVideo[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [uploadPercentage, setUploadPercentage] = useState<number>(0);
+  const [dialog, setDialog] = useState<{
+    visible: boolean;
+    title: string;
+    description: string;
+    onConfirm?: () => void;
+    showCancel?: boolean;
+  }>({ visible: false, title: "", description: "" });
 
   // 사용자가 선택한 팀 목록 조회
   const {
@@ -126,9 +133,13 @@ export default function CreatePostScreen() {
         setCurrentUser(user);
       } else {
         // 로그인되지 않은 경우 피드로 리다이렉트
-        Alert.alert("로그인 필요", "게시물을 작성하려면 로그인이 필요합니다.", [
-          { text: "확인", onPress: () => router.back() },
-        ]);
+        setDialog({
+          visible: true,
+          title: "로그인 필요",
+          description: "게시물을 작성하려면 로그인이 필요합니다.",
+          onConfirm: () => router.back(),
+          showCancel: false,
+        });
       }
     };
     checkSession();
@@ -158,18 +169,13 @@ export default function CreatePostScreen() {
       selectedImages.length > 0 ||
       selectedVideos.length > 0
     ) {
-      Alert.alert(
-        "작성 취소",
-        "작성 중인 내용이 있습니다. 정말 취소하시겠습니까?",
-        [
-          { text: "계속 작성", style: "cancel" },
-          {
-            text: "취소",
-            style: "destructive",
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      setDialog({
+        visible: true,
+        title: "작성 취소",
+        description: "작성 중인 내용이 있습니다. 정말 취소하시겠습니까?",
+        onConfirm: () => router.back(),
+        showCancel: true,
+      });
     } else {
       router.back();
     }
@@ -207,11 +213,12 @@ export default function CreatePostScreen() {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "권한 필요",
-          "미디어를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }]
-        );
+        setDialog({
+          visible: true,
+          title: "권한 필요",
+          description: "미디어를 선택하려면 갤러리 접근 권한이 필요합니다.",
+          showCancel: false,
+        });
         return;
       }
 
@@ -906,6 +913,19 @@ export default function CreatePostScreen() {
           />
         )}
       </ScrollView>
+      <AppDialog
+        visible={dialog.visible}
+        onClose={() => setDialog({ ...dialog, visible: false })}
+        title={dialog.title}
+        description={dialog.description}
+        confirmText="확인"
+        onConfirm={() => {
+          setDialog({ ...dialog, visible: false });
+          dialog.onConfirm?.();
+        }}
+        showCancel={dialog.showCancel}
+        cancelText="취소"
+      />
     </KeyboardAvoidingView>
   );
 }

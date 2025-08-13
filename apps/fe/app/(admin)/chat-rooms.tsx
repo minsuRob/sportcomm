@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
-  Alert,
   Modal,
   TextInput,
   Switch,
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AppDialog from "@/components/ui/AppDialog";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
@@ -71,6 +71,7 @@ export default function AdminChatRoomsScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoomInfo | null>(null);
+  const [roomToDelete, setRoomToDelete] = useState<ChatRoomInfo | null>(null);
   const [page, setPage] = useState(1);
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
 
@@ -261,47 +262,21 @@ export default function AdminChatRoomsScreen() {
 
   // 채팅방 삭제 핸들러
   const handleDeleteRoom = (room: ChatRoomInfo) => {
-    console.log("🗑️ 삭제 버튼 클릭됨:", room.name, room.id);
+    setRoomToDelete(room);
+  };
 
-    // 이미 삭제 중인 경우 중복 실행 방지
-    if (deletingRoomId === room.id) {
-      console.log("⚠️ 이미 삭제 중인 채팅방:", room.id);
-      return;
+  const confirmDeleteRoom = async () => {
+    if (!roomToDelete) return;
+    setDeletingRoomId(roomToDelete.id);
+    try {
+      await deleteChatRoom({
+        variables: { roomId: roomToDelete.id },
+      });
+    } catch (error) {
+      // onError에서 처리
+    } finally {
+      setRoomToDelete(null);
     }
-
-    console.log("📋 삭제 확인 다이얼로그 표시");
-    Alert.alert(
-      "채팅방 삭제",
-      `${room.name} 채팅방을 삭제하시겠습니까?\n\n⚠️ 주의사항:\n• 모든 메시지가 함께 삭제됩니다\n• 참여자들이 채팅방에서 제외됩니다\n• 이 작업은 되돌릴 수 없습니다`,
-      [
-        {
-          text: "취소",
-          style: "cancel",
-          onPress: () => {
-            console.log("❌ 삭제 취소됨");
-            setDeletingRoomId(null);
-          },
-        },
-        {
-          text: "삭제",
-          style: "destructive",
-          onPress: async () => {
-            console.log("🚀 삭제 시작:", room.id);
-            setDeletingRoomId(room.id); // 삭제 중 상태 설정
-            try {
-              console.log("📡 GraphQL 뮤테이션 호출");
-              const result = await deleteChatRoom({
-                variables: { roomId: room.id },
-              });
-              console.log("✅ 삭제 뮤테이션 완료:", result);
-            } catch (error) {
-              // 에러는 onError에서 처리됨
-              console.error("❌ 채팅방 삭제 중 오류:", error);
-            }
-          },
-        },
-      ]
-    );
   };
 
   // 채팅방 수정 모달 열기
@@ -494,22 +469,7 @@ export default function AdminChatRoomsScreen() {
                           borderRadius: 4,
                         },
                       ]}
-                      onPress={() => {
-                        console.log("🔴 삭제 버튼 터치됨 - 방:", room.name);
-                        // 간단한 테스트: Alert만 표시
-                        Alert.alert(
-                          "삭제 테스트",
-                          `${room.name} 삭제 버튼이 작동합니다!`,
-                          [
-                            { text: "취소", style: "cancel" },
-                            {
-                              text: "실제 삭제",
-                              style: "destructive",
-                              onPress: () => handleDeleteRoom(room),
-                            },
-                          ]
-                        );
-                      }}
+                      onPress={() => handleDeleteRoom(room)}
                       disabled={deletingRoomId === room.id}
                       activeOpacity={0.7}
                     >
@@ -820,6 +780,17 @@ export default function AdminChatRoomsScreen() {
           </View>
         </View>
       </Modal>
+      <AppDialog
+        visible={!!roomToDelete}
+        onClose={() => setRoomToDelete(null)}
+        title="채팅방 삭제"
+        description={`${
+          roomToDelete?.name
+        } 채팅방을 삭제하시겠습니까?\n\n⚠️ 주의사항:\n• 모든 메시지가 함께 삭제됩니다\n• 참여자들이 채팅방에서 제외됩니다\n• 이 작업은 되돌릴 수 없습니다`}
+        confirmText="삭제"
+        onConfirm={confirmDeleteRoom}
+        cancelText="취소"
+      />
     </View>
   );
 }

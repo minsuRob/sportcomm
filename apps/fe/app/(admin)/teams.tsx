@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
-  Alert,
   Modal,
   TextInput,
   RefreshControl,
@@ -24,6 +23,7 @@ import {
   DELETE_TEAM,
   TOGGLE_TEAM_STATUS,
 } from "@/lib/graphql/admin";
+import AppDialog from "@/components/ui/AppDialog";
 
 // 팀 카테고리 타입
 enum TeamCategory {
@@ -70,8 +70,9 @@ export default function AdminTeamsScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamInfo | null>(null);
+  const [teamToDelete, setTeamToDelete] = useState<TeamInfo | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
 
   // GraphQL 쿼리 및 뮤테이션
@@ -80,7 +81,7 @@ export default function AdminTeamsScreen() {
     {
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    },
+    }
   );
 
   const [createTeam, { loading: createLoading }] = useMutation(CREATE_TEAM, {
@@ -188,7 +189,7 @@ export default function AdminTeamsScreen() {
   const categories = data?.adminGetTeamsByCategory || [];
   const totalTeams = categories.reduce(
     (sum, category) => sum + category.teams.length,
-    0,
+    0
   );
 
   // 에러 처리
@@ -276,26 +277,20 @@ export default function AdminTeamsScreen() {
 
   // 팀 삭제 핸들러
   const handleDeleteTeam = (team: TeamInfo) => {
-    Alert.alert(
-      "팀 삭제",
-      `${team.name} 팀을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "삭제",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteTeam({
-                variables: { teamId: team.id },
-              });
-            } catch (error) {
-              // 에러는 onError에서 처리됨
-            }
-          },
-        },
-      ],
-    );
+    setTeamToDelete(team);
+  };
+
+  const confirmDeleteTeam = async () => {
+    if (!teamToDelete) return;
+    try {
+      await deleteTeam({
+        variables: { teamId: teamToDelete.id },
+      });
+    } catch (error) {
+      // 에러는 onError에서 처리됨
+    } finally {
+      setTeamToDelete(null);
+    }
   };
 
   // 팀 상태 토글 핸들러
@@ -366,414 +361,429 @@ export default function AdminTeamsScreen() {
   }
 
   return (
-    <View style={themed($container)}>
-      {/* 헤더 */}
-      <View style={themed($header)}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
-        </TouchableOpacity>
-        <Text style={themed($headerTitle)}>팀 관리</Text>
-        <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="add" color={theme.colors.tint} size={24} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={themed($scrollContainer)}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={() => refetch()} />
-        }
-      >
-        {/* 통계 정보 */}
-        <View style={themed($statsSection)}>
-          <View style={themed($statCard)}>
-            <Text style={themed($statNumber)}>{totalTeams}</Text>
-            <Text style={themed($statLabel)}>총 팀</Text>
-          </View>
-          <View style={themed($statCard)}>
-            <Text style={themed($statNumber)}>{categories.length}</Text>
-            <Text style={themed($statLabel)}>카테고리</Text>
-          </View>
-          <View style={themed($statCard)}>
-            <Text style={themed($statNumber)}>
-              {categories.reduce(
-                (sum, category) =>
-                  sum + category.teams.filter((team) => team.isActive).length,
-                0,
-              )}
-            </Text>
-            <Text style={themed($statLabel)}>활성 팀</Text>
-          </View>
+    <>
+      <View style={themed($container)}>
+        {/* 헤더 */}
+        <View style={themed($header)}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
+          </TouchableOpacity>
+          <Text style={themed($headerTitle)}>팀 관리</Text>
+          <TouchableOpacity onPress={() => setShowCreateModal(true)}>
+            <Ionicons name="add" color={theme.colors.tint} size={24} />
+          </TouchableOpacity>
         </View>
 
-        {/* 카테고리별 팀 목록 */}
-        <View style={themed($categoriesSection)}>
-          {categories.map((category) => (
-            <View key={category.id} style={themed($categoryCard)}>
-              <TouchableOpacity
-                style={themed($categoryHeader)}
-                onPress={() => toggleCategory(category.id)}
-              >
-                <View style={themed($categoryTitleSection)}>
-                  <Text style={themed($categoryIcon)}>{category.icon}</Text>
-                  <Text style={themed($categoryName)}>{category.name}</Text>
-                  <View style={themed($teamCountBadge)}>
-                    <Text style={themed($teamCountText)}>
-                      {category.teams.length}
-                    </Text>
-                  </View>
-                </View>
-                <Ionicons
-                  name={
-                    expandedCategories.has(category.id)
-                      ? "chevron-up"
-                      : "chevron-down"
-                  }
-                  color={theme.colors.textDim}
-                  size={20}
-                />
-              </TouchableOpacity>
+        <ScrollView
+          style={themed($scrollContainer)}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={() => refetch()} />
+          }
+        >
+          {/* 통계 정보 */}
+          <View style={themed($statsSection)}>
+            <View style={themed($statCard)}>
+              <Text style={themed($statNumber)}>{totalTeams}</Text>
+              <Text style={themed($statLabel)}>총 팀</Text>
+            </View>
+            <View style={themed($statCard)}>
+              <Text style={themed($statNumber)}>{categories.length}</Text>
+              <Text style={themed($statLabel)}>카테고리</Text>
+            </View>
+            <View style={themed($statCard)}>
+              <Text style={themed($statNumber)}>
+                {categories.reduce(
+                  (sum, category) =>
+                    sum + category.teams.filter((team) => team.isActive).length,
+                  0
+                )}
+              </Text>
+              <Text style={themed($statLabel)}>활성 팀</Text>
+            </View>
+          </View>
 
-              {expandedCategories.has(category.id) && (
-                <View style={themed($teamsContainer)}>
-                  {category.teams.map((team) => (
-                    <View key={team.id} style={themed($teamCard)}>
-                      <View style={themed($teamHeader)}>
-                        <View style={themed($teamInfo)}>
-                          <View
-                            style={[
-                              themed($teamColorIndicator),
-                              { backgroundColor: team.color },
-                            ]}
-                          />
-                          <Text style={themed($teamIcon)}>{team.icon}</Text>
-                          <View style={themed($teamDetails)}>
-                            <Text style={themed($teamName)}>{team.name}</Text>
-                            <Text style={themed($teamId)}>ID: {team.id}</Text>
+          {/* 카테고리별 팀 목록 */}
+          <View style={themed($categoriesSection)}>
+            {categories.map((category) => (
+              <View key={category.id} style={themed($categoryCard)}>
+                <TouchableOpacity
+                  style={themed($categoryHeader)}
+                  onPress={() => toggleCategory(category.id)}
+                >
+                  <View style={themed($categoryTitleSection)}>
+                    <Text style={themed($categoryIcon)}>{category.icon}</Text>
+                    <Text style={themed($categoryName)}>{category.name}</Text>
+                    <View style={themed($teamCountBadge)}>
+                      <Text style={themed($teamCountText)}>
+                        {category.teams.length}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons
+                    name={
+                      expandedCategories.has(category.id)
+                        ? "chevron-up"
+                        : "chevron-down"
+                    }
+                    color={theme.colors.textDim}
+                    size={20}
+                  />
+                </TouchableOpacity>
+
+                {expandedCategories.has(category.id) && (
+                  <View style={themed($teamsContainer)}>
+                    {category.teams.map((team) => (
+                      <View key={team.id} style={themed($teamCard)}>
+                        <View style={themed($teamHeader)}>
+                          <View style={themed($teamInfo)}>
+                            <View
+                              style={[
+                                themed($teamColorIndicator),
+                                { backgroundColor: team.color },
+                              ]}
+                            />
+                            <Text style={themed($teamIcon)}>{team.icon}</Text>
+                            <View style={themed($teamDetails)}>
+                              <Text style={themed($teamName)}>{team.name}</Text>
+                              <Text style={themed($teamId)}>ID: {team.id}</Text>
+                            </View>
+                          </View>
+
+                          <View style={themed($teamActions)}>
+                            <TouchableOpacity
+                              style={[
+                                themed($statusButton),
+                                {
+                                  backgroundColor: team.isActive
+                                    ? "#10B98120"
+                                    : "#EF444420",
+                                },
+                              ]}
+                              onPress={() => handleToggleTeamStatus(team)}
+                            >
+                              <Text
+                                style={[
+                                  themed($statusButtonText),
+                                  {
+                                    color: team.isActive
+                                      ? "#10B981"
+                                      : "#EF4444",
+                                  },
+                                ]}
+                              >
+                                {team.isActive ? "활성" : "비활성"}
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={themed($actionButton)}
+                              onPress={() => openEditModal(team)}
+                            >
+                              <Ionicons
+                                name="create-outline"
+                                color={theme.colors.tint}
+                                size={18}
+                              />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={themed($actionButton)}
+                              onPress={() => handleDeleteTeam(team)}
+                            >
+                              <Ionicons
+                                name="trash-outline"
+                                color="#EF4444"
+                                size={18}
+                              />
+                            </TouchableOpacity>
                           </View>
                         </View>
 
-                        <View style={themed($teamActions)}>
-                          <TouchableOpacity
-                            style={[
-                              themed($statusButton),
-                              {
-                                backgroundColor: team.isActive
-                                  ? "#10B98120"
-                                  : "#EF444420",
-                              },
-                            ]}
-                            onPress={() => handleToggleTeamStatus(team)}
-                          >
-                            <Text
-                              style={[
-                                themed($statusButtonText),
-                                {
-                                  color: team.isActive ? "#10B981" : "#EF4444",
-                                },
-                              ]}
-                            >
-                              {team.isActive ? "활성" : "비활성"}
-                            </Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={themed($actionButton)}
-                            onPress={() => openEditModal(team)}
-                          >
-                            <Ionicons
-                              name="create-outline"
-                              color={theme.colors.tint}
-                              size={18}
-                            />
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={themed($actionButton)}
-                            onPress={() => handleDeleteTeam(team)}
-                          >
-                            <Ionicons
-                              name="trash-outline"
-                              color="#EF4444"
-                              size={18}
-                            />
-                          </TouchableOpacity>
+                        <View style={themed($teamMeta)}>
+                          <Text style={themed($teamMetaText)}>
+                            생성일: {formatDate(team.createdAt)}
+                          </Text>
+                          <Text style={themed($teamMetaText)}>
+                            카테고리: {getCategoryDisplayName(team.category)}
+                          </Text>
                         </View>
                       </View>
+                    ))}
 
-                      <View style={themed($teamMeta)}>
-                        <Text style={themed($teamMetaText)}>
-                          생성일: {formatDate(team.createdAt)}
-                        </Text>
-                        <Text style={themed($teamMetaText)}>
-                          카테고리: {getCategoryDisplayName(team.category)}
+                    {category.teams.length === 0 && (
+                      <View style={themed($emptyTeamsContainer)}>
+                        <Text style={themed($emptyTeamsText)}>
+                          이 카테고리에는 팀이 없습니다.
                         </Text>
                       </View>
-                    </View>
-                  ))}
+                    )}
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
 
-                  {category.teams.length === 0 && (
-                    <View style={themed($emptyTeamsContainer)}>
-                      <Text style={themed($emptyTeamsText)}>
-                        이 카테고리에는 팀이 없습니다.
-                      </Text>
-                    </View>
-                  )}
+        {/* 팀 생성 모달 */}
+        <Modal visible={showCreateModal} transparent animationType="slide">
+          <View style={themed($modalOverlay)}>
+            <View style={themed($modalContent)}>
+              <View style={themed($modalHeader)}>
+                <Text style={themed($modalTitle)}>팀 생성</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowCreateModal(false);
+                    resetForm();
+                  }}
+                >
+                  <Ionicons name="close" color={theme.colors.text} size={24} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={themed($formContainer)}>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 ID *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.id}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, id: text.toUpperCase() })
+                    }
+                    placeholder="TEAM_ID (영문 대문자, 언더스코어)"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
                 </View>
-              )}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
 
-      {/* 팀 생성 모달 */}
-      <Modal visible={showCreateModal} transparent animationType="slide">
-        <View style={themed($modalOverlay)}>
-          <View style={themed($modalContent)}>
-            <View style={themed($modalHeader)}>
-              <Text style={themed($modalTitle)}>팀 생성</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowCreateModal(false);
-                  resetForm();
-                }}
-              >
-                <Ionicons name="close" color={theme.colors.text} size={24} />
-              </TouchableOpacity>
-            </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 이름 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.name}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, name: text })
+                    }
+                    placeholder="팀 이름을 입력하세요"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
 
-            <ScrollView style={themed($formContainer)}>
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>팀 ID *</Text>
-                <TextInput
-                  style={themed($textInput)}
-                  value={formData.id}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, id: text.toUpperCase() })
-                  }
-                  placeholder="TEAM_ID (영문 대문자, 언더스코어)"
-                  placeholderTextColor={theme.colors.textDim}
-                />
-              </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 색상</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.color}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, color: text })
+                    }
+                    placeholder="#000000"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
 
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>팀 이름 *</Text>
-                <TextInput
-                  style={themed($textInput)}
-                  value={formData.name}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, name: text })
-                  }
-                  placeholder="팀 이름을 입력하세요"
-                  placeholderTextColor={theme.colors.textDim}
-                />
-              </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 아이콘</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.icon}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, icon: text })
+                    }
+                    placeholder="🏆"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
 
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>팀 색상</Text>
-                <TextInput
-                  style={themed($textInput)}
-                  value={formData.color}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, color: text })
-                  }
-                  placeholder="#000000"
-                  placeholderTextColor={theme.colors.textDim}
-                />
-              </View>
-
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>팀 아이콘</Text>
-                <TextInput
-                  style={themed($textInput)}
-                  value={formData.icon}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, icon: text })
-                  }
-                  placeholder="🏆"
-                  placeholderTextColor={theme.colors.textDim}
-                />
-              </View>
-
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>카테고리</Text>
-                <View style={themed($categorySelector)}>
-                  {Object.values(TeamCategory).map((category) => (
-                    <TouchableOpacity
-                      key={category}
-                      style={[
-                        themed($categoryOption),
-                        formData.category === category &&
-                          themed($categoryOptionSelected),
-                      ]}
-                      onPress={() => setFormData({ ...formData, category })}
-                    >
-                      <Text
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>카테고리</Text>
+                  <View style={themed($categorySelector)}>
+                    {Object.values(TeamCategory).map((category) => (
+                      <TouchableOpacity
+                        key={category}
                         style={[
-                          themed($categoryOptionText),
+                          themed($categoryOption),
                           formData.category === category &&
-                            themed($categoryOptionTextSelected),
+                            themed($categoryOptionSelected),
                         ]}
+                        onPress={() => setFormData({ ...formData, category })}
                       >
-                        {getCategoryDisplayName(category)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            themed($categoryOptionText),
+                            formData.category === category &&
+                              themed($categoryOptionTextSelected),
+                          ]}
+                        >
+                          {getCategoryDisplayName(category)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            </ScrollView>
+              </ScrollView>
 
-            <View style={themed($modalActions)}>
-              <TouchableOpacity
-                style={themed($cancelButton)}
-                onPress={() => {
-                  setShowCreateModal(false);
-                  resetForm();
-                }}
-              >
-                <Text style={themed($cancelButtonText)}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  themed($confirmButton),
-                  { opacity: createLoading ? 0.5 : 1 },
-                ]}
-                onPress={handleCreateTeam}
-                disabled={createLoading}
-              >
-                <Text style={themed($confirmButtonText)}>
-                  {createLoading ? "생성 중..." : "생성"}
-                </Text>
-              </TouchableOpacity>
+              <View style={themed($modalActions)}>
+                <TouchableOpacity
+                  style={themed($cancelButton)}
+                  onPress={() => {
+                    setShowCreateModal(false);
+                    resetForm();
+                  }}
+                >
+                  <Text style={themed($cancelButtonText)}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    themed($confirmButton),
+                    { opacity: createLoading ? 0.5 : 1 },
+                  ]}
+                  onPress={handleCreateTeam}
+                  disabled={createLoading}
+                >
+                  <Text style={themed($confirmButtonText)}>
+                    {createLoading ? "생성 중..." : "생성"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* 팀 수정 모달 */}
-      <Modal visible={showEditModal} transparent animationType="slide">
-        <View style={themed($modalOverlay)}>
-          <View style={themed($modalContent)}>
-            <View style={themed($modalHeader)}>
-              <Text style={themed($modalTitle)}>팀 수정</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowEditModal(false);
-                  setSelectedTeam(null);
-                  resetForm();
-                }}
-              >
-                <Ionicons name="close" color={theme.colors.text} size={24} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={themed($formContainer)}>
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>팀 ID</Text>
-                <TextInput
-                  style={[themed($textInput), themed($disabledInput)]}
-                  value={formData.id}
-                  editable={false}
-                  placeholder="팀 ID (수정 불가)"
-                  placeholderTextColor={theme.colors.textDim}
-                />
+        {/* 팀 수정 모달 */}
+        <Modal visible={showEditModal} transparent animationType="slide">
+          <View style={themed($modalOverlay)}>
+            <View style={themed($modalContent)}>
+              <View style={themed($modalHeader)}>
+                <Text style={themed($modalTitle)}>팀 수정</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowEditModal(false);
+                    setSelectedTeam(null);
+                    resetForm();
+                  }}
+                >
+                  <Ionicons name="close" color={theme.colors.text} size={24} />
+                </TouchableOpacity>
               </View>
 
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>팀 이름 *</Text>
-                <TextInput
-                  style={themed($textInput)}
-                  value={formData.name}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, name: text })
-                  }
-                  placeholder="팀 이름을 입력하세요"
-                  placeholderTextColor={theme.colors.textDim}
-                />
-              </View>
-
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>팀 색상</Text>
-                <TextInput
-                  style={themed($textInput)}
-                  value={formData.color}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, color: text })
-                  }
-                  placeholder="#000000"
-                  placeholderTextColor={theme.colors.textDim}
-                />
-              </View>
-
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>팀 아이콘</Text>
-                <TextInput
-                  style={themed($textInput)}
-                  value={formData.icon}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, icon: text })
-                  }
-                  placeholder="🏆"
-                  placeholderTextColor={theme.colors.textDim}
-                />
-              </View>
-
-              <View style={themed($inputGroup)}>
-                <Text style={themed($inputLabel)}>카테고리</Text>
-                <View style={themed($categorySelector)}>
-                  {Object.values(TeamCategory).map((category) => (
-                    <TouchableOpacity
-                      key={category}
-                      style={[
-                        themed($categoryOption),
-                        formData.category === category &&
-                          themed($categoryOptionSelected),
-                      ]}
-                      onPress={() => setFormData({ ...formData, category })}
-                    >
-                      <Text
-                        style={[
-                          themed($categoryOptionText),
-                          formData.category === category &&
-                            themed($categoryOptionTextSelected),
-                        ]}
-                      >
-                        {getCategoryDisplayName(category)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+              <ScrollView style={themed($formContainer)}>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 ID</Text>
+                  <TextInput
+                    style={[themed($textInput), themed($disabledInput)]}
+                    value={formData.id}
+                    editable={false}
+                    placeholder="팀 ID (수정 불가)"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
                 </View>
-              </View>
-            </ScrollView>
 
-            <View style={themed($modalActions)}>
-              <TouchableOpacity
-                style={themed($cancelButton)}
-                onPress={() => {
-                  setShowEditModal(false);
-                  setSelectedTeam(null);
-                  resetForm();
-                }}
-              >
-                <Text style={themed($cancelButtonText)}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  themed($confirmButton),
-                  { opacity: updateLoading ? 0.5 : 1 },
-                ]}
-                onPress={handleEditTeam}
-                disabled={updateLoading}
-              >
-                <Text style={themed($confirmButtonText)}>
-                  {updateLoading ? "수정 중..." : "수정"}
-                </Text>
-              </TouchableOpacity>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 이름 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.name}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, name: text })
+                    }
+                    placeholder="팀 이름을 입력하세요"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 색상</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.color}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, color: text })
+                    }
+                    placeholder="#000000"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 아이콘</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.icon}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, icon: text })
+                    }
+                    placeholder="🏆"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>카테고리</Text>
+                  <View style={themed($categorySelector)}>
+                    {Object.values(TeamCategory).map((category) => (
+                      <TouchableOpacity
+                        key={category}
+                        style={[
+                          themed($categoryOption),
+                          formData.category === category &&
+                            themed($categoryOptionSelected),
+                        ]}
+                        onPress={() => setFormData({ ...formData, category })}
+                      >
+                        <Text
+                          style={[
+                            themed($categoryOptionText),
+                            formData.category === category &&
+                              themed($categoryOptionTextSelected),
+                          ]}
+                        >
+                          {getCategoryDisplayName(category)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </ScrollView>
+
+              <View style={themed($modalActions)}>
+                <TouchableOpacity
+                  style={themed($cancelButton)}
+                  onPress={() => {
+                    setShowEditModal(false);
+                    setSelectedTeam(null);
+                    resetForm();
+                  }}
+                >
+                  <Text style={themed($cancelButtonText)}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    themed($confirmButton),
+                    { opacity: updateLoading ? 0.5 : 1 },
+                  ]}
+                  onPress={handleEditTeam}
+                  disabled={updateLoading}
+                >
+                  <Text style={themed($confirmButtonText)}>
+                    {updateLoading ? "수정 중..." : "수정"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+      <AppDialog
+        visible={!!teamToDelete}
+        onClose={() => setTeamToDelete(null)}
+        title="팀 삭제"
+        description={`${
+          teamToDelete?.name
+        } 팀을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`}
+        confirmText="삭제"
+        onConfirm={confirmDeleteTeam}
+        cancelText="취소"
+      />
+    </>
   );
 }
 

@@ -18,7 +18,7 @@ import {
   getUploadEndpoints,
 } from "./common";
 import { generatePostMediaFileName, isImageFile } from "../utils/file-utils";
-
+import { Image } from "react-native";
 // --------------------------
 // 모바일 전용 타입 정의
 // --------------------------
@@ -443,16 +443,16 @@ export async function compressImageMobile(
       };
     }
 
-    // GIF가 아닌 경우 비율 유지 압축 로직 수행
-    // 먼저 원본 이미지 크기 정보 가져오기
-    const imageInfo = await ImageManipulator.manipulateAsync(uri, [], {
-      format: ImageManipulator.SaveFormat.JPEG,
-    });
+    const getSize = (uri: string): Promise<{ width: number; height: number }> =>
+      new Promise((resolve, reject) => {
+        Image.getSize(
+          uri,
+          (width, height) => resolve({ width, height }),
+          reject
+        );
+      });
 
-    const originalWidth = imageInfo.width;
-    const originalHeight = imageInfo.height;
-
-    console.log(`원본 이미지 크기: ${originalWidth}x${originalHeight}`);
+    const { width: originalWidth, height: originalHeight } = await getSize(uri);
 
     // 비율 유지하면서 크기 조정 계산
     let targetWidth = originalWidth;

@@ -11,6 +11,19 @@ config();
  * 데이터베이스 연결을 관리하고 마이그레이션을 실행하는 데 사용됩니다.
  * Supabase PostgreSQL 데이터베이스에 연결합니다.
  */
+// 실행 컨텍스트에 따른 마이그레이션 경로 분리
+// - ts-node로 실행(마이그레이션 스크립트): src 경로의 .ts 사용
+// - 일반 런타임(Nest/빌드된 코드): dist 경로의 .js 사용
+const isTsExecution =
+  !!process.env.TS_NODE ||
+  !!process.env.TS_NODE_DEV ||
+  process.argv.some((arg) => arg.includes('ts-node')) ||
+  __filename.endsWith('.ts');
+
+const migrationGlobs = isTsExecution
+  ? ['src/database/migrations/*.ts']
+  : ['dist/database/migrations/*.js'];
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
 
@@ -27,8 +40,8 @@ export const AppDataSource = new DataSource({
   // 엔티티 설정
   entities: entities,
 
-  // 마이그레이션 설정
-  migrations: ['src/database/migrations/*.ts'],
+  // 마이그레이션 설정 (컨텍스트 분리)
+  migrations: migrationGlobs,
   migrationsTableName: 'migrations',
 
   // Supabase는 운영 환경이므로 synchronize 비활성화

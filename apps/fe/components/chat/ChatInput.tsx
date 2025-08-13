@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import ChatOptionsModal, { type ChatOption } from "./ChatOptionsModal";
 
 /**
  * 채팅 입력창 Props 타입 정의
@@ -50,6 +51,7 @@ export default function ChatInput({
   const [message, setMessage] = useState("");
   const [isEmojiActive, setIsEmojiActive] = useState(false); // 이모지 버튼 활성화 상태
   const [inputHeight, setInputHeight] = useState(40); // 동적 입력창 높이
+  const [optionsModalVisible, setOptionsModalVisible] = useState(false); // 옵션 모달 상태
   const inputRef = useRef<TextInput>(null);
 
   /**
@@ -89,17 +91,48 @@ export default function ChatInput({
 
   /**
    * 이모지 버튼 토글 핸들러
-   * 특별 메시지 모드를 활성화/비활성화
+   * 옵션 모달을 열거나 특별 메시지 모드를 활성화/비활성화
    */
   const handleEmojiToggle = () => {
     if (disabled) return;
 
-    // 토글 상태 변경
-    setIsEmojiActive(!isEmojiActive);
+    // 옵션 모달 열기
+    setOptionsModalVisible(true);
 
     // 부모 컴포넌트에 상태 변경 알림 (선택적)
     if (onEmoji) {
       onEmoji();
+    }
+  };
+
+  /**
+   * 채팅 옵션 선택 핸들러
+   * 선택된 옵션을 메시지에 적용
+   */
+  const handleSelectOption = (option: ChatOption) => {
+    let newMessage = message;
+
+    switch (option.type) {
+      case "emoji":
+      case "sticker":
+        // 이모지나 스티커는 현재 메시지에 추가
+        newMessage = message + option.content;
+        break;
+      case "effect":
+        // 특수 효과는 메시지를 감싸거나 앞에 추가
+        newMessage = `${option.content} ${message}`.trim();
+        break;
+      case "template":
+        // 템플릿은 메시지를 완전히 대체
+        newMessage = option.content;
+        break;
+    }
+
+    setMessage(newMessage);
+
+    // 효과나 템플릿 선택 시 특별 모드 활성화
+    if (option.type === "effect" || option.type === "template") {
+      setIsEmojiActive(true);
     }
   };
 
@@ -200,28 +233,22 @@ export default function ChatInput({
             </TouchableOpacity>
           )}
 
-          {/* 모드 토글 pill (이모지/특별 모드) */}
+          {/* 채팅 옵션 버튼 */}
           {onEmoji && (
             <TouchableOpacity
               style={[
-                themed($modePill),
-                isEmojiActive ? themed($modePillActive) : null,
+                themed($optionsButton),
+                isEmojiActive ? themed($optionsButtonActive) : null,
               ]}
               onPress={handleEmojiToggle}
               disabled={disabled}
               accessibilityRole="button"
-              activeOpacity={0.8}
+              activeOpacity={0.7}
             >
               <Ionicons
-                name="send-outline"
-                color={theme.colors.textDim}
-                size={16}
-              />
-              <Text style={themed($modePillText)}>자동</Text>
-              <Ionicons
-                name="chevron-down"
-                color={theme.colors.textDim}
-                size={14}
+                name="happy-outline"
+                color={isEmojiActive ? theme.colors.tint : theme.colors.textDim}
+                size={20}
               />
             </TouchableOpacity>
           )}
@@ -271,6 +298,13 @@ export default function ChatInput({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 채팅 옵션 모달 */}
+      <ChatOptionsModal
+        visible={optionsModalVisible}
+        onClose={() => setOptionsModalVisible(false)}
+        onSelectOption={handleSelectOption}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -301,27 +335,21 @@ const $leftIconButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing?.xs || 8,
 });
 
-const $modePill: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
+const $optionsButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
   backgroundColor: colors.backgroundAlt,
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: spacing?.sm || 12,
   borderWidth: 1,
   borderColor: colors.border,
-  paddingHorizontal: spacing?.sm || 12,
-  paddingVertical: spacing?.xs || 6,
-  borderRadius: 18,
-  marginRight: spacing?.sm || 12,
 });
 
-const $modePillActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $optionsButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderColor: colors.tint,
   backgroundColor: colors.tint + "15",
-});
-
-const $modePillText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 12,
-  marginHorizontal: 6,
 });
 
 const $inputFlex: ThemedStyle<TextStyle> = ({ colors }) => ({

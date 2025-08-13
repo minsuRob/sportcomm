@@ -14,6 +14,13 @@ export const GET_ADMIN_CHAT_ROOMS = gql`
         maxParticipants
         currentParticipants
         totalMessages
+        teamId
+        team {
+          id
+          name
+          color
+          icon
+        }
         createdAt
         updatedAt
         lastMessageContent
@@ -33,12 +40,14 @@ export const CREATE_CHAT_ROOM = gql`
     $description: String
     $type: ChatRoomType = PUBLIC
     $maxParticipants: Int = 100
+    $teamId: String
   ) {
     adminCreateChatRoom(
       name: $name
       description: $description
       type: $type
       maxParticipants: $maxParticipants
+      teamId: $teamId
     ) {
       id
       name
@@ -48,6 +57,13 @@ export const CREATE_CHAT_ROOM = gql`
       maxParticipants
       currentParticipants
       totalMessages
+      teamId
+      team {
+        id
+        name
+        color
+        icon
+      }
       createdAt
       updatedAt
     }
@@ -61,6 +77,7 @@ export const UPDATE_CHAT_ROOM = gql`
     $description: String
     $maxParticipants: Int
     $isRoomActive: Boolean
+    $teamId: String
   ) {
     adminUpdateChatRoom(
       roomId: $roomId
@@ -68,6 +85,7 @@ export const UPDATE_CHAT_ROOM = gql`
       description: $description
       maxParticipants: $maxParticipants
       isRoomActive: $isRoomActive
+      teamId: $teamId
     ) {
       id
       name
@@ -77,6 +95,13 @@ export const UPDATE_CHAT_ROOM = gql`
       maxParticipants
       currentParticipants
       totalMessages
+      teamId
+      team {
+        id
+        name
+        color
+        icon
+      }
       createdAt
       updatedAt
     }

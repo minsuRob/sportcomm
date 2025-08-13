@@ -10,6 +10,7 @@ import { ChatRoom } from '../../entities/chat-room.entity';
 import { ChatMessage } from '../../entities/chat-message.entity';
 import { Report } from '../../entities/report.entity';
 import { Feedback } from '../../entities/feedback.entity';
+import { Team } from '../../entities/team.entity';
 
 /**
  * 관리자 모듈
@@ -26,6 +27,7 @@ import { Feedback } from '../../entities/feedback.entity';
       ChatMessage,
       Report,
       Feedback,
+      Team,
     ]),
   ],
   providers: [

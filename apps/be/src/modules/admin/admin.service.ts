@@ -15,6 +15,7 @@ import {
   FeedbackStatus,
   FeedbackPriority,
 } from '../../entities/feedback.entity';
+import { Team } from '../../entities/team.entity';
 
 /**
  * 관리자 서비스
@@ -36,6 +37,8 @@ export class AdminService {
     private readonly reportRepository: Repository<Report>,
     @InjectRepository(Feedback)
     private readonly feedbackRepository: Repository<Feedback>,
+    @InjectRepository(Team)
+    private readonly teamRepository: Repository<Team>,
   ) {}
 
   /**
@@ -163,7 +166,7 @@ export class AdminService {
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
-      relations: ['participants'],
+      relations: ['participants', 'team'],
     });
 
     return {
@@ -184,6 +187,7 @@ export class AdminService {
     description?: string,
     type: ChatRoomType = ChatRoomType.PUBLIC,
     maxParticipants: number = 100,
+    teamId?: string,
   ) {
     this.validateAdminPermission(adminUser);
 
@@ -193,6 +197,7 @@ export class AdminService {
       type,
       maxParticipants,
       isRoomActive: true,
+      teamId,
     });
 
     return await this.chatRoomRepository.save(chatRoom);
@@ -227,6 +232,7 @@ export class AdminService {
       description?: string;
       maxParticipants?: number;
       isRoomActive?: boolean;
+      teamId?: string;
     },
   ) {
     this.validateAdminPermission(adminUser);

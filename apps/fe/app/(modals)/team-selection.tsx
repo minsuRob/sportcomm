@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
   ViewStyle,
   TextStyle,
   FlatList,
@@ -59,8 +59,8 @@ export default function TeamSelectionScreen() {
     error: myTeamsError,
     refetch: refetchMyTeams,
   } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
-    skip: !isAuthenticated || !currentUser, // 인증되지 않은 경우 쿼리 스킵
-    fetchPolicy: "network-only", // 항상 네트워크에서 최신 데이터 가져오기
+    skip: !isAuthenticated || !currentUser,
+    fetchPolicy: "network-only",
     onError: (error) => {
       console.error("myTeams 쿼리 오류:", error);
       if (
@@ -91,7 +91,6 @@ export default function TeamSelectionScreen() {
         if (user) {
           setCurrentUser(user);
         } else if (!token) {
-          // 인증되지 않은 경우 처리
           console.warn("인증되지 않은 사용자가 팀 선택 화면에 접근");
           setAuthError("로그인이 필요한 기능입니다.");
           showToast({
@@ -103,7 +102,6 @@ export default function TeamSelectionScreen() {
           setTimeout(() => router.back(), 500);
         }
 
-        // 인증 상태 디버깅
         console.log("인증 상태:", {
           isAuthenticated: authStatus,
           hasToken: !!token,
@@ -125,13 +123,11 @@ export default function TeamSelectionScreen() {
       try {
         console.log(
           "MyTeams 데이터 확인:",
-          JSON.stringify(myTeamsData.myTeams, null, 2),
+          JSON.stringify(myTeamsData.myTeams, null, 2)
         );
 
-        // 안전하게 팀 ID 추출
         const teamIds = myTeamsData.myTeams
           .map((userTeam) => {
-            // userTeam 객체 로깅
             console.log("UserTeam 객체:", userTeam);
 
             if (!userTeam.team) {
@@ -141,7 +137,7 @@ export default function TeamSelectionScreen() {
 
             return userTeam.team.id;
           })
-          .filter(Boolean) as string[]; // null 값 제거
+          .filter(Boolean) as string[];
 
         setSelectedTeams(teamIds);
         console.log("사용자가 선택한 팀 목록 로드 성공:", teamIds);
@@ -220,7 +216,7 @@ export default function TeamSelectionScreen() {
    * 팀 선택 저장 핸들러
    */
   const handleSave = async () => {
-    if (isLoading) return; // 로딩 중이면 중복 요청 방지
+    if (isLoading) return;
 
     console.log("팀 저장 시도...");
 
@@ -228,7 +224,7 @@ export default function TeamSelectionScreen() {
     const isAuthValid = await checkAuthentication();
     if (!isAuthValid) {
       console.error("인증 실패 - 팀 저장 취소");
-      setTimeout(() => router.back(), 1000); // 인증이 안된 경우 뒤로 가기
+      setTimeout(() => router.back(), 1000);
       return;
     }
 
@@ -287,7 +283,6 @@ export default function TeamSelectionScreen() {
           teamIds: selectedTeams,
         },
         context: {
-          // 인증 토큰 최신 상태로 설정
           headers: {
             authorization: sessionInfo.token
               ? `Bearer ${sessionInfo.token}`
@@ -310,7 +305,7 @@ export default function TeamSelectionScreen() {
       try {
         await AsyncStorage.setItem(
           "selected_team_filter",
-          JSON.stringify(selectedTeams),
+          JSON.stringify(selectedTeams)
         );
         console.log("My Teams 변경에 따른 필터 재설정 완료");
       } catch (error) {
@@ -353,10 +348,8 @@ export default function TeamSelectionScreen() {
           duration: 3000,
         });
 
-        // 인증 문제인 경우 뒤로 가기
         setTimeout(() => router.back(), 1000);
 
-        // 추가 세션 정보 출력 (디버깅용)
         getSession().then(({ token, user }) => {
           console.log("현재 세션 상태:", {
             hasToken: !!token,
@@ -414,28 +407,27 @@ export default function TeamSelectionScreen() {
   };
 
   /**
-   * 팀 그리드 렌더링
+   * 팀 그리드 렌더링 (여러 개 표시)
    */
   const renderTeamGrid = (teams: Team[]) => {
     console.log(
       "렌더링할 팀 목록:",
-      teams.map((t) => ({ id: t.id, name: t.name })),
+      teams.map((t) => ({ id: t.id, name: t.name }))
     );
     console.log("현재 선택된 팀 ID 목록:", selectedTeams);
 
     const rows = [];
-    const teamsPerRow = 2;
+    const teamsPerRow = 3; // 3개씩 표시
 
     for (let i = 0; i < teams.length; i += teamsPerRow) {
       const rowTeams = teams.slice(i, i + teamsPerRow);
       rows.push(
         <View key={i} style={themed($teamRow)}>
           {rowTeams.map((team) => {
-            // 팀 ID가 선택 목록에 있는지 확인 (디버깅 로그 추가)
             const teamId = team.id;
             const isSelected = selectedTeams.includes(teamId);
             console.log(
-              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`,
+              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`
             );
 
             return (
@@ -479,10 +471,15 @@ export default function TeamSelectionScreen() {
             );
           })}
           {/* 빈 공간 채우기 */}
-          {rowTeams.length < teamsPerRow && (
-            <View style={[themed($teamCard), { opacity: 0 }]} />
+          {Array.from({ length: teamsPerRow - rowTeams.length }).map(
+            (_, index) => (
+              <View
+                key={`empty-${index}`}
+                style={[themed($teamCard), { opacity: 0 }]}
+              />
+            )
           )}
-        </View>,
+        </View>
       );
     }
 
@@ -493,7 +490,6 @@ export default function TeamSelectionScreen() {
   if (authError) {
     console.log("인증 오류로 인한 화면 렌더링:", authError);
 
-    // 세션 상태 확인 (디버깅용)
     getSession().then(({ token, user, isAuthenticated }) => {
       console.log("인증 오류 화면 - 세션 상태:", {
         hasToken: !!token,
@@ -686,84 +682,10 @@ const $saveButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderRadius: 8,
 });
 
-const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-});
-
-const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  marginTop: spacing.md,
-  fontSize: 16,
-  color: colors.textDim,
-});
-
-const $loadingOverlay: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: colors.background + "CC",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 10,
-});
-
-const $errorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  paddingHorizontal: spacing.lg,
-});
-
-const $errorText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 16,
-  color: colors.error,
-  textAlign: "center",
-  marginBottom: spacing.lg,
-});
-
-const $retryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  paddingHorizontal: spacing.lg,
-  paddingVertical: spacing.md,
-  backgroundColor: colors.tint,
-  borderRadius: 8,
-});
-
-const $retryButtonText: ThemedStyle<TextStyle> = () => ({
-  color: "white",
-  fontSize: 16,
-  fontWeight: "600",
-});
-
-const $selectedCountText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 14,
-  color: colors.tint,
-  fontWeight: "600",
-  marginTop: spacing.sm,
-});
-
-const $selectedIndicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  position: "absolute",
-  top: -8,
-  right: -8,
-  width: 24,
-  height: 24,
-  borderRadius: 12,
-  backgroundColor: colors.tint,
-  justifyContent: "center",
-  alignItems: "center",
-});
-
 const $saveButtonText: ThemedStyle<TextStyle> = () => ({
   color: "white",
   fontSize: 14,
   fontWeight: "600",
-});
-
-const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
 });
 
 const $descriptionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -782,6 +704,17 @@ const $descriptionText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.textDim,
   lineHeight: 20,
+});
+
+const $selectedCountText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.tint,
+  fontWeight: "600",
+  marginTop: spacing.sm,
+});
+
+const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
 });
 
 const $categorySliderContainer: ThemedStyle<ViewStyle> = ({
@@ -832,7 +765,7 @@ const $teamCard: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
   alignItems: "center",
   paddingVertical: spacing.lg,
-  paddingHorizontal: spacing.md,
+  paddingHorizontal: spacing.sm,
   marginHorizontal: spacing.xs,
   borderWidth: 2,
   borderRadius: 16,
@@ -842,15 +775,23 @@ const $teamCard: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $teamIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.sm,
+  position: "relative",
 });
 
-const $teamCardIcon: ThemedStyle<TextStyle> = () => ({
-  fontSize: 32,
-  textAlign: "center",
+const $selectedIndicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: "absolute",
+  top: -8,
+  right: -8,
+  width: 24,
+  height: 24,
+  borderRadius: 12,
+  backgroundColor: colors.tint,
+  justifyContent: "center",
+  alignItems: "center",
 });
 
 const $teamCardName: ThemedStyle<TextStyle> = () => ({
-  fontSize: 14,
+  fontSize: 12,
   fontWeight: "600",
   textAlign: "center",
 });
@@ -866,4 +807,55 @@ const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 16,
   color: colors.textDim,
   textAlign: "center",
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.md,
+  fontSize: 16,
+  color: colors.textDim,
+});
+
+const $loadingOverlay: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: colors.background + "CC",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 10,
+});
+
+const $errorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: spacing.lg,
+});
+
+const $errorText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  color: colors.error,
+  textAlign: "center",
+  marginBottom: spacing.lg,
+});
+
+const $retryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.md,
+  backgroundColor: colors.tint,
+  borderRadius: 8,
+});
+
+const $retryButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 16,
+  fontWeight: "600",
 });

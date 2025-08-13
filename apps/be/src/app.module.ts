@@ -21,6 +21,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AdminModule } from './modules/admin/admin.module';
 import { SportsModule } from './modules/sports/sports.module';
 import { SupabaseModule } from './modules/supabase/supabase.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 /**
@@ -275,6 +276,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     NotificationsModule,
     AdminModule,
     SportsModule,
+    ChatModule,
   ],
 
   // 컨트롤러 및 서비스

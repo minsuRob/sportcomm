@@ -18,6 +18,7 @@ import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
+import TeamSelector from "@/components/team/TeamSelector";
 import {
   GET_ADMIN_CHAT_ROOMS,
   CREATE_CHAT_ROOM,
@@ -35,6 +36,13 @@ interface ChatRoomInfo {
   maxParticipants: number;
   currentParticipants: number;
   totalMessages: number;
+  teamId?: string;
+  team?: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+  };
   createdAt: string;
   updatedAt: string;
   lastMessageContent?: string;
@@ -72,7 +80,7 @@ export default function AdminChatRoomsScreen() {
       variables: { page, limit: 20 },
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    },
+    }
   );
 
   const [createChatRoom, { loading: createLoading }] = useMutation(
@@ -100,7 +108,7 @@ export default function AdminChatRoomsScreen() {
           duration: 3000,
         });
       },
-    },
+    }
   );
 
   const [updateChatRoom, { loading: updateLoading }] = useMutation(
@@ -129,7 +137,7 @@ export default function AdminChatRoomsScreen() {
           duration: 3000,
         });
       },
-    },
+    }
   );
 
   const [deleteChatRoom] = useMutation(DELETE_CHAT_ROOM, {
@@ -162,6 +170,7 @@ export default function AdminChatRoomsScreen() {
     type: "PUBLIC" as "PRIVATE" | "GROUP" | "PUBLIC",
     maxParticipants: 100,
     isRoomActive: true,
+    teamId: "",
   });
 
   // 데이터 처리
@@ -201,6 +210,7 @@ export default function AdminChatRoomsScreen() {
           description: formData.description || null,
           type: formData.type,
           maxParticipants: formData.maxParticipants,
+          teamId: formData.teamId || null,
         },
       });
     } catch (error) {
@@ -228,6 +238,7 @@ export default function AdminChatRoomsScreen() {
           description: formData.description || null,
           maxParticipants: formData.maxParticipants,
           isRoomActive: formData.isRoomActive,
+          teamId: formData.teamId || null,
         },
       });
     } catch (error) {
@@ -255,7 +266,7 @@ export default function AdminChatRoomsScreen() {
             }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -268,6 +279,7 @@ export default function AdminChatRoomsScreen() {
       type: room.type,
       maxParticipants: room.maxParticipants,
       isRoomActive: room.isRoomActive,
+      teamId: room.teamId || "",
     });
     setShowEditModal(true);
   };
@@ -280,6 +292,7 @@ export default function AdminChatRoomsScreen() {
       type: "PUBLIC",
       maxParticipants: 100,
       isRoomActive: true,
+      teamId: "",
     });
   };
 
@@ -355,7 +368,7 @@ export default function AdminChatRoomsScreen() {
             <Text style={themed($statNumber)}>
               {chatRooms.reduce(
                 (sum, room) => sum + room.currentParticipants,
-                0,
+                0
               )}
             </Text>
             <Text style={themed($statLabel)}>총 참여자</Text>
@@ -390,6 +403,23 @@ export default function AdminChatRoomsScreen() {
                     {!room.isRoomActive && (
                       <View style={themed($inactiveBadge)}>
                         <Text style={themed($inactiveBadgeText)}>비활성</Text>
+                      </View>
+                    )}
+                    {room.team && (
+                      <View
+                        style={[
+                          themed($teamBadge),
+                          { backgroundColor: room.team.color + "20" },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            themed($teamBadgeText),
+                            { color: room.team.color },
+                          ]}
+                        >
+                          {room.team.name}
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -526,6 +556,18 @@ export default function AdminChatRoomsScreen() {
                 />
               </View>
 
+              <View style={themed($inputGroup)}>
+                <Text style={themed($inputLabel)}>연결할 팀 (선택사항)</Text>
+                <TeamSelector
+                  selectedTeamId={formData.teamId || undefined}
+                  onTeamSelect={(teamId) =>
+                    setFormData({ ...formData, teamId: teamId || "" })
+                  }
+                  placeholder="공용 채팅방 (팀 없음)"
+                  showClearButton={true}
+                />
+              </View>
+
               <View style={themed($switchGroup)}>
                 <Text style={themed($inputLabel)}>채팅방 활성화</Text>
                 <Switch
@@ -631,6 +673,18 @@ export default function AdminChatRoomsScreen() {
                   placeholder="100"
                   placeholderTextColor={theme.colors.textDim}
                   keyboardType="numeric"
+                />
+              </View>
+
+              <View style={themed($inputGroup)}>
+                <Text style={themed($inputLabel)}>연결할 팀 (선택사항)</Text>
+                <TeamSelector
+                  selectedTeamId={formData.teamId || undefined}
+                  onTeamSelect={(teamId) =>
+                    setFormData({ ...formData, teamId: teamId || "" })
+                  }
+                  placeholder="공용 채팅방 (팀 없음)"
+                  showClearButton={true}
                 />
               </View>
 
@@ -806,6 +860,17 @@ const $inactiveBadgeText: ThemedStyle<TextStyle> = () => ({
   fontSize: 12,
   fontWeight: "500",
   color: "#EF4444",
+});
+
+const $teamBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 12,
+});
+
+const $teamBadgeText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 12,
+  fontWeight: "500",
 });
 
 const $roomActions: ThemedStyle<ViewStyle> = ({ spacing }) => ({

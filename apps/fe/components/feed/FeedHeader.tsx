@@ -19,6 +19,7 @@ interface FeedHeaderProps {
   currentUser: User | null;
   selectedTeamIds: string[] | null;
   onTeamSelect: (ids: string[] | null) => void;
+  loading?: boolean;
   onNotificationPress: () => void;
   onCreatePress: () => void;
   onProfilePress: () => void;
@@ -32,6 +33,7 @@ export default function FeedHeader({
   currentUser,
   selectedTeamIds,
   onTeamSelect,
+  loading = false,
   onNotificationPress,
   onCreatePress,
   onProfilePress,
@@ -68,6 +70,7 @@ export default function FeedHeader({
             <TeamFilterSelector
               onTeamSelect={onTeamSelect}
               selectedTeamIds={selectedTeamIds}
+              loading={loading}
             />
             <TouchableOpacity
               style={themed($iconButton)}

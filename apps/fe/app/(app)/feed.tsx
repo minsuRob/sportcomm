@@ -154,6 +154,7 @@ export default function FeedScreen() {
         currentUser={currentUser}
         selectedTeamIds={selectedTeamIds}
         onTeamSelect={handleTeamFilterChange}
+        loading={fetching}
         onNotificationPress={handleNotificationPress}
         onCreatePress={() => router.push("/(modals)/create-post")}
         onProfilePress={() =>

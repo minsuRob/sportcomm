@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   TextInput,
   ViewStyle,
   TextStyle,
+  Animated,
+  Easing,
 } from "react-native";
 import { Portal } from "@rn-primitives/portal";
 import { useAppTheme } from "@/lib/theme/context";
@@ -78,18 +80,84 @@ export default function AppDialog({
 }: AppDialogProps) {
   const { themed, theme } = useAppTheme();
 
-  if (!visible) return null;
+  // 애니메이션 상태 관리
+  const [shouldRender, setShouldRender] = useState<boolean>(visible);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const dialogScale = useRef(new Animated.Value(0.96)).current;
+  const dialogOpacity = useRef(new Animated.Value(0)).current;
+
+  // visible 변경에 따른 페이드 인/아웃 + 스케일 애니메이션 처리
+  useEffect(() => {
+    if (visible) {
+      // 렌더 먼저 수행 후 인 애니메이션 시작
+      setShouldRender(true);
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 180,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(dialogOpacity, {
+          toValue: 1,
+          duration: 180,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(dialogScale, {
+          toValue: 1,
+          duration: 210,
+          easing: Easing.out(Easing.back(0.9)),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // 아웃 애니메이션 후 언마운트
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 160,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(dialogOpacity, {
+          toValue: 0,
+          duration: 140,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(dialogScale, {
+          toValue: 0.96,
+          duration: 160,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) {
+          setShouldRender(false);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  if (!shouldRender) return null;
 
   return (
     <Portal name="app-dialog">
-      <View style={themed($overlay)}>
+      <Animated.View style={[themed($overlay), { opacity: overlayOpacity }]}>
         <TouchableOpacity
           style={themed($backdrop)}
           activeOpacity={1}
           onPress={() => (dismissOnBackdrop ? onClose() : undefined)}
         />
 
-        <View style={themed($container)}>
+        <Animated.View
+          style={[
+            themed($container),
+            { opacity: dialogOpacity, transform: [{ scale: dialogScale }] },
+          ]}
+        >
           {imageSource ? (
             <Image
               source={imageSource}
@@ -137,8 +205,8 @@ export default function AppDialog({
               <Text style={themed($btnPrimaryText)}>{confirmText}</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Portal>
   );
 }

@@ -206,7 +206,6 @@ export const GET_ADMIN_REPORTS = gql`
         type
         status
         reason
-        description
         reporter {
           id
           nickname
@@ -217,7 +216,7 @@ export const GET_ADMIN_REPORTS = gql`
           nickname
           email
         }
-        reportedPost {
+        post {
           id
           title
           content
@@ -350,7 +349,7 @@ export const UPDATE_REPORT_STATUS = gql`
         nickname
         email
       }
-      reportedPost {
+      post {
         id
         title
         content

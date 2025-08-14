@@ -125,81 +125,79 @@ export default function ChatMessage({
       {/* 상대방 메시지 레이아웃 */}
       {!message.isMe ? (
         <View style={themed($otherMessageLayout)}>
-          {/* 왼쪽: 아바타, 닉네임, 배지 등 */}
-          <View style={themed($leftSection)}>
-            <View style={themed($avatarContainer)}>
-              <UserAvatar
-                imageUrl={message.user.avatar_url}
-                name={message.user.nickname}
-                size={28}
-              />
-            </View>
-            <View>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={themed($nickname)}>{message.user.nickname}</Text>
-
-                {/* 오른쪽: 메시지 + 시간 */}
-                <View style={themed($rightSection)}>
-                  <View
-                    style={[
-                      themed($messageBox),
-                      themed($otherMessageBox),
-                      highlightColor
-                        ? { backgroundColor: `${highlightColor}20` }
-                        : null,
-                    ]}
-                  >
-                    <Text style={themed($messageText)}>{message.content}</Text>
-                  </View>
-                </View>
-
-                {!message.isMe && userMeta?.age ? (
-                  <View style={themed($ageBadge)}>
-                    <Text style={themed($ageBadgeText)}>
-                      {(() => {
-                        const age = userMeta.age as number;
-                        if (age >= 40) return `🟪`;
-                        if (age >= 30) return `🟦`;
-                        if (age >= 26) return `🟩`;
-                        if (age >= 21) return `🟨`;
-                        if (age >= 16) return `🟧`;
-                        if (age >= 10) return `🟥`;
-                        return `${age}`;
-                      })()}
-                    </Text>
-                  </View>
-                ) : null}
-                {!message.isMe &&
-                  userMeta?.teamLogos &&
-                  userMeta.teamLogos.length > 0 && (
-                    <View style={themed($teamLogosRow)}>
-                      {userMeta.teamLogos.slice(0, 3).map((url, idx) => (
-                        <Image
-                          key={`${url}-${idx}`}
-                          source={{ uri: url }}
-                          style={themed($teamLogoSmall)}
-                        />
-                      ))}
-                    </View>
-                  )}
-                {!message.isMe && onMorePress && (
-                  <TouchableOpacity
-                    style={themed($moreButtonInline)}
-                    onPress={() => onMorePress(message)}
-                  >
-                    <Ionicons
-                      name="ellipsis-horizontal"
-                      size={16}
-                      color={theme.colors.textDim}
-                    />
-                  </TouchableOpacity>
-                )}
-                {showDate && (
-                  <Text style={themed($otherMessageDate)}>
-                    {dayjs(message.created_at).format("HH:mm")}
+          {/* 왼쪽: 아바타 */}
+          <View style={themed($avatarContainer)}>
+            <UserAvatar
+              imageUrl={message.user.avatar_url}
+              name={message.user.nickname}
+              size={28}
+            />
+          </View>
+          {/* 오른쪽: 2행 레이아웃 (닉네임/메타, 말풍선/시간) */}
+          <View style={themed($otherContentColumn)}>
+            {/* 1행: 닉네임 + 배지/로고/더보기 */}
+            <View style={themed($nicknameRow)}>
+              <Text style={themed($nickname)}>{message.user.nickname}</Text>
+              {!message.isMe && userMeta?.age ? (
+                <View style={themed($ageBadge)}>
+                  <Text style={themed($ageBadgeText)}>
+                    {(() => {
+                      const age = userMeta.age as number;
+                      if (age >= 40) return `🟪`;
+                      if (age >= 30) return `🟦`;
+                      if (age >= 26) return `🟩`;
+                      if (age >= 21) return `🟨`;
+                      if (age >= 16) return `🟧`;
+                      if (age >= 10) return `🟥`;
+                      return `${age}`;
+                    })()}
                   </Text>
+                </View>
+              ) : null}
+              {!message.isMe &&
+                userMeta?.teamLogos &&
+                userMeta.teamLogos.length > 0 && (
+                  <View style={themed($teamLogosRow)}>
+                    {userMeta.teamLogos.slice(0, 3).map((url, idx) => (
+                      <Image
+                        key={`${url}-${idx}`}
+                        source={{ uri: url }}
+                        style={themed($teamLogoSmall)}
+                      />
+                    ))}
+                  </View>
                 )}
+              {!message.isMe && onMorePress && (
+                <TouchableOpacity
+                  style={themed($moreButtonInline)}
+                  onPress={() => onMorePress(message)}
+                >
+                  <Ionicons
+                    name="ellipsis-horizontal"
+                    size={16}
+                    color={theme.colors.textDim}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+            {/* 2행: 말풍선 + 시간 */}
+            <View style={themed($bubbleRow)}>
+              <View
+                style={[
+                  themed($messageBox),
+                  themed($otherMessageBox),
+                  highlightColor
+                    ? { backgroundColor: `${highlightColor}20` }
+                    : null,
+                ]}
+              >
+                <Text style={themed($messageText)}>{message.content}</Text>
               </View>
+              {showDate && (
+                <Text style={themed($otherMessageDate)}>
+                  {dayjs(message.created_at).format("HH:mm")}
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -247,20 +245,31 @@ const $otherMessageContainer: ThemedStyle<ViewStyle> = () => ({
 // --- 새로운 레이아웃 스타일 ---
 const $otherMessageLayout: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
-  alignItems: "center", // 이 부분을 수정하여 전체 레이아웃을 중앙 정렬
+  alignItems: "flex-start",
   maxWidth: "85%",
 });
 
-const $leftSection: ThemedStyle<ViewStyle> = () => ({
-  flexDirection: "row",
-  alignItems: "center",
-  marginRight: 8,
+// 오른쪽(아바타 옆) 영역을 세로 스택으로 구성
+const $otherContentColumn: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "column",
+  marginLeft: 6,
+  flexShrink: 1,
+  maxWidth: "100%",
+  gap: spacing.xxs,
 });
 
-const $rightSection: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
+// 닉네임과 부가 정보가 가로로 배치되되 줄바꿈 허용
+const $nicknameRow: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
-  alignItems: "center", // 메시지 버블과 시간을 중앙 정렬
+  alignItems: "center",
+  flexWrap: "wrap",
+});
+
+// 말풍선과 시간이 한 줄에 배치되며 컨텐츠 폭에 맞게 수축
+const $bubbleRow: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "flex-end",
+  flexShrink: 1,
 });
 
 const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({

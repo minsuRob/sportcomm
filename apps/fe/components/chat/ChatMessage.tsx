@@ -125,7 +125,7 @@ export default function ChatMessage({
       {/* 상대방 메시지 레이아웃 */}
       {!message.isMe ? (
         <View style={themed($otherMessageLayout)}>
-          {/* 왼쪽: 아바타 + 닉네임 + 배지/로고 + more 버튼 (한 줄) */}
+          {/* 왼쪽: 아바타, 닉네임, 배지 등 */}
           <View style={themed($leftSection)}>
             <View style={themed($avatarContainer)}>
               <UserAvatar
@@ -134,69 +134,73 @@ export default function ChatMessage({
                 size={28}
               />
             </View>
-            <Text style={themed($nickname)}>{message.user.nickname}</Text>
-            {/* 나의 메시지에만 사용자 메타(연령대 배지/팀 로고) 표시하도록 설계 */}
-            {message.isMe && userMeta?.age ? (
-              <View style={themed($ageBadge)}>
-                <Text style={themed($ageBadgeText)}>
-                  {(() => {
-                    const age = userMeta.age as number;
-                    if (age >= 40) return `40+ 🟪`;
-                    if (age >= 30) return `30-35 🟦`;
-                    if (age >= 26) return `26-29 🟩`;
-                    if (age >= 21) return `20-25 🟨`;
-                    if (age >= 16) return `16-20 🟧`;
-                    if (age >= 10) return `10-15 🟥`;
-                    return `${age}`;
-                  })()}
-                </Text>
-              </View>
-            ) : null}
-            {message.isMe &&
-              userMeta?.teamLogos &&
-              userMeta.teamLogos.length > 0 && (
-                <View style={themed($teamLogosRow)}>
-                  {userMeta.teamLogos.slice(0, 3).map((url, idx) => (
-                    <Image
-                      key={`${url}-${idx}`}
-                      source={{ uri: url }}
-                      style={themed($teamLogoSmall)}
-                    />
-                  ))}
-                </View>
-              )}
-            {!message.isMe && onMorePress && (
-              <TouchableOpacity
-                style={themed($moreButtonInline)}
-                onPress={() => onMorePress(message)}
-              >
-                <Ionicons
-                  name="ellipsis-horizontal"
-                  size={16}
-                  color={theme.colors.textDim}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
+            <View>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={themed($nickname)}>{message.user.nickname}</Text>
 
-          {/* 오른쪽: 메시지 + 시간 */}
-          <View style={themed($rightSection)}>
-            <View
-              style={[
-                themed($messageBox),
-                themed($otherMessageBox),
-                highlightColor
-                  ? { backgroundColor: `${highlightColor}20` }
-                  : null,
-              ]}
-            >
-              <Text style={themed($messageText)}>{message.content}</Text>
+                {/* 오른쪽: 메시지 + 시간 */}
+                <View style={themed($rightSection)}>
+                  <View
+                    style={[
+                      themed($messageBox),
+                      themed($otherMessageBox),
+                      highlightColor
+                        ? { backgroundColor: `${highlightColor}20` }
+                        : null,
+                    ]}
+                  >
+                    <Text style={themed($messageText)}>{message.content}</Text>
+                  </View>
+                </View>
+
+                {!message.isMe && userMeta?.age ? (
+                  <View style={themed($ageBadge)}>
+                    <Text style={themed($ageBadgeText)}>
+                      {(() => {
+                        const age = userMeta.age as number;
+                        if (age >= 40) return `🟪`;
+                        if (age >= 30) return `🟦`;
+                        if (age >= 26) return `🟩`;
+                        if (age >= 21) return `🟨`;
+                        if (age >= 16) return `🟧`;
+                        if (age >= 10) return `🟥`;
+                        return `${age}`;
+                      })()}
+                    </Text>
+                  </View>
+                ) : null}
+                {!message.isMe &&
+                  userMeta?.teamLogos &&
+                  userMeta.teamLogos.length > 0 && (
+                    <View style={themed($teamLogosRow)}>
+                      {userMeta.teamLogos.slice(0, 3).map((url, idx) => (
+                        <Image
+                          key={`${url}-${idx}`}
+                          source={{ uri: url }}
+                          style={themed($teamLogoSmall)}
+                        />
+                      ))}
+                    </View>
+                  )}
+                {!message.isMe && onMorePress && (
+                  <TouchableOpacity
+                    style={themed($moreButtonInline)}
+                    onPress={() => onMorePress(message)}
+                  >
+                    <Ionicons
+                      name="ellipsis-horizontal"
+                      size={16}
+                      color={theme.colors.textDim}
+                    />
+                  </TouchableOpacity>
+                )}
+                {showDate && (
+                  <Text style={themed($otherMessageDate)}>
+                    {dayjs(message.created_at).format("HH:mm")}
+                  </Text>
+                )}
+              </View>
             </View>
-            {showDate && (
-              <Text style={themed($otherMessageDate)}>
-                {dayjs(message.created_at).format("HH:mm")}
-              </Text>
-            )}
           </View>
         </View>
       ) : (
@@ -243,7 +247,7 @@ const $otherMessageContainer: ThemedStyle<ViewStyle> = () => ({
 // --- 새로운 레이아웃 스타일 ---
 const $otherMessageLayout: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
-  alignItems: "flex-start",
+  alignItems: "center", // 이 부분을 수정하여 전체 레이아웃을 중앙 정렬
   maxWidth: "85%",
 });
 
@@ -251,12 +255,12 @@ const $leftSection: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
   alignItems: "center",
   marginRight: 8,
-  minWidth: 80, // 최소 너비 보장
 });
 
 const $rightSection: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
-  flexDirection: "column",
+  flexDirection: "row",
+  alignItems: "center", // 메시지 버블과 시간을 중앙 정렬
 });
 
 const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -300,6 +304,7 @@ const $nickname: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "500",
   color: colors.tint,
   flexShrink: 1, // 긴 닉네임 처리
+  marginRight: 8,
 });
 
 const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -384,10 +389,10 @@ const $myMessageDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
 });
 
-const $otherMessageDate: ThemedStyle<TextStyle> = () => ({
-  alignSelf: "flex-start",
-  marginTop: 2,
-  marginLeft: 4,
+const $otherMessageDate: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.textDim,
+  marginLeft: 6,
 });
 
 const $systemMessageContainer: ThemedStyle<ViewStyle> = () => ({

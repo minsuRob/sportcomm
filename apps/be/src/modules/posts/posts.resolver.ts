@@ -74,6 +74,12 @@ export class CreatePostInput {
   @IsString({ each: true, message: '미디어 ID는 문자열이어야 합니다.' })
   mediaIds?: string[];
 
+  @Field(() => [String], { nullable: true, description: '게시물 태그 목록' })
+  @IsOptional()
+  @IsArray({ message: '태그 목록은 배열이어야 합니다.' })
+  @IsString({ each: true, message: '태그는 문자열이어야 합니다.' })
+  tags?: string[];
+
   // 상단에 이미 팀 ID 필드가 있으므로 중복 필드 제거
 }
 

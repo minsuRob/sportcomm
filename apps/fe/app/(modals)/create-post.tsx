@@ -47,6 +47,7 @@ import {
 import { UploadProgress } from "@/lib/api/common";
 import TrendyCreatePostSection from "@/components/createPost/TrendyCreatePostSection";
 import CreativeCreatePostSection from "@/components/createPost/CreativeCreatePostSection";
+import TagInput from "@/components/createPost/TagInput";
 
 // --- 타입 정의 ---
 interface TeamOption {
@@ -87,6 +88,20 @@ export default function CreatePostScreen() {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
 
+  // 인기 태그 목록 (실제로는 API에서 가져와야 함)
+  const popularTags = [
+    "전술분석",
+    "이적소식",
+    "경기예측",
+    "선수분석",
+    "팀뉴스",
+    "하이라이트",
+    "골장면",
+    "세리머니",
+    "응원가",
+    "경기후기",
+  ];
+
   // 상태 관리
   const [layoutVariant, setLayoutVariant] = useState<
     "modern" | "trendy" | "creative"
@@ -94,6 +109,7 @@ export default function CreatePostScreen() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
@@ -166,6 +182,7 @@ export default function CreatePostScreen() {
       title.trim() ||
       content.trim() ||
       selectedTeamId ||
+      tags.length > 0 ||
       selectedImages.length > 0 ||
       selectedVideos.length > 0
     ) {
@@ -476,6 +493,7 @@ export default function CreatePostScreen() {
         title: title.trim(),
         content: content.trim(),
         teamId: selectedTeamId, // 선택된 팀 ID로 게시물 분류
+        tags: tags.length > 0 ? tags : undefined, // 태그가 있는 경우에만 포함
         isPublic: true,
       };
 
@@ -877,6 +895,20 @@ export default function CreatePostScreen() {
             )}
           </View>
         )}
+
+        {/* 태그 입력 영역 (모던) */}
+        {
+          <View style={themed($tagSection)}>
+            <Text style={themed($sectionTitle)}>태그</Text>
+            <TagInput
+              tags={tags}
+              onTagsChange={setTags}
+              suggestedTags={popularTags}
+              disabled={isSubmitting}
+              maxTags={10}
+            />
+          </View>
+        }
 
         {layoutVariant === "creative" && (
           <CreativeCreatePostSection
@@ -1415,4 +1447,9 @@ const $emptyHint: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $emptyHintText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   fontSize: 12,
+});
+
+const $tagSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.md,
 });

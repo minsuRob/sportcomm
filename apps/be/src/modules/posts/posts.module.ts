@@ -9,6 +9,8 @@ import { PostsResolver } from './posts.resolver';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
+import { Tag } from '../../entities/tag.entity';
+import { PostTag } from '../../entities/post-tag.entity';
 import { Media } from '../../entities/media.entity';
 import { User } from '../../entities/user.entity';
 import { Notification } from '../../entities/notification.entity';
@@ -44,6 +46,8 @@ import { PostCreatedHandler } from './events/handlers/post-created.handler';
       Post,
       PostVersion,
       PostLike,
+      Tag,
+      PostTag,
       Media,
       User,
       Notification,

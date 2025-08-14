@@ -5,7 +5,6 @@ import {
   OneToMany,
   JoinColumn,
   Index,
-  RelationId,
 } from 'typeorm';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { IsString, MaxLength, MinLength, IsOptional } from 'class-validator';
@@ -16,6 +15,8 @@ import { Media } from './media.entity';
 import { PostVersion } from './post-version.entity';
 import { PostLike } from './post-like.entity';
 import { Bookmark } from './bookmark.entity';
+import { PostTag } from './post-tag.entity';
+import { Tag } from './tag.entity';
 
 /**
  * 팀 기반 게시물 분류
@@ -241,6 +242,27 @@ export class Post extends BaseEntity {
   @OneToMany(() => Bookmark, (bookmark) => bookmark.post)
   bookmarks: Bookmark[];
 
+  /**
+   * 게시물에 연결된 태그들과의 관계
+   * 일대다 관계: 한 게시물은 여러 태그를 가질 수 있습니다.
+   */
+  @Field(() => [PostTag], {
+    nullable: true,
+    description: '게시물에 연결된 태그 관계',
+  })
+  @OneToMany(() => PostTag, (postTag) => postTag.post)
+  postTags: PostTag[];
+
+  /**
+   * 게시물의 태그 목록 (계산된 필드)
+   * GraphQL 리졸버에서 postTags 관계를 통해 계산됩니다.
+   */
+  @Field(() => [Tag], {
+    nullable: true,
+    description: '게시물의 태그 목록',
+  })
+  tags?: Tag[];
+
   // === 헬퍼 메서드 ===
 
   /**
@@ -367,4 +389,45 @@ export class Post extends BaseEntity {
    */
   @Field(() => Boolean, { description: '현재 사용자가 북마크했는지 여부' })
   isBookmarked?: boolean;
+
+  // === 태그 관련 헬퍼 메서드 ===
+
+  /**
+   * 게시물에 태그가 있는지 확인하는 메서드
+   * @param tagName 확인할 태그 이름
+   * @param tags 게시물의 태그 목록 (성능 최적화용)
+   * @returns 태그가 있다면 true, 아니면 false
+   */
+  hasTag(tagName: string, tags?: Tag[]): boolean {
+    if (!tagName) return false;
+
+    const tagsToCheck = tags || this.tags;
+    if (!tagsToCheck) return false;
+
+    return tagsToCheck.some((tag) => tag.name === tagName);
+  }
+
+  /**
+   * 게시물의 태그 이름 목록을 반환하는 메서드
+   * @param tags 게시물의 태그 목록 (성능 최적화용)
+   * @returns 태그 이름 배열
+   */
+  getTagNames(tags?: Tag[]): string[] {
+    const tagsToCheck = tags || this.tags;
+    if (!tagsToCheck) return [];
+
+    return tagsToCheck.map((tag) => tag.name);
+  }
+
+  /**
+   * 게시물의 해시태그 문자열을 반환하는 메서드
+   * @param tags 게시물의 태그 목록 (성능 최적화용)
+   * @returns 해시태그 문자열 (예: "#전술분석 #이적소식")
+   */
+  getHashtagString(tags?: Tag[]): string {
+    const tagsToCheck = tags || this.tags;
+    if (!tagsToCheck) return '';
+
+    return tagsToCheck.map((tag) => `#${tag.name}`).join(' ');
+  }
 }

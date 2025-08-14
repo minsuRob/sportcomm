@@ -8,6 +8,7 @@ import {
   MaxLength,
   IsOptional,
   IsEnum,
+  IsNumber,
 } from 'class-validator';
 import { AuthService, AuthResponse } from './auth.service';
 import { User, UserRole } from '../../entities/user.entity';
@@ -100,6 +101,11 @@ export class UpdateProfileInput {
   @IsString({ message: '프로필 이미지 URL은 문자열이어야 합니다.' })
   @MaxLength(500, { message: '프로필 이미지 URL은 최대 500자까지 가능합니다.' })
   profileImageUrl?: string;
+
+  @Field(() => Number, { nullable: true, description: '나이' })
+  @IsOptional()
+  @IsNumber({}, { message: '나이는 숫자여야 합니다.' })
+  age?: number;
 }
 
 /**

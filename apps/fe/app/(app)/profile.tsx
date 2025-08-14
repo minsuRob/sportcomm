@@ -32,6 +32,8 @@ interface UserProfile {
   nickname: string;
   email: string;
   profileImageUrl?: string;
+  bio?: string;
+  age?: number;
   role: string; // 사용자 역할 필드 추가
   isFollowing: boolean;
   followerCount: number;
@@ -150,7 +152,6 @@ export default function ProfileScreen() {
       const updatedUser = {
         ...currentUser,
         ...profileData.getUserById,
-        role: currentUser?.role || profileData.getUserById.role,
       };
       console.log(
         "업데이트된 사용자 정보:",
@@ -252,6 +253,8 @@ export default function ProfileScreen() {
     nickname: currentUser.nickname,
     email: currentUser.email || "",
     profileImageUrl: currentUser.profileImageUrl,
+    bio: currentUser.bio,
+    age: currentUser.age,
     role: currentUser.role || "USER", // 기본값 설정
     isFollowing: false,
     followerCount: 0,
@@ -283,11 +286,11 @@ export default function ProfileScreen() {
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
         <Text style={themed($username)}>{userProfile.nickname}</Text>
         {/* 연령대 배지 표시 */}
-        {currentUser?.age ? (
+        {userProfile?.age || currentUser?.age ? (
           <View style={themed($ageBadge)}>
             <Text style={themed($ageBadgeText)}>
               {(() => {
-                const age = currentUser.age as number;
+                const age = (userProfile?.age || currentUser?.age) as number;
                 if (age >= 40) return `40+ 🟪`;
                 if (age >= 30) return `30-35 🟦`;
                 if (age >= 26) return `26-29 🟩`;

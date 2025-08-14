@@ -6,6 +6,7 @@ import {
   ViewStyle,
   TextStyle,
   ImageStyle,
+  Image,
 } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -49,6 +50,7 @@ interface ChatMessageProps {
   highlightColor?: string; // 강조 색상 (필요시)
   onModerationAction?: (message: Message) => void; // 신고/차단 액션 콜백
   onMorePress?: (message: Message) => void;
+  userMeta?: { age?: number; teamLogos?: string[] };
 }
 
 /**
@@ -62,6 +64,7 @@ export default function ChatMessage({
   highlightColor,
   onModerationAction,
   onMorePress,
+  userMeta,
 }: ChatMessageProps) {
   const { themed, theme } = useAppTheme();
 
@@ -122,7 +125,7 @@ export default function ChatMessage({
       {/* 상대방 메시지 레이아웃 */}
       {!message.isMe ? (
         <View style={themed($otherMessageLayout)}>
-          {/* 왼쪽: 아바타 + 닉네임 (항상 표시) */}
+          {/* 왼쪽: 아바타 + 닉네임 + 배지/로고 + more 버튼 (한 줄) */}
           <View style={themed($leftSection)}>
             <View style={themed($avatarContainer)}>
               <UserAvatar
@@ -132,6 +135,48 @@ export default function ChatMessage({
               />
             </View>
             <Text style={themed($nickname)}>{message.user.nickname}</Text>
+            {/* 나의 메시지에만 사용자 메타(연령대 배지/팀 로고) 표시하도록 설계 */}
+            {message.isMe && userMeta?.age ? (
+              <View style={themed($ageBadge)}>
+                <Text style={themed($ageBadgeText)}>
+                  {(() => {
+                    const age = userMeta.age as number;
+                    if (age >= 40) return `40+ 🟪`;
+                    if (age >= 30) return `30-35 🟦`;
+                    if (age >= 26) return `26-29 🟩`;
+                    if (age >= 21) return `20-25 🟨`;
+                    if (age >= 16) return `16-20 🟧`;
+                    if (age >= 10) return `10-15 🟥`;
+                    return `${age}`;
+                  })()}
+                </Text>
+              </View>
+            ) : null}
+            {message.isMe &&
+              userMeta?.teamLogos &&
+              userMeta.teamLogos.length > 0 && (
+                <View style={themed($teamLogosRow)}>
+                  {userMeta.teamLogos.slice(0, 3).map((url, idx) => (
+                    <Image
+                      key={`${url}-${idx}`}
+                      source={{ uri: url }}
+                      style={themed($teamLogoSmall)}
+                    />
+                  ))}
+                </View>
+              )}
+            {!message.isMe && onMorePress && (
+              <TouchableOpacity
+                style={themed($moreButtonInline)}
+                onPress={() => onMorePress(message)}
+              >
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={16}
+                  color={theme.colors.textDim}
+                />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* 오른쪽: 메시지 + 시간 */}
@@ -151,18 +196,6 @@ export default function ChatMessage({
               <Text style={themed($otherMessageDate)}>
                 {dayjs(message.created_at).format("HH:mm")}
               </Text>
-            )}
-            {!message.isMe && onMorePress && (
-              <TouchableOpacity
-                style={themed($moreButton)}
-                onPress={() => onMorePress(message)}
-              >
-                <Ionicons
-                  name="ellipsis-horizontal"
-                  size={16}
-                  color={theme.colors.textDim}
-                />
-              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -233,6 +266,13 @@ const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
 });
 
+const $moreButtonInline: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginLeft: spacing.xs,
+  padding: spacing.xs,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
 const $avatarContainer: ThemedStyle<ViewStyle> = () => ({
   marginRight: 6,
 });
@@ -260,6 +300,37 @@ const $nickname: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "500",
   color: colors.tint,
   flexShrink: 1, // 긴 닉네임 처리
+});
+
+const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginLeft: spacing.xs,
+  paddingHorizontal: spacing.xs,
+  paddingVertical: 2,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: colors.border,
+  backgroundColor: colors.card,
+});
+
+const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.text,
+  fontWeight: "600",
+});
+
+const $teamLogosRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xxs,
+  marginLeft: spacing.xs,
+});
+
+const $teamLogoSmall: ThemedStyle<ImageStyle> = ({ colors }) => ({
+  width: 14,
+  height: 14,
+  borderRadius: 7,
+  borderWidth: 1,
+  borderColor: colors.border,
 });
 
 const $myMessageContent: ThemedStyle<ViewStyle> = () => ({

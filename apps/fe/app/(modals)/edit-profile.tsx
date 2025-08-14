@@ -334,13 +334,14 @@ export default function EditProfileScreen() {
     setIsLoading(true);
 
     try {
-      // GraphQL로 프로필 정보 업데이트 (이미지 URL 포함)
+      // GraphQL로 프로필 정보 업데이트 (이미지 URL 및 나이 포함)
       const result = await updateProfile({
         variables: {
           input: {
             nickname: name.trim(),
             bio: bio.trim(),
             profileImageUrl: profileImage,
+            age: age, // 나이 필드 추가
           },
         },
       });
@@ -352,8 +353,7 @@ export default function EditProfileScreen() {
           nickname: name.trim(),
           bio: bio.trim(),
           profileImageUrl: profileImage,
-          // 백엔드 스키마에 age가 없으므로 FE 세션에만 보관
-          age,
+          age, // 백엔드에서도 age 필드를 지원하므로 함께 저장
         };
         await saveSession(updatedUser);
 
@@ -546,7 +546,7 @@ export default function EditProfileScreen() {
             />
           </View>
           <Text style={themed($inputHelper)}>
-            나이는 로컬에만 저장되며 연령대 배지 표시에 사용됩니다.
+            나이는 1세부터 120세까지 입력 가능합니다.
           </Text>
         </View>
 

@@ -19,7 +19,7 @@ import { User, getSession } from "@/lib/auth";
 import { showToast } from "@/components/CustomToast";
 import TeamLogo from "@/components/TeamLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import FavoriteDateCalendar from "@/components/team/FavoriteDateCalendar";
+import FavoriteMonthPicker from "@/components/team/FavoriteMonthPicker";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -721,10 +721,10 @@ export default function TeamSelectionScreen() {
       )}
 
       {/* 팬이 된 날짜 선택 캘린더 */}
-      <FavoriteDateCalendar
+      <FavoriteMonthPicker
         visible={showCalendar}
         onClose={handleCalendarCancel}
-        onDateSelect={handleFavoriteDateSelect}
+        onSelect={handleFavoriteDateSelect}
         selectedDate={
           pendingTeamId ? teamFavoriteDates[pendingTeamId] : undefined
         }

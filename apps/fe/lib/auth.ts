@@ -11,6 +11,8 @@ export interface User {
   email?: string;
   profileImageUrl?: string;
   bio?: string;
+  /** 사용자의 나이 (로컬 저장 전용) */
+  age?: number;
   team?: string;
   isPrivate?: boolean;
   role?: string;

@@ -40,6 +40,7 @@ export default function EditProfileScreen() {
   const [profileImage, setProfileImage] = useState<string>("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
+  const [age, setAge] = useState<number | undefined>(undefined);
   const [team, setTeam] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +62,7 @@ export default function EditProfileScreen() {
         setBio(user.bio || "");
         setTeam(user.team || "");
         setIsPrivate(user.isPrivate || false);
+        setAge((user as any).age);
       }
     };
     loadUserData();
@@ -350,6 +352,8 @@ export default function EditProfileScreen() {
           nickname: name.trim(),
           bio: bio.trim(),
           profileImageUrl: profileImage,
+          // 백엔드 스키마에 age가 없으므로 FE 세션에만 보관
+          age,
         };
         await saveSession(updatedUser);
 
@@ -373,6 +377,19 @@ export default function EditProfileScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /**
+   * 나이 입력을 숫자만 허용하고 1~120 범위로 제한
+   */
+  const handleAgeChange = (text: string) => {
+    const onlyDigits = text.replace(/[^0-9]/g, "");
+    if (onlyDigits === "") {
+      setAge(undefined);
+      return;
+    }
+    const num = Math.max(1, Math.min(120, parseInt(onlyDigits, 10)));
+    setAge(num);
   };
 
   /**
@@ -506,6 +523,30 @@ export default function EditProfileScreen() {
           </View>
           <Text style={themed($inputHelper)}>
             이름은 14일에 두 번만 변경할 수 있습니다.
+          </Text>
+        </View>
+
+        {/* 나이 섹션 */}
+        <View style={themed($section)}>
+          <Text style={themed($sectionTitle)}>나이</Text>
+          <View style={themed($inputContainer)}>
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={theme.colors.textDim}
+            />
+            <TextInput
+              style={themed($textInput)}
+              value={age?.toString() ?? ""}
+              onChangeText={handleAgeChange}
+              placeholder="나이를 입력하세요 (숫자)"
+              placeholderTextColor={theme.colors.textDim}
+              keyboardType="numeric"
+              maxLength={3}
+            />
+          </View>
+          <Text style={themed($inputHelper)}>
+            나이는 로컬에만 저장되며 연령대 배지 표시에 사용됩니다.
           </Text>
         </View>
 

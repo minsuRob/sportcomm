@@ -5,6 +5,9 @@ import {
   IsEnum,
   MinLength,
   MaxLength,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { UserRole } from '../../../entities/user.entity';
 
@@ -61,6 +64,19 @@ export class SyncUserInput {
   @IsString({ message: '자기소개는 문자열이어야 합니다.' })
   @MaxLength(500, { message: '자기소개는 최대 500자까지 가능합니다.' })
   bio?: string;
+
+  /**
+   * 사용자 나이 (선택사항)
+   */
+  @Field(() => Number, {
+    nullable: true,
+    description: '사용자 나이',
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '나이는 숫자여야 합니다.' })
+  @Min(1, { message: '나이는 1세 이상이어야 합니다.' })
+  @Max(120, { message: '나이는 120세 이하여야 합니다.' })
+  age?: number;
 }
 
 /**
@@ -104,4 +120,17 @@ export class UpdateUserProfileInput {
   @IsString({ message: '자기소개는 문자열이어야 합니다.' })
   @MaxLength(500, { message: '자기소개는 최대 500자까지 가능합니다.' })
   bio?: string;
+
+  /**
+   * 사용자 나이 (선택사항)
+   */
+  @Field(() => Number, {
+    nullable: true,
+    description: '사용자 나이',
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '나이는 숫자여야 합니다.' })
+  @Min(1, { message: '나이는 1세 이상이어야 합니다.' })
+  @Max(120, { message: '나이는 120세 이하여야 합니다.' })
+  age?: number;
 }

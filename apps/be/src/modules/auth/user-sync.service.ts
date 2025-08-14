@@ -35,6 +35,8 @@ export interface UpdateUserProfileInput {
   profileImageUrl?: string;
   /** 자기소개 (선택사항) */
   bio?: string;
+  /** 나이 (선택사항) */
+  age?: number;
 }
 
 /**
@@ -247,6 +249,7 @@ export class UserSyncService {
       if (input.profileImageUrl !== undefined)
         user.profileImageUrl = input.profileImageUrl;
       if (input.bio !== undefined) user.bio = input.bio;
+      if (input.age !== undefined) user.age = input.age;
       user.updatedAt = new Date();
 
       const updatedUser = await this.userRepository.save(user);

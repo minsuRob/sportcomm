@@ -8,6 +8,9 @@ import {
   IsEnum,
   IsUUID,
   IsOptional,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { Post } from './post.entity';
 import { Comment } from './comment.entity';
@@ -201,6 +204,22 @@ export class User {
   bio?: string;
 
   /**
+   * 사용자 나이
+   * 선택적 필드입니다. 1-120 사이의 값만 허용됩니다.
+   */
+  @Field(() => Number, { nullable: true, description: '사용자 나이' })
+  @Column({
+    type: 'integer',
+    nullable: true,
+    comment: '사용자 나이',
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '나이는 숫자여야 합니다.' })
+  @Min(1, { message: '나이는 1세 이상이어야 합니다.' })
+  @Max(120, { message: '나이는 120세 이하여야 합니다.' })
+  age?: number;
+
+  /**
    * 이메일 인증 여부
    * 회원가입 시 이메일 인증을 완료했는지 나타냅니다.
    */
@@ -382,6 +401,7 @@ export interface CombinedUserInfo {
   role: UserRole;
   profileImageUrl?: string;
   bio?: string;
+  age?: number;
   isActive: boolean;
   /** 사용자 포인트 (가상 자산) */
   points?: number;

@@ -150,6 +150,7 @@ export default function ProfileScreen() {
       const updatedUser = {
         ...currentUser,
         ...profileData.getUserById,
+        role: currentUser?.role || profileData.getUserById.role,
       };
       console.log(
         "업데이트된 사용자 정보:",
@@ -281,6 +282,23 @@ export default function ProfileScreen() {
       <View style={themed($profileSection)}>
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
         <Text style={themed($username)}>{userProfile.nickname}</Text>
+        {/* 연령대 배지 표시 */}
+        {currentUser?.age ? (
+          <View style={themed($ageBadge)}>
+            <Text style={themed($ageBadgeText)}>
+              {(() => {
+                const age = currentUser.age as number;
+                if (age >= 40) return `40+ 🟪`;
+                if (age >= 30) return `30-35 🟦`;
+                if (age >= 26) return `26-29 🟩`;
+                if (age >= 21) return `20-25 🟨`;
+                if (age >= 16) return `16-20 🟧`;
+                if (age >= 10) return `10-15 🟥`;
+                return `${age}`;
+              })()}
+            </Text>
+          </View>
+        ) : null}
 
         {/* 팀 정보 표시 */}
         {userProfile.myTeams && userProfile.myTeams.length > 0 ? (
@@ -448,6 +466,22 @@ const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontWeight: "bold",
   color: colors.text,
   marginTop: spacing.md,
+});
+
+const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.xs,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xxs,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+  backgroundColor: colors.card,
+});
+
+const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.text,
+  fontWeight: "600",
 });
 
 // 팀 정보 스타일들

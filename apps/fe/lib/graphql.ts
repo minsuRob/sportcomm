@@ -244,6 +244,8 @@ export const GET_USER_PROFILE = gql`
       nickname
       email
       profileImageUrl
+      bio
+      age
       role
       isFollowing
       followerCount
@@ -440,6 +442,7 @@ export const UPDATE_PROFILE = gql`
       nickname
       email
       bio
+      age
       profileImageUrl
       role
       createdAt

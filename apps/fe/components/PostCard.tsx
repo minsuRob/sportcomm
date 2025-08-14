@@ -767,31 +767,31 @@ const PostCard = React.memo(function PostCard({
               </TouchableOpacity>
             </View>
 
-            {/* 제목 표시 */}
-            {post.title && post.title.trim() && (
-              <View style={themed($titleContainer)}>
-                {renderStrokedText({
-                  content: post.title,
-                  themed: themed,
-                  fontSize: 24,
-                  lineHeight: 42,
-                  numberOfLines: 2,
-                })}
-              </View>
-            )}
+            {/* 제목과 콘텐츠를 묶는 컨테이너 */}
+            <View style={themed($textContainer)}>
+              {/* 제목 표시 */}
+              {post.title && post.title.trim() && (
+                <View style={themed($titleContainer)}>
+                  {renderStrokedText({
+                    content: post.title,
+                    themed: themed,
+                    fontSize: 24,
+                    lineHeight: 42,
+                    numberOfLines: 2,
+                  })}
+                </View>
+              )}
 
-            {/* 콘텐츠 표시 */}
-            {renderContentText({
-              content: post.content,
-              themed: themed,
-              containerStyle:
-                post.title && post.title.trim()
-                  ? { bottom: 35 }
-                  : ({} as ViewStyle),
-              fontSize: 14,
-              lineHeight: 32,
-              numberOfLines: 2,
-            })}
+              {/* 콘텐츠 표시 */}
+              {renderContentText({
+                content: post.content,
+                themed: themed,
+                containerStyle: themed($contentContainer),
+                fontSize: 14,
+                lineHeight: 32,
+                numberOfLines: 2,
+              })}
+            </View>
           </TouchableOpacity>
 
           {/* 게시물 액션 버튼들 */}
@@ -1028,21 +1028,23 @@ const $categoryText: ThemedStyle<TextStyle> = () => ({
 });
 
 // 제목 컨테이너
-const $titleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $textContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
-  bottom: spacing.lg + 40,
+  bottom: "25%",
   left: spacing.sm,
   right: spacing.sm,
   zIndex: 2,
+  gap: spacing.xxs,
+});
+
+// 제목 컨테이너
+const $titleContainer: ThemedStyle<ViewStyle> = () => ({
+  // position, bottom 속성 제거
 });
 
 // 콘텐츠 컨테이너
-const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  position: "absolute",
-  bottom: spacing.sm,
-  left: spacing.sm,
-  right: spacing.sm,
-  zIndex: 2,
+const $contentContainer: ThemedStyle<ViewStyle> = () => ({
+  // position, bottom 속성 제거
 });
 
 // 텍스트 스트로크 스타일들

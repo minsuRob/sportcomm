@@ -149,19 +149,10 @@ export const UNSELECT_TEAM = gql`
   }
 `;
 
-// 팀 데이터 입력 타입
-export const TEAM_INPUT_FRAGMENT = gql`
-  input TeamDataInput {
-    teamId: String!
-    priority: Int
-    favoriteDate: String
-  }
-`;
-
 // 사용자 팀 선택 모두 업데이트
 export const UPDATE_MY_TEAMS = gql`
-  mutation UpdateMyTeams($teamIds: [String!]!, $teamsData: [TeamDataInput!]) {
-    updateMyTeams(teamIds: $teamIds, teamsData: $teamsData) {
+  mutation UpdateMyTeams($teams: [UpdateMyTeamInput!]!) {
+    updateMyTeams(teams: $teams) {
       ...UserTeamInfo
     }
   }
@@ -169,6 +160,11 @@ export const UPDATE_MY_TEAMS = gql`
 `;
 
 // TypeScript 타입 정의
+export interface UpdateMyTeamInput {
+  teamId: string;
+  favoriteDate?: string;
+}
+
 export interface Sport {
   id: string;
   name: string;

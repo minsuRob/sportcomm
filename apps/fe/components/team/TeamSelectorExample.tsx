@@ -12,59 +12,26 @@ import TeamSelector from "./TeamSelector";
 export default function TeamSelectorExample() {
   const { themed } = useAppTheme();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [favoriteDate, setFavoriteDate] = useState<string>("");
-
-  /**
-   * 팀 선택 핸들러
-   */
   const handleTeamSelect = (teamId: string | null) => {
     setSelectedTeamId(teamId);
-    if (!teamId) {
-      setFavoriteDate(""); // 팀 선택 해제 시 날짜도 초기화
-    }
-  };
-
-  /**
-   * 팬이 된 날짜 선택 핸들러
-   */
-  const handleFavoriteDateSelect = (teamId: string, date: string) => {
-    setFavoriteDate(date);
-    console.log(`팀 ${teamId}의 팬이 된 날짜: ${date}`);
   };
 
   return (
     <ScrollView style={themed($container)}>
       <View style={themed($section)}>
-        <Text style={themed($title)}>팀 선택 (팬이 된 날짜 포함)</Text>
-        <TeamSelector
-          selectedTeamId={selectedTeamId}
-          onTeamSelect={handleTeamSelect}
-          onFavoriteDateSelect={handleFavoriteDateSelect}
-          selectedFavoriteDate={favoriteDate}
-          placeholder="좋아하는 팀을 선택해주세요"
-          showFavoriteDatePicker={true}
-        />
-
-        {selectedTeamId && favoriteDate && (
-          <View style={themed($resultInfo)}>
-            <Text style={themed($resultText)}>
-              선택된 팀 ID: {selectedTeamId}
-            </Text>
-            <Text style={themed($resultText)}>
-              팬이 된 날짜: {favoriteDate}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <View style={themed($section)}>
-        <Text style={themed($title)}>팀 선택 (기본 모드)</Text>
+        <Text style={themed($title)}>팀 선택</Text>
         <TeamSelector
           selectedTeamId={selectedTeamId}
           onTeamSelect={handleTeamSelect}
           placeholder="팀을 선택해주세요"
-          showFavoriteDatePicker={false}
         />
+        {selectedTeamId && (
+          <View style={themed($resultInfo)}>
+            <Text style={themed($resultText)}>
+              선택된 팀 ID: {selectedTeamId}
+            </Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );

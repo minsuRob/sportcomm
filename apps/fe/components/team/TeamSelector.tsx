@@ -16,7 +16,6 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import TeamLogo from "@/components/TeamLogo";
 import { GET_ADMIN_TEAMS } from "@/lib/graphql/admin";
-import FavoriteDateCalendar from "./FavoriteDateCalendar";
 
 // 팀 정보 타입
 interface Team {
@@ -31,12 +30,9 @@ interface Team {
 interface TeamSelectorProps {
   selectedTeamId?: string;
   onTeamSelect: (teamId: string | null) => void;
-  onFavoriteDateSelect?: (teamId: string, favoriteDate: string) => void;
-  selectedFavoriteDate?: string;
   placeholder?: string;
   disabled?: boolean;
   showClearButton?: boolean;
-  showFavoriteDatePicker?: boolean;
 }
 
 /**
@@ -48,17 +44,12 @@ interface TeamSelectorProps {
 export default function TeamSelector({
   selectedTeamId,
   onTeamSelect,
-  onFavoriteDateSelect,
-  selectedFavoriteDate,
   placeholder = "팀 선택 (선택사항)",
   disabled = false,
   showClearButton = true,
-  showFavoriteDatePicker = true,
 }: TeamSelectorProps) {
   const { themed, theme } = useAppTheme();
   const [showModal, setShowModal] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
 
   // 팀 목록 조회
   const { data: teamsData, loading: teamsLoading } = useQuery(GET_ADMIN_TEAMS, {
@@ -72,36 +63,8 @@ export default function TeamSelector({
    * 팀 선택 핸들러
    */
   const handleTeamSelect = (teamId: string) => {
-    if (showFavoriteDatePicker && teamId) {
-      // 팀 선택 후 캘린더 표시
-      setPendingTeamId(teamId);
-      setShowModal(false);
-      setShowCalendar(true);
-    } else {
-      // 캘린더 없이 바로 선택
-      onTeamSelect(teamId);
-      setShowModal(false);
-    }
-  };
-
-  /**
-   * 팬이 된 날짜 선택 핸들러
-   */
-  const handleFavoriteDateSelect = (favoriteDate: string) => {
-    if (pendingTeamId && onFavoriteDateSelect) {
-      onFavoriteDateSelect(pendingTeamId, favoriteDate);
-    }
-    onTeamSelect(pendingTeamId);
-    setPendingTeamId(null);
-    setShowCalendar(false);
-  };
-
-  /**
-   * 캘린더 취소 핸들러
-   */
-  const handleCalendarCancel = () => {
-    setPendingTeamId(null);
-    setShowCalendar(false);
+    onTeamSelect(teamId);
+    setShowModal(false);
   };
 
   /**
@@ -184,19 +147,6 @@ export default function TeamSelector({
                   >
                     {selectedTeam.name}
                   </Text>
-                  {selectedFavoriteDate && showFavoriteDatePicker && (
-                    <Text style={themed($favoriteDateText)}>
-                      {new Date(selectedFavoriteDate).toLocaleDateString(
-                        "ko-KR",
-                        {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        }
-                      )}
-                      부터 팬
-                    </Text>
-                  )}
                 </View>
               </>
             ) : (
@@ -309,20 +259,6 @@ export default function TeamSelector({
           </View>
         </View>
       </Modal>
-
-      {/* 팬이 된 날짜 선택 캘린더 */}
-      {showFavoriteDatePicker && (
-        <FavoriteDateCalendar
-          visible={showCalendar}
-          onClose={handleCalendarCancel}
-          onDateSelect={handleFavoriteDateSelect}
-          selectedDate={selectedFavoriteDate}
-          teamName={teams.find((team: Team) => team.id === pendingTeamId)?.name}
-          teamColor={
-            teams.find((team: Team) => team.id === pendingTeamId)?.color
-          }
-        />
-      )}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   Text,
@@ -36,16 +36,22 @@ export default function FavoriteMonthPicker({
 }: FavoriteMonthPickerProps) {
   const { themed, theme } = useAppTheme();
 
-  // 초기 연도는 선택값 또는 오늘 기준
-  const initialYear = useMemo(() => {
+  const [year, setYear] = useState<number>(() => {
     if (selectedDate) {
       const d = new Date(selectedDate);
       if (!Number.isNaN(d.getTime())) return d.getFullYear();
     }
     return new Date().getFullYear();
-  }, [selectedDate]);
+  });
 
-  const [year, setYear] = useState<number>(initialYear);
+  useEffect(() => {
+    if (selectedDate) {
+      const d = new Date(selectedDate);
+      if (!Number.isNaN(d.getTime())) {
+        setYear(d.getFullYear());
+      }
+    }
+  }, [selectedDate]);
 
   // 최대 선택 가능 월: 오늘 기준 다음 달(YYYY-MM)
   const maxSelectable = useMemo(() => {

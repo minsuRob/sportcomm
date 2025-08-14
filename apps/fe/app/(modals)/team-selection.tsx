@@ -322,20 +322,13 @@ export default function TeamSelectionScreen() {
         isAuthenticated: sessionInfo.isAuthenticated,
       });
 
-      // 팀 선택 데이터 준비 (favoriteDate 포함)
-      const teamsWithDates = selectedTeams.map((teamId, index) => ({
-        teamId,
-        priority: index, // 선택 순서
-        favoriteDate: teamFavoriteDates[teamId] || null,
-      }));
-
-      console.log("저장할 팀 데이터:", teamsWithDates);
-
       // GraphQL 뮤테이션으로 팀 선택 업데이트
       const { data, errors } = await updateMyTeams({
         variables: {
-          teamIds: selectedTeams,
-          teamsData: teamsWithDates, // favoriteDate 포함 데이터 전송
+          teams: selectedTeams.map((teamId) => ({
+            teamId,
+            favoriteDate: teamFavoriteDates[teamId] || null,
+          })),
         },
         context: {
           headers: {

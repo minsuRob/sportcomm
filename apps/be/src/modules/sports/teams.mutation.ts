@@ -1,7 +1,7 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { InputType, Field } from '@nestjs/graphql';
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsDateString } from 'class-validator';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
@@ -21,6 +21,24 @@ export class UpdateTeamLogoInput {
   @IsString({ message: '로고 URL은 문자열이어야 합니다.' })
   @MaxLength(500, { message: '로고 URL은 최대 500자까지 가능합니다.' })
   logoUrl: string;
+}
+
+/**
+ * 사용자 팀 선택 업데이트 입력 타입
+ */
+@InputType()
+export class UpdateMyTeamInput {
+  @Field(() => String, { description: '팀 ID' })
+  @IsString()
+  teamId: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: '팬이 된 날짜 (YYYY-MM-DD)',
+  })
+  @IsOptional()
+  @IsDateString()
+  favoriteDate?: string;
 }
 
 /**

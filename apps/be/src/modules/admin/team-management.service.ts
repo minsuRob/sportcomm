@@ -90,7 +90,7 @@ export class TeamManagementService {
     });
 
     return sports.map((sport) => ({
-      id: sport.name.toUpperCase(),
+      id: sport.id,
       name: sport.name,
       icon: sport.icon,
       teams: sport.teams.map((team) => this.teamToTeamInfo(team)),

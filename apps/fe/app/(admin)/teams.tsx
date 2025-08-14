@@ -23,6 +23,7 @@ import {
   DELETE_TEAM,
   TOGGLE_TEAM_STATUS,
   CREATE_SPORT,
+  DELETE_SPORT,
 } from "@/lib/graphql/admin";
 import AppDialog from "@/components/ui/AppDialog";
 
@@ -72,6 +73,8 @@ export default function AdminTeamsScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamInfo | null>(null);
   const [teamToDelete, setTeamToDelete] = useState<TeamInfo | null>(null);
+  const [categoryToDelete, setCategoryToDelete] =
+    useState<SportCategoryInfo | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set()
   );
@@ -202,6 +205,27 @@ export default function AdminTeamsScreen() {
       },
     }
   );
+
+  const [deleteSport] = useMutation(DELETE_SPORT, {
+    refetchQueries: [{ query: GET_ADMIN_TEAMS_BY_CATEGORY }],
+    onCompleted: () => {
+      showToast({
+        type: "success",
+        title: "카테고리 삭제 완료",
+        message: "카테고리가 삭제되었습니다.",
+        duration: 2000,
+      });
+    },
+    onError: (error) => {
+      console.error("카테고리 삭제 실패:", error);
+      showToast({
+        type: "error",
+        title: "삭제 실패",
+        message: error.message || "카테고리 삭제 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    },
+  });
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -398,6 +422,24 @@ export default function AdminTeamsScreen() {
     }
   };
 
+  // 카테고리 삭제 핸들러
+  const handleDeleteCategory = (category: SportCategoryInfo) => {
+    setCategoryToDelete(category);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    try {
+      await deleteSport({
+        variables: { id: categoryToDelete.id },
+      });
+    } catch (error) {
+      // 에러는 onError에서 처리됨
+    } finally {
+      setCategoryToDelete(null);
+    }
+  };
+
   // 카테고리 이름 표시
   const getCategoryDisplayName = (category: string) => {
     const categoryMap = {
@@ -500,6 +542,16 @@ export default function AdminTeamsScreen() {
                         {category.teams.length}
                       </Text>
                     </View>
+                    <TouchableOpacity
+                      style={themed($actionButton)}
+                      onPress={() => handleDeleteCategory(category)}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        color="#EF4444"
+                        size={18}
+                      />
+                    </TouchableOpacity>
                   </View>
                   <Ionicons
                     name={
@@ -958,6 +1010,17 @@ export default function AdminTeamsScreen() {
         } 팀을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`}
         confirmText="삭제"
         onConfirm={confirmDeleteTeam}
+        cancelText="취소"
+      />
+      <AppDialog
+        visible={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        title="카테고리 삭제"
+        description={`${
+          categoryToDelete?.name
+        } 카테고리를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`}
+        confirmText="삭제"
+        onConfirm={confirmDeleteCategory}
         cancelText="취소"
       />
     </>

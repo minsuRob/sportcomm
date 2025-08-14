@@ -12,29 +12,7 @@ import {
   IsEnum,
 } from 'class-validator';
 
-/**
- * 팀 카테고리 열거형
- */
-export enum TeamCategory {
-  SOCCER = 'SOCCER',
-  BASEBALL = 'BASEBALL',
-  ESPORTS = 'ESPORTS',
-  BASKETBALL = 'BASKETBALL',
-  VOLLEYBALL = 'VOLLEYBALL',
-}
-
-// GraphQL 스키마에 TeamCategory enum 등록
-registerEnumType(TeamCategory, {
-  name: 'TeamCategory',
-  description: '팀 카테고리',
-  valuesMap: {
-    SOCCER: { description: '축구' },
-    BASEBALL: { description: '야구' },
-    ESPORTS: { description: 'e스포츠' },
-    BASKETBALL: { description: '농구' },
-    VOLLEYBALL: { description: '배구' },
-  },
-});
+import { Sport } from '../../../entities/sport.entity';
 
 /**
  * 팀 정보 타입
@@ -53,8 +31,8 @@ export class TeamInfo {
   @Field(() => String, { description: '팀 아이콘' })
   icon: string;
 
-  @Field(() => TeamCategory, { description: '팀 카테고리' })
-  category: TeamCategory;
+  @Field(() => Sport, { description: '소속 스포츠' })
+  sport: Sport;
 
   @Field(() => Boolean, { description: '활성화 상태' })
   isActive: boolean;
@@ -85,9 +63,9 @@ export class CreateTeamInput {
   @IsString({ message: '팀 아이콘은 문자열이어야 합니다.' })
   icon: string;
 
-  @Field(() => TeamCategory, { description: '팀 카테고리' })
-  @IsEnum(TeamCategory, { message: '올바른 팀 카테고리를 선택해주세요.' })
-  category: TeamCategory;
+  @Field(() => String, { description: '스포츠 ID' })
+  @IsString({ message: '스포츠 ID는 문자열이어야 합니다.' })
+  sportId: string;
 }
 
 /**
@@ -112,10 +90,15 @@ export class UpdateTeamInput {
   @IsString({ message: '팀 아이콘은 문자열이어야 합니다.' })
   icon?: string;
 
-  @Field(() => TeamCategory, { nullable: true, description: '팀 카테고리' })
+  @Field(() => String, { nullable: true, description: '팀 로고 URL' })
   @IsOptional()
-  @IsEnum(TeamCategory, { message: '올바른 팀 카테고리를 선택해주세요.' })
-  category?: TeamCategory;
+  @IsString({ message: '팀 로고 URL은 문자열이어야 합니다.' })
+  logoUrl?: string;
+
+  @Field(() => String, { nullable: true, description: '스포츠 ID' })
+  @IsOptional()
+  @IsString({ message: '스포츠 ID는 문자열이어야 합니다.' })
+  sportId?: string;
 
   @Field(() => Boolean, { nullable: true, description: '활성화 상태' })
   @IsOptional()

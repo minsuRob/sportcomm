@@ -14,7 +14,6 @@ import {
   UpdateTeamInput,
   TeamInfo,
   SportCategoryInfo,
-  TeamCategory,
 } from './dto/team-management.dto';
 
 /**
@@ -45,14 +44,17 @@ export class TeamManagementService {
    * Team 엔티티를 TeamInfo DTO로 변환
    */
   private teamToTeamInfo(team: Team): TeamInfo {
+    if (!team.sport) {
+      throw new NotFoundException(
+        `Team with id ${team.id} has no associated sport.`,
+      );
+    }
     return {
       id: team.id,
       name: team.name,
       color: team.color,
       icon: team.icon,
-      category:
-        (team.sport?.name?.toUpperCase() as TeamCategory) ||
-        TeamCategory.SOCCER,
+      sport: team.sport,
       isActive: team.isActive,
       createdAt: team.createdAt,
       updatedAt: team.updatedAt,
@@ -93,7 +95,11 @@ export class TeamManagementService {
       id: sport.id,
       name: sport.name,
       icon: sport.icon,
-      teams: sport.teams.map((team) => this.teamToTeamInfo(team)),
+      teams: sport.teams.map((team) => {
+        // team 객체에 sport 정보를 수동으로 할당
+        team.sport = sport;
+        return this.teamToTeamInfo(team);
+      }),
     }));
   }
 
@@ -123,7 +129,7 @@ export class TeamManagementService {
 
     // 스포츠 카테고리 찾기
     const sport = await this.sportRepository.findOne({
-      where: { name: input.category.toLowerCase() },
+      where: { id: input.sportId },
     });
     if (!sport) {
       throw new NotFoundException('해당 스포츠 카테고리를 찾을 수 없습니다.');
@@ -158,7 +164,18 @@ export class TeamManagementService {
     });
 
     const savedTeam = await this.teamRepository.save(team);
-    return this.teamToTeamInfo(savedTeam);
+
+    // sport 관계를 포함하여 다시 조회
+    const newTeam = await this.teamRepository.findOne({
+      where: { id: savedTeam.id },
+      relations: ['sport'],
+    });
+
+    if (!newTeam) {
+      throw new NotFoundException('생성된 팀을 찾을 수 없습니다.');
+    }
+
+    return this.teamToTeamInfo(newTeam);
   }
 
   /**
@@ -180,13 +197,9 @@ export class TeamManagementService {
     }
 
     // 스포츠 카테고리 변경 시 처리
-    if (
-      input.category &&
-      team.sport &&
-      input.category !== team.sport.name.toUpperCase()
-    ) {
+    if (input.sportId && team.sport?.id !== input.sportId) {
       const newSport = await this.sportRepository.findOne({
-        where: { name: input.category.toLowerCase() },
+        where: { id: input.sportId },
       });
       if (!newSport) {
         throw new NotFoundException('해당 스포츠 카테고리를 찾을 수 없습니다.');
@@ -214,6 +227,7 @@ export class TeamManagementService {
     if (input.name) team.name = input.name;
     if (input.color) team.color = input.color;
     if (input.icon) team.icon = input.icon;
+    if (input.logoUrl) team.logoUrl = input.logoUrl;
     team.updatedAt = new Date();
 
     const savedTeam = await this.teamRepository.save(team);
@@ -256,24 +270,6 @@ export class TeamManagementService {
 
     const savedTeam = await this.teamRepository.save(team);
     return this.teamToTeamInfo(savedTeam);
-  }
-
-  /**
-   * 카테고리 정보 반환
-   */
-  private getCategoryInfo(category: TeamCategory): {
-    name: string;
-    icon: string;
-  } {
-    const categoryInfoMap = {
-      [TeamCategory.SOCCER]: { name: '축구', icon: '⚽' },
-      [TeamCategory.BASEBALL]: { name: '야구', icon: '⚾' },
-      [TeamCategory.ESPORTS]: { name: 'e스포츠', icon: '🎮' },
-      [TeamCategory.BASKETBALL]: { name: '농구', icon: '🏀' },
-      [TeamCategory.VOLLEYBALL]: { name: '배구', icon: '🏐' },
-    };
-
-    return categoryInfoMap[category] || { name: '기타', icon: '🏆' };
   }
 
   /**

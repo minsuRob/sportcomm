@@ -34,16 +34,6 @@ import { uploadFilesMobile } from "@/lib/api/mobileUpload";
 import { ProgressCallback, UploadedMedia } from "@/lib/api/common";
 import { isWeb } from "@/lib/platform";
 import { generateSafeFileName } from "@/lib/utils/file-utils";
-import { UPDATE_TEAM_LOGO } from "@/lib/graphql/admin";
-
-// 팀 카테고리 타입
-enum TeamCategory {
-  SOCCER = "SOCCER",
-  BASEBALL = "BASEBALL",
-  ESPORTS = "ESPORTS",
-  BASKETBALL = "BASKETBALL",
-  VOLLEYBALL = "VOLLEYBALL",
-}
 
 // 팀 정보 타입
 interface TeamInfo {
@@ -51,11 +41,13 @@ interface TeamInfo {
   name: string;
   color: string;
   icon: string;
-  category: TeamCategory;
+  sport: {
+    id: string;
+    name: string;
+  };
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  // 백엔드에는 존재하지만 현재 쿼리에서 가져오지 않음 (선언만)
   logoUrl?: string;
 }
 
@@ -238,34 +230,12 @@ export default function AdminTeamsScreen() {
     },
   });
 
-  // 팀 로고 업데이트 뮤테이션
-  const [updateTeamLogo] = useMutation(UPDATE_TEAM_LOGO, {
-    onCompleted: () => {
-      showToast({
-        type: "success",
-        title: "로고 업데이트",
-        message: "팀 로고가 업데이트되었습니다.",
-        duration: 2000,
-      });
-    },
-    onError: (error) => {
-      console.error("팀 로고 업데이트 실패:", error);
-      showToast({
-        type: "error",
-        title: "업데이트 실패",
-        message: error.message || "팀 로고 업데이트 중 오류가 발생했습니다.",
-        duration: 3000,
-      });
-    },
-    refetchQueries: [{ query: GET_ADMIN_TEAMS_BY_CATEGORY }],
-  });
-
   // 폼 상태
   const [formData, setFormData] = useState({
     name: "",
     color: "#000000",
     icon: "🏆",
-    category: TeamCategory.SOCCER,
+    sportId: "",
   });
 
   // 카테고리 생성 관련 상태
@@ -333,18 +303,14 @@ export default function AdminTeamsScreen() {
             name: formData.name,
             color: formData.color,
             icon: formData.icon,
-            category: formData.category,
+            sportId: formData.sportId,
           },
         },
       });
 
-      // 생성 후 로고가 준비되어 있으면 로고 업데이트 수행
-      const createdId = result?.data?.adminCreateTeam?.id;
-      if (createdId && logoUrl) {
-        await updateTeamLogo({
-          variables: { input: { teamId: createdId, logoUrl } },
-        });
-      }
+      // 로고 URL은 createTeam 뮤테이션에 포함되지 않으므로,
+      // 생성 후 별도 업데이트가 필요하다면 다른 방식으로 처리해야 합니다.
+      // 현재 로직에서는 생성 시 로고를 함께 처리하지 않습니다.
     } catch (error) {
       // 에러는 onError에서 처리됨
     }
@@ -370,7 +336,8 @@ export default function AdminTeamsScreen() {
             name: formData.name,
             color: formData.color,
             icon: formData.icon,
-            category: formData.category,
+            sportId: formData.sportId,
+            logoUrl: logoUrl || undefined,
           },
         },
       });
@@ -415,7 +382,7 @@ export default function AdminTeamsScreen() {
       name: team.name,
       color: team.color,
       icon: team.icon,
-      category: team.category,
+      sportId: team.sport.id,
     });
     setLogoUrl(team.logoUrl || "");
     setShowEditModal(true);
@@ -427,7 +394,7 @@ export default function AdminTeamsScreen() {
       name: "",
       color: "#000000",
       icon: "🏆",
-      category: TeamCategory.SOCCER,
+      sportId: "",
     });
     setLogoUrl("");
   };
@@ -529,10 +496,19 @@ export default function AdminTeamsScreen() {
       // 미리보기 및 상태 반영
       setLogoUrl(media.url);
 
-      // 편집 모달인 경우 즉시 백엔드 반영
+      // 편집 모달인 경우 즉시 백엔드 반영 (기존 updateTeam 뮤테이션 사용)
       if (selectedTeam?.id) {
-        await updateTeamLogo({
-          variables: { input: { teamId: selectedTeam.id, logoUrl: media.url } },
+        await updateTeam({
+          variables: {
+            teamId: selectedTeam.id,
+            input: {
+              name: formData.name,
+              color: formData.color,
+              icon: formData.icon,
+              sportId: formData.sportId,
+              logoUrl: media.url,
+            },
+          },
         });
       }
 
@@ -604,18 +580,6 @@ export default function AdminTeamsScreen() {
     } finally {
       setCategoryToDelete(null);
     }
-  };
-
-  // 카테고리 이름 표시
-  const getCategoryDisplayName = (category: string) => {
-    const categoryMap = {
-      SOCCER: "축구",
-      BASEBALL: "야구",
-      ESPORTS: "e스포츠",
-      BASKETBALL: "농구",
-      VOLLEYBALL: "배구",
-    };
-    return categoryMap[category as keyof typeof categoryMap] || category;
   };
 
   // 날짜 포맷팅
@@ -804,7 +768,7 @@ export default function AdminTeamsScreen() {
                             생성일: {formatDate(team.createdAt)}
                           </Text>
                           <Text style={themed($teamMetaText)}>
-                            카테고리: {getCategoryDisplayName(team.category)}
+                            카테고리: {team.sport.name}
                           </Text>
                         </View>
                       </View>
@@ -924,24 +888,26 @@ export default function AdminTeamsScreen() {
                 <View style={themed($inputGroup)}>
                   <Text style={themed($inputLabel)}>카테고리</Text>
                   <View style={themed($categorySelector)}>
-                    {Object.values(TeamCategory).map((category) => (
+                    {categories.map((sport) => (
                       <TouchableOpacity
-                        key={category}
+                        key={sport.id}
                         style={[
                           themed($categoryOption),
-                          formData.category === category &&
+                          formData.sportId === sport.id &&
                             themed($categoryOptionSelected),
                         ]}
-                        onPress={() => setFormData({ ...formData, category })}
+                        onPress={() =>
+                          setFormData({ ...formData, sportId: sport.id })
+                        }
                       >
                         <Text
                           style={[
                             themed($categoryOptionText),
-                            formData.category === category &&
+                            formData.sportId === sport.id &&
                               themed($categoryOptionTextSelected),
                           ]}
                         >
-                          {getCategoryDisplayName(category)}
+                          {sport.name}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -1088,24 +1054,26 @@ export default function AdminTeamsScreen() {
                 <View style={themed($inputGroup)}>
                   <Text style={themed($inputLabel)}>카테고리</Text>
                   <View style={themed($categorySelector)}>
-                    {Object.values(TeamCategory).map((category) => (
+                    {categories.map((sport) => (
                       <TouchableOpacity
-                        key={category}
+                        key={sport.id}
                         style={[
                           themed($categoryOption),
-                          formData.category === category &&
+                          formData.sportId === sport.id &&
                             themed($categoryOptionSelected),
                         ]}
-                        onPress={() => setFormData({ ...formData, category })}
+                        onPress={() =>
+                          setFormData({ ...formData, sportId: sport.id })
+                        }
                       >
                         <Text
                           style={[
                             themed($categoryOptionText),
-                            formData.category === category &&
+                            formData.sportId === sport.id &&
                               themed($categoryOptionTextSelected),
                           ]}
                         >
-                          {getCategoryDisplayName(category)}
+                          {sport.name}
                         </Text>
                       </TouchableOpacity>
                     ))}

@@ -242,7 +242,10 @@ export const GET_ADMIN_TEAMS = gql`
       name
       color
       icon
-      category
+      sport {
+        id
+        name
+      }
       isActive
       createdAt
       updatedAt
@@ -261,7 +264,10 @@ export const GET_ADMIN_TEAMS_BY_CATEGORY = gql`
         name
         color
         icon
-        category
+        sport {
+          id
+          name
+        }
         isActive
         createdAt
         updatedAt
@@ -277,7 +283,10 @@ export const CREATE_TEAM = gql`
       name
       color
       icon
-      category
+      sport {
+        id
+        name
+      }
       isActive
       createdAt
       updatedAt
@@ -292,7 +301,10 @@ export const UPDATE_TEAM = gql`
       name
       color
       icon
-      category
+      sport {
+        id
+        name
+      }
       isActive
       createdAt
       updatedAt
@@ -313,7 +325,10 @@ export const TOGGLE_TEAM_STATUS = gql`
       name
       color
       icon
-      category
+      sport {
+        id
+        name
+      }
       isActive
       createdAt
       updatedAt

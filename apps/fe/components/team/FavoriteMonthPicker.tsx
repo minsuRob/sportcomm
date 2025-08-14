@@ -6,6 +6,8 @@ import {
   View,
   ViewStyle,
   TextStyle,
+  Dimensions,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
@@ -154,11 +156,28 @@ export default function FavoriteMonthPicker({
                 selectedYM &&
                 selectedYM.year === year &&
                 selectedYM.month === idx;
+
+              // 너비 계산
+              const { width: screenWidth } = Dimensions.get("window");
+              const contentPadding = theme.spacing.lg * 2;
+              const gridColumnGap = theme.spacing.md;
+              const numColumns = 4;
+
+              // 실제 컨텐츠 너비
+              const contentWidth =
+                (Platform.OS === "web"
+                  ? Math.min(screenWidth, 420)
+                  : screenWidth * 0.95) - contentPadding;
+
+              const cellWidth =
+                (contentWidth - gridColumnGap * (numColumns - 1)) / numColumns;
+
               return (
                 <TouchableOpacity
                   key={label}
                   style={[
                     themed($monthCell),
+                    { width: cellWidth, height: cellWidth }, // 정사각형 유지
                     isSelected && [
                       themed($monthCellSelected),
                       { borderColor: teamColor },
@@ -266,8 +285,7 @@ const $grid: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $monthCell: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  width: "23%",
-  aspectRatio: 1,
+  // width와 aspectRatio는 동적으로 계산되므로 제거
   borderRadius: 12,
   borderWidth: 1,
   borderColor: colors.border,

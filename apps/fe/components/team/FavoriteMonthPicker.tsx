@@ -169,15 +169,26 @@ export default function FavoriteMonthPicker({
                   disabled={disabled}
                   activeOpacity={0.8}
                 >
-                  <Text
-                    style={[
-                      themed($monthText),
-                      isSelected && { color: teamColor },
-                      disabled && themed($monthTextDisabled),
-                    ]}
-                  >
-                    {label}
-                  </Text>
+                  <View style={{ alignItems: "center" }}>
+                    <Text
+                      style={[
+                        themed($monthText),
+                        isSelected && { color: teamColor },
+                        disabled && themed($monthTextDisabled),
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                    <Text
+                      style={[
+                        themed($monthNumberText),
+                        isSelected && { color: teamColor },
+                        disabled && themed($monthTextDisabled),
+                      ]}
+                    >
+                      ({idx + 1})
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -282,4 +293,11 @@ const $monthText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $monthTextDisabled: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
+});
+
+const $monthNumberText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  fontWeight: "500",
+  color: colors.textDim,
+  marginTop: 2,
 });

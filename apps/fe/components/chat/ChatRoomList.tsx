@@ -15,7 +15,6 @@ import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User } from "@/lib/auth";
-import { GET_USER_CHAT_ROOMS, JOIN_CHAT_ROOM } from "@/lib/graphql/user-chat";
 import { showToast } from "@/components/CustomToast";
 
 // 채팅방 정보 타입
@@ -54,7 +53,7 @@ interface ChatRoom {
 interface ChatRoomListProps {
   currentUser: User | null;
   showHeader?: boolean;
-  mockRooms?: ChatRoom[];
+  rooms: ChatRoom[];
   isLoading?: boolean;
   onRefresh?: () => void;
 }
@@ -67,71 +66,14 @@ interface ChatRoomListProps {
 export default function ChatRoomList({
   currentUser,
   showHeader = false,
-  mockRooms = [],
+  rooms = [],
   isLoading = false,
   onRefresh,
 }: ChatRoomListProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
 
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [hasError, setHasError] = useState<boolean>(false);
-
-  // 사용자 접근 가능한 채팅방 쿼리 (팀 채팅방 + 공용 채팅방)
-  const { data, loading, error, refetch } = useQuery(GET_USER_CHAT_ROOMS, {
-    variables: { page: 1, limit: 100 },
-    fetchPolicy: "cache-and-network",
-    errorPolicy: "all",
-  });
-
-  const [joinChatRoom] = useMutation(JOIN_CHAT_ROOM, {
-    refetchQueries: [
-      { query: GET_USER_CHAT_ROOMS, variables: { page: 1, limit: 100 } },
-    ],
-  });
-
-  // 에러 처리
-  useEffect(() => {
-    if (error) {
-      console.error("채팅방 목록 로드 실패:", error);
-    }
-  }, [error]);
-
-  // 사용자 접근 가능한 채팅방 상태 관리
-  useEffect(() => {
-    const userChatRooms = (data?.getUserChatRooms?.chatRooms || []).map(
-      (room) => ({
-        id: room.id,
-        name: room.name,
-        description: room.description,
-        isPrivate: room.type === "PRIVATE",
-        type: room.type,
-        isRoomActive: room.isRoomActive,
-        maxParticipants: room.maxParticipants,
-        currentParticipants: room.currentParticipants,
-        lastMessage: room.lastMessageContent,
-        lastMessageAt: room.lastMessageAt,
-        unreadCount: 0, // 초기에 읽지 않은 메시지 0개
-        members: room.participants.map((p) => ({
-          userId: p.id,
-          user: {
-            id: p.id,
-            nickname: p.nickname,
-            profileImageUrl: p.profileImageUrl,
-          },
-          isAdmin: false,
-          joinedAt: room.createdAt,
-          lastReadAt: room.createdAt,
-        })),
-        createdAt: room.createdAt,
-        team: room.team, // 팀 정보 추가
-      })
-    );
-
-    const allChatRooms = [...userChatRooms, ...mockRooms];
-    setChatRooms(allChatRooms);
-  }, [data, mockRooms]);
 
   // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleEnterRoom = async (room: ChatRoom) => {
@@ -211,15 +153,14 @@ export default function ChatRoomList({
 
   // 새로고침 핸들러 - 통합된 버전
   const handleRefresh = async () => {
-    // 부모 컴포넌트의 onRefresh가 있으면 실행
     if (onRefresh) {
       setRefreshing(true);
-      await onRefresh();
-      setRefreshing(false);
+      try {
+        await onRefresh();
+      } finally {
+        setRefreshing(false);
+      }
     }
-
-    // 사용자 채팅방 데이터 새로고침
-    await refetch();
   };
 
   // 채팅방 아이템 렌더링
@@ -324,7 +265,7 @@ export default function ChatRoomList({
     );
   };
 
-  if ((isLoading || loading) && chatRooms.length === 0) {
+  if (isLoading && rooms.length === 0) {
     return (
       <View style={themed($loadingContainer)}>
         <ActivityIndicator size="large" color={theme.colors.tint} />
@@ -347,19 +288,19 @@ export default function ChatRoomList({
 
       {/* 채팅방 목록 */}
       <FlatList
-        data={chatRooms.filter((room) => room.isRoomActive !== false)} // 비활성화된 채팅방 제외
+        data={rooms.filter((room) => room.isRoomActive !== false)} // 비활성화된 채팅방 제외
         renderItem={renderChatRoom}
         keyExtractor={(item) => item.id}
         style={themed($flatList)}
         contentContainerStyle={themed($contentContainer)}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing || isLoading || loading}
+            refreshing={refreshing || isLoading}
             onRefresh={handleRefresh}
           />
         }
         ListEmptyComponent={
-          !isLoading && !loading ? (
+          !isLoading ? (
             <View style={themed($emptyContainer)}>
               <Ionicons
                 name="chatbubbles-outline"

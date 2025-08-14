@@ -242,25 +242,12 @@ export default function FeedScreen() {
         <ChatRoomList
           currentUser={currentUser}
           showHeader={false}
-          mockRooms={
-            currentUser?.isAdmin
-              ? []
-              : chatRooms.map((r) => ({
-                  id: r.id,
-                  name: r.name,
-                  description: r.description,
-                  isPrivate: r.isPrivate,
-                  type: r.type as "PUBLIC" | "GROUP" | "PRIVATE" | undefined,
-                  isRoomActive: r.isRoomActive ?? true,
-                  maxParticipants: r.maxParticipants ?? 0,
-                  currentParticipants: r.currentParticipants ?? 0,
-                  lastMessage: r.lastMessage ?? undefined,
-                  lastMessageAt: r.lastMessageAt ?? undefined,
-                  unreadCount: r.unreadCount ?? 0,
-                  members: [],
-                  createdAt: r.createdAt ?? new Date().toISOString(),
-                }))
-          }
+          rooms={chatRooms.map((r) => ({
+            ...r,
+            type: r.type as "PRIVATE" | "GROUP" | "PUBLIC" | undefined,
+            members: r.members || [],
+            createdAt: r.createdAt || new Date().toISOString(),
+          }))}
           isLoading={chatRoomsLoading}
           onRefresh={loadChatRooms}
         />

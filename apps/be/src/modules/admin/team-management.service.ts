@@ -121,14 +121,6 @@ export class TeamManagementService {
   async createTeam(adminUser: User, input: CreateTeamInput): Promise<TeamInfo> {
     this.validateAdminPermission(adminUser);
 
-    // 중복 ID 확인
-    const existingTeamById = await this.teamRepository.findOne({
-      where: { id: input.id },
-    });
-    if (existingTeamById) {
-      throw new ConflictException('이미 존재하는 팀 ID입니다.');
-    }
-
     // 스포츠 카테고리 찾기
     const sport = await this.sportRepository.findOne({
       where: { name: input.category.toLowerCase() },
@@ -156,7 +148,6 @@ export class TeamManagementService {
 
     // 팀 생성
     const team = this.teamRepository.create({
-      id: input.id,
       name: input.name,
       code: input.name.substring(0, 3).toUpperCase(),
       color: input.color,
@@ -189,7 +180,11 @@ export class TeamManagementService {
     }
 
     // 스포츠 카테고리 변경 시 처리
-    if (input.category && input.category !== team.sport.name.toUpperCase()) {
+    if (
+      input.category &&
+      team.sport &&
+      input.category !== team.sport.name.toUpperCase()
+    ) {
       const newSport = await this.sportRepository.findOne({
         where: { name: input.category.toLowerCase() },
       });
@@ -204,7 +199,7 @@ export class TeamManagementService {
       const existingTeam = await this.teamRepository.findOne({
         where: {
           name: input.name,
-          sport: { id: team.sport.id },
+          sport: { id: team.sport?.id },
           id: { $ne: teamId } as any,
         },
       });

@@ -10,7 +10,7 @@ import { UseGuards } from '@nestjs/common';
 import { Sport, Team } from '../../entities';
 import { SportsService } from './sports.service';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
-import { AdminGuard } from '../../common/guards/admin.guard';
+// import { AdminGuard } from '../../common/guards/admin.guard';
 import { CreateSportInput, UpdateSportInput } from './sports.input';
 
 /**
@@ -113,7 +113,7 @@ export class SportsResolver {
     name: 'adminCreateSport',
     description: '새로운 스포츠 카테고리를 생성합니다. (관리자 전용)',
   })
-  @UseGuards(GqlAuthGuard, AdminGuard)
+  @UseGuards(GqlAuthGuard)
   async createSport(@Args('input') input: CreateSportInput): Promise<Sport> {
     return this.sportsService.createSport(input);
   }
@@ -128,7 +128,7 @@ export class SportsResolver {
     name: 'adminUpdateSport',
     description: '스포츠 정보를 업데이트합니다. (관리자 전용)',
   })
-  @UseGuards(GqlAuthGuard, AdminGuard)
+  @UseGuards(GqlAuthGuard)
   async updateSport(
     @Args('id', { type: () => String, description: '스포츠 ID' }) id: string,
     @Args('input') input: UpdateSportInput,
@@ -145,7 +145,7 @@ export class SportsResolver {
     name: 'adminDeleteSport',
     description: '스포츠를 삭제합니다. (관리자 전용)',
   })
-  @UseGuards(GqlAuthGuard, AdminGuard)
+  @UseGuards(GqlAuthGuard)
   async deleteSport(
     @Args('id', { type: () => String, description: '스포츠 ID' }) id: string,
   ): Promise<boolean> {
@@ -161,7 +161,7 @@ export class SportsResolver {
     name: 'adminToggleSportStatus',
     description: '스포츠 활성화 상태를 토글합니다. (관리자 전용)',
   })
-  @UseGuards(GqlAuthGuard, AdminGuard)
+  @UseGuards(GqlAuthGuard)
   async toggleSportStatus(
     @Args('id', { type: () => String, description: '스포츠 ID' }) id: string,
   ): Promise<Sport> {

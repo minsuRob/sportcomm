@@ -205,7 +205,6 @@ export default function AdminTeamsScreen() {
 
   // 폼 상태
   const [formData, setFormData] = useState({
-    id: "",
     name: "",
     color: "#000000",
     icon: "🏆",
@@ -255,11 +254,11 @@ export default function AdminTeamsScreen() {
 
   // 팀 생성 핸들러
   const handleCreateTeam = async () => {
-    if (!formData.id.trim() || !formData.name.trim()) {
+    if (!formData.name.trim()) {
       showToast({
         type: "error",
         title: "입력 오류",
-        message: "팀 ID와 이름을 모두 입력해주세요.",
+        message: "팀 이름을 입력해주세요.",
         duration: 3000,
       });
       return;
@@ -269,7 +268,6 @@ export default function AdminTeamsScreen() {
       await createTeam({
         variables: {
           input: {
-            id: formData.id,
             name: formData.name,
             color: formData.color,
             icon: formData.icon,
@@ -344,7 +342,6 @@ export default function AdminTeamsScreen() {
   const openEditModal = (team: TeamInfo) => {
     setSelectedTeam(team);
     setFormData({
-      id: team.id,
       name: team.name,
       color: team.color,
       icon: team.icon,
@@ -356,7 +353,6 @@ export default function AdminTeamsScreen() {
   // 폼 초기화
   const resetForm = () => {
     setFormData({
-      id: "",
       name: "",
       color: "#000000",
       icon: "🏆",
@@ -628,19 +624,6 @@ export default function AdminTeamsScreen() {
 
               <ScrollView style={themed($formContainer)}>
                 <View style={themed($inputGroup)}>
-                  <Text style={themed($inputLabel)}>팀 ID *</Text>
-                  <TextInput
-                    style={themed($textInput)}
-                    value={formData.id}
-                    onChangeText={(text) =>
-                      setFormData({ ...formData, id: text.toUpperCase() })
-                    }
-                    placeholder="TEAM_ID (영문 대문자, 언더스코어)"
-                    placeholderTextColor={theme.colors.textDim}
-                  />
-                </View>
-
-                <View style={themed($inputGroup)}>
                   <Text style={themed($inputLabel)}>팀 이름 *</Text>
                   <TextInput
                     style={themed($textInput)}
@@ -756,7 +739,7 @@ export default function AdminTeamsScreen() {
                   <Text style={themed($inputLabel)}>팀 ID</Text>
                   <TextInput
                     style={[themed($textInput), themed($disabledInput)]}
-                    value={formData.id}
+                    value={selectedTeam?.id || ""}
                     editable={false}
                     placeholder="팀 ID (수정 불가)"
                     placeholderTextColor={theme.colors.textDim}

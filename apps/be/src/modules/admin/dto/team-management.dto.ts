@@ -71,12 +71,6 @@ export class TeamInfo {
  */
 @InputType()
 export class CreateTeamInput {
-  @Field(() => String, { description: '팀 ID (고유 식별자)' })
-  @IsString({ message: '팀 ID는 문자열이어야 합니다.' })
-  @MinLength(2, { message: '팀 ID는 최소 2자 이상이어야 합니다.' })
-  @MaxLength(50, { message: '팀 ID는 최대 50자까지 가능합니다.' })
-  id: string;
-
   @Field(() => String, { description: '팀 이름' })
   @IsString({ message: '팀 이름은 문자열이어야 합니다.' })
   @MinLength(1, { message: '팀 이름은 최소 1자 이상이어야 합니다.' })

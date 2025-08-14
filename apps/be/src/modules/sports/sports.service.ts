@@ -152,6 +152,7 @@ export class SportsService {
 
     // 정렬 순서 계산 (마지막 순서 + 1)
     const lastSport = await this.sportsRepository.findOne({
+      where: {},
       order: { sortOrder: 'DESC' },
     });
     const sortOrder = (lastSport?.sortOrder || 0) + 1;
@@ -170,7 +171,6 @@ export class SportsService {
     // 기본 팀 생성 (옵션)
     if (input.defaultTeamName) {
       const defaultTeam = this.teamsRepository.create({
-        id: `${input.name.toUpperCase()}_DEFAULT`,
         name: input.defaultTeamName,
         code: input.name.substring(0, 3).toUpperCase(),
         color: '#000000',

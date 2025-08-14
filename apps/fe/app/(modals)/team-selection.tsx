@@ -20,6 +20,7 @@ import { showToast } from "@/components/CustomToast";
 import TeamLogo from "@/components/TeamLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import FavoriteMonthPicker from "@/components/team/FavoriteMonthPicker";
+import TeamSettingsPopover from "@/components/team/TeamSettingsPopover";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -51,6 +52,11 @@ export default function TeamSelectionScreen() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsAnchor, setSettingsAnchor] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
 
   // GraphQL 쿼리 및 뮤테이션
   const {
@@ -188,14 +194,24 @@ export default function TeamSelectionScreen() {
           delete newDates[teamId];
           return newDates;
         });
+        // 팀 설정 버튼 숨김
+        setShowSettings(false);
         return prev.filter((id) => id !== teamId);
       } else {
-        // 선택되지 않은 팀이면 favoriteDate 캘린더 표시
-        setPendingTeamId(teamId);
-        setShowCalendar(true);
-        return prev; // 일단 기존 상태 유지, 캘린더에서 확인 후 추가
+        // 선택만 수행. 팀 설정 버튼은 별도 버튼 클릭 시 노출
+        return [...prev, teamId];
       }
     });
+  };
+
+  /**
+   * 팀 설정 버튼 클릭 시 팝오버 오픈
+   */
+  const openTeamSettings = (teamId: string, pageX: number, pageY: number) => {
+    setPendingTeamId(teamId);
+    setShowCalendar(false);
+    setShowSettings(true);
+    setSettingsAnchor({ top: pageY + 8, left: pageX - 110 });
   };
 
   /**
@@ -204,7 +220,7 @@ export default function TeamSelectionScreen() {
   const handleFavoriteDateSelect = (favoriteDate: string) => {
     if (pendingTeamId) {
       // 팀 추가 및 favoriteDate 저장
-      setSelectedTeams((prev) => [...prev, pendingTeamId]);
+      // 팀은 이미 선택되어 있으므로 날짜만 저장
       setTeamFavoriteDates((prev) => ({
         ...prev,
         [pendingTeamId]: favoriteDate,
@@ -479,58 +495,93 @@ export default function TeamSelectionScreen() {
             );
 
             return (
-              <TouchableOpacity
-                key={teamId}
-                style={[
-                  themed($teamCard),
-                  {
-                    borderColor: isSelected ? team.color : theme.colors.border,
-                    backgroundColor: isSelected
-                      ? team.color + "20"
-                      : theme.colors.card,
-                  },
-                ]}
-                onPress={() => handleTeamSelect(teamId)}
-              >
-                <View style={themed($teamIconContainer)}>
-                  <TeamLogo
-                    logoUrl={team.logoUrl}
-                    fallbackIcon={team.icon}
-                    teamName={team.name}
-                    size={40}
-                  />
-                  {isSelected && (
-                    <View style={themed($selectedIndicator)}>
-                      <Ionicons name="checkmark" size={16} color="white" />
-                    </View>
-                  )}
-                </View>
-                <View style={themed($teamCardInfo)}>
-                  <Text
-                    style={[
-                      themed($teamCardName),
-                      {
-                        color: isSelected ? team.color : theme.colors.text,
-                      },
-                    ]}
-                  >
-                    {team.name}
-                  </Text>
-                  {isSelected && teamFavoriteDates[teamId] && (
-                    <Text style={themed($teamCardDate)}>
-                      {new Date(teamFavoriteDates[teamId]).toLocaleDateString(
-                        "ko-KR",
+              <View key={teamId} style={themed($teamItemColumn)}>
+                <TouchableOpacity
+                  style={[
+                    themed($teamCard),
+                    {
+                      borderColor: isSelected
+                        ? team.color
+                        : theme.colors.border,
+                      backgroundColor: isSelected
+                        ? team.color + "20"
+                        : theme.colors.card,
+                    },
+                  ]}
+                  onPress={() => handleTeamSelect(teamId)}
+                  activeOpacity={0.85}
+                >
+                  <View style={themed($teamIconContainer)}>
+                    <TeamLogo
+                      logoUrl={team.logoUrl}
+                      fallbackIcon={team.icon}
+                      teamName={team.name}
+                      size={40}
+                    />
+                    {isSelected && (
+                      <View style={themed($selectedIndicator)}>
+                        <Ionicons name="checkmark" size={16} color="white" />
+                      </View>
+                    )}
+                  </View>
+                  <View style={themed($teamCardInfo)}>
+                    <Text
+                      style={[
+                        themed($teamCardName),
                         {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        }
-                      )}
-                      부터
+                          color: isSelected ? team.color : theme.colors.text,
+                        },
+                      ]}
+                    >
+                      {team.name}
                     </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
+                    {isSelected && teamFavoriteDates[teamId] && (
+                      <Text style={themed($teamCardDate)}>
+                        {new Date(teamFavoriteDates[teamId]).toLocaleDateString(
+                          "ko-KR",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }
+                        )}
+                        부터
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                {/* 팀 설정 버튼 (선택된 팀에만 표시). 나머지는 placeholder로 높이 유지 */}
+                {isSelected ? (
+                  <TouchableOpacity
+                    style={[
+                      themed($teamSettingsButton),
+                      { borderColor: team.color },
+                    ]}
+                    onPress={(e) =>
+                      openTeamSettings(
+                        teamId,
+                        e.nativeEvent?.pageX || 0,
+                        e.nativeEvent?.pageY || 0
+                      )
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="settings-outline"
+                      size={14}
+                      color={team.color}
+                    />
+                    <Text
+                      style={[themed($teamSettingsText), { color: team.color }]}
+                    >
+                      팀 설정
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={themed($teamSettingsPlaceholder)} />
+                )}
+              </View>
             );
           })}
           {/* 빈 공간 채우기 */}
@@ -713,7 +764,36 @@ export default function TeamSelectionScreen() {
         </View>
       )}
 
-      {/* 팬이 된 날짜 선택 캘린더 */}
+      {/* 팀 설정 팝오버 */}
+      <TeamSettingsPopover
+        visible={showSettings && !!pendingTeamId}
+        onClose={() => setShowSettings(false)}
+        anchorStyle={
+          settingsAnchor
+            ? {
+                position: "absolute",
+                top: settingsAnchor.top,
+                left: settingsAnchor.left,
+              }
+            : undefined
+        }
+        onSelectFavoriteDate={() => {
+          setShowSettings(false);
+          setShowCalendar(true);
+        }}
+        onOpenPhotoCard={() => {
+          setShowSettings(false);
+          // TODO: 포토카드 진입 로직 (추가 스펙 확정 시 구현)
+          showToast({
+            type: "info",
+            title: "포토카드",
+            message: "포토카드 기능이 곧 추가될 예정입니다.",
+            duration: 1500,
+          });
+        }}
+      />
+
+      {/* 팬이 된 날짜 선택 (연/월) */}
       <FavoriteMonthPicker
         visible={showCalendar}
         onClose={handleCalendarCancel}
@@ -848,6 +928,11 @@ const $teamRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.md,
 });
 
+const $teamItemColumn: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  marginHorizontal: spacing.xs,
+});
+
 const $teamCard: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
   alignItems: "center",
@@ -892,6 +977,30 @@ const $teamCardDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   textAlign: "center",
   marginTop: 2,
+});
+
+const $teamSettingsButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.xs,
+  alignSelf: "center",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  borderWidth: 1,
+  backgroundColor: colors.card,
+});
+
+const $teamSettingsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  fontWeight: "600",
+  color: colors.tint,
+});
+
+const $teamSettingsPlaceholder: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  height: 30,
+  marginTop: spacing.xs,
 });
 
 const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

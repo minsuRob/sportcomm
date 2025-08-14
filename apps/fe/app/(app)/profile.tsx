@@ -20,27 +20,11 @@ import {
   GET_USER_POSTS,
   GET_USER_BOOKMARKS,
 } from "@/lib/graphql";
+import { type UserTeam } from "@/lib/graphql/teams";
 import FeedList from "@/components/FeedList";
 import TabSlider from "@/components/TabSlider";
 import type { Post } from "@/components/PostCard";
 // WebCenteredLayout 제거 - 전역 레이아웃 사용
-
-// 팀 정보 타입
-interface UserTeam {
-  id: string;
-  userId: string;
-  teamId: string;
-  priority: number;
-  favoriteDate?: string; // ISO string format
-  team: {
-    id: string;
-    name: string;
-    code: string;
-    color: string;
-    icon: string;
-    logoUrl?: string;
-  };
-}
 
 // 사용자 프로필 데이터 타입
 interface UserProfile {
@@ -57,27 +41,18 @@ interface UserProfile {
 }
 
 /**
- * 2017-03-01부터 주어진 날짜까지의 일수를 계산합니다
- * @param targetDate 계산할 대상 날짜 (ISO string)
+ * 팬이 된 날짜부터 오늘까지의 일수를 계산합니다.
+ * @param favoriteDate 팬이 된 날짜 (ISO string)
  * @returns 일수
  */
-const calculateDaysFromBaseDate = (targetDate: string): number => {
-  const baseDate = new Date("2017-03-01");
-  const target = new Date(targetDate);
-  const diffTime = target.getTime() - baseDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
-};
-
-/**
- * 2017-03-01부터 오늘까지의 일수를 계산합니다
- * @returns 오늘까지의 일수
- */
-const calculateDaysFromBaseDateToToday = (): number => {
-  const baseDate = new Date("2017-03-01");
+const calculateFanDays = (favoriteDate: string): number => {
+  const startDate = new Date(favoriteDate);
   const today = new Date();
-  const diffTime = today.getTime() - baseDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  // 시간, 분, 초를 0으로 설정하여 날짜만 비교
+  startDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  const diffTime = today.getTime() - startDate.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 };
 
@@ -317,7 +292,7 @@ export default function ProfileScreen() {
                     {userTeam.favoriteDate && (
                       <Text style={themed($teamYear)}>
                         {" "}
-                        ({calculateDaysFromBaseDate(userTeam.favoriteDate)}일)
+                        ({calculateFanDays(userTeam.favoriteDate)}일)
                       </Text>
                     )}
                   </Text>

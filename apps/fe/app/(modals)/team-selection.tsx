@@ -19,6 +19,7 @@ import { User, getSession } from "@/lib/auth";
 import { showToast } from "@/components/CustomToast";
 import TeamLogo from "@/components/TeamLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import FavoriteDateCalendar from "@/components/team/FavoriteDateCalendar";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -42,9 +43,14 @@ export default function TeamSelectionScreen() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [teamFavoriteDates, setTeamFavoriteDates] = useState<
+    Record<string, string>
+  >({});
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
 
   // GraphQL 쿼리 및 뮤테이션
   const {
@@ -126,21 +132,29 @@ export default function TeamSelectionScreen() {
           JSON.stringify(myTeamsData.myTeams, null, 2)
         );
 
-        const teamIds = myTeamsData.myTeams
-          .map((userTeam) => {
-            console.log("UserTeam 객체:", userTeam);
+        const teamIds: string[] = [];
+        const favoriteDates: Record<string, string> = {};
 
-            if (!userTeam.team) {
-              console.error("UserTeam에 team 객체가 없음:", userTeam);
-              return null;
-            }
+        myTeamsData.myTeams.forEach((userTeam) => {
+          console.log("UserTeam 객체:", userTeam);
 
-            return userTeam.team.id;
-          })
-          .filter(Boolean) as string[];
+          if (!userTeam.team) {
+            console.error("UserTeam에 team 객체가 없음:", userTeam);
+            return;
+          }
+
+          teamIds.push(userTeam.team.id);
+
+          // favoriteDate가 있으면 저장
+          if (userTeam.favoriteDate) {
+            favoriteDates[userTeam.team.id] = userTeam.favoriteDate;
+          }
+        });
 
         setSelectedTeams(teamIds);
+        setTeamFavoriteDates(favoriteDates);
         console.log("사용자가 선택한 팀 목록 로드 성공:", teamIds);
+        console.log("팀별 favoriteDate 로드 성공:", favoriteDates);
       } catch (error) {
         console.error("팀 목록 처리 중 오류 발생:", error);
       }
@@ -169,12 +183,43 @@ export default function TeamSelectionScreen() {
     setSelectedTeams((prev) => {
       if (prev.includes(teamId)) {
         // 이미 선택된 팀이면 해제
+        setTeamFavoriteDates((prevDates) => {
+          const newDates = { ...prevDates };
+          delete newDates[teamId];
+          return newDates;
+        });
         return prev.filter((id) => id !== teamId);
       } else {
-        // 선택되지 않은 팀이면 추가
-        return [...prev, teamId];
+        // 선택되지 않은 팀이면 favoriteDate 캘린더 표시
+        setPendingTeamId(teamId);
+        setShowCalendar(true);
+        return prev; // 일단 기존 상태 유지, 캘린더에서 확인 후 추가
       }
     });
+  };
+
+  /**
+   * 팬이 된 날짜 선택 핸들러
+   */
+  const handleFavoriteDateSelect = (favoriteDate: string) => {
+    if (pendingTeamId) {
+      // 팀 추가 및 favoriteDate 저장
+      setSelectedTeams((prev) => [...prev, pendingTeamId]);
+      setTeamFavoriteDates((prev) => ({
+        ...prev,
+        [pendingTeamId]: favoriteDate,
+      }));
+    }
+    setPendingTeamId(null);
+    setShowCalendar(false);
+  };
+
+  /**
+   * 캘린더 취소 핸들러
+   */
+  const handleCalendarCancel = () => {
+    setPendingTeamId(null);
+    setShowCalendar(false);
   };
 
   /**
@@ -277,10 +322,20 @@ export default function TeamSelectionScreen() {
         isAuthenticated: sessionInfo.isAuthenticated,
       });
 
+      // 팀 선택 데이터 준비 (favoriteDate 포함)
+      const teamsWithDates = selectedTeams.map((teamId, index) => ({
+        teamId,
+        priority: index, // 선택 순서
+        favoriteDate: teamFavoriteDates[teamId] || null,
+      }));
+
+      console.log("저장할 팀 데이터:", teamsWithDates);
+
       // GraphQL 뮤테이션으로 팀 선택 업데이트
       const { data, errors } = await updateMyTeams({
         variables: {
           teamIds: selectedTeams,
+          teamsData: teamsWithDates, // favoriteDate 포함 데이터 전송
         },
         context: {
           headers: {
@@ -457,16 +512,31 @@ export default function TeamSelectionScreen() {
                     </View>
                   )}
                 </View>
-                <Text
-                  style={[
-                    themed($teamCardName),
-                    {
-                      color: isSelected ? team.color : theme.colors.text,
-                    },
-                  ]}
-                >
-                  {team.name}
-                </Text>
+                <View style={themed($teamCardInfo)}>
+                  <Text
+                    style={[
+                      themed($teamCardName),
+                      {
+                        color: isSelected ? team.color : theme.colors.text,
+                      },
+                    ]}
+                  >
+                    {team.name}
+                  </Text>
+                  {isSelected && teamFavoriteDates[teamId] && (
+                    <Text style={themed($teamCardDate)}>
+                      {new Date(teamFavoriteDates[teamId]).toLocaleDateString(
+                        "ko-KR",
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        }
+                      )}
+                      부터
+                    </Text>
+                  )}
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -649,6 +719,30 @@ export default function TeamSelectionScreen() {
           </Text>
         </View>
       )}
+
+      {/* 팬이 된 날짜 선택 캘린더 */}
+      <FavoriteDateCalendar
+        visible={showCalendar}
+        onClose={handleCalendarCancel}
+        onDateSelect={handleFavoriteDateSelect}
+        selectedDate={
+          pendingTeamId ? teamFavoriteDates[pendingTeamId] : undefined
+        }
+        teamName={
+          pendingTeamId && sportsData
+            ? sportsData.sports
+                .flatMap((sport) => sport.teams)
+                .find((team) => team.id === pendingTeamId)?.name
+            : undefined
+        }
+        teamColor={
+          pendingTeamId && sportsData
+            ? sportsData.sports
+                .flatMap((sport) => sport.teams)
+                .find((team) => team.id === pendingTeamId)?.color
+            : "#FF0000"
+        }
+      />
     </View>
   );
 }
@@ -790,10 +884,21 @@ const $selectedIndicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
   alignItems: "center",
 });
 
+const $teamCardInfo: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "center",
+});
+
 const $teamCardName: ThemedStyle<TextStyle> = () => ({
   fontSize: 12,
   fontWeight: "600",
   textAlign: "center",
+});
+
+const $teamCardDate: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.textDim,
+  textAlign: "center",
+  marginTop: 2,
 });
 
 const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

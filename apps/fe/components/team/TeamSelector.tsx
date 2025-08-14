@@ -16,6 +16,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import TeamLogo from "@/components/TeamLogo";
 import { GET_ADMIN_TEAMS } from "@/lib/graphql/admin";
+import FavoriteDateCalendar from "./FavoriteDateCalendar";
 
 // 팀 정보 타입
 interface Team {
@@ -30,25 +31,34 @@ interface Team {
 interface TeamSelectorProps {
   selectedTeamId?: string;
   onTeamSelect: (teamId: string | null) => void;
+  onFavoriteDateSelect?: (teamId: string, favoriteDate: string) => void;
+  selectedFavoriteDate?: string;
   placeholder?: string;
   disabled?: boolean;
   showClearButton?: boolean;
+  showFavoriteDatePicker?: boolean;
 }
 
 /**
  * 팀 선택 컴포넌트
  *
  * 관리자가 채팅방 생성/수정 시 팀을 선택할 수 있는 드롭다운 컴포넌트입니다.
+ * 팀 선택 시 해당 팀을 좋아하게 된 날짜도 함께 선택할 수 있습니다.
  */
 export default function TeamSelector({
   selectedTeamId,
   onTeamSelect,
+  onFavoriteDateSelect,
+  selectedFavoriteDate,
   placeholder = "팀 선택 (선택사항)",
   disabled = false,
   showClearButton = true,
+  showFavoriteDatePicker = true,
 }: TeamSelectorProps) {
   const { themed, theme } = useAppTheme();
   const [showModal, setShowModal] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
 
   // 팀 목록 조회
   const { data: teamsData, loading: teamsLoading } = useQuery(GET_ADMIN_TEAMS, {
@@ -62,8 +72,36 @@ export default function TeamSelector({
    * 팀 선택 핸들러
    */
   const handleTeamSelect = (teamId: string) => {
-    onTeamSelect(teamId);
-    setShowModal(false);
+    if (showFavoriteDatePicker && teamId) {
+      // 팀 선택 후 캘린더 표시
+      setPendingTeamId(teamId);
+      setShowModal(false);
+      setShowCalendar(true);
+    } else {
+      // 캘린더 없이 바로 선택
+      onTeamSelect(teamId);
+      setShowModal(false);
+    }
+  };
+
+  /**
+   * 팬이 된 날짜 선택 핸들러
+   */
+  const handleFavoriteDateSelect = (favoriteDate: string) => {
+    if (pendingTeamId && onFavoriteDateSelect) {
+      onFavoriteDateSelect(pendingTeamId, favoriteDate);
+    }
+    onTeamSelect(pendingTeamId);
+    setPendingTeamId(null);
+    setShowCalendar(false);
+  };
+
+  /**
+   * 캘린더 취소 핸들러
+   */
+  const handleCalendarCancel = () => {
+    setPendingTeamId(null);
+    setShowCalendar(false);
   };
 
   /**
@@ -137,14 +175,29 @@ export default function TeamSelector({
                   teamName={selectedTeam.name}
                   size={24}
                 />
-                <Text
-                  style={[
-                    themed($selectButtonText),
-                    { color: selectedTeam.color },
-                  ]}
-                >
-                  {selectedTeam.name}
-                </Text>
+                <View style={themed($teamInfo)}>
+                  <Text
+                    style={[
+                      themed($selectButtonText),
+                      { color: selectedTeam.color },
+                    ]}
+                  >
+                    {selectedTeam.name}
+                  </Text>
+                  {selectedFavoriteDate && showFavoriteDatePicker && (
+                    <Text style={themed($favoriteDateText)}>
+                      {new Date(selectedFavoriteDate).toLocaleDateString(
+                        "ko-KR",
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        }
+                      )}
+                      부터 팬
+                    </Text>
+                  )}
+                </View>
               </>
             ) : (
               <Text style={themed($placeholderText)}>{placeholder}</Text>
@@ -256,6 +309,20 @@ export default function TeamSelector({
           </View>
         </View>
       </Modal>
+
+      {/* 팬이 된 날짜 선택 캘린더 */}
+      {showFavoriteDatePicker && (
+        <FavoriteDateCalendar
+          visible={showCalendar}
+          onClose={handleCalendarCancel}
+          onDateSelect={handleFavoriteDateSelect}
+          selectedDate={selectedFavoriteDate}
+          teamName={teams.find((team: Team) => team.id === pendingTeamId)?.name}
+          teamColor={
+            teams.find((team: Team) => team.id === pendingTeamId)?.color
+          }
+        />
+      )}
     </>
   );
 }
@@ -387,4 +454,14 @@ const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginTop: spacing.sm,
   fontSize: 14,
   color: colors.textDim,
+});
+
+const $teamInfo: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $favoriteDateText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  marginTop: 2,
 });

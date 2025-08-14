@@ -21,6 +21,7 @@ import {
   GET_USER_BOOKMARKS,
 } from "@/lib/graphql";
 import { type UserTeam } from "@/lib/graphql/teams";
+import TeamLogo from "@/components/TeamLogo";
 import FeedList from "@/components/FeedList";
 import TabSlider from "@/components/TabSlider";
 import type { Post } from "@/components/PostCard";
@@ -303,16 +304,12 @@ export default function ProfileScreen() {
               .sort((a, b) => a.priority - b.priority)
               .map((userTeam) => (
                 <View key={userTeam.id} style={themed($teamItem)}>
-                  {/* 팀 로고 */}
-                  {userTeam.team.logoUrl ? (
-                    <Image
-                      source={{ uri: userTeam.team.logoUrl }}
-                      style={themed($teamLogo)}
-                    />
-                  ) : (
-                    <Text style={themed($teamIcon)}>{userTeam.team.icon}</Text>
-                  )}
-
+                  <TeamLogo
+                    logoUrl={userTeam.team.logoUrl}
+                    fallbackIcon={userTeam.team.icon}
+                    teamName={userTeam.team.name}
+                    size={24}
+                  />
                   {/* 팀명과 일수 */}
                   <Text style={themed($teamInfo)}>
                     {userTeam.team.name}
@@ -500,18 +497,6 @@ const $teamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   shadowOpacity: 0.1,
   shadowRadius: 2,
   elevation: 2,
-});
-
-const $teamLogo: ThemedStyle<ImageStyle> = ({ spacing }) => ({
-  width: 24,
-  height: 24,
-  borderRadius: 12,
-  marginRight: spacing.sm,
-});
-
-const $teamIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  fontSize: 20,
-  marginRight: spacing.sm,
 });
 
 const $teamInfo: ThemedStyle<TextStyle> = ({ colors }) => ({

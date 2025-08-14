@@ -34,6 +34,7 @@ import { uploadFilesMobile } from "@/lib/api/mobileUpload";
 import { ProgressCallback, UploadedMedia } from "@/lib/api/common";
 import { isWeb } from "@/lib/platform";
 import { generateSafeFileName } from "@/lib/utils/file-utils";
+import TeamLogo from "@/components/TeamLogo";
 
 // 팀 정보 타입
 interface TeamInfo {
@@ -700,13 +701,12 @@ export default function AdminTeamsScreen() {
                       <View key={team.id} style={themed($teamCard)}>
                         <View style={themed($teamHeader)}>
                           <View style={themed($teamInfo)}>
-                            <View
-                              style={[
-                                themed($teamColorIndicator),
-                                { backgroundColor: team.color },
-                              ]}
+                            <TeamLogo
+                              logoUrl={team.logoUrl}
+                              fallbackIcon={team.icon}
+                              teamName={team.name}
+                              size={24}
                             />
-                            <Text style={themed($teamIcon)}>{team.icon}</Text>
                             <View style={themed($teamDetails)}>
                               <Text style={themed($teamName)}>{team.name}</Text>
                               <Text style={themed($teamId)}>ID: {team.id}</Text>

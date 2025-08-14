@@ -13,6 +13,7 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import dayjs from "dayjs";
 import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
+import TeamLogo from "@/components/TeamLogo";
 
 /**
  * 메시지 타입 정의
@@ -159,11 +160,7 @@ export default function ChatMessage({
                 userMeta.teamLogos.length > 0 && (
                   <View style={themed($teamLogosRow)}>
                     {userMeta.teamLogos.slice(0, 3).map((url, idx) => (
-                      <Image
-                        key={`${url}-${idx}`}
-                        source={{ uri: url }}
-                        style={themed($teamLogoSmall)}
-                      />
+                      <TeamLogo key={`${url}-${idx}`} logoUrl={url} size={14} />
                     ))}
                   </View>
                 )}
@@ -337,14 +334,6 @@ const $teamLogosRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   gap: spacing.xxs,
   marginLeft: spacing.xs,
-});
-
-const $teamLogoSmall: ThemedStyle<ImageStyle> = ({ colors }) => ({
-  width: 14,
-  height: 14,
-  borderRadius: 7,
-  borderWidth: 1,
-  borderColor: colors.border,
 });
 
 const $myMessageContent: ThemedStyle<ViewStyle> = () => ({

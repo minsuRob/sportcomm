@@ -249,6 +249,21 @@ export const GET_USER_PROFILE = gql`
       followerCount
       followingCount
       postCount
+      myTeams {
+        id
+        userId
+        teamId
+        priority
+        favoriteDate
+        team {
+          id
+          name
+          code
+          color
+          icon
+          logoUrl
+        }
+      }
     }
   }
 `;

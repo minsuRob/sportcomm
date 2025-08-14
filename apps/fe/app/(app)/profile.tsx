@@ -25,6 +25,23 @@ import TabSlider from "@/components/TabSlider";
 import type { Post } from "@/components/PostCard";
 // WebCenteredLayout 제거 - 전역 레이아웃 사용
 
+// 팀 정보 타입
+interface UserTeam {
+  id: string;
+  userId: string;
+  teamId: string;
+  priority: number;
+  favoriteDate?: string; // ISO string format
+  team: {
+    id: string;
+    name: string;
+    code: string;
+    color: string;
+    icon: string;
+    logoUrl?: string;
+  };
+}
+
 // 사용자 프로필 데이터 타입
 interface UserProfile {
   id: string;
@@ -36,7 +53,33 @@ interface UserProfile {
   followerCount: number;
   followingCount: number;
   postCount: number;
+  myTeams?: UserTeam[];
 }
+
+/**
+ * 2017-03-01부터 주어진 날짜까지의 일수를 계산합니다
+ * @param targetDate 계산할 대상 날짜 (ISO string)
+ * @returns 일수
+ */
+const calculateDaysFromBaseDate = (targetDate: string): number => {
+  const baseDate = new Date("2017-03-01");
+  const target = new Date(targetDate);
+  const diffTime = target.getTime() - baseDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
+
+/**
+ * 2017-03-01부터 오늘까지의 일수를 계산합니다
+ * @returns 오늘까지의 일수
+ */
+const calculateDaysFromBaseDateToToday = (): number => {
+  const baseDate = new Date("2017-03-01");
+  const today = new Date();
+  const diffTime = today.getTime() - baseDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
 
 /**
  * 프로필 화면 컴포넌트
@@ -251,6 +294,40 @@ export default function ProfileScreen() {
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
         <Text style={themed($username)}>{userProfile.nickname}</Text>
 
+        {/* 팀 정보 표시 */}
+        {userProfile.myTeams && userProfile.myTeams.length > 0 ? (
+          <View style={themed($teamsContainer)}>
+            {userProfile.myTeams
+              .sort((a, b) => a.priority - b.priority)
+              .map((userTeam) => (
+                <View key={userTeam.id} style={themed($teamItem)}>
+                  {/* 팀 로고 */}
+                  {userTeam.team.logoUrl ? (
+                    <Image
+                      source={{ uri: userTeam.team.logoUrl }}
+                      style={themed($teamLogo)}
+                    />
+                  ) : (
+                    <Text style={themed($teamIcon)}>{userTeam.team.icon}</Text>
+                  )}
+
+                  {/* 팀명과 일수 */}
+                  <Text style={themed($teamInfo)}>
+                    {userTeam.team.name}
+                    {userTeam.favoriteDate && (
+                      <Text style={themed($teamYear)}>
+                        {" "}
+                        ({calculateDaysFromBaseDate(userTeam.favoriteDate)}일)
+                      </Text>
+                    )}
+                  </Text>
+                </View>
+              ))}
+          </View>
+        ) : (
+          <Text style={themed($noTeamText)}>아직 선택한 팀이 없습니다</Text>
+        )}
+
         {/* 프로필 편집 및 팀 선택 버튼 */}
         <View style={themed($buttonContainer)}>
           <TouchableOpacity
@@ -376,6 +453,59 @@ const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontWeight: "bold",
   color: colors.text,
   marginTop: spacing.md,
+});
+
+// 팀 정보 스타일들
+const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $teamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.backgroundAlt,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 2,
+  elevation: 2,
+});
+
+const $teamLogo: ThemedStyle<ImageStyle> = ({ spacing }) => ({
+  width: 24,
+  height: 24,
+  borderRadius: 12,
+  marginRight: spacing.sm,
+});
+
+const $teamIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  fontSize: 20,
+  marginRight: spacing.sm,
+});
+
+const $teamInfo: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: colors.text,
+});
+
+const $teamYear: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "400",
+  color: colors.textDim,
+});
+
+const $noTeamText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  marginTop: spacing.md,
+  fontStyle: "italic",
 });
 
 const $buttonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

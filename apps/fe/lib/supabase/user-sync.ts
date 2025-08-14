@@ -207,8 +207,6 @@ export class UserSyncService {
    */
   static async getCurrentUserInfo(accessToken: string): Promise<User> {
     try {
-      console.log("🔄 현재 사용자 정보 조회 시작");
-
       const { data } = await apolloClient.query({
         query: GET_CURRENT_USER_INFO_QUERY,
         context: {
@@ -223,7 +221,6 @@ export class UserSyncService {
         throw new Error("현재 사용자 정보 조회 응답이 없습니다.");
       }
 
-      console.log("✅ 현재 사용자 정보 조회 성공:", data.getCurrentUserInfo);
       return data.getCurrentUserInfo;
     } catch (error: any) {
       console.error("❌ 현재 사용자 정보 조회 실패:", error);

@@ -127,10 +127,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     const loadUserProfile = async () => {
       const { user } = await getSession();
-      console.log(
-        "세션에서 불러온 사용자 정보:",
-        JSON.stringify(user, null, 2)
-      );
+
       if (user) setCurrentUser(user);
     };
     loadUserProfile();
@@ -153,10 +150,6 @@ export default function ProfileScreen() {
         ...currentUser,
         ...profileData.getUserById,
       };
-      console.log(
-        "업데이트된 사용자 정보:",
-        JSON.stringify(updatedUser, null, 2)
-      );
 
       // 세션 업데이트
       saveSession(updatedUser);

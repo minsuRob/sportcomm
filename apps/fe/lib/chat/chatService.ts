@@ -30,7 +30,7 @@ export class ChatService {
   private async initialize(): Promise<void> {
     try {
       console.log(
-        `채팅 서비스 초기화 중... (${this.dataSource.getDataSourceType()})`,
+        `채팅 서비스 초기화 중... (${this.dataSource.getDataSourceType()})`
       );
       this.isInitialized = true;
       console.log("채팅 서비스 초기화 완료");
@@ -49,7 +49,6 @@ export class ChatService {
 
     try {
       const channels = await this.dataSource.getUserChatRooms();
-      console.log(`사용자 채팅방 ${channels.length}개 조회 완료`);
       return channels;
     } catch (error) {
       console.error("사용자 채팅방 목록 조회 실패:", error);
@@ -65,7 +64,7 @@ export class ChatService {
    */
   async getPublicChatRooms(
     page: number = 1,
-    limit: number = 20,
+    limit: number = 20
   ): Promise<{
     chatRooms: ChannelInfo[];
     total: number;
@@ -77,9 +76,7 @@ export class ChatService {
 
     try {
       const result = await this.dataSource.getPublicChatRooms(page, limit);
-      console.log(
-        `공개 채팅방 ${result.chatRooms.length}개 조회 완료 (${page}/${result.totalPages} 페이지)`,
-      );
+
       return result;
     } catch (error) {
       console.error("공개 채팅방 목록 조회 실패:", error);
@@ -103,7 +100,7 @@ export class ChatService {
   async getChatMessages(
     channelId: string,
     limit: number = 50,
-    before?: string,
+    before?: string
   ): Promise<Message[]> {
     this.ensureInitialized();
 
@@ -111,11 +108,9 @@ export class ChatService {
       const messages = await this.dataSource.getChatMessages(
         channelId,
         limit,
-        before,
+        before
       );
-      console.log(
-        `채팅방 ${channelId}의 메시지 ${messages.length}개 조회 완료`,
-      );
+
       return messages;
     } catch (error) {
       console.error("채팅 메시지 조회 실패:", error);
@@ -135,7 +130,7 @@ export class ChatService {
     channelId: string,
     content: string,
     currentUser: User,
-    replyToId?: string,
+    replyToId?: string
   ): Promise<Message | null> {
     this.ensureInitialized();
 
@@ -180,7 +175,7 @@ export class ChatService {
     description?: string,
     isPrivate: boolean = false,
     type: string = "GENERAL",
-    maxParticipants: number = 100,
+    maxParticipants: number = 100
   ): Promise<ChannelInfo | null> {
     this.ensureInitialized();
 
@@ -293,7 +288,7 @@ export class ChatService {
    */
   subscribeToMessages(
     channelId: string,
-    onMessage: (message: Message) => void,
+    onMessage: (message: Message) => void
   ): () => void {
     this.ensureInitialized();
 
@@ -306,7 +301,7 @@ export class ChatService {
         (message: Message) => {
           console.log(`새 메시지 수신: ${message.id} (채널: ${channelId})`);
           onMessage(message);
-        },
+        }
       );
 
       // 구독 해제 함수 저장

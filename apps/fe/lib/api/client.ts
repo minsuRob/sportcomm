@@ -82,8 +82,8 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
 /**
  * Apollo Client 생성
  */
-logPlatformInfo();
-console.log(`Apollo client initializing for ${getPlatformType()} environment`);
+// logPlatformInfo();
+// console.log(`Apollo client initializing for ${getPlatformType()} environment`);
 
 export const client = new ApolloClient({
   link: from([requestDebugLink, errorLink, authLink, httpLink]),

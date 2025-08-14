@@ -338,7 +338,7 @@ export class AdminService {
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
-      relations: ['reporter', 'reportedUser', 'reportedPost'],
+      relations: ['reporter', 'reportedUser', 'post'],
     });
 
     return {
@@ -363,16 +363,26 @@ export class AdminService {
 
     const report = await this.reportRepository.findOne({
       where: { id: reportId },
-      relations: ['reporter', 'reportedUser', 'reportedPost'],
+      relations: ['reporter', 'reportedUser', 'post'],
     });
 
     if (!report) {
       throw new NotFoundException('신고를 찾을 수 없습니다.');
     }
 
+    // 신고 상태 업데이트
     report.status = status;
     if (adminNote) {
       report.adminNote = adminNote;
+    }
+
+    // 신고가 승인된 경우 추가 처리
+    if (status === ReportStatus.APPROVED && report.post) {
+      // 게시물 관련 추가 처리 로직을 여기에 추가할 수 있습니다
+      // 예: 게시물 비공개 처리, 작성자에게 알림 등
+      console.log(
+        `신고 승인됨 - 게시물 ID: ${report.post.id}, 내용: ${report.post.content.substring(0, 100)}...`,
+      );
     }
 
     await this.reportRepository.save(report);

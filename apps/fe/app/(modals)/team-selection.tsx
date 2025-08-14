@@ -542,10 +542,9 @@ export default function TeamSelectionScreen() {
                           {
                             year: "numeric",
                             month: "short",
-                            day: "numeric",
                           }
                         )}
-                        부터
+                        ~
                       </Text>
                     )}
                   </View>

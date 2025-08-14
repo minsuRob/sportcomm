@@ -20,9 +20,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { usePostInteractions } from "../hooks/usePostInteractions";
+import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
+import TeamLogo from "./TeamLogo";
 import PostActions from "./shared/PostActions";
 import PostContextMenu from "./shared/PostContextMenu";
 import { isWeb } from "@/lib/platform";
@@ -51,6 +54,14 @@ export interface User {
   nickname: string;
   profileImageUrl?: string;
   isFollowing?: boolean;
+  myTeams?: {
+    team: {
+      id: string;
+      name: string;
+      logoUrl?: string;
+      icon: string;
+    };
+  }[];
 }
 
 export interface Comment {
@@ -249,6 +260,11 @@ const PostCard = React.memo(function PostCard({
   // 컨텍스트 메뉴 상태 관리
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const { data: myTeamsData } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
+    skip: !currentUser || post.author.id !== currentUser.id,
+    fetchPolicy: "cache-and-network",
+  });
 
   // 개발 환경 체크
   const __DEV__ = process.env.NODE_ENV === "development";
@@ -737,27 +753,6 @@ const PostCard = React.memo(function PostCard({
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
             <View style={themed($topRightContainer)}>
-              {/* 카테고리 배지 */}
-              <View
-                style={[
-                  themed($categoryBadge),
-                  {
-                    backgroundColor: categoryInfo.colors.primary,
-                    borderColor: categoryInfo.colors.border,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    themed($categoryIcon),
-                    { backgroundColor: categoryInfo.colors.secondary },
-                  ]}
-                >
-                  <Text style={themed($categoryIconText)}>🏆</Text>
-                </View>
-                <Text style={themed($categoryText)}>{teamName}</Text>
-              </View>
-
               {/* 더보기 버튼 */}
               <TouchableOpacity
                 style={themed($moreButton)}
@@ -765,6 +760,20 @@ const PostCard = React.memo(function PostCard({
               >
                 <Ionicons name="ellipsis-horizontal" size={20} color="white" />
               </TouchableOpacity>
+
+              {/* 팀 로고 목록 */}
+              <View style={themed($teamLogoStack)}>
+                {myTeamsData?.myTeams?.slice(0, 3).map(({ team }) => (
+                  <View key={team.id} style={themed($teamLogoWrapper)}>
+                    <TeamLogo
+                      logoUrl={team.logoUrl}
+                      fallbackIcon={team.icon}
+                      teamName={team.name}
+                      size={28}
+                    />
+                  </View>
+                ))}
+              </View>
             </View>
 
             {/* 제목과 콘텐츠를 묶는 컨테이너 */}
@@ -993,9 +1002,23 @@ const $topRightContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   top: spacing.sm,
   right: spacing.sm,
-  flexDirection: "row",
-  alignItems: "center",
+  flexDirection: "column", // 세로 정렬을 위해 column으로 변경
+  alignItems: "flex-end", // 오른쪽 정렬
   zIndex: 2,
+  gap: spacing.sm,
+});
+
+const $teamLogoStack: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "column",
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $teamLogoWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  borderWidth: 2,
+  borderColor: colors.background, // 로고 간 경계선 효과
+  borderRadius: 16,
+  backgroundColor: colors.background,
 });
 
 const $categoryBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({

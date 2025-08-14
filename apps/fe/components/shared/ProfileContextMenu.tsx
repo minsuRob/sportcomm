@@ -3,91 +3,115 @@ import { Ionicons } from "@expo/vector-icons";
 import ActionSheet, { ActionSheetOption } from "@/components/ActionSheet";
 import { useAppTheme } from "@/lib/theme/context";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useModerationActions } from "@/hooks/useModerationActions";
 
 export interface ProfileContextMenuProps {
   visible: boolean;
   onClose: () => void;
-  onOpenProfile: () => void; // 프로필 화면 이동
+  onOpenProfile?: () => void; // 내 프로필 보기
+  targetUser?: { id: string; nickname: string };
+  currentUserId?: string | null;
+  onBlockUser?: (blockedUserId: string) => void;
 }
 
 /**
- * 프로필 버튼을 위한 설정/프로필 전용 컨텍스트 메뉴
- * - 테마, 언어, 앱색상 설정을 바로 토글/선택할 수 있도록 제공합니다.
- * - 다른 화면에서도 재사용 가능하도록 범용 액션시트 옵션으로 구성합니다.
+ * 프로필 및 사용자 상호작용을 위한 컨텍스트 메뉴
+ * - 내 프로필/설정 메뉴와 다른 사용자 신고/차단 메뉴를 조건부로 렌더링합니다.
  */
 export default function ProfileContextMenu({
   visible,
   onClose,
   onOpenProfile,
+  targetUser,
+  currentUserId,
+  onBlockUser,
 }: ProfileContextMenuProps) {
   const { theme, toggleTheme, setAppColor, appColor } = useAppTheme();
   const { currentLanguage, switchLanguage } = useTranslation();
+  const { blockUser, openReportModal } = useModerationActions(onBlockUser);
+
+  const isMyProfile = !targetUser || currentUserId === targetUser.id;
 
   const options: ActionSheetOption[] = useMemo(() => {
     const opts: ActionSheetOption[] = [];
 
-    // 내 프로필 열기
-    opts.push({
-      text: "내 프로필 열기",
-      onPress: onOpenProfile,
-      icon: (
-        <Ionicons
-          name="person-circle-outline"
-          size={20}
-          color={theme.colors.text}
-        />
-      ),
-    });
-
-    // 구분선 대용 빈 옵션은 넣지 않고 순차 배치
-
-    // 테마 토글
-    opts.push({
-      text: theme.isDark ? "라이트 테마로" : "다크 테마로",
-      onPress: toggleTheme,
-      icon: (
-        <Ionicons
-          name={theme.isDark ? "sunny-outline" : "moon-outline"}
-          size={20}
-          color={theme.colors.text}
-        />
-      ),
-    });
-
-    // 언어 전환
-    opts.push({
-      text: currentLanguage === "ko" ? "English로 전환" : "한국어로 전환",
-      onPress: () => switchLanguage(currentLanguage === "ko" ? "en" : "ko"),
-      icon: (
-        <Ionicons name="globe-outline" size={20} color={theme.colors.text} />
-      ),
-    });
-
-    // 앱 색상 (하나 선택형) - 간단히 순환 토글
-    const nextColor =
-      appColor === "blue" ? "red" : appColor === "red" ? "orange" : "blue";
-    const appColorKorean =
-      appColor === "blue" ? "파랑" : appColor === "red" ? "빨강" : "주황";
-    const nextColorKorean =
-      nextColor === "blue" ? "파랑" : nextColor === "red" ? "빨강" : "주황";
-    opts.push({
-      text: `앱 색상: ${appColorKorean} → ${nextColorKorean}`,
-      onPress: () => setAppColor(nextColor as any),
-      icon: (
-        <Ionicons
-          name="color-palette-outline"
-          size={20}
-          color={theme.colors.text}
-        />
-      ),
-    });
-
-    // 취소
-    opts.push({
-      text: "취소",
-      onPress: () => {},
-      style: "cancel",
-    });
+    if (isMyProfile) {
+      // 내 프로필 설정 메뉴
+      if (onOpenProfile) {
+        opts.push({
+          text: "내 프로필 열기",
+          onPress: onOpenProfile,
+          icon: (
+            <Ionicons
+              name="person-circle-outline"
+              size={20}
+              color={theme.colors.text}
+            />
+          ),
+        });
+      }
+      opts.push(
+        {
+          text: theme.isDark ? "라이트 테마로" : "다크 테마로",
+          onPress: toggleTheme,
+          icon: (
+            <Ionicons
+              name={theme.isDark ? "sunny-outline" : "moon-outline"}
+              size={20}
+              color={theme.colors.text}
+            />
+          ),
+        },
+        {
+          text: currentLanguage === "ko" ? "English로 전환" : "한국어로 전환",
+          onPress: () => switchLanguage(currentLanguage === "ko" ? "en" : "ko"),
+          icon: (
+            <Ionicons
+              name="globe-outline"
+              size={20}
+              color={theme.colors.text}
+            />
+          ),
+        }
+      );
+    } else if (targetUser) {
+      // 다른 사용자 메뉴 (신고/차단)
+      opts.push(
+        {
+          text: "신고하기",
+          onPress: () => {
+            openReportModal({
+              userId: targetUser.id,
+              userName: targetUser.nickname,
+            });
+            onClose();
+          },
+          style: "destructive",
+          icon: (
+            <Ionicons
+              name="flag-outline"
+              color={theme.colors.error}
+              size={20}
+            />
+          ),
+        },
+        {
+          text: `${targetUser.nickname}님 차단하기`,
+          onPress: () => {
+            blockUser(targetUser.id, targetUser.nickname);
+            onClose();
+          },
+          style: "destructive",
+          icon: (
+            <Ionicons
+              name="person-remove-outline"
+              color={theme.colors.error}
+              size={20}
+            />
+          ),
+        }
+      );
+    }
 
     return opts;
   }, [
@@ -98,13 +122,22 @@ export default function ProfileContextMenu({
     appColor,
     setAppColor,
     onOpenProfile,
+    isMyProfile,
+    targetUser,
+    blockUser,
+    openReportModal,
+    onClose,
   ]);
+
+  const title = isMyProfile
+    ? "프로필 메뉴"
+    : `${targetUser?.nickname ?? ""}님 옵션`;
 
   return (
     <ActionSheet
       visible={visible}
       onClose={onClose}
-      title="프로필 메뉴"
+      title={title}
       options={options}
     />
   );

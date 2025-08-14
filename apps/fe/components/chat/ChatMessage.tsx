@@ -10,6 +10,7 @@ import {
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import dayjs from "dayjs";
+import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
 
 /**
@@ -47,6 +48,7 @@ interface ChatMessageProps {
   onLongPress?: (message: Message) => void; // 길게 누를 때 콜백 (답장/삭제 등)
   highlightColor?: string; // 강조 색상 (필요시)
   onModerationAction?: (message: Message) => void; // 신고/차단 액션 콜백
+  onMorePress?: (message: Message) => void;
 }
 
 /**
@@ -59,8 +61,9 @@ export default function ChatMessage({
   onLongPress,
   highlightColor,
   onModerationAction,
+  onMorePress,
 }: ChatMessageProps) {
-  const { themed } = useAppTheme();
+  const { themed, theme } = useAppTheme();
 
   // 시스템 메시지는 별도 처리
   if (message.is_system) {
@@ -149,11 +152,28 @@ export default function ChatMessage({
                 {dayjs(message.created_at).format("HH:mm")}
               </Text>
             )}
+            {!message.isMe && onMorePress && (
+              <TouchableOpacity
+                style={themed($moreButton)}
+                onPress={() => onMorePress(message)}
+              >
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={16}
+                  color={theme.colors.textDim}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       ) : (
         /* 내 메시지는 기존 방식 유지 */
         <View style={themed($myMessageContent)}>
+          {showDate && (
+            <Text style={themed($myMessageDate)}>
+              {dayjs(message.created_at).format("HH:mm")}
+            </Text>
+          )}
           <View
             style={[
               themed($messageBox),
@@ -165,11 +185,6 @@ export default function ChatMessage({
           >
             <Text style={themed($myMessageText)}>{message.content}</Text>
           </View>
-          {showDate && (
-            <Text style={themed($myMessageDate)}>
-              {dayjs(message.created_at).format("HH:mm")}
-            </Text>
-          )}
         </View>
       )}
     </TouchableOpacity>
@@ -211,6 +226,13 @@ const $rightSection: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "column",
 });
 
+const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginLeft: spacing.xs,
+  padding: spacing.xs,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
 const $avatarContainer: ThemedStyle<ViewStyle> = () => ({
   marginRight: 6,
 });
@@ -243,6 +265,7 @@ const $nickname: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $myMessageContent: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
   alignItems: "flex-end",
+  justifyContent: "flex-end",
   maxWidth: "80%",
 });
 
@@ -284,8 +307,10 @@ const $dateText: ThemedStyle<TextStyle> = ({ colors }) => ({
   marginTop: 2,
 });
 
-const $myMessageDate: ThemedStyle<TextStyle> = () => ({
-  marginLeft: 6,
+const $myMessageDate: ThemedStyle<TextStyle> = ({ colors }) => ({
+  marginRight: 6,
+  fontSize: 10,
+  color: colors.textDim,
 });
 
 const $otherMessageDate: ThemedStyle<TextStyle> = () => ({

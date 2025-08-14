@@ -1,6 +1,17 @@
-import { Resolver, Query, Args, ResolveField, Parent } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Args,
+  ResolveField,
+  Parent,
+  Mutation,
+} from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { Sport, Team } from '../../entities';
 import { SportsService } from './sports.service';
+import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
+import { AdminGuard } from '../../common/guards/admin.guard';
+import { CreateSportInput, UpdateSportInput } from './sports.input';
 
 /**
  * 스포츠 GraphQL 리졸버
@@ -89,5 +100,71 @@ export class SportsResolver {
   async activeTeamCount(@Parent() sport: Sport): Promise<number> {
     const stats = await this.sportsService.getSportStats(sport.id);
     return stats.activeTeams;
+  }
+
+  // === 관리자 전용 뮤테이션 ===
+
+  /**
+   * 새로운 스포츠 카테고리를 생성합니다.
+   * @param input 스포츠 생성 정보
+   * @returns 생성된 스포츠 정보
+   */
+  @Mutation(() => Sport, {
+    name: 'adminCreateSport',
+    description: '새로운 스포츠 카테고리를 생성합니다. (관리자 전용)',
+  })
+  @UseGuards(GqlAuthGuard, AdminGuard)
+  async createSport(@Args('input') input: CreateSportInput): Promise<Sport> {
+    return this.sportsService.createSport(input);
+  }
+
+  /**
+   * 스포츠 정보를 업데이트합니다.
+   * @param id 스포츠 ID
+   * @param input 업데이트할 정보
+   * @returns 업데이트된 스포츠 정보
+   */
+  @Mutation(() => Sport, {
+    name: 'adminUpdateSport',
+    description: '스포츠 정보를 업데이트합니다. (관리자 전용)',
+  })
+  @UseGuards(GqlAuthGuard, AdminGuard)
+  async updateSport(
+    @Args('id', { type: () => String, description: '스포츠 ID' }) id: string,
+    @Args('input') input: UpdateSportInput,
+  ): Promise<Sport> {
+    return this.sportsService.updateSport(id, input);
+  }
+
+  /**
+   * 스포츠를 삭제합니다.
+   * @param id 스포츠 ID
+   * @returns 삭제 성공 여부
+   */
+  @Mutation(() => Boolean, {
+    name: 'adminDeleteSport',
+    description: '스포츠를 삭제합니다. (관리자 전용)',
+  })
+  @UseGuards(GqlAuthGuard, AdminGuard)
+  async deleteSport(
+    @Args('id', { type: () => String, description: '스포츠 ID' }) id: string,
+  ): Promise<boolean> {
+    return this.sportsService.deleteSport(id);
+  }
+
+  /**
+   * 스포츠 활성화 상태를 토글합니다.
+   * @param id 스포츠 ID
+   * @returns 업데이트된 스포츠 정보
+   */
+  @Mutation(() => Sport, {
+    name: 'adminToggleSportStatus',
+    description: '스포츠 활성화 상태를 토글합니다. (관리자 전용)',
+  })
+  @UseGuards(GqlAuthGuard, AdminGuard)
+  async toggleSportStatus(
+    @Args('id', { type: () => String, description: '스포츠 ID' }) id: string,
+  ): Promise<Sport> {
+    return this.sportsService.toggleSportStatus(id);
   }
 }

@@ -472,3 +472,68 @@ export const UPDATE_FEEDBACK_PRIORITY = gql`
     }
   }
 `;
+
+// === 스포츠 카테고리 관리 GraphQL ===
+
+export const CREATE_SPORT = gql`
+  mutation AdminCreateSport($input: CreateSportInput!) {
+    adminCreateSport(input: $input) {
+      id
+      name
+      icon
+      description
+      sortOrder
+      isActive
+      teams {
+        id
+        name
+        color
+        icon
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_SPORT = gql`
+  mutation AdminUpdateSport($id: String!, $input: UpdateSportInput!) {
+    adminUpdateSport(id: $id, input: $input) {
+      id
+      name
+      icon
+      description
+      sortOrder
+      isActive
+      teams {
+        id
+        name
+        color
+        icon
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const DELETE_SPORT = gql`
+  mutation AdminDeleteSport($id: String!) {
+    adminDeleteSport(id: $id)
+  }
+`;
+
+export const TOGGLE_SPORT_STATUS = gql`
+  mutation AdminToggleSportStatus($id: String!) {
+    adminToggleSportStatus(id: $id) {
+      id
+      name
+      icon
+      description
+      sortOrder
+      isActive
+      createdAt
+      updatedAt
+    }
+  }
+`;

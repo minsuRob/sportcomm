@@ -11,6 +11,7 @@ import { ChatMessage } from '../../entities/chat-message.entity';
 import { Report } from '../../entities/report.entity';
 import { Feedback } from '../../entities/feedback.entity';
 import { Team } from '../../entities/team.entity';
+import { Sport } from '../../entities/sport.entity';
 
 /**
  * 관리자 모듈
@@ -28,6 +29,7 @@ import { Team } from '../../entities/team.entity';
       Report,
       Feedback,
       Team,
+      Sport,
     ]),
   ],
   providers: [

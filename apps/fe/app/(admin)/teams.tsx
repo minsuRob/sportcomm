@@ -22,6 +22,7 @@ import {
   UPDATE_TEAM,
   DELETE_TEAM,
   TOGGLE_TEAM_STATUS,
+  CREATE_SPORT,
 } from "@/lib/graphql/admin";
 import AppDialog from "@/components/ui/AppDialog";
 
@@ -176,6 +177,32 @@ export default function AdminTeamsScreen() {
     },
   });
 
+  const [createSport, { loading: createSportLoading }] = useMutation(
+    CREATE_SPORT,
+    {
+      refetchQueries: [{ query: GET_ADMIN_TEAMS_BY_CATEGORY }],
+      onCompleted: () => {
+        showToast({
+          type: "success",
+          title: "카테고리 생성 완료",
+          message: `${categoryFormData.name} 카테고리가 생성되었습니다.`,
+          duration: 2000,
+        });
+        setShowCreateCategoryModal(false);
+        resetCategoryForm();
+      },
+      onError: (error) => {
+        console.error("카테고리 생성 실패:", error);
+        showToast({
+          type: "error",
+          title: "생성 실패",
+          message: error.message || "카테고리 생성 중 오류가 발생했습니다.",
+          duration: 3000,
+        });
+      },
+    }
+  );
+
   // 폼 상태
   const [formData, setFormData] = useState({
     id: "",
@@ -183,6 +210,15 @@ export default function AdminTeamsScreen() {
     color: "#000000",
     icon: "🏆",
     category: TeamCategory.SOCCER,
+  });
+
+  // 카테고리 생성 관련 상태
+  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: "",
+    icon: "🏆",
+    description: "",
+    defaultTeamName: "",
   });
 
   // 데이터 처리
@@ -328,6 +364,44 @@ export default function AdminTeamsScreen() {
     });
   };
 
+  // 카테고리 폼 초기화
+  const resetCategoryForm = () => {
+    setCategoryFormData({
+      name: "",
+      icon: "🏆",
+      description: "",
+      defaultTeamName: "",
+    });
+  };
+
+  // 카테고리 생성 핸들러
+  const handleCreateCategory = async () => {
+    if (!categoryFormData.name.trim()) {
+      showToast({
+        type: "error",
+        title: "입력 오류",
+        message: "카테고리 이름을 입력해주세요.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      await createSport({
+        variables: {
+          input: {
+            name: categoryFormData.name,
+            icon: categoryFormData.icon,
+            description: categoryFormData.description || undefined,
+            defaultTeamName: categoryFormData.defaultTeamName || undefined,
+          },
+        },
+      });
+    } catch (error) {
+      // 에러는 onError에서 처리됨
+    }
+  };
+
   // 카테고리 이름 표시
   const getCategoryDisplayName = (category: string) => {
     const categoryMap = {
@@ -369,9 +443,21 @@ export default function AdminTeamsScreen() {
             <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
           <Text style={themed($headerTitle)}>팀 관리</Text>
-          <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-            <Ionicons name="add" color={theme.colors.tint} size={24} />
-          </TouchableOpacity>
+          <View style={themed($headerActions)}>
+            <TouchableOpacity
+              onPress={() => setShowCreateCategoryModal(true)}
+              style={themed($headerButton)}
+            >
+              <Ionicons
+                name="folder-outline"
+                color={theme.colors.tint}
+                size={20}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowCreateModal(true)}>
+              <Ionicons name="add" color={theme.colors.tint} size={24} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
@@ -771,6 +857,114 @@ export default function AdminTeamsScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* 카테고리 생성 모달 */}
+        <Modal
+          visible={showCreateCategoryModal}
+          transparent
+          animationType="slide"
+        >
+          <View style={themed($modalOverlay)}>
+            <View style={themed($modalContent)}>
+              <View style={themed($modalHeader)}>
+                <Text style={themed($modalTitle)}>카테고리 생성</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowCreateCategoryModal(false);
+                    resetCategoryForm();
+                  }}
+                >
+                  <Ionicons name="close" color={theme.colors.text} size={24} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={themed($formContainer)}>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>카테고리 이름 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={categoryFormData.name}
+                    onChangeText={(text) =>
+                      setCategoryFormData({ ...categoryFormData, name: text })
+                    }
+                    placeholder="카테고리 이름을 입력하세요 (예: 축구, 야구)"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>카테고리 아이콘</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={categoryFormData.icon}
+                    onChangeText={(text) =>
+                      setCategoryFormData({ ...categoryFormData, icon: text })
+                    }
+                    placeholder="🏆"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>카테고리 설명</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={categoryFormData.description}
+                    onChangeText={(text) =>
+                      setCategoryFormData({
+                        ...categoryFormData,
+                        description: text,
+                      })
+                    }
+                    placeholder="카테고리 설명 (선택사항)"
+                    placeholderTextColor={theme.colors.textDim}
+                    multiline
+                  />
+                </View>
+
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>기본 팀 이름</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={categoryFormData.defaultTeamName}
+                    onChangeText={(text) =>
+                      setCategoryFormData({
+                        ...categoryFormData,
+                        defaultTeamName: text,
+                      })
+                    }
+                    placeholder="함께 생성할 기본 팀 이름 (선택사항)"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+              </ScrollView>
+
+              <View style={themed($modalActions)}>
+                <TouchableOpacity
+                  style={themed($cancelButton)}
+                  onPress={() => {
+                    setShowCreateCategoryModal(false);
+                    resetCategoryForm();
+                  }}
+                >
+                  <Text style={themed($cancelButtonText)}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    themed($confirmButton),
+                    { opacity: createSportLoading ? 0.5 : 1 },
+                  ]}
+                  onPress={handleCreateCategory}
+                  disabled={createSportLoading}
+                >
+                  <Text style={themed($confirmButtonText)}>
+                    {createSportLoading ? "생성 중..." : "생성"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
       <AppDialog
         visible={!!teamToDelete}
@@ -1121,4 +1315,14 @@ const $confirmButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   color: "white",
   fontWeight: "500",
+});
+
+const $headerActions: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $headerButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
 });

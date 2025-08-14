@@ -90,7 +90,7 @@ export default function CreatePostScreen() {
   // 상태 관리
   const [layoutVariant, setLayoutVariant] = useState<
     "modern" | "trendy" | "creative"
-  >("modern");
+  >("creative");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -669,24 +669,6 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 레이아웃 선택 탭 (하단 본문 영역 변형) */}
-      <View style={themed($variantTabs)}>
-        {(["modern", "trendy", "creative"] as const).map((v) => (
-          <TouchableOpacity
-            key={v}
-            onPress={() => setLayoutVariant(v)}
-            style={[
-              themed($variantTab),
-              layoutVariant === v ? themed($variantTabActive) : null,
-            ]}
-          >
-            <Text style={themed($variantTabText)}>
-              {v === "modern" ? "모던" : v === "trendy" ? "트렌디" : "신박"}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {/* 상단 고정 썸네일 바 (항상 모던) */}
       {allSelectedMedia.length > 0 && (
         <View style={themed($mediaToolbar)}>
@@ -902,7 +884,6 @@ export default function CreatePostScreen() {
             teamsLoading={teamsLoading}
             selectedTeamId={selectedTeamId}
             onSelectTeam={handleTeamSelect}
-            onGoTeamSelection={handleGoToTeamSelection}
             title={title}
             setTitle={setTitle}
             content={content}

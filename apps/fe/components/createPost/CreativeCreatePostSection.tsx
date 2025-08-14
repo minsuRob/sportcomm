@@ -26,7 +26,6 @@ export interface CreativeCreatePostSectionProps {
   teamsLoading: boolean;
   selectedTeamId: string | null;
   onSelectTeam: (teamId: string) => void;
-  onGoTeamSelection: () => void;
   title: string;
   setTitle: (v: string) => void;
   content: string;
@@ -46,7 +45,6 @@ export default function CreativeCreatePostSection(
     teamsLoading,
     selectedTeamId,
     onSelectTeam,
-    onGoTeamSelection,
     title,
     setTitle,
     content,
@@ -99,15 +97,6 @@ export default function CreativeCreatePostSection(
                 })}
               </View>
             </ScrollView>
-          )}
-          {teamOptions.length === 0 && !teamsLoading && (
-            <TouchableOpacity
-              style={themed($primaryBtn)}
-              onPress={onGoTeamSelection}
-            >
-              <Ionicons name="heart" color="white" size={16} />
-              <Text style={themed($primaryBtnText)}>팀 선택하기</Text>
-            </TouchableOpacity>
           )}
         </View>
       </View>

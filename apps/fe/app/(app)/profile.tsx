@@ -41,19 +41,32 @@ interface UserProfile {
 }
 
 /**
- * 팬이 된 날짜부터 오늘까지의 일수를 계산합니다.
+ * 팬이 된 날짜부터 오늘까지의 기간을 년, 월, 일로 계산합니다.
  * @param favoriteDate 팬이 된 날짜 (ISO string)
- * @returns 일수
+ * @returns 년, 월, 총 일수 객체
  */
-const calculateFanDays = (favoriteDate: string): number => {
+const formatFanDuration = (
+  favoriteDate: string
+): { years: number; months: number; totalDays: number } => {
   const startDate = new Date(favoriteDate);
   const today = new Date();
+
   // 시간, 분, 초를 0으로 설정하여 날짜만 비교
   startDate.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
+
   const diffTime = today.getTime() - startDate.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  let years = today.getFullYear() - startDate.getFullYear();
+  let months = today.getMonth() - startDate.getMonth();
+
+  if (months < 0 || (months === 0 && today.getDate() < startDate.getDate())) {
+    years--;
+    months += 12;
+  }
+
+  return { years, months, totalDays };
 };
 
 /**
@@ -292,7 +305,14 @@ export default function ProfileScreen() {
                     {userTeam.favoriteDate && (
                       <Text style={themed($teamYear)}>
                         {" "}
-                        ({calculateFanDays(userTeam.favoriteDate)}일)
+                        {formatFanDuration(userTeam.favoriteDate).years > 0
+                          ? `${formatFanDuration(userTeam.favoriteDate).years}년째`
+                          : `${formatFanDuration(userTeam.favoriteDate).months}개월째`}
+                        <Text style={themed($teamDays)}>
+                          {" "}
+                          ({formatFanDuration(userTeam.favoriteDate).totalDays}
+                          일)
+                        </Text>
                       </Text>
                     )}
                   </Text>
@@ -472,6 +492,12 @@ const $teamInfo: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $teamYear: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
+  fontWeight: "400",
+  color: colors.textDim,
+});
+
+const $teamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 11,
   fontWeight: "400",
   color: colors.textDim,
 });

@@ -300,6 +300,9 @@ const PostCard = React.memo(function PostCard({
     isBookmarked,
     isBookmarkProcessing,
     handleBookmark,
+    isFollowing,
+    handleFollowToggle,
+    followLoading,
   } = usePostInteractions({
     postId: post.id,
     authorId: post.author.id,
@@ -702,6 +705,34 @@ const PostCard = React.memo(function PostCard({
                   {formatTimeAgo(post.createdAt)}
                 </Text>
               </View>
+
+              {/* 팔로우 버튼 - 자신의 게시물이 아닌 경우에만 표시 */}
+              {currentUser && currentUser.id !== post.author.id && (
+                <TouchableOpacity
+                  style={[
+                    themed($followButton),
+                    isFollowing && themed($followButtonActive),
+                  ]}
+                  onPress={handleFollowToggle}
+                  disabled={followLoading}
+                  activeOpacity={0.8}
+                >
+                  {followLoading ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name={isFollowing ? "person-remove" : "person-add"}
+                        size={12}
+                        color="white"
+                      />
+                      <Text style={themed($followButtonText)}>
+                        {isFollowing ? "언팔로우" : "팔로우"}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
@@ -928,6 +959,33 @@ const $autoplayIndicatorText: ThemedStyle<TextStyle> = () => ({
 const $profileTime: ThemedStyle<TextStyle> = () => ({
   color: "rgba(255, 255, 255, 0.8)",
   fontSize: 12,
+});
+
+// 팔로우 버튼 스타일들
+const $followButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  marginLeft: spacing.sm,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+  elevation: 3,
+  gap: spacing.xxxs,
+});
+
+const $followButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.textDim,
+});
+
+const $followButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 11,
+  fontWeight: "600",
+  letterSpacing: 0.2,
 });
 
 // 카테고리 배지와 더보기 버튼 컨테이너 - 오른쪽 위

@@ -13,6 +13,7 @@ import {
   triggerLikeNotification,
   shouldTriggerDevelopmentNotifications,
 } from "@/lib/notifications/notificationTrigger";
+import { Post } from "@/components/PostCard";
 
 interface UsePostInteractionsProps {
   postId: string;
@@ -22,6 +23,12 @@ interface UsePostInteractionsProps {
   initialIsLiked: boolean;
   initialIsFollowing: boolean;
   initialIsBookmarked?: boolean;
+}
+
+interface GetPostsQueryData {
+  posts: {
+    posts: Post[];
+  };
 }
 
 /**
@@ -79,7 +86,7 @@ export function usePostInteractions({
       // 개발 환경에서만 디버깅 로그
       if (process.env.NODE_ENV === "development") {
         console.log(
-          `[DEBUG] usePostInteractions 초기화 - isLiked: ${initialIsLiked}, isBookmarked: ${initialIsBookmarked}`,
+          `[DEBUG] usePostInteractions 초기화 - isLiked: ${initialIsLiked}, isBookmarked: ${initialIsBookmarked}`
         );
       }
     }
@@ -125,7 +132,7 @@ export function usePostInteractions({
         if (data?.likePost !== undefined) {
           // GET_POSTS 쿼리의 캐시 업데이트
           try {
-            const existingData = cache.readQuery({
+            const existingData = cache.readQuery<GetPostsQueryData>({
               query: GET_POSTS,
               variables: { input: { page: 1, limit: 10 } }, // TODO: PAGE_SIZE 상수 사용 고려
             });
@@ -184,14 +191,14 @@ export function usePostInteractions({
         // 개발 환경에서만 디버깅 로그
         if (process.env.NODE_ENV === "development") {
           console.log(
-            `[DEBUG] 좋아요 응답 - postId: ${postId}, likeSuccessful: ${likeSuccessful}, 예상값: ${newLikedStatus}`,
+            `[DEBUG] 좋아요 응답 - postId: ${postId}, likeSuccessful: ${likeSuccessful}, 예상값: ${newLikedStatus}`
           );
         }
 
         if (likeSuccessful !== undefined && likeSuccessful !== newLikedStatus) {
           setIsLiked(likeSuccessful);
           setLikeCount(
-            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1,
+            likeSuccessful ? originalLikeCount + 1 : originalLikeCount - 1
           );
         }
 
@@ -333,6 +340,7 @@ export function usePostInteractions({
     isLikeProcessing,
     isBookmarkProcessing,
     isLikeError,
+    followLoading,
 
     // 핸들러
     handleLike,

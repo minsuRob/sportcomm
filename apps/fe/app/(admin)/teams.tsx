@@ -9,6 +9,8 @@ import {
   Modal,
   TextInput,
   RefreshControl,
+  Image,
+  ImageStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -26,6 +28,13 @@ import {
   DELETE_SPORT,
 } from "@/lib/graphql/admin";
 import AppDialog from "@/components/ui/AppDialog";
+import * as ImagePicker from "expo-image-picker";
+import { uploadFilesWeb } from "@/lib/api/webUpload";
+import { uploadFilesMobile } from "@/lib/api/mobileUpload";
+import { ProgressCallback, UploadedMedia } from "@/lib/api/common";
+import { isWeb } from "@/lib/platform";
+import { generateSafeFileName } from "@/lib/utils/file-utils";
+import { UPDATE_TEAM_LOGO } from "@/lib/graphql/admin";
 
 // 팀 카테고리 타입
 enum TeamCategory {
@@ -46,6 +55,8 @@ interface TeamInfo {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // 백엔드에는 존재하지만 현재 쿼리에서 가져오지 않음 (선언만)
+  logoUrl?: string;
 }
 
 // 스포츠 카테고리 정보 타입
@@ -227,6 +238,28 @@ export default function AdminTeamsScreen() {
     },
   });
 
+  // 팀 로고 업데이트 뮤테이션
+  const [updateTeamLogo] = useMutation(UPDATE_TEAM_LOGO, {
+    onCompleted: () => {
+      showToast({
+        type: "success",
+        title: "로고 업데이트",
+        message: "팀 로고가 업데이트되었습니다.",
+        duration: 2000,
+      });
+    },
+    onError: (error) => {
+      console.error("팀 로고 업데이트 실패:", error);
+      showToast({
+        type: "error",
+        title: "업데이트 실패",
+        message: error.message || "팀 로고 업데이트 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    },
+    refetchQueries: [{ query: GET_ADMIN_TEAMS_BY_CATEGORY }],
+  });
+
   // 폼 상태
   const [formData, setFormData] = useState({
     name: "",
@@ -243,6 +276,11 @@ export default function AdminTeamsScreen() {
     description: "",
     defaultTeamName: "",
   });
+
+  // 로고 업로드 상태
+  const [logoUrl, setLogoUrl] = useState<string>("");
+  const [isLogoUploading, setIsLogoUploading] = useState<boolean>(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState<number>(0);
 
   // 데이터 처리
   const categories = data?.adminGetTeamsByCategory || [];
@@ -289,7 +327,7 @@ export default function AdminTeamsScreen() {
     }
 
     try {
-      await createTeam({
+      const result = await createTeam({
         variables: {
           input: {
             name: formData.name,
@@ -299,6 +337,14 @@ export default function AdminTeamsScreen() {
           },
         },
       });
+
+      // 생성 후 로고가 준비되어 있으면 로고 업데이트 수행
+      const createdId = result?.data?.adminCreateTeam?.id;
+      if (createdId && logoUrl) {
+        await updateTeamLogo({
+          variables: { input: { teamId: createdId, logoUrl } },
+        });
+      }
     } catch (error) {
       // 에러는 onError에서 처리됨
     }
@@ -371,6 +417,7 @@ export default function AdminTeamsScreen() {
       icon: team.icon,
       category: team.category,
     });
+    setLogoUrl(team.logoUrl || "");
     setShowEditModal(true);
   };
 
@@ -382,6 +429,7 @@ export default function AdminTeamsScreen() {
       icon: "🏆",
       category: TeamCategory.SOCCER,
     });
+    setLogoUrl("");
   };
 
   // 카테고리 폼 초기화
@@ -392,6 +440,124 @@ export default function AdminTeamsScreen() {
       description: "",
       defaultTeamName: "",
     });
+  };
+
+  // 팀 로고 이미지 선택 및 업로드
+  const handleSelectLogoImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.9,
+        allowsMultipleSelection: false,
+      });
+
+      if (result.canceled || !result.assets[0]) return;
+
+      const asset = result.assets[0];
+
+      // 파일 타입/크기 검증
+      if (!asset.mimeType?.startsWith("image/")) {
+        showToast({
+          type: "error",
+          title: "파일 형식 오류",
+          message: "이미지 파일만 업로드 가능합니다.",
+          duration: 3000,
+        });
+        return;
+      }
+      const maxSize = 5 * 1024 * 1024;
+      if (asset.fileSize && asset.fileSize > maxSize) {
+        showToast({
+          type: "error",
+          title: "파일 크기 초과",
+          message: "로고 이미지는 5MB 이하만 가능합니다.",
+          duration: 3000,
+        });
+        return;
+      }
+
+      // 업로드 준비
+      setIsLogoUploading(true);
+      setLogoUploadProgress(0);
+
+      const progress: ProgressCallback = (p) =>
+        setLogoUploadProgress(p.percentage);
+
+      let uploaded: UploadedMedia[] = [];
+
+      if (isWeb()) {
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        const safeName = generateSafeFileName(
+          asset.fileName || "team_logo.jpg",
+          "team_logo",
+          selectedTeam?.id || formData.name || "team"
+        );
+        const file = new File([blob], safeName, {
+          type: asset.mimeType || "image/jpeg",
+        });
+        uploaded = await uploadFilesWeb([file], progress);
+      } else {
+        const safeName = generateSafeFileName(
+          asset.fileName || "team_logo.jpg",
+          "team_logo",
+          selectedTeam?.id || formData.name || "team"
+        );
+        uploaded = await uploadFilesMobile(
+          [
+            {
+              uri: asset.uri,
+              name: safeName,
+              type: asset.mimeType || "image/jpeg",
+            },
+          ],
+          progress
+        );
+      }
+
+      if (!uploaded.length) {
+        throw new Error("업로드 응답이 비어있습니다.");
+      }
+
+      const media = uploaded[0];
+      if (media.status === "FAILED" || !media.url) {
+        throw new Error(media.failureReason || "업로드에 실패했습니다.");
+      }
+
+      // 미리보기 및 상태 반영
+      setLogoUrl(media.url);
+
+      // 편집 모달인 경우 즉시 백엔드 반영
+      if (selectedTeam?.id) {
+        await updateTeamLogo({
+          variables: { input: { teamId: selectedTeam.id, logoUrl: media.url } },
+        });
+      }
+
+      showToast({
+        type: "success",
+        title: "완료",
+        message: "로고 이미지가 업로드되었습니다.",
+        duration: 2000,
+      });
+    } catch (error: any) {
+      console.error("팀 로고 업로드 실패:", error);
+      showToast({
+        type: "error",
+        title: "업로드 실패",
+        message: error?.message || "로고 업로드 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    } finally {
+      setIsLogoUploading(false);
+      setLogoUploadProgress(0);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl("");
   };
 
   // 카테고리 생성 핸들러
@@ -714,6 +880,47 @@ export default function AdminTeamsScreen() {
                   />
                 </View>
 
+                {/* 팀 로고 업로드 */}
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 로고</Text>
+                  <View style={themed($logoRow)}>
+                    {logoUrl ? (
+                      <Image
+                        source={{ uri: logoUrl }}
+                        style={themed($logoPreview)}
+                      />
+                    ) : (
+                      <View style={themed($logoPlaceholder)}>
+                        <Text style={themed($logoPlaceholderText)}>
+                          미리보기 없음
+                        </Text>
+                      </View>
+                    )}
+                    <View style={themed($logoButtons)}>
+                      <TouchableOpacity
+                        style={themed($smallButton)}
+                        onPress={handleSelectLogoImage}
+                        disabled={isLogoUploading}
+                      >
+                        <Text style={themed($smallButtonText)}>
+                          {isLogoUploading
+                            ? `업로드 ${logoUploadProgress}%`
+                            : "로고 선택"}
+                        </Text>
+                      </TouchableOpacity>
+                      {logoUrl ? (
+                        <TouchableOpacity
+                          style={[themed($smallButton), themed($dangerButton)]}
+                          onPress={handleRemoveLogo}
+                          disabled={isLogoUploading}
+                        >
+                          <Text style={themed($dangerButtonText)}>제거</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  </View>
+                </View>
+
                 <View style={themed($inputGroup)}>
                   <Text style={themed($inputLabel)}>카테고리</Text>
                   <View style={themed($categorySelector)}>
@@ -835,6 +1042,47 @@ export default function AdminTeamsScreen() {
                     placeholder="🏆"
                     placeholderTextColor={theme.colors.textDim}
                   />
+                </View>
+
+                {/* 팀 로고 업로드 (편집) */}
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>팀 로고</Text>
+                  <View style={themed($logoRow)}>
+                    {logoUrl ? (
+                      <Image
+                        source={{ uri: logoUrl }}
+                        style={themed($logoPreview)}
+                      />
+                    ) : (
+                      <View style={themed($logoPlaceholder)}>
+                        <Text style={themed($logoPlaceholderText)}>
+                          미리보기 없음
+                        </Text>
+                      </View>
+                    )}
+                    <View style={themed($logoButtons)}>
+                      <TouchableOpacity
+                        style={themed($smallButton)}
+                        onPress={handleSelectLogoImage}
+                        disabled={isLogoUploading}
+                      >
+                        <Text style={themed($smallButtonText)}>
+                          {isLogoUploading
+                            ? `업로드 ${logoUploadProgress}%`
+                            : "로고 변경"}
+                        </Text>
+                      </TouchableOpacity>
+                      {logoUrl ? (
+                        <TouchableOpacity
+                          style={[themed($smallButton), themed($dangerButton)]}
+                          onPress={handleRemoveLogo}
+                          disabled={isLogoUploading}
+                        >
+                          <Text style={themed($dangerButtonText)}>제거</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  </View>
                 </View>
 
                 <View style={themed($inputGroup)}>
@@ -1271,7 +1519,7 @@ const $modalTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 const $formContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  maxHeight: 400,
+  maxHeight: 600,
 });
 
 const $inputGroup: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -1304,6 +1552,64 @@ const $categorySelector: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   flexWrap: "wrap",
   gap: spacing.sm,
+});
+
+// 로고 업로드 UI 스타일
+const $logoRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.md,
+});
+
+const $logoPreview: ThemedStyle<ImageStyle> = ({ colors }) => ({
+  width: 56,
+  height: 56,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $logoPlaceholder: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 56,
+  height: 56,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.border,
+  alignItems: "center",
+  justifyContent: "center",
+});
+
+const $logoPlaceholderText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.textDim,
+});
+
+const $logoButtons: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  gap: spacing.sm,
+});
+
+const $smallButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingVertical: spacing.xs,
+  paddingHorizontal: spacing.sm,
+  backgroundColor: colors.tint,
+  borderRadius: 6,
+});
+
+const $smallButtonText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 12,
+  color: "white",
+  fontWeight: "600",
+});
+
+const $dangerButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.error,
+});
+
+const $dangerButtonText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 12,
+  color: "white",
+  fontWeight: "600",
 });
 
 const $categoryOption: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

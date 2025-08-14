@@ -523,6 +523,17 @@ export const DELETE_SPORT = gql`
   }
 `;
 
+// === 팀 로고 업데이트 (관리자 전용) ===
+export const UPDATE_TEAM_LOGO = gql`
+  mutation UpdateTeamLogo($input: UpdateTeamLogoInput!) {
+    updateTeamLogo(input: $input) {
+      id
+      logoUrl
+      updatedAt
+    }
+  }
+`;
+
 export const TOGGLE_SPORT_STATUS = gql`
   mutation AdminToggleSportStatus($id: String!) {
     adminToggleSportStatus(id: $id) {

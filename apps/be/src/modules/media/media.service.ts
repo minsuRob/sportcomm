@@ -180,12 +180,19 @@ export class MediaService {
 
           mediaTypeEnum = MediaType.IMAGE;
 
-          // 파일명에 따라 버킷 결정 (아바타 vs 일반 이미지)
-          bucket =
-            file.originalname.toLowerCase().includes('profile') ||
-            file.originalname.toLowerCase().includes('avatar')
-              ? 'avatars'
-              : 'post-images';
+          // 파일명에 따라 버킷 결정 (아바타 / 팀 로고 / 일반 이미지)
+          const lowerName = file.originalname.toLowerCase();
+          if (lowerName.includes('profile') || lowerName.includes('avatar')) {
+            bucket = 'avatars';
+          } else if (
+            lowerName.includes('team_logo') ||
+            lowerName.includes('team-logo') ||
+            lowerName.includes('teamlogo')
+          ) {
+            bucket = 'team-logos';
+          } else {
+            bucket = 'post-images';
+          }
         }
 
         // 파일을 Supabase Storage에 업로드

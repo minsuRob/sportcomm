@@ -14,6 +14,7 @@ import { PostTag } from '../../entities/post-tag.entity';
 import { Media } from '../../entities/media.entity';
 import { User } from '../../entities/user.entity';
 import { Notification } from '../../entities/notification.entity';
+import { UserTeam } from '../../entities/user-team.entity';
 
 // Command Handlers
 import { CreatePostHandler } from './commands/handlers/create-post.handler';
@@ -51,6 +52,7 @@ import { PostCreatedHandler } from './events/handlers/post-created.handler';
       Media,
       User,
       Notification,
+      UserTeam,
     ]),
 
     // 미디어 관련 기능 사용을 위한 MediaModule 가져오기

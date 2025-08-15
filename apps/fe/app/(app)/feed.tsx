@@ -92,6 +92,17 @@ export default function FeedScreen() {
   };
 
   /**
+   * 추첨 버튼 클릭 핸들러
+   */
+  const handleLotteryPress = () => {
+    if (!currentUser) {
+      setAuthModalVisible(true);
+      return;
+    }
+    router.push("/(modals)/lottery");
+  };
+
+  /**
    * 상점 아이템 구매 핸들러
    */
   const handleShopPurchase = async (item: any) => {
@@ -195,6 +206,7 @@ export default function FeedScreen() {
             : setAuthModalVisible(true)
         }
         onShopPress={handleShopPress}
+        onLotteryPress={handleLotteryPress}
       />
 
       {/* 상점 모달 */}

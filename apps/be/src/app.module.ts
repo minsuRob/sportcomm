@@ -22,6 +22,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { SportsModule } from './modules/sports/sports.module';
 import { SupabaseModule } from './modules/supabase/supabase.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { LotteryModule } from './modules/lottery/lottery.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 /**
@@ -277,6 +278,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     AdminModule,
     SportsModule,
     ChatModule,
+    LotteryModule,
   ],
 
   // 컨트롤러 및 서비스

@@ -14,6 +14,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import type { User } from "@/lib/auth";
 import ShopItem from "./ShopItem";
+import PointLottery from "../lottery/PointLottery";
 
 // 상점 아이템 타입 정의
 export interface ShopItemData {
@@ -202,6 +203,19 @@ export default function ShopModal({
             </View>
           </View>
 
+          {/* 포인트 추첨 안내 */}
+          <View style={themed($lotteryNotice)}>
+            <View style={themed($lotteryNoticeContent)}>
+              <Text style={themed($lotteryNoticeIcon)}>🎰</Text>
+              <View style={themed($lotteryNoticeText)}>
+                <Text style={themed($lotteryNoticeTitle)}>포인트 추첨</Text>
+                <Text style={themed($lotteryNoticeDesc)}>
+                  별도 추첨 페이지에서 응모하여 포인트를 획득하세요!
+                </Text>
+              </View>
+            </View>
+          </View>
+
           {/* 카테고리 탭 */}
           <ScrollView
             horizontal
@@ -378,6 +392,45 @@ const $categoryTabTextActive: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $itemsContainer: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
+});
+
+const $lotteryNotice: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.lg,
+  marginBottom: spacing.md,
+});
+
+const $lotteryNoticeContent: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint + "15",
+  borderRadius: 12,
+  padding: spacing.md,
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+});
+
+const $lotteryNoticeIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  fontSize: 24,
+  marginRight: spacing.sm,
+});
+
+const $lotteryNoticeText: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $lotteryNoticeTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "700",
+  color: colors.text,
+  marginBottom: 2,
+});
+
+const $lotteryNoticeDesc: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
 });
 
 const $itemsGrid: ThemedStyle<ViewStyle> = ({ spacing }) => ({

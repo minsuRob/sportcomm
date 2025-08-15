@@ -24,6 +24,7 @@ interface FeedHeaderProps {
   onCreatePress: () => void;
   onProfilePress: () => void;
   onShopPress: () => void;
+  onLotteryPress: () => void;
 }
 
 /**
@@ -39,6 +40,7 @@ export default function FeedHeader({
   onCreatePress,
   onProfilePress,
   onShopPress,
+  onLotteryPress,
 }: FeedHeaderProps) {
   const { themed, theme } = useAppTheme();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
@@ -70,6 +72,17 @@ export default function FeedHeader({
               <Text style={themed($pointsText)}>
                 💰 {currentUser.points ?? 0}P
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themed($lotteryButton)}
+              onPress={onLotteryPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="ticket-outline"
+                size={20}
+                color={theme.colors.tint}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={themed($shopButton)}
@@ -205,6 +218,18 @@ const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontSize: 12,
   fontWeight: "700",
+});
+
+const $lotteryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.tint + "15",
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+  marginRight: spacing.xs,
 });
 
 const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

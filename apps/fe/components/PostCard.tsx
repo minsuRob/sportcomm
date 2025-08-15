@@ -20,9 +20,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { usePostInteractions } from "../hooks/usePostInteractions";
+import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
+import TeamLogo from "./TeamLogo";
 import PostActions from "./shared/PostActions";
 import PostContextMenu from "./shared/PostContextMenu";
 import { isWeb } from "@/lib/platform";
@@ -33,6 +36,7 @@ import {
 } from "@/lib/image";
 import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
+import UserAvatar from "@/components/users/UserAvatar";
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
@@ -50,6 +54,14 @@ export interface User {
   nickname: string;
   profileImageUrl?: string;
   isFollowing?: boolean;
+  myTeams?: {
+    team: {
+      id: string;
+      name: string;
+      logoUrl?: string;
+      icon: string;
+    };
+  }[];
 }
 
 export interface Comment {
@@ -78,6 +90,19 @@ export interface Post {
   content: string;
   type: PostType;
   teamId: string;
+  team: {
+    id: string;
+    name: string;
+    sport: {
+      id: string;
+      name: string;
+      icon: string;
+    };
+  };
+  tags?: {
+    id: string;
+    name: string;
+  }[];
   media: Media[];
   author: User;
   likeCount: number;
@@ -249,6 +274,11 @@ const PostCard = React.memo(function PostCard({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  const { data: myTeamsData } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
+    skip: !currentUser || post.author.id !== currentUser.id,
+    fetchPolicy: "cache-and-network",
+  });
+
   // 개발 환경 체크
   const __DEV__ = process.env.NODE_ENV === "development";
 
@@ -299,6 +329,9 @@ const PostCard = React.memo(function PostCard({
     isBookmarked,
     isBookmarkProcessing,
     handleBookmark,
+    isFollowing,
+    handleFollowToggle,
+    followLoading,
   } = usePostInteractions({
     postId: post.id,
     authorId: post.author.id,
@@ -346,10 +379,9 @@ const PostCard = React.memo(function PostCard({
   // 디버깅용 - post 데이터 구조 확인 (개발 중에만 사용)
   useEffect(() => {
     if (__DEV__) {
-      console.log(`PostCard - post.id: ${post.id}`);
-      console.log(`PostCard - post.title: ${post.title || "제목 없음"}`);
+      // 게시물 디버깅 로그를 한 줄로 통합
       console.log(
-        `PostCard - post.content: ${post.content.substring(0, 20)}...`
+        `PostCard - post.id: ${post.id}, post.title: ${post.title || "제목 없음"}, post.content: ${post.content.substring(0, 20)}...`
       );
     }
   }, [post.id]);
@@ -632,11 +664,7 @@ const PostCard = React.memo(function PostCard({
                       aspectRatio:
                         imageAspectRatio ||
                         IMAGE_CONSTANTS.DEFAULT_ASPECT_RATIO,
-                      maxHeight:
-                        screenHeight *
-                        (isWeb()
-                          ? IMAGE_CONSTANTS.WEB.MAX_HEIGHT_RATIO
-                          : IMAGE_CONSTANTS.MOBILE.MAX_HEIGHT_RATIO),
+                      maxHeight: screenHeight,
                       minHeight: isWeb()
                         ? IMAGE_CONSTANTS.WEB.MIN_HEIGHT
                         : IMAGE_CONSTANTS.MOBILE.MIN_HEIGHT,
@@ -695,13 +723,10 @@ const PostCard = React.memo(function PostCard({
 
             {/* 프로필 정보 컨테이너 */}
             <View style={themed($profileContainer)}>
-              <Image
-                source={{
-                  uri:
-                    post.author.profileImageUrl ||
-                    "https://via.placeholder.com/32",
-                }}
-                style={themed($profileImage)}
+              <UserAvatar
+                imageUrl={post.author.profileImageUrl}
+                name={post.author.nickname}
+                size={32}
               />
               <View style={themed($profileInfo)}>
                 <Text style={themed($profileName)}>{post.author.nickname}</Text>
@@ -709,65 +734,106 @@ const PostCard = React.memo(function PostCard({
                   {formatTimeAgo(post.createdAt)}
                 </Text>
               </View>
+
+              {/* 팔로우 버튼 - 자신의 게시물이 아닌 경우에만 표시 */}
+              {currentUser && currentUser.id !== post.author.id && (
+                <TouchableOpacity
+                  style={[
+                    themed($followButton),
+                    isFollowing && themed($followButtonActive),
+                  ]}
+                  onPress={handleFollowToggle}
+                  disabled={followLoading}
+                  activeOpacity={0.8}
+                >
+                  {followLoading ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name={isFollowing ? "person-remove" : "person-add"}
+                        size={12}
+                        color="white"
+                      />
+                      <Text style={themed($followButtonText)}>
+                        {isFollowing ? "언팔로우" : "팔로우"}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
             <View style={themed($topRightContainer)}>
-              {/* 카테고리 배지 */}
-              <View
-                style={[
-                  themed($categoryBadge),
-                  {
-                    backgroundColor: categoryInfo.colors.primary,
-                    borderColor: categoryInfo.colors.border,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    themed($categoryIcon),
-                    { backgroundColor: categoryInfo.colors.secondary },
-                  ]}
-                >
-                  <Text style={themed($categoryIconText)}>🏆</Text>
+              <View style={themed($topRightIcons)}>
+                {/* Sport Icon */}
+                <View style={themed($sportIconBadge)}>
+                  <Text style={themed($sportIconText)}>
+                    {post.team?.sport?.icon || "🏆"}
+                  </Text>
                 </View>
-                <Text style={themed($categoryText)}>{teamName}</Text>
+
+                {/* Tags */}
+                {post.tags?.slice(0, 1).map((tag) => (
+                  <View key={tag.id} style={themed($tagBadge)}>
+                    <Text style={themed($tagText)}>#{tag.name}</Text>
+                  </View>
+                ))}
+
+                {/* 더보기 버튼 */}
+                <TouchableOpacity
+                  style={themed($moreButton)}
+                  onPress={handleMorePress}
+                >
+                  <Ionicons
+                    name="ellipsis-horizontal"
+                    size={20}
+                    color="white"
+                  />
+                </TouchableOpacity>
               </View>
 
-              {/* 더보기 버튼 */}
-              <TouchableOpacity
-                style={themed($moreButton)}
-                onPress={handleMorePress}
-              >
-                <Ionicons name="ellipsis-horizontal" size={20} color="white" />
-              </TouchableOpacity>
+              {/* 팀 로고 목록 */}
+              <View style={themed($teamLogoStack)}>
+                {myTeamsData?.myTeams?.slice(0, 3).map(({ team }) => (
+                  <View key={team.id} style={themed($teamLogoWrapper)}>
+                    <TeamLogo
+                      logoUrl={team.logoUrl}
+                      fallbackIcon={team.icon}
+                      teamName={team.name}
+                      size={28}
+                    />
+                  </View>
+                ))}
+              </View>
             </View>
 
-            {/* 제목 표시 */}
-            {post.title && post.title.trim() && (
-              <View style={themed($titleContainer)}>
-                {renderStrokedText({
-                  content: post.title,
-                  themed: themed,
-                  fontSize: 24,
-                  lineHeight: 42,
-                  numberOfLines: 2,
-                })}
-              </View>
-            )}
+            {/* 제목과 콘텐츠를 묶는 컨테이너 */}
+            <View style={themed($textContainer)}>
+              {/* 제목 표시 */}
+              {post.title && post.title.trim() && (
+                <View style={themed($titleContainer)}>
+                  {renderStrokedText({
+                    content: post.title,
+                    themed: themed,
+                    fontSize: 24,
+                    lineHeight: 42,
+                    numberOfLines: 2,
+                  })}
+                </View>
+              )}
 
-            {/* 콘텐츠 표시 */}
-            {renderContentText({
-              content: post.content,
-              themed: themed,
-              containerStyle:
-                post.title && post.title.trim()
-                  ? { bottom: 35 }
-                  : ({} as ViewStyle),
-              fontSize: 14,
-              lineHeight: 32,
-              numberOfLines: 2,
-            })}
+              {/* 콘텐츠 표시 */}
+              {renderContentText({
+                content: post.content,
+                themed: themed,
+                containerStyle: themed($contentContainer),
+                fontSize: 14,
+                lineHeight: 32,
+                numberOfLines: 2,
+              })}
+            </View>
           </TouchableOpacity>
 
           {/* 게시물 액션 버튼들 */}
@@ -937,14 +1003,87 @@ const $profileTime: ThemedStyle<TextStyle> = () => ({
   fontSize: 12,
 });
 
+// 팔로우 버튼 스타일들
+const $followButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  marginLeft: spacing.sm,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+  elevation: 3,
+  gap: spacing.xxxs,
+});
+
+const $followButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.textDim,
+});
+
+const $followButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 11,
+  fontWeight: "600",
+  letterSpacing: 0.2,
+});
+
 // 카테고리 배지와 더보기 버튼 컨테이너 - 오른쪽 위
 const $topRightContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   top: spacing.sm,
   right: spacing.sm,
+  flexDirection: "column",
+  alignItems: "flex-end",
+  zIndex: 2,
+  gap: spacing.sm,
+});
+
+const $topRightIcons: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  zIndex: 2,
+  gap: spacing.xs,
+});
+
+const $sportIconBadge: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $sportIconText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 16,
+});
+
+const $tagBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xxs,
+  borderRadius: 12,
+});
+
+const $tagText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 12,
+  fontWeight: "600",
+});
+
+const $teamLogoStack: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "column",
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $teamLogoWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  borderWidth: 2,
+  borderColor: colors.background, // 로고 간 경계선 효과
+  borderRadius: 16,
+  backgroundColor: colors.background,
 });
 
 const $categoryBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -977,21 +1116,23 @@ const $categoryText: ThemedStyle<TextStyle> = () => ({
 });
 
 // 제목 컨테이너
-const $titleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $textContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
-  bottom: spacing.lg + 40,
+  bottom: "25%",
   left: spacing.sm,
   right: spacing.sm,
   zIndex: 2,
+  gap: spacing.xxs,
+});
+
+// 제목 컨테이너
+const $titleContainer: ThemedStyle<ViewStyle> = () => ({
+  // position, bottom 속성 제거
 });
 
 // 콘텐츠 컨테이너
-const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  position: "absolute",
-  bottom: spacing.sm,
-  left: spacing.sm,
-  right: spacing.sm,
-  zIndex: 2,
+const $contentContainer: ThemedStyle<ViewStyle> = () => ({
+  // position, bottom 속성 제거
 });
 
 // 텍스트 스트로크 스타일들

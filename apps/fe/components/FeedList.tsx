@@ -9,8 +9,10 @@ import { getFlatListOptimizationProps } from "@/lib/platform/optimization";
 
 interface FeedListProps {
   posts: Post[];
+  fetching?: boolean;
   onRefresh?: () => void;
   refreshing?: boolean;
+  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListEmptyComponent?: React.ComponentType<any> | React.ReactElement | null;
   onEndReached?: () => void;
@@ -26,6 +28,7 @@ export default function FeedList({
   posts,
   onRefresh,
   refreshing,
+  ListHeaderComponent,
   ListFooterComponent,
   ListEmptyComponent,
   onEndReached,
@@ -86,6 +89,7 @@ export default function FeedList({
       renderItem,
       keyExtractor,
       ItemSeparatorComponent: ItemSeparator,
+      ListHeaderComponent,
       ListEmptyComponent: ListEmptyComponent || EmptyComponent,
       onRefresh,
       refreshing,
@@ -100,6 +104,7 @@ export default function FeedList({
       renderItem,
       keyExtractor,
       ItemSeparator,
+      ListHeaderComponent,
       ListEmptyComponent,
       EmptyComponent,
       onRefresh,

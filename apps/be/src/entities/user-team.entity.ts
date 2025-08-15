@@ -64,6 +64,18 @@ export class UserTeam extends BaseEntity {
   })
   notificationEnabled: boolean;
 
+  /**
+   * 팀을 좋아하게 된 날짜
+   * 사용자가 해당 팀을 좋아하게 된 날짜를 저장합니다.
+   */
+  @Field(() => Date, { nullable: true, description: '팀을 좋아하게 된 날짜' })
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: '팀을 좋아하게 된 날짜',
+  })
+  favoriteDate?: Date;
+
   // === 관계 설정 ===
 
   /**

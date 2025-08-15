@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
   ViewStyle,
   TextStyle,
   FlatList,
@@ -19,6 +19,8 @@ import { User, getSession } from "@/lib/auth";
 import { showToast } from "@/components/CustomToast";
 import TeamLogo from "@/components/TeamLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import FavoriteMonthPicker from "@/components/team/FavoriteMonthPicker";
+import TeamSettingsPopover from "@/components/team/TeamSettingsPopover";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -42,9 +44,19 @@ export default function TeamSelectionScreen() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [teamFavoriteDates, setTeamFavoriteDates] = useState<
+    Record<string, string>
+  >({});
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsAnchor, setSettingsAnchor] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
 
   // GraphQL 쿼리 및 뮤테이션
   const {
@@ -59,8 +71,8 @@ export default function TeamSelectionScreen() {
     error: myTeamsError,
     refetch: refetchMyTeams,
   } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
-    skip: !isAuthenticated || !currentUser, // 인증되지 않은 경우 쿼리 스킵
-    fetchPolicy: "network-only", // 항상 네트워크에서 최신 데이터 가져오기
+    skip: !isAuthenticated || !currentUser,
+    fetchPolicy: "network-only",
     onError: (error) => {
       console.error("myTeams 쿼리 오류:", error);
       if (
@@ -91,7 +103,6 @@ export default function TeamSelectionScreen() {
         if (user) {
           setCurrentUser(user);
         } else if (!token) {
-          // 인증되지 않은 경우 처리
           console.warn("인증되지 않은 사용자가 팀 선택 화면에 접근");
           setAuthError("로그인이 필요한 기능입니다.");
           showToast({
@@ -103,7 +114,6 @@ export default function TeamSelectionScreen() {
           setTimeout(() => router.back(), 500);
         }
 
-        // 인증 상태 디버깅
         console.log("인증 상태:", {
           isAuthenticated: authStatus,
           hasToken: !!token,
@@ -125,26 +135,32 @@ export default function TeamSelectionScreen() {
       try {
         console.log(
           "MyTeams 데이터 확인:",
-          JSON.stringify(myTeamsData.myTeams, null, 2),
+          JSON.stringify(myTeamsData.myTeams, null, 2)
         );
 
-        // 안전하게 팀 ID 추출
-        const teamIds = myTeamsData.myTeams
-          .map((userTeam) => {
-            // userTeam 객체 로깅
-            console.log("UserTeam 객체:", userTeam);
+        const teamIds: string[] = [];
+        const favoriteDates: Record<string, string> = {};
 
-            if (!userTeam.team) {
-              console.error("UserTeam에 team 객체가 없음:", userTeam);
-              return null;
-            }
+        myTeamsData.myTeams.forEach((userTeam) => {
+          console.log("UserTeam 객체:", userTeam);
 
-            return userTeam.team.id;
-          })
-          .filter(Boolean) as string[]; // null 값 제거
+          if (!userTeam.team) {
+            console.error("UserTeam에 team 객체가 없음:", userTeam);
+            return;
+          }
+
+          teamIds.push(userTeam.team.id);
+
+          // favoriteDate가 있으면 저장
+          if (userTeam.favoriteDate) {
+            favoriteDates[userTeam.team.id] = userTeam.favoriteDate;
+          }
+        });
 
         setSelectedTeams(teamIds);
+        setTeamFavoriteDates(favoriteDates);
         console.log("사용자가 선택한 팀 목록 로드 성공:", teamIds);
+        console.log("팀별 favoriteDate 로드 성공:", favoriteDates);
       } catch (error) {
         console.error("팀 목록 처리 중 오류 발생:", error);
       }
@@ -173,12 +189,53 @@ export default function TeamSelectionScreen() {
     setSelectedTeams((prev) => {
       if (prev.includes(teamId)) {
         // 이미 선택된 팀이면 해제
+        setTeamFavoriteDates((prevDates) => {
+          const newDates = { ...prevDates };
+          delete newDates[teamId];
+          return newDates;
+        });
+        // 팀 설정 버튼 숨김
+        setShowSettings(false);
         return prev.filter((id) => id !== teamId);
       } else {
-        // 선택되지 않은 팀이면 추가
+        // 선택만 수행. 팀 설정 버튼은 별도 버튼 클릭 시 노출
         return [...prev, teamId];
       }
     });
+  };
+
+  /**
+   * 팀 설정 버튼 클릭 시 팝오버 오픈
+   */
+  const openTeamSettings = (teamId: string, pageX: number, pageY: number) => {
+    setPendingTeamId(teamId);
+    setShowCalendar(false);
+    setShowSettings(true);
+    setSettingsAnchor({ top: pageY + 8, left: pageX - 110 });
+  };
+
+  /**
+   * 팬이 된 날짜 선택 핸들러
+   */
+  const handleFavoriteDateSelect = (favoriteDate: string) => {
+    if (pendingTeamId) {
+      // 팀 추가 및 favoriteDate 저장
+      // 팀은 이미 선택되어 있으므로 날짜만 저장
+      setTeamFavoriteDates((prev) => ({
+        ...prev,
+        [pendingTeamId]: favoriteDate,
+      }));
+    }
+    setPendingTeamId(null);
+    setShowCalendar(false);
+  };
+
+  /**
+   * 캘린더 취소 핸들러
+   */
+  const handleCalendarCancel = () => {
+    setPendingTeamId(null);
+    setShowCalendar(false);
   };
 
   /**
@@ -220,7 +277,7 @@ export default function TeamSelectionScreen() {
    * 팀 선택 저장 핸들러
    */
   const handleSave = async () => {
-    if (isLoading) return; // 로딩 중이면 중복 요청 방지
+    if (isLoading) return;
 
     console.log("팀 저장 시도...");
 
@@ -228,7 +285,7 @@ export default function TeamSelectionScreen() {
     const isAuthValid = await checkAuthentication();
     if (!isAuthValid) {
       console.error("인증 실패 - 팀 저장 취소");
-      setTimeout(() => router.back(), 1000); // 인증이 안된 경우 뒤로 가기
+      setTimeout(() => router.back(), 1000);
       return;
     }
 
@@ -284,10 +341,12 @@ export default function TeamSelectionScreen() {
       // GraphQL 뮤테이션으로 팀 선택 업데이트
       const { data, errors } = await updateMyTeams({
         variables: {
-          teamIds: selectedTeams,
+          teams: selectedTeams.map((teamId) => ({
+            teamId,
+            favoriteDate: teamFavoriteDates[teamId] || null,
+          })),
         },
         context: {
-          // 인증 토큰 최신 상태로 설정
           headers: {
             authorization: sessionInfo.token
               ? `Bearer ${sessionInfo.token}`
@@ -310,7 +369,7 @@ export default function TeamSelectionScreen() {
       try {
         await AsyncStorage.setItem(
           "selected_team_filter",
-          JSON.stringify(selectedTeams),
+          JSON.stringify(selectedTeams)
         );
         console.log("My Teams 변경에 따른 필터 재설정 완료");
       } catch (error) {
@@ -353,10 +412,8 @@ export default function TeamSelectionScreen() {
           duration: 3000,
         });
 
-        // 인증 문제인 경우 뒤로 가기
         setTimeout(() => router.back(), 1000);
 
-        // 추가 세션 정보 출력 (디버깅용)
         getSession().then(({ token, user }) => {
           console.log("현재 세션 상태:", {
             hasToken: !!token,
@@ -414,75 +471,128 @@ export default function TeamSelectionScreen() {
   };
 
   /**
-   * 팀 그리드 렌더링
+   * 팀 그리드 렌더링 (여러 개 표시)
    */
   const renderTeamGrid = (teams: Team[]) => {
     console.log(
       "렌더링할 팀 목록:",
-      teams.map((t) => ({ id: t.id, name: t.name })),
+      teams.map((t) => ({ id: t.id, name: t.name }))
     );
     console.log("현재 선택된 팀 ID 목록:", selectedTeams);
 
     const rows = [];
-    const teamsPerRow = 2;
+    const teamsPerRow = 3; // 3개씩 표시
 
     for (let i = 0; i < teams.length; i += teamsPerRow) {
       const rowTeams = teams.slice(i, i + teamsPerRow);
       rows.push(
         <View key={i} style={themed($teamRow)}>
           {rowTeams.map((team) => {
-            // 팀 ID가 선택 목록에 있는지 확인 (디버깅 로그 추가)
             const teamId = team.id;
             const isSelected = selectedTeams.includes(teamId);
             console.log(
-              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`,
+              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`
             );
 
             return (
-              <TouchableOpacity
-                key={teamId}
-                style={[
-                  themed($teamCard),
-                  {
-                    borderColor: isSelected ? team.color : theme.colors.border,
-                    backgroundColor: isSelected
-                      ? team.color + "20"
-                      : theme.colors.card,
-                  },
-                ]}
-                onPress={() => handleTeamSelect(teamId)}
-              >
-                <View style={themed($teamIconContainer)}>
-                  <TeamLogo
-                    logoUrl={team.logoUrl}
-                    fallbackIcon={team.icon}
-                    teamName={team.name}
-                    size={40}
-                  />
-                  {isSelected && (
-                    <View style={themed($selectedIndicator)}>
-                      <Ionicons name="checkmark" size={16} color="white" />
-                    </View>
-                  )}
-                </View>
-                <Text
+              <View key={teamId} style={themed($teamItemColumn)}>
+                <TouchableOpacity
                   style={[
-                    themed($teamCardName),
+                    themed($teamCard),
                     {
-                      color: isSelected ? team.color : theme.colors.text,
+                      borderColor: isSelected
+                        ? team.color
+                        : theme.colors.border,
+                      backgroundColor: isSelected
+                        ? team.color + "20"
+                        : theme.colors.card,
                     },
                   ]}
+                  onPress={() => handleTeamSelect(teamId)}
+                  activeOpacity={0.85}
                 >
-                  {team.name}
-                </Text>
-              </TouchableOpacity>
+                  <View style={themed($teamIconContainer)}>
+                    <TeamLogo
+                      logoUrl={team.logoUrl}
+                      fallbackIcon={team.icon}
+                      teamName={team.name}
+                      size={40}
+                    />
+                    {isSelected && (
+                      <View style={themed($selectedIndicator)}>
+                        <Ionicons name="checkmark" size={16} color="white" />
+                      </View>
+                    )}
+                  </View>
+                  <View style={themed($teamCardInfo)}>
+                    <Text
+                      style={[
+                        themed($teamCardName),
+                        {
+                          color: isSelected ? team.color : theme.colors.text,
+                        },
+                      ]}
+                    >
+                      {team.name}
+                    </Text>
+                    {isSelected && teamFavoriteDates[teamId] && (
+                      <Text style={themed($teamCardDate)}>
+                        {new Date(teamFavoriteDates[teamId]).toLocaleDateString(
+                          "ko-KR",
+                          {
+                            year: "numeric",
+                            month: "short",
+                          }
+                        )}
+                        ~
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                {/* 팀 설정 버튼 (선택된 팀에만 표시). 나머지는 placeholder로 높이 유지 */}
+                {isSelected ? (
+                  <TouchableOpacity
+                    style={[
+                      themed($teamSettingsButton),
+                      { borderColor: team.color },
+                    ]}
+                    onPress={(e) =>
+                      openTeamSettings(
+                        teamId,
+                        e.nativeEvent?.pageX || 0,
+                        e.nativeEvent?.pageY || 0
+                      )
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="settings-outline"
+                      size={14}
+                      color={team.color}
+                    />
+                    <Text
+                      style={[themed($teamSettingsText), { color: team.color }]}
+                    >
+                      팀 설정
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={themed($teamSettingsPlaceholder)} />
+                )}
+              </View>
             );
           })}
           {/* 빈 공간 채우기 */}
-          {rowTeams.length < teamsPerRow && (
-            <View style={[themed($teamCard), { opacity: 0 }]} />
+          {Array.from({ length: teamsPerRow - rowTeams.length }).map(
+            (_, index) => (
+              <View
+                key={`empty-${index}`}
+                style={[themed($teamCard), { opacity: 0 }]}
+              />
+            )
           )}
-        </View>,
+        </View>
       );
     }
 
@@ -493,7 +603,6 @@ export default function TeamSelectionScreen() {
   if (authError) {
     console.log("인증 오류로 인한 화면 렌더링:", authError);
 
-    // 세션 상태 확인 (디버깅용)
     getSession().then(({ token, user, isAuthenticated }) => {
       console.log("인증 오류 화면 - 세션 상태:", {
         hasToken: !!token,
@@ -653,6 +762,59 @@ export default function TeamSelectionScreen() {
           </Text>
         </View>
       )}
+
+      {/* 팀 설정 팝오버 */}
+      <TeamSettingsPopover
+        visible={showSettings && !!pendingTeamId}
+        onClose={() => setShowSettings(false)}
+        anchorStyle={
+          settingsAnchor
+            ? {
+                position: "absolute",
+                top: settingsAnchor.top,
+                left: settingsAnchor.left,
+              }
+            : undefined
+        }
+        onSelectFavoriteDate={() => {
+          setShowSettings(false);
+          setShowCalendar(true);
+        }}
+        onOpenPhotoCard={() => {
+          setShowSettings(false);
+          // TODO: 포토카드 진입 로직 (추가 스펙 확정 시 구현)
+          showToast({
+            type: "info",
+            title: "포토카드",
+            message: "포토카드 기능이 곧 추가될 예정입니다.",
+            duration: 1500,
+          });
+        }}
+      />
+
+      {/* 팬이 된 날짜 선택 (연/월) */}
+      <FavoriteMonthPicker
+        visible={showCalendar}
+        onClose={handleCalendarCancel}
+        onSelect={handleFavoriteDateSelect}
+        selectedDate={
+          pendingTeamId ? teamFavoriteDates[pendingTeamId] : undefined
+        }
+        teamName={
+          pendingTeamId && sportsData
+            ? sportsData.sports
+                .flatMap((sport) => sport.teams)
+                .find((team) => team.id === pendingTeamId)?.name
+            : undefined
+        }
+        teamColor={
+          pendingTeamId && sportsData
+            ? sportsData.sports
+                .flatMap((sport) => sport.teams)
+                .find((team) => team.id === pendingTeamId)?.color
+            : "#FF0000"
+        }
+      />
     </View>
   );
 }
@@ -684,6 +846,173 @@ const $saveButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingVertical: spacing.sm,
   backgroundColor: colors.tint,
   borderRadius: 8,
+});
+
+const $saveButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 14,
+  fontWeight: "600",
+});
+
+const $descriptionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.lg,
+});
+
+const $descriptionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 20,
+  fontWeight: "bold",
+  color: colors.text,
+  marginBottom: spacing.sm,
+});
+
+const $descriptionText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  lineHeight: 20,
+});
+
+const $selectedCountText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.tint,
+  fontWeight: "600",
+  marginTop: spacing.sm,
+});
+
+const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $categorySliderContainer: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  paddingVertical: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $categorySliderContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+});
+
+const $categoryTab: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  marginRight: spacing.sm,
+  borderWidth: 1,
+  borderRadius: 20,
+});
+
+const $categoryTabIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  fontSize: 16,
+  marginRight: spacing.xs,
+});
+
+const $categoryTabText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 14,
+  fontWeight: "600",
+});
+
+const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.lg,
+});
+
+const $teamRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginBottom: spacing.md,
+});
+
+const $teamItemColumn: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  marginHorizontal: spacing.xs,
+});
+
+const $teamCard: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  alignItems: "center",
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.sm,
+  marginHorizontal: spacing.xs,
+  borderWidth: 2,
+  borderRadius: 16,
+  minHeight: 100,
+  justifyContent: "center",
+});
+
+const $teamIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginBottom: spacing.sm,
+  position: "relative",
+});
+
+const $selectedIndicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: "absolute",
+  top: -8,
+  right: -8,
+  width: 24,
+  height: 24,
+  borderRadius: 12,
+  backgroundColor: colors.tint,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $teamCardInfo: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "center",
+});
+
+const $teamCardName: ThemedStyle<TextStyle> = () => ({
+  fontSize: 12,
+  fontWeight: "600",
+  textAlign: "center",
+});
+
+const $teamCardDate: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.textDim,
+  textAlign: "center",
+  marginTop: 2,
+});
+
+const $teamSettingsButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.xs,
+  alignSelf: "center",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  borderWidth: 1,
+  backgroundColor: colors.card,
+});
+
+const $teamSettingsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  fontWeight: "600",
+  color: colors.tint,
+});
+
+const $teamSettingsPlaceholder: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  height: 30,
+  marginTop: spacing.xs,
+});
+
+const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: spacing.xl,
+});
+
+const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+  textAlign: "center",
 });
 
 const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
@@ -735,135 +1064,4 @@ const $retryButtonText: ThemedStyle<TextStyle> = () => ({
   color: "white",
   fontSize: 16,
   fontWeight: "600",
-});
-
-const $selectedCountText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 14,
-  color: colors.tint,
-  fontWeight: "600",
-  marginTop: spacing.sm,
-});
-
-const $selectedIndicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  position: "absolute",
-  top: -8,
-  right: -8,
-  width: 24,
-  height: 24,
-  borderRadius: 12,
-  backgroundColor: colors.tint,
-  justifyContent: "center",
-  alignItems: "center",
-});
-
-const $saveButtonText: ThemedStyle<TextStyle> = () => ({
-  color: "white",
-  fontSize: 14,
-  fontWeight: "600",
-});
-
-const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-});
-
-const $descriptionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.lg,
-});
-
-const $descriptionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 20,
-  fontWeight: "bold",
-  color: colors.text,
-  marginBottom: spacing.sm,
-});
-
-const $descriptionText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
-  color: colors.textDim,
-  lineHeight: 20,
-});
-
-const $categorySliderContainer: ThemedStyle<ViewStyle> = ({
-  colors,
-  spacing,
-}) => ({
-  paddingVertical: spacing.md,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
-});
-
-const $categorySliderContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-});
-
-const $categoryTab: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: spacing.lg,
-  paddingVertical: spacing.sm,
-  marginRight: spacing.sm,
-  borderWidth: 1,
-  borderRadius: 20,
-});
-
-const $categoryTabIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  fontSize: 16,
-  marginRight: spacing.xs,
-});
-
-const $categoryTabText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 14,
-  fontWeight: "600",
-});
-
-const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.lg,
-});
-
-const $teamRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-between",
-  marginBottom: spacing.md,
-});
-
-const $teamCard: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flex: 1,
-  alignItems: "center",
-  paddingVertical: spacing.lg,
-  paddingHorizontal: spacing.md,
-  marginHorizontal: spacing.xs,
-  borderWidth: 2,
-  borderRadius: 16,
-  minHeight: 100,
-  justifyContent: "center",
-});
-
-const $teamIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginBottom: spacing.sm,
-});
-
-const $teamCardIcon: ThemedStyle<TextStyle> = () => ({
-  fontSize: 32,
-  textAlign: "center",
-});
-
-const $teamCardName: ThemedStyle<TextStyle> = () => ({
-  fontSize: 14,
-  fontWeight: "600",
-  textAlign: "center",
-});
-
-const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  paddingVertical: spacing.xl,
-});
-
-const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
-  color: colors.textDim,
-  textAlign: "center",
 });

@@ -244,11 +244,28 @@ export const GET_USER_PROFILE = gql`
       nickname
       email
       profileImageUrl
+      bio
+      age
       role
       isFollowing
       followerCount
       followingCount
       postCount
+      myTeams {
+        id
+        userId
+        teamId
+        priority
+        favoriteDate
+        team {
+          id
+          name
+          code
+          color
+          icon
+          logoUrl
+        }
+      }
     }
   }
 `;
@@ -318,9 +335,6 @@ export const BLOCK_USER = gql`
   mutation BlockUser($blockedUserId: String!) {
     blockUser(blockedUserId: $blockedUserId) {
       id
-      blockerId
-      blockedUserId
-      createdAt
     }
   }
 `;
@@ -428,6 +442,7 @@ export const UPDATE_PROFILE = gql`
       nickname
       email
       bio
+      age
       profileImageUrl
       role
       createdAt

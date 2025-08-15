@@ -92,29 +92,35 @@ export class CreatePostDto {
   mediaIds?: string[];
 
   /**
-   * 해시태그 목록 (선택사항)
+   * 태그 목록 (선택사항)
+   * 게시물의 주제나 카테고리를 나타내는 태그들입니다.
    */
   @Field(() => [String], { nullable: true })
   @IsOptional()
-  @IsArray({ message: '해시태그는 배열 형태여야 합니다.' })
-  @ArrayMaxSize(10, { message: '해시태그는 최대 10개까지 추가할 수 있습니다.' })
-  @IsString({ each: true, message: '해시태그는 문자열이어야 합니다.' })
+  @IsArray({ message: '태그는 배열 형태여야 합니다.' })
+  @ArrayMaxSize(10, { message: '태그는 최대 10개까지 추가할 수 있습니다.' })
+  @IsString({ each: true, message: '태그는 문자열이어야 합니다.' })
+  @MinLength(1, {
+    each: true,
+    message: '태그는 최소 1자 이상이어야 합니다.',
+  })
   @MaxLength(50, {
     each: true,
-    message: '해시태그는 최대 50자까지 입력할 수 있습니다.',
+    message: '태그는 최대 50자까지 입력할 수 있습니다.',
   })
-  @Matches(/^[가-힣a-zA-Z0-9_]+$/, {
+  @Matches(/^[가-힣a-zA-Z0-9_\s]+$/, {
     each: true,
-    message: '해시태그는 한글, 영문, 숫자, 언더스코어만 사용할 수 있습니다.',
+    message: '태그는 한글, 영문, 숫자, 언더스코어, 공백만 사용할 수 있습니다.',
   })
   @Transform(({ value }) =>
     Array.isArray(value)
       ? value
-          .map((tag) => tag.trim().toLowerCase())
+          .map((tag) => tag.trim())
           .filter((tag) => tag.length > 0)
+          .slice(0, 10) // 최대 10개로 제한
       : value,
   )
-  hashtags?: string[];
+  tags?: string[];
 
   /**
    * 공개 범위 (선택사항, 기본값: PUBLIC)

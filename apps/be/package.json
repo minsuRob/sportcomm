@@ -12,6 +12,8 @@
     "start:dev": "NODE_ENV=development nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "prestart:dev": "npm run db:migrate",
+    "prestart:prod": "npm run db:migrate:prod",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -21,6 +23,8 @@
     "seed:sports": "ts-node -r tsconfig-paths/register src/database/seeds/sports-teams.seed.ts",
     "seed:logos": "ts-node -r tsconfig-paths/register src/database/seeds/download-team-logos.ts",
     "migrate:uploads": "ts-node -r tsconfig-paths/register src/scripts/migrate-uploads-to-supabase.ts",
+    "db:migrate": "ts-node -r tsconfig-paths/register src/database/run-migrations.ts",
+    "db:migrate:prod": "node dist/database/run-migrations.js",
     "db:setup": "node setup-database.js",
     "db:test": "node test-db-connection.js"
   },

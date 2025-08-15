@@ -1,12 +1,17 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  Animated,
   ViewStyle,
   TextStyle,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  interpolateColor,
+} from "react-native-reanimated";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
@@ -31,64 +36,103 @@ export default function TabSlider({
   onTabChange,
 }: TabSliderProps) {
   const { themed, theme } = useAppTheme();
-  const [indicatorAnimation] = useState(new Animated.Value(0));
+  // Reanimated 기반 진행도 값 (현재 활성 탭의 인덱스)
+  const progress = useSharedValue(0);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   /**
    * 탭 변경 핸들러
    */
-  const handleTabPress = (tabKey: string, index: number) => {
-    onTabChange(tabKey);
-
-    // 인디케이터 애니메이션
-    Animated.spring(indicatorAnimation, {
-      toValue: index,
-      useNativeDriver: false,
-      tension: 100,
-      friction: 8,
-    }).start();
-  };
+  const handleTabPress = useCallback(
+    (tabKey: string, index: number) => {
+      onTabChange(tabKey);
+      // 스프링 애니메이션으로 부드럽게 이동
+      progress.value = withSpring(index, {
+        damping: 18,
+        stiffness: 180,
+        mass: 0.8,
+      });
+    },
+    [onTabChange, progress]
+  );
 
   const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
+  // 외부에서 activeTab이 바뀌는 경우 동기화
+  useEffect(() => {
+    progress.value = withSpring(activeIndex, {
+      damping: 18,
+      stiffness: 180,
+      mass: 0.8,
+    });
+  }, [activeIndex, progress]);
+
+  const onSegmentLayout = useCallback((e: any) => {
+    setContainerWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  const segmentWidth = useMemo(() => {
+    if (tabs.length === 0) return 0;
+    return containerWidth / tabs.length;
+  }, [containerWidth, tabs.length]);
+
+  // 활성 탭 배경( pill ) 인디케이터 애니메이션 스타일
+  const indicatorStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateX: segmentWidth * progress.value,
+        },
+      ],
+      width: Math.max(segmentWidth, 0),
+    } as ViewStyle;
+  }, [segmentWidth]);
 
   return (
     <View style={themed($container)}>
-      <View style={themed($tabContainer)}>
-        {tabs.map((tab, index) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={themed($tab)}
-            onPress={() => handleTabPress(tab.key, index)}
-          >
-            <Text
-              style={[
-                themed($tabText),
-                {
-                  color:
-                    activeTab === tab.key
-                      ? theme.colors.tint
-                      : theme.colors.textDim,
-                  fontWeight: activeTab === tab.key ? "700" : "500",
-                },
-              ]}
-            >
-              {tab.title}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <View style={themed($segmentWrapper)} onLayout={onSegmentLayout}>
+        {/* 이동형 배경 인디케이터 */}
+        <Animated.View
+          style={[themed($indicator), indicatorStyle]}
+          pointerEvents="none"
+        />
 
-      {/* 활성 탭 인디케이터 */}
-      <Animated.View
-        style={[
-          themed($indicator),
-          {
-            left: indicatorAnimation.interpolate({
-              inputRange: [0, 1],
-              outputRange: ["0%", "50%"],
-            }),
-          },
-        ]}
-      />
+        {/* 탭 버튼들 */}
+        {tabs.map((tab, index) => {
+          const animatedTextStyle = useAnimatedStyle(() => {
+            // Pager-dots 예제의 색상 보간 아이디어 차용
+            const activeColor = theme.colors.tint;
+            const inactiveColor = theme.colors.textDim;
+            return {
+              color: interpolateColor(
+                progress.value,
+                [index - 1, index, index + 1],
+                [inactiveColor, activeColor, inactiveColor]
+              ),
+            } as TextStyle;
+          }, [index, theme.colors.tint, theme.colors.textDim]);
+
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={themed($tab)}
+              onPress={() => handleTabPress(tab.key, index)}
+              accessibilityRole="button"
+            >
+              <Animated.Text
+                style={[
+                  themed($tabText),
+                  animatedTextStyle,
+                  { fontWeight: activeIndex === index ? "700" : "500" },
+                ]}
+              >
+                {tab.title}
+              </Animated.Text>
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* onLayout은 상위 컨테이너에서 측정 */}
+      </View>
     </View>
   );
 }
@@ -103,16 +147,24 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderBottomColor: colors.border,
 });
 
-const $tabContainer: ThemedStyle<ViewStyle> = () => ({
+const $segmentWrapper: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
-  justifyContent: "space-around",
+  alignItems: "center",
+  backgroundColor: colors.background,
+  borderRadius: 9999,
+  padding: 4,
+  height: 42,
+  marginBottom: spacing.sm,
+  borderWidth: 1,
+  borderColor: colors.border,
+  overflow: "hidden",
 });
 
-const $tab: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+const $tab: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
   alignItems: "center",
-  paddingVertical: spacing.lg,
-  position: "relative",
+  justifyContent: "center",
+  height: "100%",
 });
 
 const $tabText: ThemedStyle<TextStyle> = () => ({
@@ -123,14 +175,12 @@ const $tabText: ThemedStyle<TextStyle> = () => ({
 
 const $indicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
   position: "absolute",
-  bottom: 0,
-  width: "50%",
-  height: 4,
+  left: 0,
+  top: 4,
+  bottom: 4,
+  borderRadius: 9999,
   backgroundColor: colors.tint,
-  borderRadius: 2,
-  shadowColor: colors.tint,
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.4,
-  shadowRadius: 2,
-  elevation: 2,
+  opacity: 0.15,
 });
+
+// 레이아웃 프로브 제거: 웹에서 포인터 이벤트를 가로채는 문제 방지

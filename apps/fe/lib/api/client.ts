@@ -72,9 +72,9 @@ const authLink = setContext(async (_, { headers }) => {
  * 요청/응답 디버깅 링크
  */
 const requestDebugLink = new ApolloLink((operation, forward) => {
-  console.log(`GraphQL Request: ${operation.operationName}`);
+  // console.log(`GraphQL Request: ${operation.operationName}`);
   return forward(operation).map((response) => {
-    console.log(`GraphQL Response: ${operation.operationName}`);
+    // console.log(`GraphQL Response: ${operation.operationName}`);
     return response;
   });
 });
@@ -82,8 +82,8 @@ const requestDebugLink = new ApolloLink((operation, forward) => {
 /**
  * Apollo Client 생성
  */
-logPlatformInfo();
-console.log(`Apollo client initializing for ${getPlatformType()} environment`);
+// logPlatformInfo();
+// console.log(`Apollo client initializing for ${getPlatformType()} environment`);
 
 export const client = new ApolloClient({
   link: from([requestDebugLink, errorLink, authLink, httpLink]),

@@ -24,6 +24,10 @@ import { Sport } from './sport.entity';
 import { Team } from './team.entity';
 import { UserTeam } from './user-team.entity';
 import { PushToken } from './push-token.entity';
+import { Tag } from './tag.entity';
+import { PostTag } from './post-tag.entity';
+import { PointLottery } from './point-lottery.entity';
+import { LotteryEntry } from './lottery-entry.entity';
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -40,6 +44,14 @@ export {
 export { Post } from './post.entity';
 export { PostVersion } from './post-version.entity';
 export { PostLike } from './post-like.entity';
+export { PostTag } from './post-tag.entity';
+
+// 태그 관련 엔티티
+export { Tag } from './tag.entity';
+
+// 포인트 추첨 관련 엔티티
+export { PointLottery, LotteryStatus } from './point-lottery.entity';
+export { LotteryEntry } from './lottery-entry.entity';
 
 // 댓글 관련 엔티티
 export { Comment } from './comment.entity';
@@ -101,6 +113,10 @@ export const entities = [
   Team,
   UserTeam,
   PushToken,
+  Tag,
+  PostTag,
+  PointLottery,
+  LotteryEntry,
 ];
 
 /**

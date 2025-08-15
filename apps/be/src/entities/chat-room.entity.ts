@@ -3,7 +3,9 @@ import {
   Column,
   OneToMany,
   ManyToMany,
+  ManyToOne,
   JoinTable,
+  JoinColumn,
   Index,
 } from 'typeorm';
 import { ObjectType, Field, registerEnumType } from '@nestjs/graphql';
@@ -19,6 +21,7 @@ import {
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { ChatMessage } from './chat-message.entity';
+import { Team } from './team.entity';
 
 /**
  * 채팅방 유형 열거형
@@ -218,6 +221,22 @@ export class ChatRoom extends BaseEntity {
   isPasswordProtected: boolean;
 
   /**
+   * 연결된 팀 ID
+   * 특정 팀에만 제한된 채팅방인 경우 팀 ID를 저장합니다.
+   * null인 경우 공용 채팅방입니다.
+   */
+  @Field(() => String, {
+    nullable: true,
+    description: '연결된 팀 ID (null이면 공용 채팅방)',
+  })
+  @Column({
+    type: 'uuid',
+    nullable: true,
+    comment: '연결된 팀 ID (null이면 공용 채팅방)',
+  })
+  teamId?: string;
+
+  /**
    * 채팅방 비밀번호
    * 보호된 채팅방에 입장하기 위한 비밀번호입니다.
    * GraphQL 스키마에 노출되지 않습니다.
@@ -260,6 +279,19 @@ export class ChatRoom extends BaseEntity {
   @OneToMany(() => ChatMessage, (chatMessage) => chatMessage.room)
   messages: ChatMessage[];
 
+  /**
+   * 연결된 팀
+   * 다대일 관계: 여러 채팅방이 하나의 팀에 속할 수 있습니다.
+   * null인 경우 공용 채팅방입니다.
+   */
+  @Field(() => Team, {
+    nullable: true,
+    description: '연결된 팀 (null이면 공용 채팅방)',
+  })
+  @ManyToOne(() => Team, { nullable: true })
+  @JoinColumn({ name: 'teamId' })
+  team?: Team;
+
   // === 헬퍼 메서드 ===
 
   /**
@@ -284,6 +316,22 @@ export class ChatRoom extends BaseEntity {
    */
   isPublicChat(): boolean {
     return this.type === ChatRoomType.PUBLIC;
+  }
+
+  /**
+   * 공용 채팅방인지 확인하는 메서드 (팀에 속하지 않은 채팅방)
+   * @returns 공용 채팅방인 경우 true, 아닌 경우 false
+   */
+  isGeneralChat(): boolean {
+    return !this.teamId;
+  }
+
+  /**
+   * 팀 전용 채팅방인지 확인하는 메서드
+   * @returns 팀 전용 채팅방인 경우 true, 아닌 경우 false
+   */
+  isTeamChat(): boolean {
+    return !!this.teamId;
   }
 
   /**
@@ -387,7 +435,9 @@ export class ChatRoom extends BaseEntity {
         : this.type === ChatRoomType.GROUP
           ? '그룹'
           : '공개';
-    return `${this.name} (${typeStr}, ${this.currentParticipants}/${this.maxParticipants}명)`;
+
+    const teamStr = this.team ? ` - ${this.team.name}` : ' - 공용';
+    return `${this.name} (${typeStr}${teamStr}, ${this.currentParticipants}/${this.maxParticipants}명)`;
   }
 
   /**

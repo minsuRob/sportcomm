@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team, UserTeam, User } from '../../entities';
+import { UpdateMyTeamInput } from './teams.mutation';
 
 /**
  * 팀 서비스
@@ -195,7 +196,7 @@ export class TeamsService {
    */
   async updateUserTeams(
     userId: string,
-    teamIds: string[],
+    teamsData: UpdateMyTeamInput[],
   ): Promise<UserTeam[]> {
     // 사용자 존재 확인
     const user = await this.usersRepository.findOneBy({ id: userId });
@@ -208,8 +209,8 @@ export class TeamsService {
 
     // 새로운 팀 선택 생성
     const userTeams: UserTeam[] = [];
-    for (let i = 0; i < teamIds.length; i++) {
-      const teamId = teamIds[i];
+    for (let i = 0; i < teamsData.length; i++) {
+      const { teamId, favoriteDate } = teamsData[i];
 
       // 팀 존재 확인 및 조회
       const team = await this.findById(teamId);
@@ -219,9 +220,11 @@ export class TeamsService {
         team,
         priority: i, // 배열 순서대로 우선순위 설정
         notificationEnabled: true,
+        favoriteDate: favoriteDate ? new Date(favoriteDate) : undefined,
       });
 
-      userTeams.push(await this.userTeamsRepository.save(userTeam));
+      const savedUserTeam = await this.userTeamsRepository.save(userTeam);
+      userTeams.push(savedUserTeam);
     }
 
     return userTeams;

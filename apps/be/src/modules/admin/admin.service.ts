@@ -15,6 +15,7 @@ import {
   FeedbackStatus,
   FeedbackPriority,
 } from '../../entities/feedback.entity';
+import { Team } from '../../entities/team.entity';
 
 /**
  * 관리자 서비스
@@ -36,6 +37,8 @@ export class AdminService {
     private readonly reportRepository: Repository<Report>,
     @InjectRepository(Feedback)
     private readonly feedbackRepository: Repository<Feedback>,
+    @InjectRepository(Team)
+    private readonly teamRepository: Repository<Team>,
   ) {}
 
   /**
@@ -163,7 +166,7 @@ export class AdminService {
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
-      relations: ['participants'],
+      relations: ['participants', 'team'],
     });
 
     return {
@@ -184,8 +187,29 @@ export class AdminService {
     description?: string,
     type: ChatRoomType = ChatRoomType.PUBLIC,
     maxParticipants: number = 100,
+    teamId?: string,
   ) {
     this.validateAdminPermission(adminUser);
+
+    // teamId가 제공된 경우 UUID 형식인지 확인하고, 아니면 팀 코드로 간주하여 UUID 조회
+    let resolvedTeamId: string | undefined = teamId;
+
+    if (teamId) {
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const isUuid = uuidRegex.test(teamId);
+
+      const team = await this.teamRepository.findOne({
+        where: isUuid ? { id: teamId } : { code: teamId },
+      });
+
+      if (!team) {
+        throw new NotFoundException(
+          `팀 ID 또는 코드 '${teamId}'에 해당하는 팀을 찾을 수 없습니다.`,
+        );
+      }
+      resolvedTeamId = team.id;
+    }
 
     const chatRoom = this.chatRoomRepository.create({
       name,
@@ -193,6 +217,7 @@ export class AdminService {
       type,
       maxParticipants,
       isRoomActive: true,
+      teamId: resolvedTeamId,
     });
 
     return await this.chatRoomRepository.save(chatRoom);
@@ -227,6 +252,7 @@ export class AdminService {
       description?: string;
       maxParticipants?: number;
       isRoomActive?: boolean;
+      teamId?: string;
     },
   ) {
     this.validateAdminPermission(adminUser);
@@ -297,7 +323,7 @@ export class AdminService {
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
-      relations: ['reporter', 'reportedUser', 'reportedPost'],
+      relations: ['reporter', 'reportedUser', 'post'],
     });
 
     return {
@@ -322,16 +348,26 @@ export class AdminService {
 
     const report = await this.reportRepository.findOne({
       where: { id: reportId },
-      relations: ['reporter', 'reportedUser', 'reportedPost'],
+      relations: ['reporter', 'reportedUser', 'post'],
     });
 
     if (!report) {
       throw new NotFoundException('신고를 찾을 수 없습니다.');
     }
 
+    // 신고 상태 업데이트
     report.status = status;
     if (adminNote) {
       report.adminNote = adminNote;
+    }
+
+    // 신고가 승인된 경우 추가 처리
+    if (status === ReportStatus.APPROVED && report.post) {
+      // 게시물 관련 추가 처리 로직을 여기에 추가할 수 있습니다
+      // 예: 게시물 비공개 처리, 작성자에게 알림 등
+      console.log(
+        `신고 승인됨 - 게시물 ID: ${report.post.id}, 내용: ${report.post.content.substring(0, 100)}...`,
+      );
     }
 
     await this.reportRepository.save(report);

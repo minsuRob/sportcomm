@@ -18,6 +18,7 @@ interface UseStoryDataProps {
   storyTypes: StoryType[];
   maxItems?: number;
   userId?: string; // MyTeams 데이터를 위한 사용자 ID
+  teamIds?: string[] | null; // 팀 필터 (null이면 모든 팀, 빈 배열이면 필터 없음)
 }
 
 interface StoryDataResult {
@@ -106,6 +107,7 @@ export const useStoryData = ({
   storyTypes,
   maxItems = 10,
   userId,
+  teamIds,
 }: UseStoryDataProps): StoryDataResult => {
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,9 +127,11 @@ export const useStoryData = ({
         limit: 3,
         sortBy: "likeCount",
         sortOrder: "DESC",
+        teamIds: teamIds, // 팀 필터 적용
       },
     },
     skip: !storyTypes.includes("popular"),
+    fetchPolicy: "cache-first", // 캐시 우선으로 변경하여 중복 네트워크 요청 방지
   });
 
   // MyTeams 게시물 쿼리
@@ -143,11 +147,11 @@ export const useStoryData = ({
         limit: 3,
         sortBy: "createdAt",
         sortOrder: "DESC",
-        // TODO: MyTeams 필터링 로직 추가
-        teamIds: [], // 사용자의 팀 ID들
+        teamIds: teamIds, // 팀 필터 적용
       },
     },
     skip: !storyTypes.includes("myteams") || !userId,
+    fetchPolicy: "cache-first", // 캐시 우선으로 변경하여 중복 네트워크 요청 방지
   });
 
   /**

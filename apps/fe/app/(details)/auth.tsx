@@ -13,6 +13,7 @@ import { saveSession, getSession, User } from "@/lib/auth";
 import { signIn, signUp } from "@/lib/supabase/auth";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useAppTheme } from "@/lib/theme/context";
+import AppDialog from "@/components/ui/AppDialog";
 
 /**
  * 소셜 로그인 컴포넌트
@@ -22,38 +23,49 @@ const SocialLogins = ({
   onSocialLogin,
 }: {
   onSocialLogin: (provider: string) => void;
-}) => (
-  <>
-    <View className="flex-row items-center my-4">
-      <View className="flex-1 h-px bg-border" />
-      <Text className="mx-4 text-muted-foreground">또는</Text>
-      <View className="flex-1 h-px bg-border" />
-    </View>
-    <View className="space-y-3">
-      <Button
-        variant="outline"
-        size="lg"
-        onPress={() => onSocialLogin("google")}
-      >
-        <Text className="text-foreground">Google로 계속하기</Text>
-      </Button>
-      <Button
-        variant="outline"
-        size="lg"
-        onPress={() => onSocialLogin("apple")}
-      >
-        <Text className="text-foreground">Apple로 계속하기</Text>
-      </Button>
-      <Button
-        variant="outline"
-        size="lg"
-        onPress={() => alert("곧 지원 예정입니다.")}
-      >
-        <Text className="text-foreground">폰으로 계속하기</Text>
-      </Button>
-    </View>
-  </>
-);
+}) => {
+  const [isDialogVisible, setDialogVisible] = useState(false);
+  return (
+    <>
+      <View className="flex-row items-center my-4">
+        <View className="flex-1 h-px bg-border" />
+        <Text className="mx-4 text-muted-foreground">또는</Text>
+        <View className="flex-1 h-px bg-border" />
+      </View>
+      <View className="space-y-3">
+        <Button
+          variant="outline"
+          size="lg"
+          onPress={() => onSocialLogin("google")}
+        >
+          <Text className="text-foreground">Google로 계속하기</Text>
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          onPress={() => onSocialLogin("apple")}
+        >
+          <Text className="text-foreground">Apple로 계속하기</Text>
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          onPress={() => setDialogVisible(true)}
+        >
+          <Text className="text-foreground">폰으로 계속하기</Text>
+        </Button>
+      </View>
+      <AppDialog
+        visible={isDialogVisible}
+        onClose={() => setDialogVisible(false)}
+        title="알림"
+        description="곧 지원 예정입니다."
+        confirmText="확인"
+        onConfirm={() => setDialogVisible(false)}
+      />
+    </>
+  );
+};
 
 /**
  * 인증 화면 컴포넌트
@@ -68,6 +80,11 @@ export default function AuthScreen() {
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [dialog, setDialog] = useState<{
+    visible: boolean;
+    title: string;
+    description: string;
+  }>({ visible: false, title: "", description: "" });
 
   // 에러 상태 관리
   const [emailError, setEmailError] = useState("");
@@ -108,7 +125,7 @@ export default function AuthScreen() {
   const handleLoginSuccess = (user: User) => {
     console.log(
       "✅ AuthScreen: 로그인 성공, 메인 화면으로 이동:",
-      user.nickname,
+      user.nickname
     );
     // 메인 앱으로 이동 (스택을 초기화하여 뒤로가기 방지)
     router.replace("/(app)/feed");
@@ -148,7 +165,7 @@ export default function AuthScreen() {
         const errorMessage = result.error.message;
         console.error(
           `${isLoginAction ? "로그인" : "회원가입"} 실패:`,
-          errorMessage,
+          errorMessage
         );
 
         // 에러 메시지에 따라 적절한 필드에 에러 설정
@@ -222,7 +239,7 @@ export default function AuthScreen() {
             } else {
               console.log(
                 "⚠️ 백엔드에 사용자 정보가 없습니다:",
-                syncResult.error,
+                syncResult.error
               );
             }
           } else {
@@ -233,7 +250,7 @@ export default function AuthScreen() {
             if (syncResult.success && syncResult.user) {
               console.log(
                 "✅ 회원가입 후 사용자 정보 동기화 완료:",
-                syncResult.user,
+                syncResult.user
               );
             } else {
               console.warn("⚠️ 회원가입 후 동기화 실패:", syncResult.error);
@@ -242,7 +259,7 @@ export default function AuthScreen() {
         } catch (syncError: any) {
           console.warn(
             "⚠️ 사용자 정보 동기화 실패 (로그인은 계속 진행):",
-            syncError.message,
+            syncError.message
           );
           // 동기화 실패해도 로그인은 계속 진행
           // 필요시 나중에 수동으로 동기화할 수 있음
@@ -253,9 +270,12 @@ export default function AuthScreen() {
           setGeneralError(""); // 에러 초기화
           // 이메일 확인이 필요한 경우 안내 메시지 표시
           if (!result.session.user?.email_confirmed_at) {
-            alert(
-              "회원가입이 완료되었습니다. 이메일을 확인하여 계정을 활성화해주세요.",
-            );
+            setDialog({
+              visible: true,
+              title: "회원가입 완료",
+              description:
+                "회원가입이 완료되었습니다. 이메일을 확인하여 계정을 활성화해주세요.",
+            });
           }
         }
 
@@ -264,7 +284,7 @@ export default function AuthScreen() {
     } catch (error: any) {
       console.error(
         `${isLoginAction ? "로그인" : "회원가입"} 중 예외 발생:`,
-        error,
+        error
       );
 
       const errorMessage = error?.message || "오류가 발생했습니다";
@@ -307,7 +327,11 @@ export default function AuthScreen() {
       //   }
       // });
 
-      alert(`${provider} 로그인은 곧 지원 예정입니다.`);
+      setDialog({
+        visible: true,
+        title: "알림",
+        description: `${provider} 로그인은 곧 지원 예정입니다.`,
+      });
     } catch (error) {
       console.error(`${provider} 로그인 실패:`, error);
       setGeneralError(`${provider} 로그인 중 오류가 발생했습니다.`);
@@ -331,7 +355,11 @@ export default function AuthScreen() {
       // const { error } = await supabase.auth.resetPasswordForEmail(email);
       // if (error) throw error;
 
-      alert("비밀번호 재설정 링크가 이메일로 전송되었습니다.");
+      setDialog({
+        visible: true,
+        title: "비밀번호 재설정",
+        description: "비밀번호 재설정 링크가 이메일로 전송되었습니다.",
+      });
     } catch (error: any) {
       console.error("비밀번호 재설정 실패:", error);
       setGeneralError("비밀번호 재설정 중 오류가 발생했습니다.");
@@ -543,6 +571,14 @@ export default function AuthScreen() {
           <SocialLogins onSocialLogin={handleSocialLogin} />
         </View>
       </ScrollView>
+      <AppDialog
+        visible={dialog.visible}
+        onClose={() => setDialog({ ...dialog, visible: false })}
+        title={dialog.title}
+        description={dialog.description}
+        confirmText="확인"
+        onConfirm={() => setDialog({ ...dialog, visible: false })}
+      />
     </>
   );
 }

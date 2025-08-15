@@ -20,6 +20,8 @@ import {
   GET_USER_POSTS,
   GET_USER_BOOKMARKS,
 } from "@/lib/graphql";
+import { type UserTeam } from "@/lib/graphql/teams";
+import TeamLogo from "@/components/TeamLogo";
 import FeedList from "@/components/FeedList";
 import TabSlider from "@/components/TabSlider";
 import type { Post } from "@/components/PostCard";
@@ -31,12 +33,44 @@ interface UserProfile {
   nickname: string;
   email: string;
   profileImageUrl?: string;
+  bio?: string;
+  age?: number;
   role: string; // 사용자 역할 필드 추가
   isFollowing: boolean;
   followerCount: number;
   followingCount: number;
   postCount: number;
+  myTeams?: UserTeam[];
 }
+
+/**
+ * 팬이 된 날짜부터 오늘까지의 기간을 년, 월, 일로 계산합니다.
+ * @param favoriteDate 팬이 된 날짜 (ISO string)
+ * @returns 년, 월, 총 일수 객체
+ */
+const formatFanDuration = (
+  favoriteDate: string
+): { years: number; months: number; totalDays: number } => {
+  const startDate = new Date(favoriteDate);
+  const today = new Date();
+
+  // 시간, 분, 초를 0으로 설정하여 날짜만 비교
+  startDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = today.getTime() - startDate.getTime();
+  const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  let years = today.getFullYear() - startDate.getFullYear();
+  let months = today.getMonth() - startDate.getMonth();
+
+  if (months < 0 || (months === 0 && today.getDate() < startDate.getDate())) {
+    years--;
+    months += 12;
+  }
+
+  return { years, months, totalDays };
+};
 
 /**
  * 프로필 화면 컴포넌트
@@ -94,10 +128,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     const loadUserProfile = async () => {
       const { user } = await getSession();
-      console.log(
-        "세션에서 불러온 사용자 정보:",
-        JSON.stringify(user, null, 2),
-      );
+
       if (user) setCurrentUser(user);
     };
     loadUserProfile();
@@ -120,10 +151,6 @@ export default function ProfileScreen() {
         ...currentUser,
         ...profileData.getUserById,
       };
-      console.log(
-        "업데이트된 사용자 정보:",
-        JSON.stringify(updatedUser, null, 2),
-      );
 
       // 세션 업데이트
       saveSession(updatedUser);
@@ -220,6 +247,8 @@ export default function ProfileScreen() {
     nickname: currentUser.nickname,
     email: currentUser.email || "",
     profileImageUrl: currentUser.profileImageUrl,
+    bio: currentUser.bio,
+    age: currentUser.age,
     role: currentUser.role || "USER", // 기본값 설정
     isFollowing: false,
     followerCount: 0,
@@ -250,6 +279,60 @@ export default function ProfileScreen() {
       <View style={themed($profileSection)}>
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
         <Text style={themed($username)}>{userProfile.nickname}</Text>
+        {/* 연령대 배지 표시 */}
+        {userProfile?.age || currentUser?.age ? (
+          <View style={themed($ageBadge)}>
+            <Text style={themed($ageBadgeText)}>
+              {(() => {
+                const age = (userProfile?.age || currentUser?.age) as number;
+                if (age >= 40) return `40+ 🟪`;
+                if (age >= 30) return `30-35 🟦`;
+                if (age >= 26) return `26-29 🟩`;
+                if (age >= 21) return `20-25 🟨`;
+                if (age >= 16) return `16-20 🟧`;
+                if (age >= 10) return `10-15 🟥`;
+                return `${age}`;
+              })()}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* 팀 정보 표시 */}
+        {userProfile.myTeams && userProfile.myTeams.length > 0 ? (
+          <View style={themed($teamsContainer)}>
+            {userProfile.myTeams
+              .sort((a, b) => a.priority - b.priority)
+              .map((userTeam) => (
+                <View key={userTeam.id} style={themed($teamItem)}>
+                  <TeamLogo
+                    logoUrl={userTeam.team.logoUrl}
+                    fallbackIcon={userTeam.team.icon}
+                    teamName={userTeam.team.name}
+                    size={24}
+                  />
+                  {/* 팀명과 일수 */}
+                  <Text style={themed($teamInfo)}>
+                    {userTeam.team.name}
+                    {userTeam.favoriteDate && (
+                      <Text style={themed($teamYear)}>
+                        {" "}
+                        {formatFanDuration(userTeam.favoriteDate).years > 0
+                          ? `${formatFanDuration(userTeam.favoriteDate).years}년째`
+                          : `${formatFanDuration(userTeam.favoriteDate).months}개월째`}
+                        <Text style={themed($teamDays)}>
+                          {" "}
+                          ({formatFanDuration(userTeam.favoriteDate).totalDays}
+                          일)
+                        </Text>
+                      </Text>
+                    )}
+                  </Text>
+                </View>
+              ))}
+          </View>
+        ) : (
+          <Text style={themed($noTeamText)}>아직 선택한 팀이 없습니다</Text>
+        )}
 
         {/* 프로필 편집 및 팀 선택 버튼 */}
         <View style={themed($buttonContainer)}>
@@ -376,6 +459,69 @@ const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontWeight: "bold",
   color: colors.text,
   marginTop: spacing.md,
+});
+
+const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.xs,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xxs,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+  backgroundColor: colors.card,
+});
+
+const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.text,
+  fontWeight: "600",
+});
+
+// 팀 정보 스타일들
+const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $teamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.backgroundAlt,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 2,
+  elevation: 2,
+});
+
+const $teamInfo: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: colors.text,
+});
+
+const $teamYear: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "400",
+  color: colors.textDim,
+});
+
+const $teamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 11,
+  fontWeight: "400",
+  color: colors.textDim,
+});
+
+const $noTeamText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  marginTop: spacing.md,
+  fontStyle: "italic",
 });
 
 const $buttonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

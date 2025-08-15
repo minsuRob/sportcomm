@@ -1,127 +1,83 @@
-import React, { useState } from "react";
-import { View, Text, ViewStyle, TextStyle } from "react-native";
-import { Image, ImageStyle } from "expo-image";
+import React from "react";
+import {
+  View,
+  Text,
+  Image,
+  ViewStyle,
+  TextStyle,
+  ImageStyle,
+} from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
 interface TeamLogoProps {
-  logoUrl?: string;
+  logoUrl?: string | null;
   fallbackIcon?: string;
-  teamName: string;
-  size?: number;
-  style?: ViewStyle;
+  teamName?: string;
+  size: number;
 }
 
-/**
- * 팀 로고 컴포넌트
- * webp 이미지를 표시하고, 로딩 실패 시 fallback 아이콘을 표시합니다.
- */
 export default function TeamLogo({
   logoUrl,
-  fallbackIcon = "🏆",
+  fallbackIcon,
   teamName,
-  size = 32,
-  style,
+  size,
 }: TeamLogoProps) {
   const { themed } = useAppTheme();
-  const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
 
-  // 이미지 URL이 없거나 로딩 실패한 경우 fallback 아이콘 표시
-  if (!logoUrl || imageError) {
+  const $logoStyle: ImageStyle = {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+  };
+
+  const $fallbackContainerStyle: ViewStyle = {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    justifyContent: "center",
+    alignItems: "center",
+  };
+
+  const $fallbackTextStyle: TextStyle = {
+    fontSize: size * 0.6,
+  };
+
+  if (logoUrl) {
     return (
-      <View style={[themed($container), { width: size, height: size }, style]}>
-        <View
-          style={[
-            themed($circleBackground),
-            { width: size, height: size, borderRadius: size / 2 },
-          ]}
-        >
-          <Text style={[themed($fallbackIcon), { fontSize: size * 0.5 }]}>
-            {fallbackIcon}
-          </Text>
-        </View>
+      <Image source={{ uri: logoUrl }} style={themed([$logo, $logoStyle])} />
+    );
+  }
+
+  if (fallbackIcon) {
+    return (
+      <View style={themed([$fallbackContainer, $fallbackContainerStyle])}>
+        <Text style={[$fallbackText, $fallbackTextStyle]}>{fallbackIcon}</Text>
       </View>
     );
   }
 
   return (
-    <View style={[themed($container), { width: size, height: size }, style]}>
-      <View
-        style={[
-          themed($circleBackground),
-          { width: size, height: size, borderRadius: size / 2 },
-        ]}
-      >
-        {imageLoading && (
-          <View style={themed($loadingContainer)}>
-            <Text style={[themed($fallbackIcon), { fontSize: size * 0.5 }]}>
-              {fallbackIcon}
-            </Text>
-          </View>
-        )}
-        <Image
-          source={{ uri: logoUrl }}
-          style={[
-            themed($image),
-            {
-              width: size * 0.9, // 원형 배경보다 약간 작게
-              height: size * 0.9,
-              opacity: imageLoading ? 0 : 1,
-            },
-          ]}
-          onLoad={() => setImageLoading(false)}
-          onError={() => {
-            setImageError(true);
-            setImageLoading(false);
-          }}
-          contentFit="contain"
-          transition={200}
-          accessibilityLabel={`${teamName} 로고`}
-        />
-      </View>
+    <View style={themed([$fallbackContainer, $fallbackContainerStyle])}>
+      <Text style={[$fallbackText, $fallbackTextStyle]}>
+        {teamName?.charAt(0) || "T"}
+      </Text>
     </View>
   );
 }
 
-// --- 스타일 정의 ---
-const $container: ThemedStyle<ViewStyle> = () => ({
-  justifyContent: "center",
-  alignItems: "center",
-  position: "relative",
-});
-
-const $circleBackground: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: "white",
-  justifyContent: "center",
-  alignItems: "center",
-  position: "relative",
-  // 그림자 효과 추가
-  shadowColor: "#000",
-  shadowOffset: {
-    width: 0,
-    height: 2,
-  },
-  shadowOpacity: 0.1,
-  shadowRadius: 3,
-  elevation: 3,
-  // 테두리 추가 (선택사항)
+const $logo: ThemedStyle<ImageStyle> = ({ colors }) => ({
   borderWidth: 1,
-  borderColor: colors.border + "30", // 투명도 적용
+  borderColor: colors.border,
 });
 
-const $image: ThemedStyle<ImageStyle> = () => ({
-  position: "absolute",
+const $fallbackContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
 });
 
-const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
-  justifyContent: "center",
-  alignItems: "center",
-  position: "absolute",
-  width: "100%",
-  height: "100%",
-});
-
-const $fallbackIcon: ThemedStyle<TextStyle> = () => ({
-  textAlign: "center",
-});
+const $fallbackText: TextStyle = {
+  color: "white",
+  fontWeight: "bold",
+};

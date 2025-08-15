@@ -56,10 +56,9 @@ interface ReportInfo {
   type: ReportType;
   status: ReportStatus;
   reason: string;
-  description?: string;
   reporter: UserInfo;
   reportedUser?: UserInfo;
-  reportedPost?: PostInfo;
+  post?: PostInfo;
   adminNote?: string;
   createdAt: string;
   updatedAt: string;
@@ -97,7 +96,7 @@ export default function AdminReportsScreen() {
       variables: { page, limit: 20 },
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    },
+    }
   );
 
   const [updateReportStatus, { loading: updateLoading }] = useMutation(
@@ -127,7 +126,7 @@ export default function AdminReportsScreen() {
           duration: 3000,
         });
       },
-    },
+    }
   );
 
   // 데이터 처리
@@ -136,7 +135,7 @@ export default function AdminReportsScreen() {
 
   // 필터링된 신고 목록
   const filteredReports = reports.filter((report) =>
-    statusFilter === "ALL" ? true : report.status === statusFilter,
+    statusFilter === "ALL" ? true : report.status === statusFilter
   );
 
   // 에러 처리
@@ -163,7 +162,7 @@ export default function AdminReportsScreen() {
   // 신고 상태 업데이트 핸들러
   const handleUpdateReportStatus = async (
     status: ReportStatus,
-    note?: string,
+    note?: string
   ) => {
     if (!selectedReport) return;
 
@@ -277,16 +276,10 @@ export default function AdminReportsScreen() {
             <Text style={themed($statLabel)}>총 신고</Text>
           </View>
           <View style={themed($statCard)}>
-            <Text style={[themed($statNumber), { color: "#F59E0B" }]}>
-              {statusStats.PENDING}
+            <Text style={[themed($statNumber), { color: "#10B981" }]}>
+              {reports.filter((r) => r.post).length}
             </Text>
-            <Text style={themed($statLabel)}>대기 중</Text>
-          </View>
-          <View style={themed($statCard)}>
-            <Text style={[themed($statNumber), { color: "#3B82F6" }]}>
-              {statusStats.REVIEWING}
-            </Text>
-            <Text style={themed($statLabel)}>검토 중</Text>
+            <Text style={themed($statLabel)}>게시물 신고</Text>
           </View>
         </View>
 
@@ -403,15 +396,16 @@ export default function AdminReportsScreen() {
                       </Text>
                     </View>
                   )}
-                  {report.reportedPost && (
-                    <View style={themed($reportMetaItem)}>
-                      <Ionicons
-                        name="document-text-outline"
-                        color={theme.colors.textDim}
-                        size={14}
-                      />
-                      <Text style={themed($reportMetaText)}>
-                        게시물: {report.reportedPost.title}
+                  {report.post && (
+                    <View style={themed($reportPostPreview)}>
+                      <Text style={themed($reportPostId)}>
+                        게시물 ID: {report.post.id}
+                      </Text>
+                      <Text
+                        style={themed($reportPostPreviewText)}
+                        numberOfLines={3}
+                      >
+                        {report.post.content}
                       </Text>
                     </View>
                   )}
@@ -549,20 +543,25 @@ export default function AdminReportsScreen() {
                 )}
 
                 {/* 신고된 게시물 정보 */}
-                {selectedReport.reportedPost && (
+                {selectedReport.post && (
                   <View style={themed($detailSection)}>
                     <Text style={themed($detailSectionTitle)}>
                       신고된 게시물
                     </Text>
                     <View style={themed($detailRow)}>
-                      <Text style={themed($detailLabel)}>제목:</Text>
+                      <Text style={themed($detailLabel)}>게시물 ID:</Text>
                       <Text style={themed($detailValue)}>
-                        {selectedReport.reportedPost.title}
+                        {selectedReport.post.id}
                       </Text>
                     </View>
-                    <Text style={themed($detailContent)}>
-                      {selectedReport.reportedPost.content}
+                    <Text style={themed($detailSectionSubtitle)}>
+                      게시물 내용:
                     </Text>
+                    <View style={themed($postContentContainer)}>
+                      <Text style={themed($postContent)}>
+                        {selectedReport.post.content}
+                      </Text>
+                    </View>
                   </View>
                 )}
 
@@ -685,19 +684,25 @@ const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $statsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
-  paddingHorizontal: spacing.md,
+  paddingHorizontal: spacing.lg,
   paddingVertical: spacing.lg,
-  gap: spacing.sm,
+  gap: spacing.md,
+  justifyContent: "center",
 });
 
 const $statCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flex: 1,
   backgroundColor: colors.card,
-  padding: spacing.md,
-  borderRadius: 12,
+  padding: spacing.lg,
+  borderRadius: 16,
   alignItems: "center",
   borderWidth: 1,
   borderColor: colors.border,
+  shadowColor: colors.text,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
 });
 
 const $statNumber: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -754,10 +759,15 @@ const $reportsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $reportCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.card,
-  padding: spacing.md,
-  borderRadius: 12,
+  padding: spacing.lg,
+  borderRadius: 16,
   borderWidth: 1,
   borderColor: colors.border,
+  shadowColor: colors.text,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.08,
+  shadowRadius: 4,
+  elevation: 2,
 });
 
 const $reportHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -839,11 +849,16 @@ const $modalOverlay: ThemedStyle<ViewStyle> = () => ({
 
 const $modalContent: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
-  borderRadius: 16,
-  padding: spacing.lg,
+  borderRadius: 20,
+  padding: spacing.xl,
   width: "95%",
-  maxWidth: 500,
+  maxWidth: 600,
   maxHeight: "90%",
+  shadowColor: colors.text,
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: 0.25,
+  shadowRadius: 20,
+  elevation: 10,
 });
 
 const $modalHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -902,6 +917,35 @@ const $detailContent: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   borderColor: colors.border,
 });
 
+const $detailSectionSubtitle: ThemedStyle<TextStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  fontSize: 14,
+  fontWeight: "600",
+  color: colors.text,
+  marginTop: spacing.md,
+  marginBottom: spacing.sm,
+});
+
+const $postContentContainer: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  backgroundColor: colors.backgroundAlt,
+  borderRadius: 12,
+  padding: spacing.lg,
+  borderWidth: 1,
+  borderColor: colors.border,
+  maxHeight: 250,
+});
+
+const $postContent: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: colors.text,
+  lineHeight: 20,
+});
+
 const $adminNoteInput: ThemedStyle<any> = ({ colors, spacing }) => ({
   borderWidth: 1,
   borderColor: colors.border,
@@ -922,12 +966,36 @@ const $modalActions: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.lg,
-  paddingVertical: spacing.sm,
-  borderRadius: 8,
+  paddingHorizontal: spacing.xl,
+  paddingVertical: spacing.md,
+  borderRadius: 12,
+  minWidth: 80,
 });
 
 const $actionButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   fontWeight: "500",
+});
+
+const $reportPostPreview: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.backgroundAlt,
+  borderRadius: 12,
+  padding: spacing.md,
+  marginTop: spacing.sm,
+  borderLeftWidth: 4,
+  borderLeftColor: colors.tint,
+});
+
+const $reportPostPreviewText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  lineHeight: 16,
+  fontStyle: "italic",
+});
+
+const $reportPostId: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 10,
+  color: colors.tint,
+  fontWeight: "600",
+  marginBottom: spacing.xs,
 });

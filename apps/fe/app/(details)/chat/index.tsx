@@ -15,7 +15,7 @@ import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
-import { GET_CHAT_ROOMS, JOIN_CHAT_CHANNEL } from "@/lib/graphql/chat";
+import { GET_USER_CHAT_ROOMS, JOIN_CHAT_ROOM } from "@/lib/graphql/user-chat";
 import { GET_ADMIN_CHAT_ROOMS } from "@/lib/graphql/admin";
 import { showToast } from "@/components/CustomToast";
 
@@ -44,34 +44,11 @@ interface ChatRoom {
     lastReadAt: string;
   }[];
   createdAt: string;
-}
-
-// GraphQL 응답 타입
-interface ChatRoomsResponse {
-  chatChannels: ChatRoom[];
-}
-
-// 관리자 채팅방 응답 타입
-interface AdminChatRoomsResponse {
-  adminGetAllChatRooms: {
-    chatRooms: {
-      id: string;
-      name: string;
-      description?: string;
-      type: "PRIVATE" | "GROUP" | "PUBLIC";
-      isRoomActive: boolean;
-      maxParticipants: number;
-      currentParticipants: number;
-      totalMessages: number;
-      createdAt: string;
-      updatedAt: string;
-      lastMessageContent?: string;
-      lastMessageAt?: string;
-    }[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+  team?: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
   };
 }
 
@@ -85,31 +62,16 @@ export default function ChatScreen() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // GraphQL 쿼리 및 뮤테이션
-  const { data, loading, error, refetch } = useQuery<ChatRoomsResponse>(
-    GET_CHAT_ROOMS,
-    {
-      fetchPolicy: "cache-and-network",
-      errorPolicy: "all",
-    },
-  );
-
-  // 관리자 채팅방 쿼리 (공개 채팅방만)
-  const {
-    data: adminData,
-    loading: adminLoading,
-    error: adminError,
-    refetch: refetchAdmin,
-  } = useQuery<AdminChatRoomsResponse>(GET_ADMIN_CHAT_ROOMS, {
+  // 사용자 접근 가능한 채팅방 쿼리 (팀 채팅방 + 공용 채팅방)
+  const { data, loading, error, refetch } = useQuery(GET_USER_CHAT_ROOMS, {
     variables: { page: 1, limit: 100 },
     fetchPolicy: "cache-and-network",
     errorPolicy: "all",
   });
 
-  const [joinChatChannel] = useMutation(JOIN_CHAT_CHANNEL, {
+  const [joinChatRoom] = useMutation(JOIN_CHAT_ROOM, {
     refetchQueries: [
-      { query: GET_CHAT_ROOMS },
-      { query: GET_ADMIN_CHAT_ROOMS, variables: { page: 1, limit: 100 } },
+      { query: GET_USER_CHAT_ROOMS, variables: { page: 1, limit: 100 } },
     ],
   });
 
@@ -134,32 +96,35 @@ export default function ChatScreen() {
         duration: 3000,
       });
     }
-    if (adminError) {
-      console.error("관리자 채팅방 로드 실패:", adminError);
-    }
-  }, [error, adminError]);
+  }, [error]);
 
-  // 일반 채팅방과 관리자 채팅방 합치기
-  const regularChatRooms = data?.chatChannels || [];
-  const adminChatRooms = (adminData?.adminGetAllChatRooms?.chatRooms || [])
-    .filter((room) => room.type === "PUBLIC" && room.isRoomActive) // 공개이고 활성화된 채팅방만
-    .map((room) => ({
-      id: room.id,
-      name: room.name,
-      description: room.description,
-      isPrivate: false,
-      type: room.type,
-      isRoomActive: room.isRoomActive,
-      maxParticipants: room.maxParticipants,
-      currentParticipants: room.currentParticipants,
-      lastMessage: room.lastMessageContent,
-      lastMessageAt: room.lastMessageAt,
-      unreadCount: 0, // 관리자 채팅방은 초기에 읽지 않은 메시지 0개
-      members: [], // 빈 배열로 초기화 (자동 참여 처리)
-      createdAt: room.createdAt,
-    }));
-
-  const chatRooms = [...regularChatRooms, ...adminChatRooms];
+  // 사용자 접근 가능한 채팅방 (팀 채팅방 + 공용 채팅방)
+  const chatRooms = (data?.getUserChatRooms?.chatRooms || []).map((room) => ({
+    id: room.id,
+    name: room.name,
+    description: room.description,
+    isPrivate: room.type === "PRIVATE",
+    type: room.type,
+    isRoomActive: room.isRoomActive,
+    maxParticipants: room.maxParticipants,
+    currentParticipants: room.currentParticipants,
+    lastMessage: room.lastMessageContent,
+    lastMessageAt: room.lastMessageAt,
+    unreadCount: 0, // 초기에 읽지 않은 메시지 0개
+    members: room.participants.map((p) => ({
+      userId: p.id,
+      user: {
+        id: p.id,
+        nickname: p.nickname,
+        profileImageUrl: p.profileImageUrl,
+      },
+      isAdmin: false,
+      joinedAt: room.createdAt,
+      lastReadAt: room.createdAt,
+    })),
+    createdAt: room.createdAt,
+    team: room.team, // 팀 정보 추가
+  }));
 
   // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
   const handleEnterRoom = async (room: ChatRoom) => {
@@ -197,11 +162,21 @@ export default function ChatScreen() {
 
   // 채팅방 타입별 아이콘 및 색상 반환
   const getRoomTypeInfo = (room: ChatRoom) => {
-    // 관리자가 생성한 채팅방인 경우 type 필드 사용
+    // 팀 채팅방인 경우 팀 색상 사용
+    if (room.team) {
+      return {
+        icon: "people-outline",
+        color: room.team.color,
+        label: room.team.name,
+        teamIcon: room.team.icon,
+      };
+    }
+
+    // 공용 채팅방인 경우
     if (room.type) {
       switch (room.type) {
         case "PUBLIC":
-          return { icon: "globe-outline", color: "#3B82F6", label: "공개" };
+          return { icon: "globe-outline", color: "#3B82F6", label: "공용" };
         case "GROUP":
           return { icon: "people-outline", color: "#10B981", label: "그룹" };
         case "PRIVATE":
@@ -250,11 +225,15 @@ export default function ChatScreen() {
               { backgroundColor: typeInfo.color + "20" },
             ]}
           >
-            <Ionicons
-              name={typeInfo.icon as any}
-              color={typeInfo.color}
-              size={24}
-            />
+            {typeInfo.teamIcon ? (
+              <Text style={{ fontSize: 20 }}>{typeInfo.teamIcon}</Text>
+            ) : (
+              <Ionicons
+                name={typeInfo.icon as any}
+                color={typeInfo.color}
+                size={24}
+              />
+            )}
           </View>
 
           <View style={themed($roomContent)}>
@@ -327,10 +306,10 @@ export default function ChatScreen() {
 
   // 새로고침 핸들러
   const handleRefresh = async () => {
-    await Promise.all([refetch(), refetchAdmin()]);
+    await refetch();
   };
 
-  if ((loading || adminLoading) && !data && !adminData) {
+  if (loading && !data) {
     return (
       <View style={themed($container)}>
         <View style={themed($header)}>
@@ -362,13 +341,10 @@ export default function ChatScreen() {
         style={themed($flatList)}
         contentContainerStyle={themed($contentContainer)}
         refreshControl={
-          <RefreshControl
-            refreshing={loading || adminLoading}
-            onRefresh={handleRefresh}
-          />
+          <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
-          !loading && !adminLoading ? (
+          !loading ? (
             <View style={themed($emptyContainer)}>
               <Ionicons
                 name="chatbubbles-outline"

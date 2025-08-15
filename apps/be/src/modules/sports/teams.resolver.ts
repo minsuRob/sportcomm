@@ -11,6 +11,7 @@ import { UseGuards } from '@nestjs/common';
 import { Team, UserTeam, Sport } from '../../entities';
 import { TeamsService } from './teams.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { UpdateMyTeamInput } from './teams.mutation';
 
 /**
  * 팀 GraphQL 리졸버
@@ -172,11 +173,11 @@ export class TeamsResolver {
   })
   @UseGuards(JwtAuthGuard)
   async updateMyTeams(
-    @Args('teamIds', {
-      type: () => [String],
-      description: '선택할 팀 ID 배열',
+    @Args('teams', {
+      type: () => [UpdateMyTeamInput],
+      description: '선택할 팀과 팬이 된 날짜 정보 배열',
     })
-    teamIds: string[],
+    teams: UpdateMyTeamInput[],
     @Context() context: any,
   ): Promise<UserTeam[]> {
     // GraphQL 컨텍스트에서 사용자 정보 추출
@@ -199,7 +200,7 @@ export class TeamsResolver {
     }
 
     const userId = user.id;
-    return this.teamsService.updateUserTeams(userId, teamIds);
+    return this.teamsService.updateUserTeams(userId, teams);
   }
 
   /**

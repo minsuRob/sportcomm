@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
   ScrollView,
+  ActivityIndicator,
   ViewStyle,
   TextStyle,
-  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@apollo/client";
@@ -19,16 +19,12 @@ import {
   type GetMyTeamsResult,
 } from "@/lib/graphql/teams";
 import TeamLogo from "@/components/TeamLogo";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const { width: screenWidth } = Dimensions.get("window");
 
 interface TeamFilterSelectorProps {
   onTeamSelect: (teamIds: string[] | null) => void;
   selectedTeamIds: string[] | null;
+  loading?: boolean;
 }
-
-const STORAGE_KEY = "selected_team_filter";
 
 /**
  * 팀 필터 선택 컴포넌트
@@ -37,34 +33,27 @@ const STORAGE_KEY = "selected_team_filter";
 export default function TeamFilterSelector({
   onTeamSelect,
   selectedTeamIds,
+  loading = false,
 }: TeamFilterSelectorProps) {
   const { themed, theme } = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedTeams, setSelectedTeams] = useState<Team[]>([]);
   // 체크박스처럼 모달 내에서만 임시 선택 상태를 유지하고, 적용 버튼에서만 반영
   const [pendingSelectedIds, setPendingSelectedIds] = useState<string[]>(
-    selectedTeamIds ?? [],
+    selectedTeamIds ?? []
   );
 
   // 사용자가 선택한 팀 목록 조회
-  const { data: myTeamsData, loading } = useQuery<GetMyTeamsResult>(
-    GET_MY_TEAMS,
-    {
+  const { data: myTeamsData, loading: myTeamsLoading } =
+    useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
       fetchPolicy: "cache-and-network",
-    },
-  );
+    });
 
-  // 선택된 팀 정보 업데이트
-  useEffect(() => {
-    if (myTeamsData?.myTeams && selectedTeamIds) {
-      const teams = myTeamsData.myTeams
-        .filter((userTeam) => selectedTeamIds.includes(userTeam.team.id))
-        .map((userTeam) => userTeam.team);
-      setSelectedTeams(teams);
-    } else {
-      setSelectedTeams([]);
-    }
-  }, [myTeamsData, selectedTeamIds]);
+  // 팀 조회 결과를 빠르게 참조하기 위한 맵 (렌더 성능 최적화)
+  const teamMap = useMemo(() => {
+    const map = new Map<string, Team>();
+    myTeamsData?.myTeams?.forEach((ut) => map.set(ut.team.id, ut.team));
+    return map;
+  }, [myTeamsData]);
 
   // 모달 오픈 시 현재 적용된 선택을 임시 상태로 복사
   useEffect(() => {
@@ -76,19 +65,24 @@ export default function TeamFilterSelector({
   /**
    * 팀 선택 핸들러
    */
-  // 적용 버튼: 임시 선택을 저장하고 콜백 반영
+  // 적용 버튼: 임시 선택을 콜백으로 전달 (저장은 부모 훅이 담당)
   const applySelection = async (): Promise<void> => {
     try {
-      if (pendingSelectedIds.length > 0) {
-        await AsyncStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(pendingSelectedIds),
-        );
-        onTeamSelect(pendingSelectedIds);
-      } else {
-        await AsyncStorage.removeItem(STORAGE_KEY);
-        onTeamSelect(null);
+      const next = pendingSelectedIds.length > 0 ? pendingSelectedIds : null;
+
+      // 현재 선택과 동일한 경우 중복 호출 방지
+      const currentIds = selectedTeamIds || [];
+      const nextIds = next || [];
+
+      const isSameSelection =
+        currentIds.length === nextIds.length &&
+        currentIds.every((id) => nextIds.includes(id)) &&
+        nextIds.every((id) => currentIds.includes(id));
+
+      if (!isSameSelection) {
+        onTeamSelect(next);
       }
+
       setModalVisible(false);
     } catch (error) {
       console.error("팀 필터 저장 실패:", error);
@@ -102,7 +96,7 @@ export default function TeamFilterSelector({
     setPendingSelectedIds((prev) =>
       prev.includes(teamId)
         ? prev.filter((id) => id !== teamId)
-        : [...prev, teamId],
+        : [...prev, teamId]
     );
   };
 
@@ -111,10 +105,11 @@ export default function TeamFilterSelector({
     if (!selectedTeamIds || selectedTeamIds.length === 0) {
       return "모든 팀";
     }
-    if (selectedTeams.length === 1) {
-      return selectedTeams[0].name;
+    if (selectedTeamIds.length === 1) {
+      const team = teamMap.get(selectedTeamIds[0]);
+      return team?.name ?? "1개 팀";
     }
-    return `${selectedTeams.length}개 팀`;
+    return `${selectedTeamIds.length}개 팀`;
   };
 
   // 표시할 로고 결정
@@ -122,18 +117,22 @@ export default function TeamFilterSelector({
     if (!selectedTeamIds || selectedTeamIds.length === 0) {
       return { logoUrl: undefined, fallbackIcon: "🏆", teamName: "모든 팀" };
     }
-    if (selectedTeams.length === 1) {
-      const team = selectedTeams[0];
+    if (selectedTeamIds.length === 1) {
+      const team = teamMap.get(selectedTeamIds[0]);
       return {
-        logoUrl: team.logoUrl,
-        fallbackIcon: team.icon,
-        teamName: team.name,
+        logoUrl: team?.logoUrl,
+        fallbackIcon: team?.icon,
+        teamName: team?.name ?? "선택된 팀",
       };
     }
     return { logoUrl: undefined, fallbackIcon: "🏆", teamName: "다중 선택" };
   };
 
-  if (loading || !myTeamsData?.myTeams || myTeamsData.myTeams.length === 0) {
+  if (
+    myTeamsLoading ||
+    !myTeamsData?.myTeams ||
+    myTeamsData.myTeams.length === 0
+  ) {
     return null; // 팀이 없으면 필터 버튼을 표시하지 않음
   }
 
@@ -143,6 +142,7 @@ export default function TeamFilterSelector({
       <TouchableOpacity
         style={themed($filterButton)}
         onPress={() => setModalVisible(true)}
+        disabled={loading}
       >
         <TeamLogo
           logoUrl={getDisplayLogo().logoUrl}
@@ -153,7 +153,15 @@ export default function TeamFilterSelector({
         <Text style={themed($filterText)} numberOfLines={1}>
           {getDisplayText()}
         </Text>
-        <Ionicons name="chevron-down" size={14} color={theme.colors.textDim} />
+        {loading ? (
+          <ActivityIndicator size="small" color={theme.colors.textDim} />
+        ) : (
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={theme.colors.textDim}
+          />
+        )}
       </TouchableOpacity>
 
       {/* 팀 선택 모달 */}
@@ -215,8 +223,23 @@ export default function TeamFilterSelector({
               <TouchableOpacity
                 style={themed($applyButton)}
                 onPress={applySelection}
+                disabled={loading}
+                activeOpacity={loading ? 1 : 0.7}
               >
-                <Text style={themed($applyButtonText)}>적용</Text>
+                {loading ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={themed($applyButtonText)}>적용 중...</Text>
+                  </View>
+                ) : (
+                  <Text style={themed($applyButtonText)}>적용</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

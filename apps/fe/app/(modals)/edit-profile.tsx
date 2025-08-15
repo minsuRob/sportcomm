@@ -7,12 +7,12 @@ import {
   TextInput,
   ScrollView,
   Switch,
-  Alert,
   ViewStyle,
   TextStyle,
   ImageStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AppDialog from "@/components/ui/AppDialog";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAppTheme } from "@/lib/theme/context";
@@ -40,11 +40,13 @@ export default function EditProfileScreen() {
   const [profileImage, setProfileImage] = useState<string>("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
+  const [age, setAge] = useState<number | undefined>(undefined);
   const [team, setTeam] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // GraphQL 뮤테이션 (프로필 정보 업데이트용)
   const [updateProfile] = useMutation(UPDATE_PROFILE);
@@ -60,6 +62,7 @@ export default function EditProfileScreen() {
         setBio(user.bio || "");
         setTeam(user.team || "");
         setIsPrivate(user.isPrivate || false);
+        setAge((user as any).age);
       }
     };
     loadUserData();
@@ -70,7 +73,7 @@ export default function EditProfileScreen() {
    * 세분화된 에러 처리와 함께 구현
    */
   const uploadProfileImage = async (
-    file: File | { uri: string; name: string; type: string },
+    file: File | { uri: string; name: string; type: string }
   ): Promise<string | null> => {
     try {
       setIsImageUploading(true);
@@ -95,14 +98,14 @@ export default function EditProfileScreen() {
       } else {
         uploadedFiles = await uploadFilesMobile(
           [file as { uri: string; name: string; type: string }],
-          progressCallback,
+          progressCallback
         );
       }
 
       // 업로드 결과 검증
       if (!uploadedFiles || uploadedFiles.length === 0) {
         throw new Error(
-          "업로드 응답이 비어있습니다. 서버 연결을 확인해주세요.",
+          "업로드 응답이 비어있습니다. 서버 연결을 확인해주세요."
         );
       }
 
@@ -119,7 +122,7 @@ export default function EditProfileScreen() {
       // URL 유효성 검증
       if (!uploadedMedia.url || uploadedMedia.url.trim() === "") {
         throw new Error(
-          "업로드는 완료되었지만 이미지 URL을 받지 못했습니다. 잠시 후 다시 시도해주세요.",
+          "업로드는 완료되었지만 이미지 URL을 받지 못했습니다. 잠시 후 다시 시도해주세요."
         );
       }
 
@@ -226,7 +229,7 @@ export default function EditProfileScreen() {
             // 한글 파일명 문제 해결: 안전한 파일명 생성
             const safeFileName = generateAvatarFileName(
               selectedAsset.fileName || "avatar.jpg",
-              currentUser?.id || "user",
+              currentUser?.id || "user"
             );
 
             uploadFile = new File([blob], safeFileName, {
@@ -236,7 +239,7 @@ export default function EditProfileScreen() {
             // 모바일 환경 - 한글 파일명 문제 해결
             const safeFileName = generateAvatarFileName(
               selectedAsset.fileName || "avatar.jpg",
-              currentUser?.id || "user",
+              currentUser?.id || "user"
             );
 
             uploadFile = {
@@ -304,14 +307,12 @@ export default function EditProfileScreen() {
    * 프로필 이미지 삭제
    */
   const handleDeleteImage = () => {
-    Alert.alert("프로필 사진 삭제", "현재 프로필 사진을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: () => setProfileImage(""),
-      },
-    ]);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteImage = () => {
+    setProfileImage("");
+    setShowDeleteDialog(false);
   };
 
   /**
@@ -333,13 +334,14 @@ export default function EditProfileScreen() {
     setIsLoading(true);
 
     try {
-      // GraphQL로 프로필 정보 업데이트 (이미지 URL 포함)
+      // GraphQL로 프로필 정보 업데이트 (이미지 URL 및 나이 포함)
       const result = await updateProfile({
         variables: {
           input: {
             nickname: name.trim(),
             bio: bio.trim(),
             profileImageUrl: profileImage,
+            age: age, // 나이 필드 추가
           },
         },
       });
@@ -351,6 +353,7 @@ export default function EditProfileScreen() {
           nickname: name.trim(),
           bio: bio.trim(),
           profileImageUrl: profileImage,
+          age, // 백엔드에서도 age 필드를 지원하므로 함께 저장
         };
         await saveSession(updatedUser);
 
@@ -374,6 +377,19 @@ export default function EditProfileScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /**
+   * 나이 입력을 숫자만 허용하고 1~120 범위로 제한
+   */
+  const handleAgeChange = (text: string) => {
+    const onlyDigits = text.replace(/[^0-9]/g, "");
+    if (onlyDigits === "") {
+      setAge(undefined);
+      return;
+    }
+    const num = Math.max(1, Math.min(120, parseInt(onlyDigits, 10)));
+    setAge(num);
   };
 
   /**
@@ -510,6 +526,30 @@ export default function EditProfileScreen() {
           </Text>
         </View>
 
+        {/* 나이 섹션 */}
+        <View style={themed($section)}>
+          <Text style={themed($sectionTitle)}>나이</Text>
+          <View style={themed($inputContainer)}>
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={theme.colors.textDim}
+            />
+            <TextInput
+              style={themed($textInput)}
+              value={age?.toString() ?? ""}
+              onChangeText={handleAgeChange}
+              placeholder="나이를 입력하세요 (숫자)"
+              placeholderTextColor={theme.colors.textDim}
+              keyboardType="numeric"
+              maxLength={3}
+            />
+          </View>
+          <Text style={themed($inputHelper)}>
+            나이는 1세부터 120세까지 입력 가능합니다.
+          </Text>
+        </View>
+
         {/* 소개 섹션 */}
         <View style={themed($section)}>
           <Text style={themed($sectionTitle)}>소개</Text>
@@ -565,6 +605,15 @@ export default function EditProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      <AppDialog
+        visible={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        title="프로필 사진 삭제"
+        description="현재 프로필 사진을 삭제하시겠습니까?"
+        confirmText="삭제"
+        onConfirm={confirmDeleteImage}
+        cancelText="취소"
+      />
     </View>
   );
 }

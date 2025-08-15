@@ -9,7 +9,6 @@ import {
   Platform,
   ViewStyle,
   TextStyle,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@apollo/client";
@@ -18,6 +17,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { UPDATE_POST } from "@/lib/graphql";
+import AppDialog from "@/components/ui/AppDialog";
 // --- 타입 정의 ---
 interface TeamOption {
   teamId: string;
@@ -56,6 +56,7 @@ export default function PostEditModal({
   const [content, setContent] = useState(post.content);
   const [selectedTeamId, setSelectedTeamId] = useState<string>(post.teamId);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelDialogVisible, setCancelDialogVisible] = useState(false);
 
   // GraphQL 뮤테이션
   const [executeUpdatePost] = useMutation(UPDATE_POST);
@@ -110,14 +111,7 @@ export default function PostEditModal({
    */
   const handleClose = () => {
     if (hasChanges()) {
-      Alert.alert("수정 취소", "변경사항이 있습니다. 정말 취소하시겠습니까?", [
-        { text: "계속 수정", style: "cancel" },
-        {
-          text: "취소",
-          style: "destructive",
-          onPress: () => onClose(),
-        },
-      ]);
+      setCancelDialogVisible(true);
     } else {
       onClose();
     }
@@ -218,121 +212,138 @@ export default function PostEditModal({
   if (!visible) return null;
 
   return (
-    <KeyboardAvoidingView
-      style={themed($modalOverlay)}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <View style={themed($modalContent)}>
-        {/* 헤더 */}
-        <View style={themed($header)}>
-          <TouchableOpacity onPress={handleClose} style={themed($closeButton)}>
-            <Ionicons name="close" color={theme.colors.text} size={24} />
-          </TouchableOpacity>
-          <Text style={themed($headerTitle)}>게시물 수정</Text>
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={!hasChanges() || isSubmitting}
-            style={[
-              themed($saveButton),
-              {
-                opacity: !hasChanges() || isSubmitting ? 0.5 : 1,
-              },
-            ]}
-          >
-            <Ionicons name="save" color="white" size={20} />
-            <Text style={themed($saveButtonText)}>
-              {isSubmitting ? "저장 중..." : "저장"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+    <>
+      <KeyboardAvoidingView
+        style={themed($modalOverlay)}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={themed($modalContent)}>
+          {/* 헤더 */}
+          <View style={themed($header)}>
+            <TouchableOpacity
+              onPress={handleClose}
+              style={themed($closeButton)}
+            >
+              <Ionicons name="close" color={theme.colors.text} size={24} />
+            </TouchableOpacity>
+            <Text style={themed($headerTitle)}>게시물 수정</Text>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={!hasChanges() || isSubmitting}
+              style={[
+                themed($saveButton),
+                {
+                  opacity: !hasChanges() || isSubmitting ? 0.5 : 1,
+                },
+              ]}
+            >
+              <Ionicons name="save" color="white" size={20} />
+              <Text style={themed($saveButtonText)}>
+                {isSubmitting ? "저장 중..." : "저장"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView
-          style={themed($scrollContainer)}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* 팀 선택 */}
-          <View style={themed($typeSection)}>
-            <Text style={themed($sectionTitle)}>팀 선택</Text>
-            <View style={themed($typeOptions)}>
-              {teamOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.teamId}
-                  style={[
-                    themed($typeOption),
-                    {
-                      borderColor:
-                        selectedTeamId === option.teamId
-                          ? option.color
-                          : theme.colors.border,
-                      backgroundColor:
-                        selectedTeamId === option.teamId
-                          ? option.color + "20"
-                          : "transparent",
-                    },
-                  ]}
-                  onPress={() => handleTeamSelect(option.teamId)}
-                >
-                  <Text style={themed($typeIcon)}>{option.icon}</Text>
-                  <Text
+          <ScrollView
+            style={themed($scrollContainer)}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* 팀 선택 */}
+            <View style={themed($typeSection)}>
+              <Text style={themed($sectionTitle)}>팀 선택</Text>
+              <View style={themed($typeOptions)}>
+                {teamOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.teamId}
                     style={[
-                      themed($typeLabel),
+                      themed($typeOption),
                       {
-                        color:
+                        borderColor:
                           selectedTeamId === option.teamId
                             ? option.color
-                            : theme.colors.text,
+                            : theme.colors.border,
+                        backgroundColor:
+                          selectedTeamId === option.teamId
+                            ? option.color + "20"
+                            : "transparent",
                       },
                     ]}
+                    onPress={() => handleTeamSelect(option.teamId)}
                   >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text style={themed($typeIcon)}>{option.icon}</Text>
+                    <Text
+                      style={[
+                        themed($typeLabel),
+                        {
+                          color:
+                            selectedTeamId === option.teamId
+                              ? option.color
+                              : theme.colors.text,
+                        },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
 
-          {/* 제목 입력 영역 */}
-          <View style={themed($titleSection)}>
-            <Text style={themed($sectionTitle)}>제목</Text>
-            <TextInput
-              style={themed($titleInput)}
-              placeholder="게시물 제목을 입력하세요"
-              placeholderTextColor={theme.colors.textDim}
-              value={title}
-              onChangeText={setTitle}
-              maxLength={200}
-              editable={!isSubmitting}
-            />
-            <View style={themed($characterCount)}>
-              <Text style={themed($characterCountText)}>
-                {title.length}/200
-              </Text>
+            {/* 제목 입력 영역 */}
+            <View style={themed($titleSection)}>
+              <Text style={themed($sectionTitle)}>제목</Text>
+              <TextInput
+                style={themed($titleInput)}
+                placeholder="게시물 제목을 입력하세요"
+                placeholderTextColor={theme.colors.textDim}
+                value={title}
+                onChangeText={setTitle}
+                maxLength={200}
+                editable={!isSubmitting}
+              />
+              <View style={themed($characterCount)}>
+                <Text style={themed($characterCountText)}>
+                  {title.length}/200
+                </Text>
+              </View>
             </View>
-          </View>
 
-          {/* 내용 입력 영역 */}
-          <View style={themed($contentSection)}>
-            <Text style={themed($sectionTitle)}>내용</Text>
-            <TextInput
-              style={themed($textInput)}
-              placeholder="게시물 내용을 입력하세요"
-              placeholderTextColor={theme.colors.textDim}
-              value={content}
-              onChangeText={setContent}
-              multiline
-              textAlignVertical="top"
-              maxLength={10000}
-              editable={!isSubmitting}
-            />
-            <View style={themed($characterCount)}>
-              <Text style={themed($characterCountText)}>
-                {content.length}/10000
-              </Text>
+            {/* 내용 입력 영역 */}
+            <View style={themed($contentSection)}>
+              <Text style={themed($sectionTitle)}>내용</Text>
+              <TextInput
+                style={themed($textInput)}
+                placeholder="게시물 내용을 입력하세요"
+                placeholderTextColor={theme.colors.textDim}
+                value={content}
+                onChangeText={setContent}
+                multiline
+                textAlignVertical="top"
+                maxLength={10000}
+                editable={!isSubmitting}
+              />
+              <View style={themed($characterCount)}>
+                <Text style={themed($characterCountText)}>
+                  {content.length}/10000
+                </Text>
+              </View>
             </View>
-          </View>
-        </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+      <AppDialog
+        visible={isCancelDialogVisible}
+        onClose={() => setCancelDialogVisible(false)}
+        title="수정 취소"
+        description="변경사항이 있습니다. 정말 취소하시겠습니까?"
+        confirmText="취소"
+        onConfirm={() => {
+          setCancelDialogVisible(false);
+          onClose();
+        }}
+        cancelText="계속 수정"
+      />
+    </>
   );
 }
 

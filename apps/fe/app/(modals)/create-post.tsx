@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,12 @@ import {
   Platform,
   ViewStyle,
   TextStyle,
-  Alert,
   Image,
   Dimensions,
   ImageStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AppDialog from "@/components/ui/AppDialog";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { isWeb } from "@/lib/platform";
@@ -45,6 +45,9 @@ import {
   SelectedVideo,
 } from "@/lib/api/videoUpload";
 import { UploadProgress } from "@/lib/api/common";
+import TrendyCreatePostSection from "@/components/createPost/TrendyCreatePostSection";
+import CreativeCreatePostSection from "@/components/createPost/CreativeCreatePostSection";
+import TagInput from "@/components/createPost/TagInput";
 
 // --- 타입 정의 ---
 interface TeamOption {
@@ -85,16 +88,41 @@ export default function CreatePostScreen() {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
 
+  // 인기 태그 목록 (실제로는 API에서 가져와야 함)
+  const popularTags = [
+    "전술분석",
+    "이적소식",
+    "경기예측",
+    "선수분석",
+    "팀뉴스",
+    "하이라이트",
+    "골장면",
+    "세리머니",
+    "응원가",
+    "경기후기",
+  ];
+
   // 상태 관리
+  const [layoutVariant, setLayoutVariant] = useState<
+    "modern" | "trendy" | "creative"
+  >("creative");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<SelectedVideo[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [uploadPercentage, setUploadPercentage] = useState<number>(0);
+  const [dialog, setDialog] = useState<{
+    visible: boolean;
+    title: string;
+    description: string;
+    onConfirm?: () => void;
+    showCancel?: boolean;
+  }>({ visible: false, title: "", description: "" });
 
   // 사용자가 선택한 팀 목록 조회
   const {
@@ -121,9 +149,13 @@ export default function CreatePostScreen() {
         setCurrentUser(user);
       } else {
         // 로그인되지 않은 경우 피드로 리다이렉트
-        Alert.alert("로그인 필요", "게시물을 작성하려면 로그인이 필요합니다.", [
-          { text: "확인", onPress: () => router.back() },
-        ]);
+        setDialog({
+          visible: true,
+          title: "로그인 필요",
+          description: "게시물을 작성하려면 로그인이 필요합니다.",
+          onConfirm: () => router.back(),
+          showCancel: false,
+        });
       }
     };
     checkSession();
@@ -150,25 +182,30 @@ export default function CreatePostScreen() {
       title.trim() ||
       content.trim() ||
       selectedTeamId ||
+      tags.length > 0 ||
       selectedImages.length > 0 ||
       selectedVideos.length > 0
     ) {
-      Alert.alert(
-        "작성 취소",
-        "작성 중인 내용이 있습니다. 정말 취소하시겠습니까?",
-        [
-          { text: "계속 작성", style: "cancel" },
-          {
-            text: "취소",
-            style: "destructive",
-            onPress: () => router.back(),
-          },
-        ],
-      );
+      setDialog({
+        visible: true,
+        title: "작성 취소",
+        description: "작성 중인 내용이 있습니다. 정말 취소하시겠습니까?",
+        onConfirm: () => router.back(),
+        showCancel: true,
+      });
     } else {
       router.back();
     }
   };
+
+  // 선택된 모든 미디어 배열 (썸네일/히어로 공용)
+  const allSelectedMedia = useMemo(
+    () => [
+      ...selectedImages.map((img) => ({ type: "image" as const, ...img })),
+      ...selectedVideos.map((vid) => ({ type: "video" as const, ...vid })),
+    ],
+    [selectedImages, selectedVideos]
+  );
 
   /**
    * 팀 선택 핸들러
@@ -193,11 +230,12 @@ export default function CreatePostScreen() {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "권한 필요",
-          "미디어를 선택하려면 갤러리 접근 권한이 필요합니다.",
-          [{ text: "확인" }],
-        );
+        setDialog({
+          visible: true,
+          title: "권한 필요",
+          description: "미디어를 선택하려면 갤러리 접근 권한이 필요합니다.",
+          showCancel: false,
+        });
         return;
       }
 
@@ -253,7 +291,7 @@ export default function CreatePostScreen() {
                   `video_${index}_${Date.now()}.mp4`,
                   {
                     type: "video/mp4",
-                  },
+                  }
                 );
 
                 // 메타데이터 추출
@@ -290,7 +328,7 @@ export default function CreatePostScreen() {
                 } catch (compressionError) {
                   console.warn(
                     "동영상 압축 실패, 원본 사용:",
-                    compressionError,
+                    compressionError
                   );
                   // 압축 실패 시 원본 정보 사용
                   processedVideo = {
@@ -455,6 +493,7 @@ export default function CreatePostScreen() {
         title: title.trim(),
         content: content.trim(),
         teamId: selectedTeamId, // 선택된 팀 ID로 게시물 분류
+        tags: tags.length > 0 ? tags : undefined, // 태그가 있는 경우에만 포함
         isPublic: true,
       };
 
@@ -648,6 +687,34 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* 상단 고정 썸네일 바 (항상 모던) */}
+      {allSelectedMedia.length > 0 && (
+        <View style={themed($mediaToolbar)}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={themed($mediaToolbarContent)}
+          >
+            {allSelectedMedia.map((m, idx) => (
+              <View key={`m-${idx}`} style={themed($mediaToolbarItem)}>
+                {m.type === "image" ? (
+                  <Image
+                    source={{ uri: m.uri }}
+                    style={themed($mediaToolbarThumb)}
+                  />
+                ) : (
+                  <View
+                    style={[themed($mediaToolbarThumb), themed($videoBadgeBg)]}
+                  >
+                    <Ionicons name="videocam" color="white" size={16} />
+                  </View>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <ScrollView
         style={themed($scrollContainer)}
         showsVerticalScrollIndicator={false}
@@ -661,210 +728,217 @@ export default function CreatePostScreen() {
         </View>
 
         {/* 응원할 팀 선택 */}
-        <View style={themed($typeSection)}>
-          <View style={themed($sectionHeader)}>
-            <Text style={themed($sectionTitle)}>응원할 팀 선택</Text>
-            {teamOptions.length === 0 && !teamsLoading && (
-              <TouchableOpacity
-                style={themed($addTeamButton)}
-                onPress={handleGoToTeamSelection}
-              >
-                <Ionicons name="add" color={theme.colors.tint} size={16} />
-                <Text style={themed($addTeamText)}>팀 추가</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {teamsLoading ? (
-            <View style={themed($loadingContainer)}>
-              <Text style={themed($loadingText)}>팀 목록을 불러오는 중...</Text>
+        {layoutVariant === "modern" && (
+          <View style={themed($typeSection)}>
+            <View style={themed($sectionHeader)}>
+              <Text style={themed($sectionTitle)}>응원할 팀 선택</Text>
+              {teamOptions.length === 0 && !teamsLoading && (
+                <TouchableOpacity
+                  style={themed($addTeamButton)}
+                  onPress={handleGoToTeamSelection}
+                >
+                  <Ionicons name="add" color={theme.colors.tint} size={16} />
+                  <Text style={themed($addTeamText)}>팀 추가</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          ) : teamOptions.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={themed($typeScrollView)}
-            >
-              <View style={themed($typeOptions)}>
-                {teamOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.teamId}
-                    style={[
-                      themed($typeOption),
-                      {
-                        borderColor:
-                          selectedTeamId === option.teamId
-                            ? option.color
-                            : theme.colors.border,
-                        backgroundColor:
-                          selectedTeamId === option.teamId
-                            ? option.color + "20"
-                            : "transparent",
-                      },
-                    ]}
-                    onPress={() => handleTeamSelect(option.teamId)}
-                  >
-                    <Text style={themed($typeIcon)}>{option.icon}</Text>
-                    <Text
-                      style={[
-                        themed($typeLabel),
-                        {
-                          color:
-                            selectedTeamId === option.teamId
-                              ? option.color
-                              : theme.colors.text,
-                        },
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                    <Text style={themed($sportLabel)}>{option.sportName}</Text>
-                  </TouchableOpacity>
-                ))}
+
+            {teamsLoading ? (
+              <View style={themed($loadingContainer)}>
+                <Text style={themed($loadingText)}>
+                  팀 목록을 불러오는 중...
+                </Text>
               </View>
-            </ScrollView>
-          ) : (
-            <View style={themed($emptyTeamsContainer)}>
-              <Text style={themed($emptyTeamsText)}>
-                응원할 팀을 먼저 선택해주세요
-              </Text>
-              <TouchableOpacity
-                style={themed($selectTeamButton)}
-                onPress={handleGoToTeamSelection}
-              >
-                <Ionicons name="heart" color="white" size={16} />
-                <Text style={themed($selectTeamButtonText)}>팀 선택하기</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* 제목 입력 영역 */}
-        <View style={themed($titleSection)}>
-          <Text style={themed($sectionTitle)}>제목</Text>
-          <TextInput
-            style={themed($titleInput)}
-            placeholder="게시물 제목을 입력하세요"
-            placeholderTextColor={theme.colors.textDim}
-            value={title}
-            onChangeText={setTitle}
-            maxLength={200}
-            editable={!isSubmitting}
-          />
-          <View style={themed($characterCount)}>
-            <Text style={themed($characterCountText)}>{title.length}/200</Text>
-          </View>
-        </View>
-
-        {/* 내용 입력 영역 */}
-        <View style={themed($contentSection)}>
-          <Text style={themed($sectionTitle)}>내용</Text>
-          <TextInput
-            style={themed($textInput)}
-            placeholder={t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER)}
-            placeholderTextColor={theme.colors.textDim}
-            value={content}
-            onChangeText={setContent}
-            multiline
-            textAlignVertical="top"
-            maxLength={10000}
-            editable={!isSubmitting}
-          />
-          <View style={themed($characterCount)}>
-            <Text style={themed($characterCountText)}>
-              {content.length}/10000
-            </Text>
-          </View>
-
-          {/* 미디어 업로드 버튼 */}
-          <TouchableOpacity
-            style={themed($imageUploadButton)}
-            onPress={handleMediaPicker}
-            disabled={
-              isSubmitting || selectedImages.length + selectedVideos.length >= 4
-            }
-          >
-            <Ionicons name="image" color={theme.colors.tint} size={20} />
-            <Text style={themed($imageUploadText)}>
-              미디어 추가 ({selectedImages.length + selectedVideos.length}/4)
-            </Text>
-          </TouchableOpacity>
-
-          {/* 선택된 미디어 미리보기 */}
-          {(selectedImages.length > 0 || selectedVideos.length > 0) && (
-            <View style={themed($imagePreviewContainer)}>
-              <Text style={themed($sectionTitle)}>첨부된 미디어</Text>
+            ) : teamOptions.length > 0 ? (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                style={themed($imagePreviewScroll)}
+                style={themed($typeScrollView)}
               >
-                {/* 이미지 미리보기 */}
-                {selectedImages.map((image, index) => (
-                  <View
-                    key={`image-${index}`}
-                    style={themed($imagePreviewItem)}
-                  >
-                    <Image
-                      source={{ uri: image.uri }}
-                      style={themed($imagePreview)}
-                      resizeMode="cover"
-                    />
+                <View style={themed($typeOptions)}>
+                  {teamOptions.map((option) => (
                     <TouchableOpacity
-                      style={themed($imageRemoveButton)}
-                      onPress={() => handleRemoveImage(index)}
+                      key={option.teamId}
+                      style={[
+                        themed($typeOption),
+                        {
+                          borderColor:
+                            selectedTeamId === option.teamId
+                              ? option.color
+                              : theme.colors.border,
+                          backgroundColor:
+                            selectedTeamId === option.teamId
+                              ? option.color + "20"
+                              : "transparent",
+                        },
+                      ]}
+                      onPress={() => handleTeamSelect(option.teamId)}
                     >
-                      <Ionicons name="close" color="white" size={16} />
-                    </TouchableOpacity>
-                    {image.fileSize && (
-                      <Text style={themed($imageSizeText)}>
-                        {(image.fileSize / 1024 / 1024).toFixed(1)}MB
+                      <Text style={themed($typeIcon)}>{option.icon}</Text>
+                      <Text
+                        style={[
+                          themed($typeLabel),
+                          {
+                            color:
+                              selectedTeamId === option.teamId
+                                ? option.color
+                                : theme.colors.text,
+                          },
+                        ]}
+                      >
+                        {option.label}
                       </Text>
-                    )}
-                    <View style={themed($mediaTypeIndicator)}>
-                      <Ionicons name="image" color="white" size={12} />
-                    </View>
-                  </View>
-                ))}
-
-                {/* 동영상 미리보기 */}
-                {selectedVideos.map((video, index) => (
-                  <View
-                    key={`video-${index}`}
-                    style={themed($imagePreviewItem)}
-                  >
-                    <View style={themed($videoPreviewContainer)}>
-                      <View style={themed($videoPlaceholder)}>
-                        <Ionicons name="play" color="white" size={24} />
-                      </View>
-                      {video.duration && (
-                        <Text style={themed($videoDurationText)}>
-                          {Math.floor(video.duration / 60)}:
-                          {(video.duration % 60).toFixed(0).padStart(2, "0")}
-                        </Text>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      style={themed($imageRemoveButton)}
-                      onPress={() => handleRemoveVideo(index)}
-                    >
-                      <Ionicons name="close" color="white" size={16} />
-                    </TouchableOpacity>
-                    {video.fileSize && (
-                      <Text style={themed($imageSizeText)}>
-                        {(video.fileSize / 1024 / 1024).toFixed(1)}MB
+                      <Text style={themed($sportLabel)}>
+                        {option.sportName}
                       </Text>
-                    )}
-                    <View style={themed($mediaTypeIndicator)}>
-                      <Ionicons name="videocam" color="white" size={12} />
-                    </View>
-                  </View>
-                ))}
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </ScrollView>
+            ) : (
+              <View style={themed($emptyTeamsContainer)}>
+                <Text style={themed($emptyTeamsText)}>
+                  응원할 팀을 먼저 선택해주세요
+                </Text>
+                <TouchableOpacity
+                  style={themed($selectTeamButton)}
+                  onPress={handleGoToTeamSelection}
+                >
+                  <Ionicons name="heart" color="white" size={16} />
+                  <Text style={themed($selectTeamButtonText)}>팀 선택하기</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {layoutVariant === "trendy" && (
+          <TrendyCreatePostSection
+            teamOptions={teamOptions}
+            teamsLoading={teamsLoading}
+            selectedTeamId={selectedTeamId}
+            onSelectTeam={handleTeamSelect}
+            onGoTeamSelection={handleGoToTeamSelection}
+            title={title}
+            setTitle={setTitle}
+            content={content}
+            setContent={setContent}
+            isSubmitting={isSubmitting}
+            onPickMedia={handleMediaPicker}
+            selectedCount={selectedImages.length + selectedVideos.length}
+          />
+        )}
+
+        {/* 제목 입력 영역 (모던) */}
+        {layoutVariant === "modern" && (
+          <View style={themed($titleSection)}>
+            <Text style={themed($sectionTitle)}>제목</Text>
+            <TextInput
+              style={themed($titleInput)}
+              placeholder="게시물 제목을 입력하세요"
+              placeholderTextColor={theme.colors.textDim}
+              value={title}
+              onChangeText={setTitle}
+              maxLength={200}
+              editable={!isSubmitting}
+            />
+            <View style={themed($characterCount)}>
+              <Text style={themed($characterCountText)}>
+                {title.length}/200
+              </Text>
             </View>
-          )}
-        </View>
+          </View>
+        )}
+
+        {/* 내용 입력 영역 (모던) */}
+        {layoutVariant === "modern" && (
+          <View style={themed($contentSection)}>
+            <Text style={themed($sectionTitle)}>내용</Text>
+            <TextInput
+              style={themed($textInput)}
+              placeholder={t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER)}
+              placeholderTextColor={theme.colors.textDim}
+              value={content}
+              onChangeText={setContent}
+              multiline
+              textAlignVertical="top"
+              maxLength={10000}
+              editable={!isSubmitting}
+            />
+            <View style={themed($characterCount)}>
+              <Text style={themed($characterCountText)}>
+                {content.length}/10000
+              </Text>
+            </View>
+
+            {/* 미디어 업로드 버튼 */}
+            <TouchableOpacity
+              style={themed($imageUploadButton)}
+              onPress={handleMediaPicker}
+              disabled={
+                isSubmitting ||
+                selectedImages.length + selectedVideos.length >= 4
+              }
+            >
+              <Ionicons name="image" color={theme.colors.tint} size={20} />
+              <Text style={themed($imageUploadText)}>
+                미디어 추가 ({selectedImages.length + selectedVideos.length}/4)
+              </Text>
+            </TouchableOpacity>
+            {/* 선택된 미디어 미리보기 (modern/split은 상단에서 처리, dock에서는 여기서도 노출 생략) */}
+            {allSelectedMedia.length === 0 && (
+              <View style={themed($emptyHint)}>
+                <Text style={themed($emptyHintText)}>
+                  미디어를 추가하면 상단에 표시됩니다
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* 태그 입력 영역 (모던) */}
+        {
+          <View style={themed($tagSection)}>
+            <Text style={themed($sectionTitle)}>태그</Text>
+            <TagInput
+              tags={tags}
+              onTagsChange={setTags}
+              suggestedTags={popularTags}
+              disabled={isSubmitting}
+              maxTags={10}
+            />
+          </View>
+        }
+
+        {layoutVariant === "creative" && (
+          <CreativeCreatePostSection
+            teamOptions={teamOptions}
+            teamsLoading={teamsLoading}
+            selectedTeamId={selectedTeamId}
+            onSelectTeam={handleTeamSelect}
+            title={title}
+            setTitle={setTitle}
+            content={content}
+            setContent={setContent}
+            isSubmitting={isSubmitting}
+            onPickMedia={handleMediaPicker}
+            selectedCount={selectedImages.length + selectedVideos.length}
+          />
+        )}
       </ScrollView>
+      <AppDialog
+        visible={dialog.visible}
+        onClose={() => setDialog({ ...dialog, visible: false })}
+        title={dialog.title}
+        description={dialog.description}
+        confirmText="확인"
+        onConfirm={() => {
+          setDialog({ ...dialog, visible: false });
+          dialog.onConfirm?.();
+        }}
+        showCancel={dialog.showCancel}
+        cancelText="취소"
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -915,6 +989,38 @@ const $publishButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
 
 const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
+});
+
+// 레이아웃 변형 탭
+const $variantTabs: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  gap: spacing.xs,
+  paddingHorizontal: spacing.md,
+  paddingTop: spacing.xs,
+  paddingBottom: spacing.sm,
+  backgroundColor: colors.background,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $variantTab: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 999,
+  backgroundColor: colors.backgroundAlt,
+});
+
+const $variantTabActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.tint + "15",
+  borderColor: colors.tint,
+});
+
+const $variantTabText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "600",
 });
 
 const $userSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -1206,4 +1312,144 @@ const $mediaTypeIndicator: ThemedStyle<ViewStyle> = () => ({
   height: 20,
   justifyContent: "center",
   alignItems: "center",
+});
+
+// 모던 상단바
+const $mediaToolbar: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  backgroundColor: colors.background,
+});
+
+const $mediaToolbarContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  gap: spacing.sm,
+});
+
+const $mediaToolbarItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginRight: spacing.xs,
+});
+
+const $mediaToolbarThumb: ThemedStyle<ImageStyle> = () => ({
+  width: 56,
+  height: 56,
+  borderRadius: 12,
+});
+
+const $videoBadgeBg: ThemedStyle<ViewStyle> = () => ({
+  backgroundColor: "rgba(0,0,0,0.7)",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+// 분할형 히어로
+const $heroContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.backgroundAlt,
+  height: 180,
+});
+
+const $heroImage: ThemedStyle<ImageStyle> = () => ({
+  width: "100%",
+  height: "100%",
+});
+
+const $heroVideoPlaceholder: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "center",
+});
+
+const $heroEmpty: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: colors.backgroundAlt,
+});
+
+const $heroEmptyText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.textDim,
+  marginTop: spacing.xs,
+});
+
+const $heroThumbRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+});
+
+const $heroThumb: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginRight: spacing.xs,
+});
+
+const $heroThumbImg: ThemedStyle<ImageStyle> = () => ({
+  width: 56,
+  height: 56,
+  borderRadius: 10,
+});
+
+// 도크형
+const $dockBar: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  paddingVertical: spacing.sm,
+  paddingHorizontal: spacing.md,
+  backgroundColor: colors.card,
+  borderTopWidth: 1,
+  borderTopColor: colors.border,
+});
+
+const $dockItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginRight: spacing.sm,
+});
+
+const $dockThumb: ThemedStyle<ImageStyle> = () => ({
+  width: 48,
+  height: 48,
+  borderRadius: 10,
+});
+
+const $dockEmpty: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+  paddingVertical: spacing.xs,
+});
+
+const $dockEmptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 12,
+});
+
+const $fab: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  position: "absolute",
+  right: spacing.lg,
+  bottom: spacing.xl + 8,
+  width: 48,
+  height: 48,
+  borderRadius: 24,
+  backgroundColor: colors.tint,
+  justifyContent: "center",
+  alignItems: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.2,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 6,
+});
+
+const $emptyHint: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  marginTop: spacing.md,
+});
+
+const $emptyHintText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 12,
+});
+
+const $tagSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.md,
 });

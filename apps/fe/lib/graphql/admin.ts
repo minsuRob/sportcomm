@@ -14,6 +14,13 @@ export const GET_ADMIN_CHAT_ROOMS = gql`
         maxParticipants
         currentParticipants
         totalMessages
+        teamId
+        team {
+          id
+          name
+          color
+          icon
+        }
         createdAt
         updatedAt
         lastMessageContent
@@ -33,12 +40,14 @@ export const CREATE_CHAT_ROOM = gql`
     $description: String
     $type: ChatRoomType = PUBLIC
     $maxParticipants: Int = 100
+    $teamId: String
   ) {
     adminCreateChatRoom(
       name: $name
       description: $description
       type: $type
       maxParticipants: $maxParticipants
+      teamId: $teamId
     ) {
       id
       name
@@ -48,6 +57,13 @@ export const CREATE_CHAT_ROOM = gql`
       maxParticipants
       currentParticipants
       totalMessages
+      teamId
+      team {
+        id
+        name
+        color
+        icon
+      }
       createdAt
       updatedAt
     }
@@ -61,6 +77,7 @@ export const UPDATE_CHAT_ROOM = gql`
     $description: String
     $maxParticipants: Int
     $isRoomActive: Boolean
+    $teamId: String
   ) {
     adminUpdateChatRoom(
       roomId: $roomId
@@ -68,6 +85,7 @@ export const UPDATE_CHAT_ROOM = gql`
       description: $description
       maxParticipants: $maxParticipants
       isRoomActive: $isRoomActive
+      teamId: $teamId
     ) {
       id
       name
@@ -77,6 +95,13 @@ export const UPDATE_CHAT_ROOM = gql`
       maxParticipants
       currentParticipants
       totalMessages
+      teamId
+      team {
+        id
+        name
+        color
+        icon
+      }
       createdAt
       updatedAt
     }
@@ -181,7 +206,6 @@ export const GET_ADMIN_REPORTS = gql`
         type
         status
         reason
-        description
         reporter {
           id
           nickname
@@ -192,7 +216,7 @@ export const GET_ADMIN_REPORTS = gql`
           nickname
           email
         }
-        reportedPost {
+        post {
           id
           title
           content
@@ -218,7 +242,10 @@ export const GET_ADMIN_TEAMS = gql`
       name
       color
       icon
-      category
+      sport {
+        id
+        name
+      }
       isActive
       createdAt
       updatedAt
@@ -237,7 +264,10 @@ export const GET_ADMIN_TEAMS_BY_CATEGORY = gql`
         name
         color
         icon
-        category
+        sport {
+          id
+          name
+        }
         isActive
         createdAt
         updatedAt
@@ -253,7 +283,10 @@ export const CREATE_TEAM = gql`
       name
       color
       icon
-      category
+      sport {
+        id
+        name
+      }
       isActive
       createdAt
       updatedAt
@@ -268,7 +301,10 @@ export const UPDATE_TEAM = gql`
       name
       color
       icon
-      category
+      sport {
+        id
+        name
+      }
       isActive
       createdAt
       updatedAt
@@ -289,7 +325,10 @@ export const TOGGLE_TEAM_STATUS = gql`
       name
       color
       icon
-      category
+      sport {
+        id
+        name
+      }
       isActive
       createdAt
       updatedAt
@@ -325,7 +364,7 @@ export const UPDATE_REPORT_STATUS = gql`
         nickname
         email
       }
-      reportedPost {
+      post {
         id
         title
         content
@@ -444,6 +483,82 @@ export const UPDATE_FEEDBACK_PRIORITY = gql`
     adminUpdateFeedbackPriority(feedbackId: $feedbackId, priority: $priority) {
       id
       priority
+      updatedAt
+    }
+  }
+`;
+
+// === 스포츠 카테고리 관리 GraphQL ===
+
+export const CREATE_SPORT = gql`
+  mutation AdminCreateSport($input: CreateSportInput!) {
+    adminCreateSport(input: $input) {
+      id
+      name
+      icon
+      description
+      sortOrder
+      isActive
+      teams {
+        id
+        name
+        color
+        icon
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_SPORT = gql`
+  mutation AdminUpdateSport($id: String!, $input: UpdateSportInput!) {
+    adminUpdateSport(id: $id, input: $input) {
+      id
+      name
+      icon
+      description
+      sortOrder
+      isActive
+      teams {
+        id
+        name
+        color
+        icon
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const DELETE_SPORT = gql`
+  mutation AdminDeleteSport($id: String!) {
+    adminDeleteSport(id: $id)
+  }
+`;
+
+// === 팀 로고 업데이트 (관리자 전용) ===
+export const UPDATE_TEAM_LOGO = gql`
+  mutation UpdateTeamLogo($input: UpdateTeamLogoInput!) {
+    updateTeamLogo(input: $input) {
+      id
+      logoUrl
+      updatedAt
+    }
+  }
+`;
+
+export const TOGGLE_SPORT_STATUS = gql`
+  mutation AdminToggleSportStatus($id: String!) {
+    adminToggleSportStatus(id: $id) {
+      id
+      name
+      icon
+      description
+      sortOrder
+      isActive
+      createdAt
       updatedAt
     }
   }

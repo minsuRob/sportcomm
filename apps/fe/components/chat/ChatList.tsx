@@ -12,17 +12,18 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import ChatMessage, {
-  Message as ChatMessageType,
-  MessageWithIsMe,
-} from "./ChatMessage";
+import ChatMessage, { Message as ChatMessageType } from "./ChatMessage";
 import { User } from "@/lib/auth";
 import dayjs from "dayjs";
 import {
   useModerationActions,
   ModerationTarget,
-} from "@/lib/useModerationActions";
+} from "@/hooks/useModerationActions";
 import ReportModal from "../ReportModal";
+import { useQuery } from "@apollo/client";
+import { GET_BLOCKED_USERS } from "@/lib/graphql";
+import UserContextMenu from "../shared/UserContextMenu";
+type MessageWithIsMe = Message & { isMe: boolean };
 
 // ChatList에서 사용하는 Message 타입 (GraphQL 응답과 호환)
 export interface Message {
@@ -34,6 +35,8 @@ export interface Message {
     id: string;
     nickname: string;
     profileImageUrl?: string;
+    age?: number;
+    myTeamLogos?: string[];
   };
   replyTo?: {
     id: string;
@@ -138,6 +141,25 @@ export default function ChatList({
   const { themed, theme } = useAppTheme();
   const flatListRef = useRef<FlatList>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [contextMenuVisible, setContextMenuVisible] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+
+  // 차단 사용자 목록 조회
+  const { data: blockedUsersData } = useQuery<{
+    getBlockedUsers: string[];
+  }>(GET_BLOCKED_USERS, { fetchPolicy: "cache-and-network" });
+
+  useEffect(() => {
+    if (blockedUsersData?.getBlockedUsers) {
+      setBlockedUserIds(blockedUsersData.getBlockedUsers);
+    }
+  }, [blockedUsersData]);
+
+  const handleBlockUser = (blockedUserId: string) => {
+    setBlockedUserIds((prev) => [...prev, blockedUserId]);
+    setContextMenuVisible(false);
+  };
 
   // 신고/차단 기능
   const {
@@ -145,19 +167,21 @@ export default function ChatList({
     reportTarget,
     closeReportModal,
     showModerationOptions,
-  } = useModerationActions();
+  } = useModerationActions(handleBlockUser);
 
-  // 메시지에 현재 사용자 정보 추가
-  const messagesWithIsMe: MessageWithIsMe[] = messages.map((message) => ({
-    ...message,
-    isMe: currentUser?.id === message.user_id,
-  }));
+  // 차단된 사용자 메시지 필터링 및 isMe 추가
+  const messagesWithIsMe: MessageWithIsMe[] = messages
+    .filter((message) => !blockedUserIds.includes(message.user_id))
+    .map((message) => ({
+      ...message,
+      isMe: currentUser?.id === message.user_id,
+    }));
 
   /**
    * 메시지를 ChatMessage 컴포넌트 형식으로 변환
    */
   const convertToChatMessage = (
-    message: MessageWithIsMe,
+    message: MessageWithIsMe
   ): ChatMessageType & { isMe: boolean } => {
     return {
       id: message.id,
@@ -185,6 +209,11 @@ export default function ChatList({
       messageContent: message.content,
     };
     showModerationOptions(target);
+  };
+
+  const handleMorePress = (message: Message) => {
+    setSelectedMessage(message);
+    setContextMenuVisible(true);
   };
 
   // 날짜 구분선이 있는 최종 데이터
@@ -239,6 +268,25 @@ export default function ChatList({
     const message = item as MessageWithIsMe;
     const convertedMessage = convertToChatMessage(message);
 
+    // 내 메시지인 경우, 프로필에서 age와 myTeams 로고를 함께 전달 (최대 3개 표시)
+    const userMeta = message.isMe
+      ? {
+          age: (currentUser as any)?.age ?? message.user.age,
+          teamLogos: (
+            (currentUser as any)?.myTeams
+              ?.filter((t: any) => t?.team?.logoUrl)
+              .map((t: any) => t.team.logoUrl) ||
+            message.user.myTeamLogos ||
+            []
+          ).slice(0, 3),
+        }
+      : message.user
+        ? {
+            age: message.user.age,
+            teamLogos: (message.user.myTeamLogos || []).slice(0, 3),
+          }
+        : undefined;
+
     // 연속된 메시지인지 확인 (아바타 표시 여부 결정)
     const showAvatar = (() => {
       if (message.isMe) return false; // 내 메시지는 항상 아바타 숨김
@@ -264,6 +312,8 @@ export default function ChatList({
           onLongPressMessage ? () => onLongPressMessage(message) : undefined
         }
         onModerationAction={handleModerationAction}
+        userMeta={userMeta}
+        onMorePress={handleMorePress}
       />
     );
   };
@@ -337,6 +387,20 @@ export default function ChatList({
         reportedUserId={reportTarget?.userId}
         reportedUserName={reportTarget?.userName}
       />
+
+      {/* 사용자 컨텍스트 메뉴 */}
+      {selectedMessage && (
+        <UserContextMenu
+          visible={contextMenuVisible}
+          onClose={() => setContextMenuVisible(false)}
+          targetUser={{
+            id: selectedMessage.user.id,
+            nickname: selectedMessage.user.nickname,
+          }}
+          currentUserId={currentUser?.id}
+          onBlockUser={handleBlockUser}
+        />
+      )}
     </View>
   );
 }

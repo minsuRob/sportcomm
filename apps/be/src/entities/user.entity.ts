@@ -8,6 +8,9 @@ import {
   IsEnum,
   IsUUID,
   IsOptional,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { Post } from './post.entity';
 import { Comment } from './comment.entity';
@@ -130,6 +133,19 @@ export class User {
   email: string;
 
   /**
+   * 사용자 포인트
+   * 유료 메시지/꾸미기 등에 사용되는 가상 자산 값입니다.
+   */
+  @Field(() => Number, { description: '사용자 포인트', defaultValue: 0 })
+  @Column({
+    type: 'integer',
+    default: 0,
+    nullable: false,
+    comment: '사용자 포인트 (기본값 0)',
+  })
+  points: number;
+
+  /**
    * 사용자 비밀번호 (해시된 값) - DEPRECATED
    * Supabase Auth를 사용하므로 더 이상 사용하지 않습니다.
    * 레거시 호환성을 위해 유지됩니다.
@@ -186,6 +202,22 @@ export class User {
   @IsString({ message: '자기소개는 문자열이어야 합니다.' })
   @MaxLength(500, { message: '자기소개는 최대 500자까지 가능합니다.' })
   bio?: string;
+
+  /**
+   * 사용자 나이
+   * 선택적 필드입니다. 1-120 사이의 값만 허용됩니다.
+   */
+  @Field(() => Number, { nullable: true, description: '사용자 나이' })
+  @Column({
+    type: 'integer',
+    nullable: true,
+    comment: '사용자 나이',
+  })
+  @IsOptional()
+  @IsNumber({}, { message: '나이는 숫자여야 합니다.' })
+  @Min(1, { message: '나이는 1세 이상이어야 합니다.' })
+  @Max(120, { message: '나이는 120세 이하여야 합니다.' })
+  age?: number;
 
   /**
    * 이메일 인증 여부
@@ -369,7 +401,10 @@ export interface CombinedUserInfo {
   role: UserRole;
   profileImageUrl?: string;
   bio?: string;
+  age?: number;
   isActive: boolean;
+  /** 사용자 포인트 (가상 자산) */
+  points?: number;
   // 공통 정보
   createdAt: Date;
   updatedAt: Date;

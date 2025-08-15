@@ -4,30 +4,32 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Not, Repository } from 'typeorm';
 import { User } from '../../entities/user.entity';
+import { Team } from '../../entities/team.entity';
+import { Sport } from '../../entities/sport.entity';
 import {
   CreateTeamInput,
   UpdateTeamInput,
   TeamInfo,
   SportCategoryInfo,
-  TeamCategory,
 } from './dto/team-management.dto';
 
 /**
  * 팀 관리 서비스
  *
  * 팀 데이터를 관리하는 서비스입니다.
- * 현재는 메모리 기반으로 구현되어 있으며, 필요시 데이터베이스로 확장 가능합니다.
+ * 데이터베이스 기반으로 구현되어 있습니다.
  */
 @Injectable()
 export class TeamManagementService {
-  // 메모리 기반 팀 데이터 저장소
-  private teams: Map<string, TeamInfo> = new Map();
-
-  constructor() {
-    // 초기 팀 데이터 로드
-    this.initializeDefaultTeams();
-  }
+  constructor(
+    @InjectRepository(Team)
+    private readonly teamRepository: Repository<Team>,
+    @InjectRepository(Sport)
+    private readonly sportRepository: Repository<Sport>,
+  ) {}
 
   /**
    * 관리자 권한 확인
@@ -39,130 +41,24 @@ export class TeamManagementService {
   }
 
   /**
-   * 기본 팀 데이터 초기화
+   * Team 엔티티를 TeamInfo DTO로 변환
    */
-  private initializeDefaultTeams(): void {
-    const defaultTeams = [
-      // 축구팀
-      {
-        id: 'TOTTENHAM',
-        name: '토트넘',
-        color: '#132257',
-        icon: '⚽',
-        category: TeamCategory.SOCCER,
-      },
-      {
-        id: 'NEWCASTLE',
-        name: '뉴캐슬',
-        color: '#241F20',
-        icon: '⚽',
-        category: TeamCategory.SOCCER,
-      },
-      {
-        id: 'ATLETICO_MADRID',
-        name: '아틀레티코',
-        color: '#CE2029',
-        icon: '⚽',
-        category: TeamCategory.SOCCER,
-      },
-      {
-        id: 'MANCHESTER_CITY',
-        name: '맨시티',
-        color: '#6CABDD',
-        icon: '⚽',
-        category: TeamCategory.SOCCER,
-      },
-      {
-        id: 'LIVERPOOL',
-        name: '리버풀',
-        color: '#C8102E',
-        icon: '⚽',
-        category: TeamCategory.SOCCER,
-      },
-      // 야구팀
-      {
-        id: 'DOOSAN_BEARS',
-        name: '두산',
-        color: '#131230',
-        icon: '⚾',
-        category: TeamCategory.BASEBALL,
-      },
-      {
-        id: 'HANWHA_EAGLES',
-        name: '한화',
-        color: '#FF6600',
-        icon: '⚾',
-        category: TeamCategory.BASEBALL,
-      },
-      {
-        id: 'LG_TWINS',
-        name: 'LG',
-        color: '#C30452',
-        icon: '⚾',
-        category: TeamCategory.BASEBALL,
-      },
-      {
-        id: 'SAMSUNG_LIONS',
-        name: '삼성',
-        color: '#074CA1',
-        icon: '⚾',
-        category: TeamCategory.BASEBALL,
-      },
-      {
-        id: 'KIA_TIGERS',
-        name: 'KIA',
-        color: '#EA0029',
-        icon: '⚾',
-        category: TeamCategory.BASEBALL,
-      },
-      // e스포츠팀
-      {
-        id: 'T1',
-        name: 'T1',
-        color: '#E2012D',
-        icon: '🎮',
-        category: TeamCategory.ESPORTS,
-      },
-      {
-        id: 'GENG',
-        name: 'Gen.G',
-        color: '#AA8B56',
-        icon: '🎮',
-        category: TeamCategory.ESPORTS,
-      },
-      {
-        id: 'DRX',
-        name: 'DRX',
-        color: '#2E5BFF',
-        icon: '🎮',
-        category: TeamCategory.ESPORTS,
-      },
-      {
-        id: 'KT_ROLSTER',
-        name: 'KT',
-        color: '#D4002A',
-        icon: '🎮',
-        category: TeamCategory.ESPORTS,
-      },
-      {
-        id: 'DAMWON_KIA',
-        name: '담원',
-        color: '#004B9F',
-        icon: '🎮',
-        category: TeamCategory.ESPORTS,
-      },
-    ];
-
-    const now = new Date();
-    defaultTeams.forEach((teamData) => {
-      const team: TeamInfo = {
-        ...teamData,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      };
-      this.teams.set(team.id, team);
-    });
+  private teamToTeamInfo(team: Team): TeamInfo {
+    if (!team.sport) {
+      throw new NotFoundException(
+        `Team with id ${team.id} has no associated sport.`,
+      );
+    }
+    return {
+      id: team.id,
+      name: team.name,
+      color: team.color,
+      icon: team.icon,
+      sport: team.sport,
+      isActive: team.isActive,
+      createdAt: team.createdAt,
+      updatedAt: team.updatedAt,
+    };
   }
 
   /**
@@ -170,9 +66,13 @@ export class TeamManagementService {
    */
   async getAllTeams(adminUser: User): Promise<TeamInfo[]> {
     this.validateAdminPermission(adminUser);
-    return Array.from(this.teams.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+
+    const teams = await this.teamRepository.find({
+      relations: ['sport'],
+      order: { name: 'ASC' },
+    });
+
+    return teams.map((team) => this.teamToTeamInfo(team));
   }
 
   /**
@@ -181,30 +81,26 @@ export class TeamManagementService {
   async getTeamsByCategory(adminUser: User): Promise<SportCategoryInfo[]> {
     this.validateAdminPermission(adminUser);
 
-    const categoryMap = new Map<TeamCategory, TeamInfo[]>();
-
-    // 팀들을 카테고리별로 그룹화
-    Array.from(this.teams.values()).forEach((team) => {
-      if (!categoryMap.has(team.category)) {
-        categoryMap.set(team.category, []);
-      }
-      categoryMap.get(team.category)!.push(team);
+    const sports = await this.sportRepository.find({
+      relations: ['teams'],
+      where: { isActive: true },
+      order: {
+        sortOrder: 'ASC',
+        name: 'ASC',
+        teams: { sortOrder: 'ASC', name: 'ASC' },
+      },
     });
 
-    // 카테고리 정보 생성
-    const categories: SportCategoryInfo[] = [];
-
-    categoryMap.forEach((teams, category) => {
-      const categoryInfo = this.getCategoryInfo(category);
-      categories.push({
-        id: category,
-        name: categoryInfo.name,
-        icon: categoryInfo.icon,
-        teams: teams.sort((a, b) => a.name.localeCompare(b.name)),
-      });
-    });
-
-    return categories.sort((a, b) => a.name.localeCompare(b.name));
+    return sports.map((sport) => ({
+      id: sport.id,
+      name: sport.name,
+      icon: sport.icon,
+      teams: sport.teams.map((team) => {
+        // team 객체에 sport 정보를 수동으로 할당
+        team.sport = sport;
+        return this.teamToTeamInfo(team);
+      }),
+    }));
   }
 
   /**
@@ -213,12 +109,16 @@ export class TeamManagementService {
   async getTeamById(adminUser: User, teamId: string): Promise<TeamInfo> {
     this.validateAdminPermission(adminUser);
 
-    const team = this.teams.get(teamId);
+    const team = await this.teamRepository.findOne({
+      where: { id: teamId },
+      relations: ['sport'],
+    });
+
     if (!team) {
       throw new NotFoundException('팀을 찾을 수 없습니다.');
     }
 
-    return team;
+    return this.teamToTeamInfo(team);
   }
 
   /**
@@ -227,31 +127,55 @@ export class TeamManagementService {
   async createTeam(adminUser: User, input: CreateTeamInput): Promise<TeamInfo> {
     this.validateAdminPermission(adminUser);
 
-    // 중복 ID 확인
-    if (this.teams.has(input.id)) {
-      throw new ConflictException('이미 존재하는 팀 ID입니다.');
+    // 스포츠 카테고리 찾기
+    const sport = await this.sportRepository.findOne({
+      where: { id: input.sportId },
+    });
+    if (!sport) {
+      throw new NotFoundException('해당 스포츠 카테고리를 찾을 수 없습니다.');
     }
 
-    // 중복 이름 확인
-    const existingTeam = Array.from(this.teams.values()).find(
-      (team) => team.name === input.name && team.category === input.category,
-    );
-    if (existingTeam) {
+    // 중복 이름 확인 (같은 스포츠 내에서)
+    const existingTeamByName = await this.teamRepository.findOne({
+      where: { name: input.name, sport: { id: sport.id } },
+    });
+    if (existingTeamByName) {
       throw new ConflictException(
         '같은 카테고리에 이미 존재하는 팀 이름입니다.',
       );
     }
 
-    const now = new Date();
-    const team: TeamInfo = {
-      ...input,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    };
+    // 정렬 순서 계산
+    const lastTeam = await this.teamRepository.findOne({
+      where: { sport: { id: sport.id } },
+      order: { sortOrder: 'DESC' },
+    });
+    const sortOrder = (lastTeam?.sortOrder || 0) + 1;
 
-    this.teams.set(team.id, team);
-    return team;
+    // 팀 생성
+    const team = this.teamRepository.create({
+      name: input.name,
+      code: input.name.substring(0, 3).toUpperCase(),
+      color: input.color,
+      icon: input.icon,
+      sport: sport,
+      sortOrder,
+      isActive: true,
+    });
+
+    const savedTeam = await this.teamRepository.save(team);
+
+    // sport 관계를 포함하여 다시 조회
+    const newTeam = await this.teamRepository.findOne({
+      where: { id: savedTeam.id },
+      relations: ['sport'],
+    });
+
+    if (!newTeam) {
+      throw new NotFoundException('생성된 팀을 찾을 수 없습니다.');
+    }
+
+    return this.teamToTeamInfo(newTeam);
   }
 
   /**
@@ -264,19 +188,34 @@ export class TeamManagementService {
   ): Promise<TeamInfo> {
     this.validateAdminPermission(adminUser);
 
-    const team = this.teams.get(teamId);
+    const team = await this.teamRepository.findOne({
+      where: { id: teamId },
+      relations: ['sport'],
+    });
     if (!team) {
       throw new NotFoundException('팀을 찾을 수 없습니다.');
     }
 
-    // 이름 중복 확인 (다른 팀과 중복되는지)
+    // 스포츠 카테고리 변경 시 처리
+    if (input.sportId && team.sport?.id !== input.sportId) {
+      const newSport = await this.sportRepository.findOne({
+        where: { id: input.sportId },
+      });
+      if (!newSport) {
+        throw new NotFoundException('해당 스포츠 카테고리를 찾을 수 없습니다.');
+      }
+      team.sport = newSport;
+    }
+
+    // 이름 중복 확인
     if (input.name && input.name !== team.name) {
-      const existingTeam = Array.from(this.teams.values()).find(
-        (t) =>
-          t.id !== teamId &&
-          t.name === input.name &&
-          t.category === (input.category || team.category),
-      );
+      const existingTeam = await this.teamRepository.findOne({
+        where: {
+          name: input.name,
+          sport: { id: team.sport?.id },
+          id: Not(teamId),
+        },
+      });
       if (existingTeam) {
         throw new ConflictException(
           '같은 카테고리에 이미 존재하는 팀 이름입니다.',
@@ -285,14 +224,14 @@ export class TeamManagementService {
     }
 
     // 팀 정보 업데이트
-    const updatedTeam: TeamInfo = {
-      ...team,
-      ...input,
-      updatedAt: new Date(),
-    };
+    if (input.name) team.name = input.name;
+    if (input.color) team.color = input.color;
+    if (input.icon) team.icon = input.icon;
+    if (input.logoUrl) team.logoUrl = input.logoUrl;
+    team.updatedAt = new Date();
 
-    this.teams.set(teamId, updatedTeam);
-    return updatedTeam;
+    const savedTeam = await this.teamRepository.save(team);
+    return this.teamToTeamInfo(savedTeam);
   }
 
   /**
@@ -301,12 +240,14 @@ export class TeamManagementService {
   async deleteTeam(adminUser: User, teamId: string): Promise<boolean> {
     this.validateAdminPermission(adminUser);
 
-    const team = this.teams.get(teamId);
+    const team = await this.teamRepository.findOne({
+      where: { id: teamId },
+    });
     if (!team) {
       throw new NotFoundException('팀을 찾을 수 없습니다.');
     }
 
-    this.teams.delete(teamId);
+    await this.teamRepository.remove(team);
     return true;
   }
 
@@ -316,37 +257,19 @@ export class TeamManagementService {
   async toggleTeamStatus(adminUser: User, teamId: string): Promise<TeamInfo> {
     this.validateAdminPermission(adminUser);
 
-    const team = this.teams.get(teamId);
+    const team = await this.teamRepository.findOne({
+      where: { id: teamId },
+      relations: ['sport'],
+    });
     if (!team) {
       throw new NotFoundException('팀을 찾을 수 없습니다.');
     }
 
-    const updatedTeam: TeamInfo = {
-      ...team,
-      isActive: !team.isActive,
-      updatedAt: new Date(),
-    };
+    team.isActive = !team.isActive;
+    team.updatedAt = new Date();
 
-    this.teams.set(teamId, updatedTeam);
-    return updatedTeam;
-  }
-
-  /**
-   * 카테고리 정보 반환
-   */
-  private getCategoryInfo(category: TeamCategory): {
-    name: string;
-    icon: string;
-  } {
-    const categoryInfoMap = {
-      [TeamCategory.SOCCER]: { name: '축구', icon: '⚽' },
-      [TeamCategory.BASEBALL]: { name: '야구', icon: '⚾' },
-      [TeamCategory.ESPORTS]: { name: 'e스포츠', icon: '🎮' },
-      [TeamCategory.BASKETBALL]: { name: '농구', icon: '🏀' },
-      [TeamCategory.VOLLEYBALL]: { name: '배구', icon: '🏐' },
-    };
-
-    return categoryInfoMap[category] || { name: '기타', icon: '🏆' };
+    const savedTeam = await this.teamRepository.save(team);
+    return this.teamToTeamInfo(savedTeam);
   }
 
   /**
@@ -354,20 +277,29 @@ export class TeamManagementService {
    * 프론트엔드에서 사용할 수 있는 형태로 팀 데이터를 반환합니다.
    */
   async exportTeamsForFrontend(): Promise<any> {
-    const categories = await this.getTeamsByCategory({
-      isAdmin: () => true,
-    } as User);
+    const sports = await this.sportRepository.find({
+      relations: ['teams'],
+      where: { isActive: true },
+      order: {
+        sortOrder: 'ASC',
+        name: 'ASC',
+        teams: { sortOrder: 'ASC', name: 'ASC' },
+      },
+    });
 
-    return categories.map((category) => ({
-      id: category.id.toLowerCase(),
-      name: category.name,
-      icon: category.icon,
-      teams: category.teams.map((team) => ({
-        id: team.id,
-        name: team.name,
-        color: team.color,
-        icon: team.icon,
-      })),
+    return sports.map((sport) => ({
+      id: sport.id,
+      name: sport.name,
+      icon: sport.icon,
+      teams: sport.teams
+        .filter((team) => team.isActive)
+        .map((team) => ({
+          id: team.id,
+          name: team.name,
+          color: team.color,
+          icon: team.icon,
+          logoUrl: team.logoUrl,
+        })),
     }));
   }
 }

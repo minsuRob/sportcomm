@@ -7,6 +7,8 @@ import {
   TextStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import UserAvatar from "@/components/users/UserAvatar";
+import ProfileContextPopover from "@/components/shared/ProfileContextPopover";
 import TeamFilterSelector from "@/components/TeamFilterSelector";
 import { NotificationBadge } from "@/components/notifications";
 import { useAppTheme } from "@/lib/theme/context";
@@ -17,9 +19,12 @@ interface FeedHeaderProps {
   currentUser: User | null;
   selectedTeamIds: string[] | null;
   onTeamSelect: (ids: string[] | null) => void;
+  loading?: boolean;
   onNotificationPress: () => void;
   onCreatePress: () => void;
   onProfilePress: () => void;
+  onShopPress: () => void;
+  onLotteryPress: () => void;
 }
 
 /**
@@ -30,24 +35,74 @@ export default function FeedHeader({
   currentUser,
   selectedTeamIds,
   onTeamSelect,
+  loading = false,
   onNotificationPress,
   onCreatePress,
   onProfilePress,
+  onShopPress,
+  onLotteryPress,
 }: FeedHeaderProps) {
   const { themed, theme } = useAppTheme();
+  const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
+  const anchorRef = React.useRef<View>(null);
+
+  const handleProfilePress = () => {
+    if (currentUser) {
+      // 로그인 상태면 컨텍스트 메뉴 오픈
+      setProfileMenuVisible(true);
+    } else {
+      // 비로그인 상태면 기존 프로필(=로그인/프로필) 화면 이동
+      onProfilePress();
+    }
+  };
 
   return (
     <View style={themed($header)}>
       <View style={themed($headerLeft)}>
-        <Text style={themed($logoText)}>SportComm</Text>
+        <Text style={themed($logoText)}>SportCom</Text>
       </View>
-      <Text style={themed($headerTitle)}>Home</Text>
       <View style={themed($headerRight)}>
+        {currentUser && (
+          <>
+            <TouchableOpacity
+              style={themed($pointsBadge)}
+              onPress={onShopPress}
+              activeOpacity={0.7}
+            >
+              <Text style={themed($pointsText)}>
+                💰 {currentUser.points ?? 0}P
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themed($lotteryButton)}
+              onPress={onLotteryPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="ticket-outline"
+                size={20}
+                color={theme.colors.tint}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themed($shopButton)}
+              onPress={onShopPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="storefront-outline"
+                size={20}
+                color={theme.colors.tint}
+              />
+            </TouchableOpacity>
+          </>
+        )}
         {currentUser && (
           <>
             <TeamFilterSelector
               onTeamSelect={onTeamSelect}
               selectedTeamIds={selectedTeamIds}
+              loading={loading}
             />
             <TouchableOpacity
               style={themed($iconButton)}
@@ -60,26 +115,43 @@ export default function FeedHeader({
               />
               <NotificationBadge size="small" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($iconButton)}
-              onPress={onCreatePress}
-            >
-              <Ionicons
-                name="add-outline"
-                size={22}
-                color={theme.colors.text}
-              />
-            </TouchableOpacity>
           </>
         )}
-        <TouchableOpacity style={themed($iconButton)} onPress={onProfilePress}>
-          <Ionicons
-            name={currentUser ? "person" : "person-outline"}
-            size={22}
-            color={theme.colors.text}
-          />
+        <TouchableOpacity
+          ref={anchorRef}
+          style={themed($iconButton)}
+          onPress={handleProfilePress}
+        >
+          {currentUser ? (
+            <UserAvatar
+              imageUrl={currentUser.profileImageUrl}
+              name={currentUser.nickname}
+              size={28}
+            />
+          ) : (
+            <Ionicons
+              name="person-outline"
+              size={22}
+              color={theme.colors.text}
+            />
+          )}
         </TouchableOpacity>
       </View>
+      {/* 프로필 컨텍스트 팝오버: 헤더 우측 아바타 아래 위치 */}
+      {currentUser && (
+        <ProfileContextPopover
+          visible={profileMenuVisible}
+          onClose={() => setProfileMenuVisible(false)}
+          onOpenProfile={() => {
+            setProfileMenuVisible(false);
+            onProfilePress();
+          }}
+          anchorStyle={{
+            top: 46,
+            right: 10,
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -130,4 +202,44 @@ const $iconButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
   justifyContent: "center",
   alignItems: "center",
   position: "relative",
+});
+
+const $pointsBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.sm,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: colors.backgroundAlt,
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: spacing.xs,
+});
+
+const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "700",
+});
+
+const $lotteryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.tint + "15",
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+  marginRight: spacing.xs,
+});
+
+const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.tint + "15",
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+  marginRight: spacing.xs,
 });

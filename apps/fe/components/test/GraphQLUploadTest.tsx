@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Alert } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useFileUpload } from "@/lib/api/fileUpload";
+import AppDialog from "@/components/ui/AppDialog";
 
 /**
  * GraphQL 파일 업로드 테스트 컴포넌트
@@ -11,13 +12,22 @@ export default function GraphQLUploadTest() {
   const { uploadFiles } = useFileUpload();
   const loading = false;
   const error = null;
+  const [dialog, setDialog] = useState<{
+    visible: boolean;
+    title: string;
+    description: string;
+  }>({ visible: false, title: "", description: "" });
 
   const handleImagePicker = async () => {
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("권한 필요", "갤러리 접근 권한이 필요합니다.");
+        setDialog({
+          visible: true,
+          title: "권한 필요",
+          description: "갤러리 접근 권한이 필요합니다.",
+        });
         return;
       }
 
@@ -34,24 +44,40 @@ export default function GraphQLUploadTest() {
       }
     } catch (error) {
       console.error("이미지 선택 실패:", error);
-      Alert.alert("오류", "이미지 선택 중 오류가 발생했습니다.");
+      setDialog({
+        visible: true,
+        title: "오류",
+        description: "이미지 선택 중 오류가 발생했습니다.",
+      });
     }
   };
 
   const handleUpload = async () => {
     if (selectedImages.length === 0) {
-      Alert.alert("알림", "업로드할 이미지를 선택해주세요.");
+      setDialog({
+        visible: true,
+        title: "알림",
+        description: "업로드할 이미지를 선택해주세요.",
+      });
       return;
     }
 
     try {
       const result = await uploadFiles(selectedImages);
       console.log("업로드 성공:", result);
-      Alert.alert("성공", `${result.length}개의 파일이 업로드되었습니다.`);
+      setDialog({
+        visible: true,
+        title: "성공",
+        description: `${result.length}개의 파일이 업로드되었습니다.`,
+      });
       setSelectedImages([]);
     } catch (error) {
       console.error("업로드 실패:", error);
-      Alert.alert("실패", "파일 업로드에 실패했습니다.");
+      setDialog({
+        visible: true,
+        title: "실패",
+        description: "파일 업로드에 실패했습니다.",
+      });
     }
   };
 
@@ -101,6 +127,14 @@ export default function GraphQLUploadTest() {
           선택된 이미지: {selectedImages.length}개
         </Text>
       )}
+      <AppDialog
+        visible={dialog.visible}
+        onClose={() => setDialog({ ...dialog, visible: false })}
+        title={dialog.title}
+        description={dialog.description}
+        confirmText="확인"
+        onConfirm={() => setDialog({ ...dialog, visible: false })}
+      />
     </View>
   );
 }

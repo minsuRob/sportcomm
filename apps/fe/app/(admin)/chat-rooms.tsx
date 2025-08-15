@@ -6,18 +6,19 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
-  Alert,
   Modal,
   TextInput,
   Switch,
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AppDialog from "@/components/ui/AppDialog";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
+import TeamSelector from "@/components/team/TeamSelector";
 import {
   GET_ADMIN_CHAT_ROOMS,
   CREATE_CHAT_ROOM,
@@ -35,6 +36,13 @@ interface ChatRoomInfo {
   maxParticipants: number;
   currentParticipants: number;
   totalMessages: number;
+  teamId?: string;
+  team?: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+  };
   createdAt: string;
   updatedAt: string;
   lastMessageContent?: string;
@@ -63,7 +71,9 @@ export default function AdminChatRoomsScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoomInfo | null>(null);
+  const [roomToDelete, setRoomToDelete] = useState<ChatRoomInfo | null>(null);
   const [page, setPage] = useState(1);
+  const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
 
   // GraphQL 쿼리 및 뮤테이션
   const { data, loading, error, refetch } = useQuery<ChatRoomsResponse>(
@@ -72,7 +82,7 @@ export default function AdminChatRoomsScreen() {
       variables: { page, limit: 20 },
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    },
+    }
   );
 
   const [createChatRoom, { loading: createLoading }] = useMutation(
@@ -100,7 +110,7 @@ export default function AdminChatRoomsScreen() {
           duration: 3000,
         });
       },
-    },
+    }
   );
 
   const [updateChatRoom, { loading: updateLoading }] = useMutation(
@@ -129,31 +139,43 @@ export default function AdminChatRoomsScreen() {
           duration: 3000,
         });
       },
-    },
+    }
   );
 
-  const [deleteChatRoom] = useMutation(DELETE_CHAT_ROOM, {
-    refetchQueries: [
-      { query: GET_ADMIN_CHAT_ROOMS, variables: { page, limit: 20 } },
-    ],
-    onCompleted: () => {
-      showToast({
-        type: "success",
-        title: "채팅방 삭제 완료",
-        message: "채팅방이 삭제되었습니다.",
-        duration: 2000,
-      });
-    },
-    onError: (error) => {
-      console.error("채팅방 삭제 실패:", error);
-      showToast({
-        type: "error",
-        title: "삭제 실패",
-        message: error.message || "채팅방 삭제 중 오류가 발생했습니다.",
-        duration: 3000,
-      });
-    },
-  });
+  const [deleteChatRoom, { loading: deleteLoading }] = useMutation(
+    DELETE_CHAT_ROOM,
+    {
+      refetchQueries: [
+        { query: GET_ADMIN_CHAT_ROOMS, variables: { page, limit: 20 } },
+      ],
+      onCompleted: (data, { variables }) => {
+        console.log("✅ 삭제 뮤테이션 성공:", data, variables);
+        showToast({
+          type: "success",
+          title: "채팅방 삭제 완료",
+          message: "채팅방이 성공적으로 삭제되었습니다.",
+          duration: 2000,
+        });
+        setDeletingRoomId(null); // 삭제 중인 방 ID 초기화
+      },
+      onError: (error) => {
+        console.error("❌ 삭제 뮤테이션 실패:", error);
+        console.error(
+          "❌ 에러 상세:",
+          error.message,
+          error.graphQLErrors,
+          error.networkError
+        );
+        showToast({
+          type: "error",
+          title: "삭제 실패",
+          message: error.message || "채팅방 삭제 중 오류가 발생했습니다.",
+          duration: 3000,
+        });
+        setDeletingRoomId(null); // 삭제 중인 방 ID 초기화
+      },
+    }
+  );
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -162,6 +184,7 @@ export default function AdminChatRoomsScreen() {
     type: "PUBLIC" as "PRIVATE" | "GROUP" | "PUBLIC",
     maxParticipants: 100,
     isRoomActive: true,
+    teamId: "",
   });
 
   // 데이터 처리
@@ -201,6 +224,7 @@ export default function AdminChatRoomsScreen() {
           description: formData.description || null,
           type: formData.type,
           maxParticipants: formData.maxParticipants,
+          teamId: formData.teamId || null,
         },
       });
     } catch (error) {
@@ -228,6 +252,7 @@ export default function AdminChatRoomsScreen() {
           description: formData.description || null,
           maxParticipants: formData.maxParticipants,
           isRoomActive: formData.isRoomActive,
+          teamId: formData.teamId || null,
         },
       });
     } catch (error) {
@@ -237,26 +262,21 @@ export default function AdminChatRoomsScreen() {
 
   // 채팅방 삭제 핸들러
   const handleDeleteRoom = (room: ChatRoomInfo) => {
-    Alert.alert(
-      "채팅방 삭제",
-      `${room.name} 채팅방을 삭제하시겠습니까?\n모든 메시지가 함께 삭제되며, 이 작업은 되돌릴 수 없습니다.`,
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "삭제",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteChatRoom({
-                variables: { roomId: room.id },
-              });
-            } catch (error) {
-              // 에러는 onError에서 처리됨
-            }
-          },
-        },
-      ],
-    );
+    setRoomToDelete(room);
+  };
+
+  const confirmDeleteRoom = async () => {
+    if (!roomToDelete) return;
+    setDeletingRoomId(roomToDelete.id);
+    try {
+      await deleteChatRoom({
+        variables: { roomId: roomToDelete.id },
+      });
+    } catch (error) {
+      // onError에서 처리
+    } finally {
+      setRoomToDelete(null);
+    }
   };
 
   // 채팅방 수정 모달 열기
@@ -268,6 +288,7 @@ export default function AdminChatRoomsScreen() {
       type: room.type,
       maxParticipants: room.maxParticipants,
       isRoomActive: room.isRoomActive,
+      teamId: room.teamId || "",
     });
     setShowEditModal(true);
   };
@@ -280,6 +301,7 @@ export default function AdminChatRoomsScreen() {
       type: "PUBLIC",
       maxParticipants: 100,
       isRoomActive: true,
+      teamId: "",
     });
   };
 
@@ -328,8 +350,16 @@ export default function AdminChatRoomsScreen() {
           <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>채팅방 관리</Text>
-        <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="add" color={theme.colors.tint} size={24} />
+        <TouchableOpacity
+          onPress={() => setShowCreateModal(true)}
+          disabled={!!deletingRoomId}
+          style={{ opacity: deletingRoomId ? 0.5 : 1 }}
+        >
+          <Ionicons
+            name="add"
+            color={deletingRoomId ? theme.colors.textDim : theme.colors.tint}
+            size={24}
+          />
         </TouchableOpacity>
       </View>
 
@@ -355,7 +385,7 @@ export default function AdminChatRoomsScreen() {
             <Text style={themed($statNumber)}>
               {chatRooms.reduce(
                 (sum, room) => sum + room.currentParticipants,
-                0,
+                0
               )}
             </Text>
             <Text style={themed($statLabel)}>총 참여자</Text>
@@ -392,28 +422,68 @@ export default function AdminChatRoomsScreen() {
                         <Text style={themed($inactiveBadgeText)}>비활성</Text>
                       </View>
                     )}
+                    {room.team && (
+                      <View
+                        style={[
+                          themed($teamBadge),
+                          { backgroundColor: room.team.color + "20" },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            themed($teamBadgeText),
+                            { color: room.team.color },
+                          ]}
+                        >
+                          {room.team.name}
+                        </Text>
+                      </View>
+                    )}
                   </View>
 
                   <View style={themed($roomActions)}>
                     <TouchableOpacity
-                      style={themed($actionButton)}
+                      style={[
+                        themed($actionButton),
+                        { opacity: deletingRoomId === room.id ? 0.5 : 1 },
+                      ]}
                       onPress={() => openEditModal(room)}
+                      disabled={deletingRoomId === room.id}
                     >
                       <Ionicons
                         name="create-outline"
-                        color={theme.colors.tint}
+                        color={
+                          deletingRoomId === room.id
+                            ? theme.colors.textDim
+                            : theme.colors.tint
+                        }
                         size={18}
                       />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={themed($actionButton)}
+                      style={[
+                        themed($actionButton),
+                        {
+                          opacity: deletingRoomId === room.id ? 0.5 : 1,
+                          backgroundColor: "rgba(239, 68, 68, 0.1)", // 디버깅용 배경색
+                          borderRadius: 4,
+                        },
+                      ]}
                       onPress={() => handleDeleteRoom(room)}
+                      disabled={deletingRoomId === room.id}
+                      activeOpacity={0.7}
                     >
-                      <Ionicons
-                        name="trash-outline"
-                        color="#EF4444"
-                        size={18}
-                      />
+                      {deletingRoomId === room.id ? (
+                        <View style={themed($loadingSpinner)}>
+                          <Text style={themed($loadingText)}>삭제중...</Text>
+                        </View>
+                      ) : (
+                        <Ionicons
+                          name="trash-outline"
+                          color="#EF4444"
+                          size={18}
+                        />
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -432,7 +502,7 @@ export default function AdminChatRoomsScreen() {
                       size={16}
                     />
                     <Text style={themed($statText)}>
-                      {room.currentParticipants}/{room.maxParticipants}
+                      {room.currentParticipants}/{room.maxParticipants}명
                     </Text>
                   </View>
                   <View style={themed($statItem)}>
@@ -442,7 +512,7 @@ export default function AdminChatRoomsScreen() {
                       size={16}
                     />
                     <Text style={themed($statText)}>
-                      {room.totalMessages.toLocaleString()}
+                      {room.totalMessages.toLocaleString()}개 메시지
                     </Text>
                   </View>
                   <View style={themed($statItem)}>
@@ -458,6 +528,13 @@ export default function AdminChatRoomsScreen() {
                     </Text>
                   </View>
                 </View>
+
+                {/* 삭제 중인 경우 오버레이 표시 */}
+                {deletingRoomId === room.id && (
+                  <View style={themed($deletingOverlay)}>
+                    <Text style={themed($deletingText)}>삭제 중...</Text>
+                  </View>
+                )}
               </View>
             );
           })}
@@ -523,6 +600,18 @@ export default function AdminChatRoomsScreen() {
                   placeholder="100"
                   placeholderTextColor={theme.colors.textDim}
                   keyboardType="numeric"
+                />
+              </View>
+
+              <View style={themed($inputGroup)}>
+                <Text style={themed($inputLabel)}>연결할 팀 (선택사항)</Text>
+                <TeamSelector
+                  selectedTeamId={formData.teamId || undefined}
+                  onTeamSelect={(teamId) =>
+                    setFormData({ ...formData, teamId: teamId || "" })
+                  }
+                  placeholder="공용 채팅방 (팀 없음)"
+                  showClearButton={true}
                 />
               </View>
 
@@ -634,6 +723,18 @@ export default function AdminChatRoomsScreen() {
                 />
               </View>
 
+              <View style={themed($inputGroup)}>
+                <Text style={themed($inputLabel)}>연결할 팀 (선택사항)</Text>
+                <TeamSelector
+                  selectedTeamId={formData.teamId || undefined}
+                  onTeamSelect={(teamId) =>
+                    setFormData({ ...formData, teamId: teamId || "" })
+                  }
+                  placeholder="공용 채팅방 (팀 없음)"
+                  showClearButton={true}
+                />
+              </View>
+
               <View style={themed($switchGroup)}>
                 <Text style={themed($inputLabel)}>채팅방 활성화</Text>
                 <Switch
@@ -679,6 +780,17 @@ export default function AdminChatRoomsScreen() {
           </View>
         </View>
       </Modal>
+      <AppDialog
+        visible={!!roomToDelete}
+        onClose={() => setRoomToDelete(null)}
+        title="채팅방 삭제"
+        description={`${
+          roomToDelete?.name
+        } 채팅방을 삭제하시겠습니까?\n\n⚠️ 주의사항:\n• 모든 메시지가 함께 삭제됩니다\n• 참여자들이 채팅방에서 제외됩니다\n• 이 작업은 되돌릴 수 없습니다`}
+        confirmText="삭제"
+        onConfirm={confirmDeleteRoom}
+        cancelText="취소"
+      />
     </View>
   );
 }
@@ -713,11 +825,6 @@ const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
   justifyContent: "center",
   alignItems: "center",
-});
-
-const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
-  color: colors.textDim,
 });
 
 const $statsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -808,13 +915,29 @@ const $inactiveBadgeText: ThemedStyle<TextStyle> = () => ({
   color: "#EF4444",
 });
 
+const $teamBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 12,
+});
+
+const $teamBadgeText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 12,
+  fontWeight: "500",
+});
+
 const $roomActions: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   gap: spacing.sm,
 });
 
 const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.sm,
+  padding: spacing.md, // 더 큰 터치 영역
+  minWidth: 44, // 최소 터치 영역 보장
+  minHeight: 44,
+  justifyContent: "center",
+  alignItems: "center",
+  borderRadius: 8,
 });
 
 const $roomDescription: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
@@ -937,4 +1060,35 @@ const $confirmButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   color: "white",
   fontWeight: "500",
+});
+
+const $loadingSpinner: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: spacing.xs,
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: "#EF4444",
+  fontWeight: "500",
+});
+
+const $deletingOverlay: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: colors.background + "E6", // 90% 투명도
+  borderRadius: 12,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $deletingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: "#EF4444",
+  fontWeight: "600",
 });

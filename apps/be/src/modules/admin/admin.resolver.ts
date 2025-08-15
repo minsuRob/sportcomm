@@ -184,6 +184,8 @@ export class AdminResolver {
     type?: ChatRoomType,
     @Args('maxParticipants', { type: () => Int, defaultValue: 100 })
     maxParticipants?: number,
+    @Args('teamId', { nullable: true, description: '연결할 팀 ID (선택사항)' })
+    teamId?: string,
   ): Promise<ChatRoom> {
     return await this.adminService.createChatRoom(
       user,
@@ -191,6 +193,7 @@ export class AdminResolver {
       description,
       type,
       maxParticipants,
+      teamId,
     );
   }
 
@@ -211,13 +214,16 @@ export class AdminResolver {
     @Args('maxParticipants', { type: () => Int, nullable: true })
     maxParticipants?: number,
     @Args('isRoomActive', { nullable: true }) isRoomActive?: boolean,
+    @Args('teamId', { nullable: true, description: '연결할 팀 ID (선택사항)' })
+    teamId?: string,
   ): Promise<ChatRoom> {
-    const updates: any = {};
+    const updates: Partial<ChatRoom> = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (maxParticipants !== undefined)
       updates.maxParticipants = maxParticipants;
     if (isRoomActive !== undefined) updates.isRoomActive = isRoomActive;
+    if (teamId !== undefined) updates.teamId = teamId;
 
     return await this.adminService.updateChatRoom(user, roomId, updates);
   }

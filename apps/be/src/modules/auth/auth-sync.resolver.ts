@@ -130,6 +130,7 @@ export class AuthSyncResolver {
         isEmailVerified: !!combinedInfo.emailConfirmedAt,
         createdAt: combinedInfo.createdAt,
         updatedAt: combinedInfo.updatedAt,
+        points: (combinedInfo as any).points ?? 0,
         // 관계 필드들은 필요시 별도 쿼리로 로드
         posts: [],
         comments: [],

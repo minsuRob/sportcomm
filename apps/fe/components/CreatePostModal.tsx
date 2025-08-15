@@ -10,9 +10,9 @@ import {
   Platform,
   ViewStyle,
   TextStyle,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AppDialog from "@/components/ui/AppDialog";
 import { useMutation } from "@apollo/client";
 import { showToast } from "@/components/CustomToast";
 import { useAppTheme } from "@/lib/theme/context";
@@ -57,6 +57,7 @@ export default function CreatePostModal({
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelDialogVisible, setCancelDialogVisible] = useState(false);
 
   // GraphQL 뮤테이션
   const [executeCreatePost] = useMutation(CREATE_POST);
@@ -85,19 +86,7 @@ export default function CreatePostModal({
    */
   const handleCloseConfirm = () => {
     if (content.trim() || selectedMedia) {
-      Alert.alert(
-        "작성 취소",
-        "작성 중인 게시물이 있습니다. 작성을 취소하시겠습니까?",
-        [
-          { text: "계속 작성", style: "cancel" },
-          {
-            text: "작성 취소",
-            style: "destructive",
-            onPress: resetAndClose,
-          },
-        ],
-        { cancelable: true }
-      );
+      setCancelDialogVisible(true);
     } else {
       resetAndClose();
     }
@@ -202,80 +191,94 @@ export default function CreatePostModal({
       transparent={false}
       onRequestClose={handleCloseConfirm}
     >
-      <View style={themed($container)}>
-        {/* 헤더 */}
-        <View style={themed($header)}>
-          <TouchableOpacity onPress={handleCloseConfirm}>
-            <Ionicons name="close" color={theme.colors.text} size={24} />
-          </TouchableOpacity>
-          <Text style={themed($headerTitle)}>새 게시물 작성</Text>
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={isSubmitting || !content.trim() || !selectedType}
-            style={[
-              themed($submitButton),
-              {
-                opacity:
-                  isSubmitting || !content.trim() || !selectedType ? 0.5 : 1,
-              },
-            ]}
-          >
-            <Ionicons name="send" color="#fff" size={20} />
-          </TouchableOpacity>
-        </View>
+      <>
+        <View style={themed($container)}>
+          {/* 헤더 */}
+          <View style={themed($header)}>
+            <TouchableOpacity onPress={handleCloseConfirm}>
+              <Ionicons name="close" color={theme.colors.text} size={24} />
+            </TouchableOpacity>
+            <Text style={themed($headerTitle)}>새 게시물 작성</Text>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting || !content.trim() || !selectedType}
+              style={[
+                themed($submitButton),
+                {
+                  opacity:
+                    isSubmitting || !content.trim() || !selectedType ? 0.5 : 1,
+                },
+              ]}
+            >
+              <Ionicons name="send" color="#fff" size={20} />
+            </TouchableOpacity>
+          </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-        >
-          <ScrollView
-            style={themed($scrollView)}
-            contentContainerStyle={{ flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
           >
-            {/* 게시물 내용 입력 */}
-            <TextInput
-              style={themed($contentInput)}
-              placeholder="무슨 생각을 하고 계신가요?"
-              placeholderTextColor={theme.colors.textDim}
-              value={content}
-              onChangeText={setContent}
-              multiline
-              maxLength={500}
-              editable={!isSubmitting}
-            />
+            <ScrollView
+              style={themed($scrollView)}
+              contentContainerStyle={{ flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* 게시물 내용 입력 */}
+              <TextInput
+                style={themed($contentInput)}
+                placeholder="무슨 생각을 하고 계신가요?"
+                placeholderTextColor={theme.colors.textDim}
+                value={content}
+                onChangeText={setContent}
+                multiline
+                maxLength={500}
+                editable={!isSubmitting}
+              />
 
-            {/* 게시물 타입 선택 */}
-            <View style={themed($typeSelector)}>
-              <Text style={themed($sectionTitle)}>게시물 타입</Text>
-              <View style={themed($typeOptions)}>
-                {postTypeOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      themed($typeOption),
-                      selectedType === option.value &&
-                        themed($selectedTypeOption),
-                    ]}
-                    onPress={() => handleTypeSelect(option.value)}
-                  >
-                    {option.icon}
-                    <Text
+              {/* 게시물 타입 선택 */}
+              <View style={themed($typeSelector)}>
+                <Text style={themed($sectionTitle)}>게시물 타입</Text>
+                <View style={themed($typeOptions)}>
+                  {postTypeOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
                       style={[
-                        themed($typeLabel),
+                        themed($typeOption),
                         selectedType === option.value &&
-                          themed($selectedTypeLabel),
+                          themed($selectedTypeOption),
                       ]}
+                      onPress={() => handleTypeSelect(option.value)}
                     >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      {option.icon}
+                      <Text
+                        style={[
+                          themed($typeLabel),
+                          selectedType === option.value &&
+                            themed($selectedTypeLabel),
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+        <AppDialog
+          visible={isCancelDialogVisible}
+          onClose={() => setCancelDialogVisible(false)}
+          title="작성 취소"
+          description="작성 중인 게시물이 있습니다. 작성을 취소하시겠습니까?"
+          confirmText="작성 취소"
+          onConfirm={() => {
+            setCancelDialogVisible(false);
+            resetAndClose();
+          }}
+          cancelText="계속 작성"
+        />
+      </>
     </Modal>
   );
 }

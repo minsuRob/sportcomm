@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sport, Team } from '../../entities';
@@ -124,5 +128,131 @@ export class SportsService {
       activeTeams,
       totalUsers,
     };
+  }
+
+  /**
+   * 새로운 스포츠 카테고리를 생성합니다.
+   * @param input 스포츠 생성 정보
+   * @returns 생성된 스포츠 정보
+   */
+  async createSport(input: {
+    name: string;
+    icon: string;
+    description?: string;
+    defaultTeamName?: string;
+  }): Promise<Sport> {
+    // 중복 이름 확인
+    const existingSport = await this.sportsRepository.findOne({
+      where: { name: input.name },
+    });
+
+    if (existingSport) {
+      throw new BadRequestException('이미 존재하는 스포츠 이름입니다.');
+    }
+
+    // 정렬 순서 계산 (마지막 순서 + 1)
+    const lastSport = await this.sportsRepository.findOne({
+      where: {},
+      order: { sortOrder: 'DESC' },
+    });
+    const sortOrder = (lastSport?.sortOrder || 0) + 1;
+
+    // 스포츠 생성
+    const sport = this.sportsRepository.create({
+      name: input.name,
+      icon: input.icon,
+      description: input.description,
+      sortOrder,
+      isActive: true,
+    });
+
+    const savedSport = await this.sportsRepository.save(sport);
+
+    // 기본 팀 생성 (옵션)
+    if (input.defaultTeamName) {
+      const defaultTeam = this.teamsRepository.create({
+        name: input.defaultTeamName,
+        code: input.name.substring(0, 3).toUpperCase(),
+        color: '#000000',
+        icon: input.icon,
+        sport: savedSport,
+        sortOrder: 1,
+        isActive: true,
+      });
+
+      await this.teamsRepository.save(defaultTeam);
+    }
+
+    return this.findById(savedSport.id);
+  }
+
+  /**
+   * 스포츠 정보를 업데이트합니다.
+   * @param id 스포츠 ID
+   * @param input 업데이트할 정보
+   * @returns 업데이트된 스포츠 정보
+   */
+  async updateSport(
+    id: string,
+    input: {
+      name?: string;
+      icon?: string;
+      description?: string;
+      sortOrder?: number;
+      isActive?: boolean;
+    },
+  ): Promise<Sport> {
+    const sport = await this.findById(id);
+
+    // 이름 중복 확인 (다른 스포츠와)
+    if (input.name && input.name !== sport.name) {
+      const existingSport = await this.sportsRepository.findOne({
+        where: { name: input.name },
+      });
+
+      if (existingSport) {
+        throw new BadRequestException('이미 존재하는 스포츠 이름입니다.');
+      }
+    }
+
+    // 업데이트
+    Object.assign(sport, input);
+    sport.updatedAt = new Date();
+
+    await this.sportsRepository.save(sport);
+    return this.findById(id);
+  }
+
+  /**
+   * 스포츠를 삭제합니다.
+   * @param id 스포츠 ID
+   * @returns 삭제 성공 여부
+   */
+  async deleteSport(id: string): Promise<boolean> {
+    const sport = await this.findById(id);
+
+    // 소속 팀이 있는지 확인
+    if (sport.teams && sport.teams.length > 0) {
+      throw new BadRequestException(
+        '소속 팀이 있는 스포츠는 삭제할 수 없습니다. 먼저 모든 팀을 삭제해주세요.',
+      );
+    }
+
+    await this.sportsRepository.remove(sport);
+    return true;
+  }
+
+  /**
+   * 스포츠 활성화 상태를 토글합니다.
+   * @param id 스포츠 ID
+   * @returns 업데이트된 스포츠 정보
+   */
+  async toggleSportStatus(id: string): Promise<Sport> {
+    const sport = await this.findById(id);
+    sport.isActive = !sport.isActive;
+    sport.updatedAt = new Date();
+
+    await this.sportsRepository.save(sport);
+    return sport;
   }
 }

@@ -9,6 +9,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
+import { Tag } from '../../entities/tag.entity';
+import { PostTag } from '../../entities/post-tag.entity';
 import { User } from '../../entities/user.entity';
 import { Media } from '../../entities/media.entity';
 import { MediaService } from '../media/media.service';
@@ -27,6 +29,8 @@ export interface CreatePostInput {
   isPublic?: boolean;
   /** 첨부할 미디어 ID 배열 */
   mediaIds?: string[];
+  /** 태그 이름 배열 */
+  tags?: string[];
 }
 
 /**
@@ -108,6 +112,10 @@ export class PostsService {
     private readonly postVersionRepository: Repository<PostVersion>,
     @InjectRepository(PostLike)
     private readonly postLikeRepository: Repository<PostLike>,
+    @InjectRepository(Tag)
+    private readonly tagRepository: Repository<Tag>,
+    @InjectRepository(PostTag)
+    private readonly postTagRepository: Repository<PostTag>,
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
     private dataSource: DataSource,
@@ -132,6 +140,7 @@ export class PostsService {
       teamId,
       isPublic = true,
       mediaIds = [],
+      tags = [],
     } = createPostInput;
 
     // 팀 연관 게시물 로깅
@@ -153,6 +162,11 @@ export class PostsService {
 
     // 게시물 저장
     const savedPost = await this.postRepository.save(post);
+
+    // 태그 처리
+    if (tags.length > 0) {
+      await this.handlePostTags(savedPost.id, tags);
+    }
 
     // 미디어 연결 (미디어 ID가 있는 경우)
     if (mediaIds.length > 0) {
@@ -192,6 +206,7 @@ export class PostsService {
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
       .leftJoinAndSelect('post.media', 'media')
+      .leftJoinAndSelect('post.team', 'team')
       .where('post.deletedAt IS NULL');
 
     // 필터 적용
@@ -266,6 +281,7 @@ export class PostsService {
         'media',
         'versions',
         'likes',
+        'team',
       ],
     });
 
@@ -806,5 +822,39 @@ export class PostsService {
       order: { createdAt: 'DESC' },
       take: limit,
     });
+  }
+
+  /**
+   * 게시물에 대한 태그를 처리합니다.
+   * 기존에 없는 태그는 새로 생성하고, 게시물과 연결합니다.
+   *
+   * @param postId - 게시물 ID
+   * @param tagNames - 태그 이름 배열
+   */
+  private async handlePostTags(
+    postId: string,
+    tagNames: string[],
+  ): Promise<void> {
+    const tags = await Promise.all(
+      tagNames.map(async (name) => {
+        let tag = await this.tagRepository.findOne({ where: { name } });
+        if (!tag) {
+          tag = await this.tagRepository.save(
+            this.tagRepository.create({ name }),
+          );
+        }
+        return tag;
+      }),
+    );
+
+    await Promise.all(
+      tags.map((tag) => {
+        const postTag = this.postTagRepository.create({
+          postId,
+          tagId: tag.id,
+        });
+        return this.postTagRepository.save(postTag);
+      }),
+    );
   }
 }

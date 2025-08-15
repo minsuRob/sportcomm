@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@apollo/client";
-import { GET_POSTS, GET_BLOCKED_USERS } from "@/lib/graphql";
+import { gql } from "@apollo/client";
+import { GET_BLOCKED_USERS } from "@/lib/graphql";
 import {
   GET_MY_TEAMS,
   type GetMyTeamsResult,
@@ -17,6 +18,19 @@ interface GqlPost {
   createdAt: string;
   type: PostType;
   teamId: string;
+  team: {
+    id: string;
+    name: string;
+    sport: {
+      id: string;
+      name: string;
+      icon: string;
+    };
+  };
+  tags?: {
+    id: string;
+    name: string;
+  }[];
   isLiked: boolean;
   isBookmarked?: boolean;
   viewCount: number;
@@ -41,6 +55,51 @@ interface PostsQueryResponse {
 
 const PAGE_SIZE = 10;
 const STORAGE_KEY = "selected_team_filter";
+
+const GET_POSTS = gql`
+  query GetPosts($input: FindPostsInput) {
+    posts(input: $input) {
+      posts {
+        id
+        title
+        content
+        createdAt
+        type
+        teamId
+        isLiked
+        isBookmarked
+        viewCount
+        likeCount
+        commentCount
+        author {
+          id
+          nickname
+          profileImageUrl
+        }
+        media {
+          id
+          url
+          type
+        }
+        team {
+          id
+          name
+          sport {
+            id
+            name
+            icon
+          }
+        }
+        tags {
+          id
+          name
+        }
+      }
+      hasNext
+      page
+    }
+  }
+`;
 
 /**
  * 피드 게시물/필터/페이지네이션 전담 훅
@@ -81,7 +140,7 @@ export function useFeedPosts() {
     },
     skip: !filterInitialized, // 필터가 초기화되기 전까지는 쿼리 실행하지 않음
     notifyOnNetworkStatusChange: true,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first", // 캐시 우선으로 변경하여 중복 네트워크 요청 방지
   });
 
   // 필터 초기화: AsyncStorage -> My Teams 순서로 처리
@@ -100,14 +159,14 @@ export function useFeedPosts() {
         // 2. 저장된 필터가 없으면 My Teams를 기본값으로 사용
         if (myTeamsData?.myTeams) {
           const allMyTeamIds = myTeamsData.myTeams.map(
-            (ut: UserTeam) => ut.team.id,
+            (ut: UserTeam) => ut.team.id
           );
           setSelectedTeamIds(allMyTeamIds.length > 0 ? allMyTeamIds : null);
 
           // AsyncStorage에 기본값 저장
           await AsyncStorage.setItem(
             STORAGE_KEY,
-            JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : []),
+            JSON.stringify(allMyTeamIds.length > 0 ? allMyTeamIds : [])
           );
           setFilterInitialized(true);
         }
@@ -145,7 +204,7 @@ export function useFeedPosts() {
             ...p,
             isMock: false,
             media: p.media || [],
-          }) as Post,
+          }) as Post
       );
 
     if (data.posts.page === 1) {
@@ -157,7 +216,7 @@ export function useFeedPosts() {
         const merged = Array.from(map.values());
         return merged.sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
       });
     }
@@ -190,6 +249,19 @@ export function useFeedPosts() {
   const handleTeamFilterChange = useCallback(
     async (teamIds: string[] | null) => {
       try {
+        // 현재 선택과 동일한 경우 중복 처리 방지
+        const currentIds = selectedTeamIds || [];
+        const nextIds = teamIds || [];
+
+        const isSameSelection =
+          currentIds.length === nextIds.length &&
+          currentIds.every((id) => nextIds.includes(id)) &&
+          nextIds.every((id) => currentIds.includes(id));
+
+        if (isSameSelection) {
+          return; // 동일한 선택이면 아무것도 하지 않음
+        }
+
         // AsyncStorage에 저장
         if (teamIds && teamIds.length > 0) {
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(teamIds));
@@ -210,7 +282,7 @@ export function useFeedPosts() {
         console.error("팀 필터 변경 실패:", error);
       }
     },
-    [refetch],
+    [refetch, selectedTeamIds]
   );
 
   /**
@@ -226,6 +298,16 @@ export function useFeedPosts() {
     }
   }, []);
 
+  /**
+   * 사용자를 차단하고 피드에서 해당 사용자의 게시물을 즉시 제거합니다.
+   */
+  const handleBlockUser = useCallback((blockedUserId: string) => {
+    setPosts((currentPosts) =>
+      currentPosts.filter((p) => p.author.id !== blockedUserId)
+    );
+    setBlockedUserIds((currentIds) => [...currentIds, blockedUserId]);
+  }, []);
+
   return {
     posts,
     fetching,
@@ -237,6 +319,7 @@ export function useFeedPosts() {
     handleTeamFilterChange,
     refreshFilterFromMyTeams,
     filterInitialized,
+    handleBlockUser,
   } as const;
 }
 

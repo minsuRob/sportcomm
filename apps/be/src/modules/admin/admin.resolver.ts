@@ -217,7 +217,7 @@ export class AdminResolver {
     @Args('teamId', { nullable: true, description: '연결할 팀 ID (선택사항)' })
     teamId?: string,
   ): Promise<ChatRoom> {
-    const updates: any = {};
+    const updates: Partial<ChatRoom> = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
     if (maxParticipants !== undefined)

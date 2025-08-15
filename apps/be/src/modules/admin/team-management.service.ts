@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { User } from '../../entities/user.entity';
 import { Team } from '../../entities/team.entity';
 import { Sport } from '../../entities/sport.entity';
@@ -213,7 +213,7 @@ export class TeamManagementService {
         where: {
           name: input.name,
           sport: { id: team.sport?.id },
-          id: { $ne: teamId } as any,
+          id: Not(teamId),
         },
       });
       if (existingTeam) {

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { Portal } from "@rn-primitives/portal";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import PhotoCardSelector from "./PhotoCardSelector";
 
 export interface TeamSettingsPopoverProps {
   visible: boolean;
   onClose: () => void;
   anchorStyle?: ViewStyle; // 팝오버 위치 조정
   onSelectFavoriteDate: () => void;
-  onOpenPhotoCard: () => void;
 }
 
 /**
@@ -28,9 +28,20 @@ export default function TeamSettingsPopover({
   onClose,
   anchorStyle,
   onSelectFavoriteDate,
-  onOpenPhotoCard,
 }: TeamSettingsPopoverProps) {
   const { themed, theme } = useAppTheme();
+  const [photoCardSelectorVisible, setPhotoCardSelectorVisible] =
+    useState(false);
+
+  const handleOpenPhotoCard = () => {
+    onClose(); // Close popover first
+    setPhotoCardSelectorVisible(true);
+  };
+
+  const handleSelectCard = (cardId: string) => {
+    console.log("Selected card:", cardId);
+    setPhotoCardSelectorVisible(false);
+  };
 
   const items = useMemo(
     () => [
@@ -51,47 +62,51 @@ export default function TeamSettingsPopover({
         icon: (
           <Ionicons name="images-outline" size={18} color={theme.colors.text} />
         ),
-        onPress: () => {
-          onClose();
-          onOpenPhotoCard();
-        },
+        onPress: handleOpenPhotoCard,
       },
     ],
-    [onClose, onOpenPhotoCard, onSelectFavoriteDate, theme.colors.text]
+    [onClose, onSelectFavoriteDate, theme.colors.text, handleOpenPhotoCard]
   );
 
   if (!visible) return null;
 
   return (
-    <Portal name="team-settings-popover">
-      <View style={themed($overlay)}>
-        {/* 바깥 영역 클릭 시 닫기 */}
-        <TouchableOpacity
-          style={themed($backdrop)}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+    <>
+      <Portal name="team-settings-popover">
+        <View style={themed($overlay)}>
+          {/* 바깥 영역 클릭 시 닫기 */}
+          <TouchableOpacity
+            style={themed($backdrop)}
+            activeOpacity={1}
+            onPress={onClose}
+          />
 
-        {/* 메뉴 카드 */}
-        <View style={[themed($menuContainer), anchorStyle]}>
-          {items.map((item, index) => (
-            <TouchableOpacity
-              key={item.key}
-              style={[
-                themed($menuItem),
-                index === 0 ? themed($menuItemFirst) : null,
-                index === items.length - 1 ? themed($menuItemLast) : null,
-              ]}
-              onPress={item.onPress}
-              activeOpacity={0.8}
-            >
-              <View style={themed($itemLeft)}>{item.icon}</View>
-              <Text style={themed($itemText)}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {/* 메뉴 카드 */}
+          <View style={[themed($menuContainer), anchorStyle]}>
+            {items.map((item, index) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[
+                  themed($menuItem),
+                  index === 0 ? themed($menuItemFirst) : null,
+                  index === items.length - 1 ? themed($menuItemLast) : null,
+                ]}
+                onPress={item.onPress}
+                activeOpacity={0.8}
+              >
+                <View style={themed($itemLeft)}>{item.icon}</View>
+                <Text style={themed($itemText)}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
-    </Portal>
+      </Portal>
+      <PhotoCardSelector
+        visible={photoCardSelectorVisible}
+        onClose={() => setPhotoCardSelectorVisible(false)}
+        onSelectCard={handleSelectCard}
+      />
+    </>
   );
 }
 

@@ -780,16 +780,6 @@ export default function TeamSelectionScreen() {
           setShowSettings(false);
           setShowCalendar(true);
         }}
-        onOpenPhotoCard={() => {
-          setShowSettings(false);
-          // TODO: 포토카드 진입 로직 (추가 스펙 확정 시 구현)
-          showToast({
-            type: "info",
-            title: "포토카드",
-            message: "포토카드 기능이 곧 추가될 예정입니다.",
-            duration: 1500,
-          });
-        }}
       />
 
       {/* 팬이 된 날짜 선택 (연/월) */}

@@ -12,12 +12,17 @@ import {
   ImageBackground,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useMutation } from "@apollo/client";
+import { useQuery, useMutation, useApolloClient } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
 import { useRouter } from "expo-router";
 import { GET_USER_PROFILE, GET_USER_POSTS, TOGGLE_FOLLOW } from "@/lib/graphql";
+import {
+  CREATE_OR_GET_PRIVATE_CHAT,
+  GET_USER_PRIVATE_CHATS,
+  type CreatePrivateChatResponse,
+} from "@/lib/graphql/user-chat";
 import { type UserTeam } from "@/lib/graphql/teams";
 import TeamLogo from "@/components/TeamLogo";
 import FeedList from "@/components/FeedList";
@@ -174,6 +179,13 @@ export default function UserProfileModal({
   /**
    * DM 시작 핸들러
    */
+  const [createOrGetPrivateChat, { loading: createChatLoading }] =
+    useMutation<CreatePrivateChatResponse>(CREATE_OR_GET_PRIVATE_CHAT, {
+      refetchQueries: [
+        { query: GET_USER_PRIVATE_CHATS, variables: { page: 1, limit: 100 } },
+      ],
+    });
+
   const handleStartDM = async () => {
     if (!currentUser?.id) {
       Toast.show({
@@ -188,13 +200,30 @@ export default function UserProfileModal({
     if (currentUser.id === userId) return;
 
     try {
-      router.push(`/(modals)/start-private-chat?targetUserId=${userId}`);
-      onClose?.();
+      const { data } = await createOrGetPrivateChat({
+        variables: { targetUserId: userId },
+      });
+
+      if (data) {
+        const chatRoom = data.createOrGetPrivateChat;
+        const displayName =
+          chatRoom.participants.find((p) => p.id !== currentUser.id)
+            ?.nickname || chatRoom.name;
+
+        onClose?.();
+        router.replace({
+          pathname: "/(details)/chat/[roomId]",
+          params: {
+            roomId: chatRoom.id,
+            roomName: displayName,
+          },
+        });
+      }
     } catch (error) {
       Toast.show({
         type: "error",
         text1: "오류",
-        text2: "메시지를 시작할 수 없습니다.",
+        text2: "채팅을 시작할 수 없습니다.",
         visibilityTime: 3000,
       });
     }
@@ -285,10 +314,15 @@ export default function UserProfileModal({
             <TouchableOpacity
               style={themed($exchangeContactButton)}
               onPress={handleStartDM}
+              disabled={createChatLoading}
             >
-              <Text style={themed($exchangeContactButtonText)}>
-                Exchange Contact
-              </Text>
+              {createChatLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={themed($exchangeContactButtonText)}>
+                  Exchange Contact
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         )}

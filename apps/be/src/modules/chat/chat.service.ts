@@ -360,21 +360,22 @@ export class ChatService {
     }
 
     // 기존 1대1 채팅방 조회 (두 사용자가 모두 참여하고 있는 PRIVATE 타입 채팅방)
+    const subQuery = this.chatRoomRepository
+      .createQueryBuilder('subChatRoom')
+      .select('subChatRoom.id')
+      .innerJoin('subChatRoom.participants', 'subParticipants')
+      .where('subChatRoom.type = :type', { type: ChatRoomType.PRIVATE })
+      .andWhere('subParticipants.id IN (:...userIds)', {
+        userIds: [userId1, userId2],
+      })
+      .groupBy('subChatRoom.id')
+      .having('COUNT(DISTINCT subParticipants.id) = 2');
+
     const existingChatRoom = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
       .leftJoinAndSelect('chatRoom.participants', 'participants')
-      .where('chatRoom.type = :type', { type: ChatRoomType.PRIVATE })
-      .andWhere('chatRoom.maxParticipants = :maxParticipants', {
-        maxParticipants: 2,
-      })
-      .andWhere('chatRoom.teamId IS NULL') // 팀에 속하지 않은 채팅방
-      .having('COUNT(participants.id) = 2') // 정확히 2명의 참여자
-      .andWhere('participants.id IN (:...userIds)', {
-        userIds: [userId1, userId2],
-      })
-      .groupBy('chatRoom.id')
-      .addGroupBy('participants.id')
-      .having('COUNT(DISTINCT participants.id) = 2') // 두 사용자가 모두 참여
+      .where(`chatRoom.id IN (${subQuery.getQuery()})`)
+      .setParameters(subQuery.getParameters())
       .getOne();
 
     if (existingChatRoom) {

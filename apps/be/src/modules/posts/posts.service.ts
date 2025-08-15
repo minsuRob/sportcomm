@@ -12,6 +12,7 @@ import { PostLike } from '../../entities/post-like.entity';
 import { Tag } from '../../entities/tag.entity';
 import { PostTag } from '../../entities/post-tag.entity';
 import { User } from '../../entities/user.entity';
+import { UserTeam } from '../../entities/user-team.entity';
 import { Media } from '../../entities/media.entity';
 import { MediaService } from '../media/media.service';
 
@@ -118,6 +119,8 @@ export class PostsService {
     private readonly postTagRepository: Repository<PostTag>,
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
+    @InjectRepository(UserTeam)
+    private readonly userTeamRepository: Repository<UserTeam>,
     private dataSource: DataSource,
     private readonly mediaService: MediaService,
     private readonly eventEmitter: EventEmitter2,
@@ -146,6 +149,13 @@ export class PostsService {
     // 팀 연관 게시물 로깅
     console.log(`게시물 생성 - 팀 ID: ${teamId}`);
 
+    // 작성자의 팀 정보 조회
+    const authorTeams = await this.userTeamRepository.find({
+      where: { userId: authorId },
+      relations: ['team'],
+      order: { priority: 'ASC' },
+    });
+
     // 게시물 생성
     const post = this.postRepository.create({
       title,
@@ -153,6 +163,12 @@ export class PostsService {
       content,
       isPublic,
       authorId,
+      authorTeams: authorTeams.map((ut) => ({
+        id: ut.team.id,
+        name: ut.team.name,
+        logoUrl: ut.team.logoUrl,
+        icon: ut.team.icon,
+      })),
       viewCount: 0,
       likeCount: 0,
       commentCount: 0,

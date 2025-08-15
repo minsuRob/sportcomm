@@ -112,6 +112,12 @@ export interface Post {
   commentCount?: number;
   viewCount?: number;
   isMock?: boolean;
+  authorTeams?: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+    icon: string;
+  }[];
 }
 
 export interface PostCardProps {
@@ -273,11 +279,6 @@ const PostCard = React.memo(function PostCard({
   // 컨텍스트 메뉴 상태 관리
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-  const { data: myTeamsData } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
-    skip: !currentUser || post.author.id !== currentUser.id,
-    fetchPolicy: "cache-and-network",
-  });
 
   // 개발 환경 체크
   const __DEV__ = process.env.NODE_ENV === "development";
@@ -809,7 +810,7 @@ const PostCard = React.memo(function PostCard({
 
               {/* 팀 로고 목록 */}
               <View style={themed($teamLogoStack)}>
-                {myTeamsData?.myTeams?.slice(0, 3).map(({ team }) => (
+                {post.authorTeams?.slice(0, 3).map((team) => (
                   <View key={team.id} style={themed($teamLogoWrapper)}>
                     <TeamLogo
                       logoUrl={team.logoUrl}

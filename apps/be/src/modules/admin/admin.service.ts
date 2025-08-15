@@ -195,35 +195,20 @@ export class AdminService {
     let resolvedTeamId: string | undefined = teamId;
 
     if (teamId) {
-      // UUID 형식 검증 (간단한 정규식 사용)
       const uuidRegex =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const isUuid = uuidRegex.test(teamId);
 
-      if (!uuidRegex.test(teamId)) {
-        // UUID가 아닌 경우 팀 코드로 간주하여 팀 조회
-        const team = await this.teamRepository.findOne({
-          where: { code: teamId },
-        });
+      const team = await this.teamRepository.findOne({
+        where: isUuid ? { id: teamId } : { code: teamId },
+      });
 
-        if (!team) {
-          throw new NotFoundException(
-            `팀 코드 '${teamId}'에 해당하는 팀을 찾을 수 없습니다.`,
-          );
-        }
-
-        resolvedTeamId = team.id;
-      } else {
-        // UUID인 경우 해당 팀이 존재하는지 확인
-        const team = await this.teamRepository.findOne({
-          where: { id: teamId },
-        });
-
-        if (!team) {
-          throw new NotFoundException(
-            `팀 ID '${teamId}'에 해당하는 팀을 찾을 수 없습니다.`,
-          );
-        }
+      if (!team) {
+        throw new NotFoundException(
+          `팀 ID 또는 코드 '${teamId}'에 해당하는 팀을 찾을 수 없습니다.`,
+        );
       }
+      resolvedTeamId = team.id;
     }
 
     const chatRoom = this.chatRoomRepository.create({

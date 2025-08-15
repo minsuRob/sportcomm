@@ -105,28 +105,28 @@ export default function AdminDashboardScreen() {
         value: stats.totalUsers.toLocaleString(),
         icon: "people-outline",
         color: theme.colors.tint,
-        onPress: () => router.push("/(admin)/users"),
+        onPress: () => router.push("/(admin)/users" as any),
       },
       {
         title: "총 게시물",
         value: stats.totalPosts.toLocaleString(),
         icon: "document-text-outline",
         color: "#10B981",
-        onPress: () => router.push("/(admin)/posts"),
+        onPress: () => router.push("/(admin)/posts" as any),
       },
       {
         title: "채팅방",
         value: stats.totalChatRooms.toLocaleString(),
         icon: "chatbubbles-outline",
         color: "#8B5CF6",
-        onPress: () => router.push("/(admin)/chat-rooms"),
+        onPress: () => router.push("/(admin)/chat-rooms" as any),
       },
       {
         title: "신고",
         value: stats.totalReports.toLocaleString(),
         icon: "flag-outline",
         color: "#EF4444",
-        onPress: () => router.push("/(admin)/reports"),
+        onPress: () => router.push("/(admin)/reports" as any),
       },
     ];
   };
@@ -164,42 +164,42 @@ export default function AdminDashboardScreen() {
       description: "사용자 계정 및 권한 관리",
       icon: "people-outline",
       color: theme.colors.tint,
-      onPress: () => router.push("/(admin)/users"),
+      onPress: () => router.push("/(admin)/users" as any),
     },
     {
       title: "채팅방 관리",
       description: "채팅방 생성, 삭제 및 설정",
       icon: "chatbubbles-outline",
       color: "#8B5CF6",
-      onPress: () => router.push("/(admin)/chat-rooms"),
+      onPress: () => router.push("/(admin)/chat-rooms" as any),
     },
     {
       title: "팀 관리",
       description: "스포츠 팀 추가, 수정 및 삭제",
       icon: "trophy-outline",
       color: "#F59E0B",
-      onPress: () => router.push("/(admin)/teams"),
+      onPress: () => router.push("/(admin)/teams" as any),
     },
     {
       title: "게시물 관리",
       description: "게시물 모니터링 및 관리",
       icon: "document-text-outline",
       color: "#10B981",
-      onPress: () => router.push("/(admin)/posts"),
+      onPress: () => router.push("/(admin)/posts" as any),
     },
     {
       title: "신고 관리",
       description: "사용자 신고 처리 및 관리",
       icon: "flag-outline",
       color: "#EF4444",
-      onPress: () => router.push("/(admin)/reports"),
+      onPress: () => router.push("/(admin)/reports" as any),
     },
     {
       title: "피드백 관리",
       description: "사용자 피드백 및 건의사항 처리",
       icon: "chatbubble-ellipses-outline",
       color: "#8B5CF6",
-      onPress: () => router.push("/(admin)/feedbacks"),
+      onPress: () => router.push("/(admin)/feedbacks" as any),
     },
   ];
 
@@ -948,6 +948,17 @@ const $actionButtons: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.sm,
 });
 
+const $statItem: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "center",
+  flex: 1,
+});
+
+const $statLabel: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  marginTop: 4,
+});
+
 const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
   flexDirection: "row",
@@ -1028,7 +1039,7 @@ const $inputLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   marginBottom: spacing.xs,
 });
 
-const $textInput: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $textInput: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   borderWidth: 1,
   borderColor: colors.border,
   borderRadius: 8,

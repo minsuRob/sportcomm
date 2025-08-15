@@ -11,6 +11,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { Portal } from "@rn-primitives/portal";
+import { useRouter } from "expo-router";
 
 export interface ProfileContextPopoverProps {
   visible: boolean;
@@ -31,12 +32,28 @@ export default function ProfileContextPopover({
 }: ProfileContextPopoverProps) {
   const { theme, toggleTheme, setAppColor, appColor, themed } = useAppTheme();
   const { currentLanguage, switchLanguage } = useTranslation();
+  const router = useRouter();
 
   const items = useMemo(
     () => [
       {
+        key: "privateMessages",
+        label: "개인 메시지",
+        icon: (
+          <Ionicons
+            name="chatbubbles-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          onClose();
+          router.push("/(modals)/private-chats");
+        },
+      },
+      {
         key: "openProfile",
-        label: "내 프로필 열기",
+        label: "내 프로필",
         icon: (
           <Ionicons
             name="person-circle-outline"
@@ -108,6 +125,7 @@ export default function ProfileContextPopover({
       setAppColor,
       onOpenProfile,
       onClose,
+      router,
     ]
   );
 

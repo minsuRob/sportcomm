@@ -90,6 +90,19 @@ export interface Post {
   content: string;
   type: PostType;
   teamId: string;
+  team: {
+    id: string;
+    name: string;
+    sport: {
+      id: string;
+      name: string;
+      icon: string;
+    };
+  };
+  tags?: {
+    id: string;
+    name: string;
+  }[];
   media: Media[];
   author: User;
   likeCount: number;
@@ -753,13 +766,33 @@ const PostCard = React.memo(function PostCard({
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
             <View style={themed($topRightContainer)}>
-              {/* 더보기 버튼 */}
-              <TouchableOpacity
-                style={themed($moreButton)}
-                onPress={handleMorePress}
-              >
-                <Ionicons name="ellipsis-horizontal" size={20} color="white" />
-              </TouchableOpacity>
+              <View style={themed($topRightIcons)}>
+                {/* Sport Icon */}
+                <View style={themed($sportIconBadge)}>
+                  <Text style={themed($sportIconText)}>
+                    {post.team?.sport?.icon || "🏆"}
+                  </Text>
+                </View>
+
+                {/* Tags */}
+                {post.tags?.slice(0, 1).map((tag) => (
+                  <View key={tag.id} style={themed($tagBadge)}>
+                    <Text style={themed($tagText)}>#{tag.name}</Text>
+                  </View>
+                ))}
+
+                {/* 더보기 버튼 */}
+                <TouchableOpacity
+                  style={themed($moreButton)}
+                  onPress={handleMorePress}
+                >
+                  <Ionicons
+                    name="ellipsis-horizontal"
+                    size={20}
+                    color="white"
+                  />
+                </TouchableOpacity>
+              </View>
 
               {/* 팀 로고 목록 */}
               <View style={themed($teamLogoStack)}>
@@ -1002,10 +1035,42 @@ const $topRightContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   top: spacing.sm,
   right: spacing.sm,
-  flexDirection: "column", // 세로 정렬을 위해 column으로 변경
-  alignItems: "flex-end", // 오른쪽 정렬
+  flexDirection: "column",
+  alignItems: "flex-end",
   zIndex: 2,
   gap: spacing.sm,
+});
+
+const $topRightIcons: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+});
+
+const $sportIconBadge: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $sportIconText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 16,
+});
+
+const $tagBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xxs,
+  borderRadius: 12,
+});
+
+const $tagText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 12,
+  fontWeight: "600",
 });
 
 const $teamLogoStack: ThemedStyle<ViewStyle> = ({ spacing }) => ({

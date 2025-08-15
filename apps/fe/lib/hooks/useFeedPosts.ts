@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@apollo/client";
-import { GET_POSTS, GET_BLOCKED_USERS } from "@/lib/graphql";
+import { gql } from "@apollo/client";
+import { GET_BLOCKED_USERS } from "@/lib/graphql";
 import {
   GET_MY_TEAMS,
   type GetMyTeamsResult,
@@ -17,6 +18,19 @@ interface GqlPost {
   createdAt: string;
   type: PostType;
   teamId: string;
+  team: {
+    id: string;
+    name: string;
+    sport: {
+      id: string;
+      name: string;
+      icon: string;
+    };
+  };
+  tags?: {
+    id: string;
+    name: string;
+  }[];
   isLiked: boolean;
   isBookmarked?: boolean;
   viewCount: number;
@@ -41,6 +55,51 @@ interface PostsQueryResponse {
 
 const PAGE_SIZE = 10;
 const STORAGE_KEY = "selected_team_filter";
+
+const GET_POSTS = gql`
+  query GetPosts($input: FindPostsInput) {
+    posts(input: $input) {
+      posts {
+        id
+        title
+        content
+        createdAt
+        type
+        teamId
+        isLiked
+        isBookmarked
+        viewCount
+        likeCount
+        commentCount
+        author {
+          id
+          nickname
+          profileImageUrl
+        }
+        media {
+          id
+          url
+          type
+        }
+        team {
+          id
+          name
+          sport {
+            id
+            name
+            icon
+          }
+        }
+        tags {
+          id
+          name
+        }
+      }
+      hasNext
+      page
+    }
+  }
+`;
 
 /**
  * 피드 게시물/필터/페이지네이션 전담 훅

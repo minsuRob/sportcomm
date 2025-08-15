@@ -26,6 +26,7 @@ import { uploadFilesMobile } from "@/lib/api/mobileUpload";
 import { generateAvatarFileName } from "@/lib/utils/file-utils";
 import { isWeb } from "@/lib/platform";
 import { UploadedMedia, ProgressCallback } from "@/lib/api/common";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 /**
  * 프로필 편집 모달 화면
@@ -428,9 +429,11 @@ export default function EditProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={themed($scrollContainer)}
         showsVerticalScrollIndicator={false}
+        extraScrollHeight={100}
+        enableOnAndroid={true}
       >
         {/* 프로필 이미지 섹션 */}
         <View style={themed($imageSection)}>
@@ -604,7 +607,7 @@ export default function EditProfileScreen() {
             />
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <AppDialog
         visible={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}

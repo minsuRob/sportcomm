@@ -1,6 +1,7 @@
 import { Resolver, Query, Mutation, Args, Context, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
+import { AdminGuard } from '../../common/guards/admin.guard';
 import { LotteryService } from './lottery.service';
 import { PointLottery } from '../../entities/point-lottery.entity';
 import { LotteryEntry } from '../../entities/lottery-entry.entity';
@@ -8,6 +9,7 @@ import {
   LotteryStatusResponse,
   LotteryHistoryResponse,
   UserWinHistoryResponse,
+  AdminLotteryStatsResponse,
 } from './dto/lottery.dto';
 
 /**
@@ -147,5 +149,49 @@ export class LotteryResolver {
       page,
       limit,
     };
+  }
+
+  // === 관리자 전용 리졸버 ===
+
+  /**
+   * 관리자: 현재 추첨 중단
+   */
+  @Mutation(() => Boolean, { description: '관리자: 현재 진행 중인 추첨 중단' })
+  @UseGuards(GqlAuthGuard, AdminGuard)
+  async adminStopCurrentLottery(): Promise<boolean> {
+    return await this.lotteryService.adminStopCurrentLottery();
+  }
+
+  /**
+   * 관리자: 커스텀 추첨 생성
+   */
+  @Mutation(() => PointLottery, {
+    nullable: true,
+    description: '관리자: 커스텀 설정으로 새 추첨 생성',
+  })
+  @UseGuards(GqlAuthGuard, AdminGuard)
+  async adminCreateCustomLottery(
+    @Args('totalPrize', { type: () => Int }) totalPrize: number,
+    @Args('winnerCount', { type: () => Int }) winnerCount: number,
+    @Args('durationMinutes', { type: () => Int, defaultValue: 50 })
+    durationMinutes: number,
+  ): Promise<PointLottery | null> {
+    return await this.lotteryService.adminCreateCustomLottery(
+      totalPrize,
+      winnerCount,
+      durationMinutes,
+    );
+  }
+
+  /**
+   * 관리자: 추첨 통계 조회
+   */
+  @Query(() => AdminLotteryStatsResponse, {
+    description: '관리자: 추첨 통계 조회',
+  })
+  @UseGuards(GqlAuthGuard, AdminGuard)
+  async adminLotteryStats(): Promise<AdminLotteryStatsResponse> {
+    const stats = await this.lotteryService.getAdminLotteryStats();
+    return stats;
   }
 }

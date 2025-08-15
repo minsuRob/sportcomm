@@ -67,3 +67,24 @@ export class UserWinHistoryResponse {
   @Field(() => Int, { description: '페이지당 항목 수' })
   limit: number;
 }
+
+/**
+ * 관리자 추첨 통계 응답 DTO
+ */
+@ObjectType()
+export class AdminLotteryStatsResponse {
+  @Field(() => Int, { description: '총 추첨 수' })
+  totalLotteries: number;
+
+  @Field(() => Int, { description: '진행 중인 추첨 수' })
+  activeLotteries: number;
+
+  @Field(() => Int, { description: '총 응모 수' })
+  totalEntries: number;
+
+  @Field(() => Int, { description: '총 지급된 상금' })
+  totalPrizeDistributed: number;
+
+  @Field(() => Number, { description: '평균 참여율' })
+  averageParticipation: number;
+}

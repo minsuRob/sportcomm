@@ -9,6 +9,7 @@ import {
   ImageStyle,
   ActivityIndicator,
   ScrollView,
+  ImageBackground,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@apollo/client";
@@ -45,32 +46,6 @@ interface UserProfileModalProps {
   userId: string;
   onClose?: () => void;
 }
-
-/**
- * 팬이 된 날짜부터 오늘까지의 기간을 년, 월, 일로 계산합니다.
- */
-const formatFanDuration = (
-  favoriteDate: string
-): { years: number; months: number; totalDays: number } => {
-  const startDate = new Date(favoriteDate);
-  const today = new Date();
-
-  startDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-
-  const diffTime = today.getTime() - startDate.getTime();
-  const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  let years = today.getFullYear() - startDate.getFullYear();
-  let months = today.getMonth() - startDate.getMonth();
-
-  if (months < 0 || (months === 0 && today.getDate() < startDate.getDate())) {
-    years--;
-    months += 12;
-  }
-
-  return { years, months, totalDays };
-};
 
 /**
  * 다른 사용자의 프로필을 표시하는 모달 컴포넌트
@@ -113,11 +88,7 @@ export default function UserProfileModal({
   });
 
   // 사용자의 게시물 목록 조회
-  const {
-    data: postsData,
-    loading: postsLoading,
-    refetch: refetchPosts,
-  } = useQuery<{
+  const { data: postsData, loading: postsLoading } = useQuery<{
     posts: { posts: Post[] };
   }>(GET_USER_POSTS, {
     variables: { input: { authorId: userId } },
@@ -188,7 +159,6 @@ export default function UserProfileModal({
         visibilityTime: 2000,
       });
 
-      // 프로필 데이터 새로고침
       refetchProfile();
     } catch (error) {
       setIsFollowing(previousIsFollowing);
@@ -218,7 +188,6 @@ export default function UserProfileModal({
     if (currentUser.id === userId) return;
 
     try {
-      // 1대1 채팅 시작 로직 (기존 구현 활용)
       router.push(`/(modals)/start-private-chat?targetUserId=${userId}`);
       onClose?.();
     } catch (error) {
@@ -231,25 +200,6 @@ export default function UserProfileModal({
     }
   };
 
-  /**
-   * 팔로워 목록 보기
-   */
-  const handleFollowersPress = () => {
-    router.push(`/(details)/followers?userId=${userId}`);
-    onClose?.();
-  };
-
-  /**
-   * 팔로잉 목록 보기
-   */
-  const handleFollowingPress = () => {
-    router.push(`/(details)/following?userId=${userId}`);
-    onClose?.();
-  };
-
-  /**
-   * 탭 변경 핸들러
-   */
   const handleTabChange = (tabKey: string) => {
     setActiveTab(tabKey);
   };
@@ -283,190 +233,101 @@ export default function UserProfileModal({
     userProfile.profileImageUrl ||
     `https://i.pravatar.cc/150?u=${userProfile.id}`;
   const isOwnProfile = currentUser?.id === userId;
+  const backgroundImageUrl = "https://picsum.photos/seed/picsum/400/200"; // Placeholder
 
   return (
-    <View style={themed($container)}>
-      {/* 헤더 */}
-      <View style={themed($header)}>
-        <TouchableOpacity onPress={onClose}>
-          <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
-        </TouchableOpacity>
-        <Text style={themed($headerTitle)}>{userProfile.nickname}</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView
-        style={themed($scrollContainer)}
-        showsVerticalScrollIndicator={false}
+    <ScrollView style={themed($container)} showsVerticalScrollIndicator={false}>
+      <ImageBackground
+        source={{ uri: backgroundImageUrl }}
+        style={themed($backgroundImage)}
       >
-        {/* 프로필 정보 */}
-        <View style={themed($profileSection)}>
+        <TouchableOpacity style={themed($backButton)} onPress={onClose}>
+          <Ionicons name="arrow-back" color={"#fff"} size={24} />
+        </TouchableOpacity>
+      </ImageBackground>
+
+      <View style={themed($mainContent)}>
+        <View style={themed($profileCard)}>
           <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
-          <Text style={themed($username)}>{userProfile.nickname}</Text>
-
-          {/* 연령대 배지 표시 */}
-          {userProfile.age && (
-            <View style={themed($ageBadge)}>
-              <Text style={themed($ageBadgeText)}>
-                {(() => {
-                  const age = userProfile.age;
-                  if (age >= 40) return `40+ 🟪`;
-                  if (age >= 30) return `30-35 🟦`;
-                  if (age >= 26) return `26-29 🟩`;
-                  if (age >= 21) return `20-25 🟨`;
-                  if (age >= 16) return `16-20 🟧`;
-                  if (age >= 10) return `10-15 🟥`;
-                  return `${age}`;
-                })()}
-              </Text>
-            </View>
-          )}
-
-          {/* 바이오 */}
-          {userProfile.bio && (
-            <Text style={themed($bio)}>{userProfile.bio}</Text>
-          )}
-
-          {/* 팀 정보 표시 */}
-          {userProfile.myTeams && userProfile.myTeams.length > 0 ? (
-            <View style={themed($teamsContainer)}>
-              {userProfile.myTeams
-                .slice()
-                .sort((a, b) => a.priority - b.priority)
-                .map((userTeam) => (
-                  <View key={userTeam.id} style={themed($teamItem)}>
-                    <TeamLogo
-                      logoUrl={userTeam.team.logoUrl}
-                      fallbackIcon={userTeam.team.icon}
-                      teamName={userTeam.team.name}
-                      size={24}
-                    />
-                    <Text style={themed($teamInfo)}>
-                      {userTeam.team.name}
-                      {userTeam.favoriteDate && (
-                        <Text style={themed($teamYear)}>
-                          {" "}
-                          {formatFanDuration(userTeam.favoriteDate).years > 0
-                            ? `${formatFanDuration(userTeam.favoriteDate).years}년째`
-                            : `${formatFanDuration(userTeam.favoriteDate).months}개월째`}
-                          <Text style={themed($teamDays)}>
-                            {" "}
-                            (
-                            {formatFanDuration(userTeam.favoriteDate).totalDays}
-                            일)
-                          </Text>
-                        </Text>
-                      )}
-                    </Text>
-                  </View>
-                ))}
-            </View>
-          ) : (
-            <Text style={themed($noTeamText)}>아직 선택한 팀이 없습니다</Text>
-          )}
-
-          {/* 액션 버튼들 */}
-          {!isOwnProfile && (
-            <View style={themed($buttonContainer)}>
-              <TouchableOpacity
-                style={themed(isFollowing ? $followingButton : $followButton)}
-                onPress={handleFollowToggle}
-                disabled={followLoading}
-              >
-                {followLoading ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.background}
-                  />
-                ) : (
-                  <>
-                    <Ionicons
-                      name={isFollowing ? "person-remove" : "person-add"}
-                      color={
-                        isFollowing
-                          ? theme.colors.text
-                          : theme.colors.background
-                      }
-                      size={16}
-                    />
-                    <Text
-                      style={themed(
-                        isFollowing ? $followingButtonText : $followButtonText
-                      )}
-                    >
-                      {isFollowing ? "팔로잉" : "팔로우"}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={themed($dmButton)}
-                onPress={handleStartDM}
-              >
-                <Ionicons
-                  name="chatbubble-outline"
-                  color={theme.colors.tint}
-                  size={16}
-                />
-                <Text style={themed($dmButtonText)}>메시지</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* 통계 정보 */}
-        <View style={themed($statsSection)}>
-          <View style={themed($statItem)}>
-            <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
-            <Text style={themed($statLabel)}>게시물</Text>
-          </View>
-          <TouchableOpacity
-            style={themed($statItem)}
-            onPress={handleFollowersPress}
-          >
-            <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
-            <Text style={themed($statLabel)}>팔로워</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={themed($statItem)}
-            onPress={handleFollowingPress}
-          >
-            <Text style={themed($statNumber)}>
-              {userProfile.followingCount}
+          <View style={themed($infoContainer)}>
+            <Text style={themed($username)}>{userProfile.nickname}</Text>
+            <Text style={themed($userDescription)}>
+              Certified Brand Ambassador
             </Text>
-            <Text style={themed($statLabel)}>팔로잉</Text>
-          </TouchableOpacity>
+            {userProfile.myTeams && userProfile.myTeams.length > 0 && (
+              <View style={themed($teamLogoContainer)}>
+                <TeamLogo
+                  logoUrl={userProfile.myTeams[0].team.logoUrl}
+                  fallbackIcon={userProfile.myTeams[0].team.icon}
+                  teamName={userProfile.myTeams[0].team.name}
+                  size={32}
+                />
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* 탭 슬라이더 */}
-        <TabSlider
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-
-        {/* 게시물 목록 */}
-        {postsLoading ? (
-          <View style={themed($loadingContainer)}>
-            <ActivityIndicator size="large" color={theme.colors.tint} />
-          </View>
-        ) : (
-          <View style={themed($postsContainer)}>
-            <FeedList
-              posts={userPosts}
-              ListEmptyComponent={
-                <View style={themed($emptyState)}>
-                  <Text style={themed($emptyStateText)}>
-                    아직 작성한 게시물이 없습니다
-                  </Text>
-                </View>
-              }
-            />
+        {!isOwnProfile && (
+          <View style={themed($buttonContainer)}>
+            <TouchableOpacity
+              style={themed($saveContactButton)}
+              onPress={handleFollowToggle}
+              disabled={followLoading}
+            >
+              {followLoading ? (
+                <ActivityIndicator size="small" color={theme.colors.text} />
+              ) : (
+                <Text style={themed($saveContactButtonText)}>
+                  {isFollowing ? "Following" : "Save contact"}
+                </Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themed($exchangeContactButton)}
+              onPress={handleStartDM}
+            >
+              <Text style={themed($exchangeContactButtonText)}>
+                Exchange Contact
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
-      </ScrollView>
-    </View>
+
+        <View style={themed($contentContainer)}>
+          {userProfile.bio && (
+            <View style={themed($aboutSection)}>
+              <Text style={themed($sectionTitle)}>About</Text>
+              <Text style={themed($bioText)}>{userProfile.bio}</Text>
+            </View>
+          )}
+
+          <TabSlider
+            tabs={tabs}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
+
+          {postsLoading ? (
+            <View style={themed($loadingContainer)}>
+              <ActivityIndicator size="large" color={theme.colors.tint} />
+            </View>
+          ) : (
+            <View style={themed($postsContainer)}>
+              <FeedList
+                posts={userPosts}
+                ListEmptyComponent={
+                  <View style={themed($emptyState)}>
+                    <Text style={themed($emptyStateText)}>
+                      아직 작성한 게시물이 없습니다
+                    </Text>
+                  </View>
+                }
+              />
+            </View>
+          )}
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -476,206 +337,126 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
 });
 
-const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
+const $backgroundImage: ThemedStyle<ImageStyle> = () => ({
+  height: 200,
+  justifyContent: "flex-start",
+  padding: 16,
+});
+
+const $backButton: ThemedStyle<ViewStyle> = () => ({
+  alignSelf: "flex-start",
+  padding: 8,
+  borderRadius: 20,
+  backgroundColor: "rgba(0,0,0,0.4)",
+});
+
+const $mainContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.lg,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
+  marginTop: -80, // 프로필 카드를 배경 이미지 위로 올림
 });
 
-const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 18,
-  fontWeight: "600",
-  color: colors.text,
-});
-
-const $scrollContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  flex: 1,
-  backgroundColor: colors.background,
-});
-
-const $profileSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "center",
-  padding: spacing.xl,
+const $profileCard: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flexDirection: "row",
+  alignItems: "flex-end",
+  borderRadius: 16,
+  overflow: "hidden",
 });
 
 const $profileImage: ThemedStyle<ImageStyle> = () => ({
-  width: 100,
-  height: 100,
-  borderRadius: 50,
+  width: 140,
+  height: 140,
+  borderWidth: 4,
+  borderColor: "#fff",
+  borderRadius: 16,
 });
 
-const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+const $infoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  backgroundColor: "#000",
+  padding: spacing.md,
+  height: 120,
+  flex: 1,
+  justifyContent: "center",
+  borderTopRightRadius: 16,
+  borderBottomRightRadius: 16,
+});
+
+const $username: ThemedStyle<TextStyle> = () => ({
+  color: "#fff",
   fontSize: 24,
   fontWeight: "bold",
-  color: colors.text,
-  marginTop: spacing.md,
 });
 
-const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  marginTop: spacing.xs,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xxs,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: colors.border,
-  backgroundColor: colors.card,
-});
-
-const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
-  color: colors.text,
-  fontWeight: "600",
-});
-
-const $bio: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 16,
-  color: colors.textDim,
-  textAlign: "center",
-  marginTop: spacing.sm,
-  paddingHorizontal: spacing.md,
-  lineHeight: 22,
-});
-
-// 팀 정보 스타일들
-const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginTop: spacing.md,
-  alignItems: "center",
-  gap: spacing.sm,
-});
-
-const $teamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: colors.backgroundAlt,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: colors.border,
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.1,
-  shadowRadius: 2,
-  elevation: 2,
-});
-
-const $teamInfo: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
-  fontWeight: "600",
-  color: colors.text,
-});
-
-const $teamYear: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $userDescription: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  color: "#ccc",
   fontSize: 14,
-  fontWeight: "400",
-  color: colors.textDim,
+  marginTop: spacing.xxs,
 });
 
-const $teamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 11,
-  fontWeight: "400",
-  color: colors.textDim,
-});
-
-const $noTeamText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 14,
-  color: colors.textDim,
-  marginTop: spacing.md,
-  fontStyle: "italic",
+const $teamLogoContainer: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  right: 12,
+  bottom: 12,
 });
 
 const $buttonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
-  marginTop: spacing.lg,
+  marginTop: spacing.md,
   gap: spacing.sm,
 });
 
-const $followButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  backgroundColor: colors.tint,
-  borderRadius: 8,
+const $saveContactButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flex: 1,
-  justifyContent: "center",
-});
-
-const $followButtonText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  marginLeft: spacing.xs,
-  color: colors.background,
-  fontWeight: "600",
-});
-
-const $followingButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
+  paddingVertical: spacing.md,
+  backgroundColor: colors.background,
+  borderRadius: 8,
   borderWidth: 1,
   borderColor: colors.border,
-  backgroundColor: colors.card,
-  borderRadius: 8,
-  flex: 1,
+  alignItems: "center",
   justifyContent: "center",
 });
 
-const $followingButtonText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  marginLeft: spacing.xs,
+const $saveContactButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontWeight: "600",
 });
 
-const $dmButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  borderWidth: 1,
-  borderColor: colors.tint,
-  borderRadius: 8,
+const $exchangeContactButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
+  paddingVertical: spacing.md,
+  backgroundColor: "#F97316", // 오렌지색
+  borderRadius: 8,
+  alignItems: "center",
   justifyContent: "center",
 });
 
-const $dmButtonText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  marginLeft: spacing.xs,
-  color: colors.tint,
+const $exchangeContactButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "#fff",
   fontWeight: "600",
 });
 
-const $statsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-around",
-  paddingVertical: spacing.lg,
-  borderTopWidth: 1,
-  borderBottomWidth: 1,
-  borderColor: colors.border,
-  marginHorizontal: spacing.md,
+const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.lg,
 });
 
-const $statItem: ThemedStyle<ViewStyle> = () => ({
-  alignItems: "center",
+const $aboutSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginBottom: spacing.lg,
 });
 
-const $statNumber: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 20,
   fontWeight: "bold",
   color: colors.text,
+  marginBottom: spacing.sm,
 });
 
-const $statLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 14,
+const $bioText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
   color: colors.textDim,
-  marginTop: spacing.xxxs,
+  lineHeight: 24,
 });
 
-const $postsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $postsContainer: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
-  paddingHorizontal: spacing.md,
 });
 
 const $emptyState: ThemedStyle<ViewStyle> = ({ spacing }) => ({

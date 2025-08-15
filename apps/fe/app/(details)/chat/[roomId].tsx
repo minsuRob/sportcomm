@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession } from "@/lib/auth";
@@ -18,6 +19,8 @@ import ChatList from "@/components/chat/ChatList";
 import ChatInput from "@/components/chat/ChatInput";
 import { showToast } from "@/components/CustomToast";
 import { chatService } from "@/lib/chat/chatService";
+import { GET_PRIVATE_CHAT_PARTNER } from "@/lib/graphql/user-chat";
+import { getChatRoomDisplayName, isPrivateChat } from "@/lib/chat/chatUtils";
 
 // 메시지 타입 (ChatList와 호환)
 interface Message {
@@ -84,6 +87,16 @@ export default function ChatRoomScreen() {
 
   // 채팅방 정보 상태
   const [channelInfo, setChannelInfo] = useState<any>(null);
+  const [chatRoomTitle, setChatRoomTitle] = useState<string>(
+    roomName || "채팅방"
+  );
+
+  // 1대1 채팅방인 경우 상대방 정보 조회
+  const { data: partnerData } = useQuery(GET_PRIVATE_CHAT_PARTNER, {
+    variables: { roomId },
+    skip: !roomId,
+    fetchPolicy: "cache-and-network",
+  });
 
   // 사용자 정보 로드 및 메시지 데이터 조회
   useEffect(() => {
@@ -125,7 +138,7 @@ export default function ChatRoomScreen() {
       const loadedMessages = await chatService.getChatMessages(roomId);
       setMessages(loadedMessages);
       console.log(
-        `채팅방 ${roomId}의 메시지 ${loadedMessages.length}개 로드 완료`,
+        `채팅방 ${roomId}의 메시지 ${loadedMessages.length}개 로드 완료`
       );
     } catch (error) {
       console.error("메시지 로드 실패:", error);
@@ -147,12 +160,28 @@ export default function ChatRoomScreen() {
       // 공개 채팅방 목록에서 현재 채팅방 정보 찾기
       const result = await chatService.getPublicChatRooms(1, 100);
       const currentChannel = result.chatRooms.find(
-        (room) => room.id === roomId,
+        (room) => room.id === roomId
       );
 
       if (currentChannel) {
         setChannelInfo(currentChannel);
-        console.log(`채팅방 정보 로드 완료: ${currentChannel.name}`);
+
+        // 채팅방 제목 설정 (1대1 채팅인 경우 상대방 이름 사용)
+        const displayName = getChatRoomDisplayName(
+          {
+            ...currentChannel,
+            type:
+              (currentChannel.type as "PRIVATE" | "GROUP" | "PUBLIC") ||
+              "PUBLIC",
+            isPrivate: currentChannel.type === "PRIVATE",
+            unreadCount: 0,
+            members: [],
+          },
+          currentUser?.nickname
+        );
+        setChatRoomTitle(displayName);
+
+        console.log(`채팅방 정보 로드 완료: ${displayName}`);
       }
     } catch (error) {
       console.error("채팅방 정보 로드 실패:", error);
@@ -178,7 +207,7 @@ export default function ChatRoomScreen() {
       const newMessage = await chatService.sendMessage(
         roomId,
         messageContent,
-        currentUser,
+        currentUser
       );
 
       if (newMessage) {
@@ -224,7 +253,7 @@ export default function ChatRoomScreen() {
         if (newMessage.user_id !== currentUser.id) {
           setMessages((prev) => [...prev, newMessage]);
         }
-      },
+      }
     );
 
     // 컴포넌트 언마운트 시 구독 해제
@@ -297,11 +326,7 @@ export default function ChatRoomScreen() {
         onRefresh={handleRefresh}
         onLongPressMessage={handleLongPressMessage}
         onBack={handleBack}
-        title={
-          roomName ||
-          channelInfo?.name ||
-          `채팅방 (${chatService.getDataSourceType()})`
-        }
+        title={chatRoomTitle}
         hasMoreMessages={false}
         onLoadMore={() => {
           // TODO: 이전 메시지 로드 구현

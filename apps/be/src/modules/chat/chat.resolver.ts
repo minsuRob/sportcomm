@@ -68,6 +68,24 @@ export class PaginatedChatMessages {
   chatRoom: ChatRoom;
 }
 
+@ObjectType()
+export class SearchUsersResponse {
+  @Field(() => [User], { description: '사용자 목록' })
+  users: User[];
+
+  @Field(() => Int, { description: '총 사용자 수' })
+  total: number;
+
+  @Field(() => Int, { description: '현재 페이지' })
+  page: number;
+
+  @Field(() => Int, { description: '페이지당 항목 수' })
+  limit: number;
+
+  @Field(() => Int, { description: '총 페이지 수' })
+  totalPages: number;
+}
+
 /**
  * 채팅 리졸버
  *
@@ -188,5 +206,56 @@ export class ChatResolver {
   })
   async getUserTeamsForChat(@CurrentUser() user: User): Promise<UserTeam[]> {
     return await this.chatService.getUserTeams(user.id);
+  }
+
+  // === 1대1 개인 채팅 ===
+
+  @Mutation(() => ChatRoom, {
+    description: '1대1 개인 채팅방 생성 또는 조회',
+  })
+  async createOrGetPrivateChat(
+    @CurrentUser() user: User,
+    @Args('targetUserId') targetUserId: string,
+  ): Promise<ChatRoom> {
+    return await this.chatService.createOrGetPrivateChat(user.id, targetUserId);
+  }
+
+  @Query(() => PaginatedUserChatRooms, {
+    description: '사용자의 1대1 개인 채팅방 목록 조회',
+  })
+  async getUserPrivateChats(
+    @CurrentUser() user: User,
+    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
+    @Args('limit', { type: () => Int, defaultValue: 20 }) limit: number,
+  ): Promise<PaginatedUserChatRooms> {
+    return await this.chatService.getUserPrivateChats(user.id, page, limit);
+  }
+
+  @Query(() => SearchUsersResponse, {
+    description: '사용자 검색 (1대1 채팅 시작용)',
+  })
+  async searchUsersForChat(
+    @CurrentUser() user: User,
+    @Args('searchQuery') searchQuery: string,
+    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
+    @Args('limit', { type: () => Int, defaultValue: 20 }) limit: number,
+  ): Promise<SearchUsersResponse> {
+    return await this.chatService.searchUsersForChat(
+      searchQuery,
+      user.id,
+      page,
+      limit,
+    );
+  }
+
+  @Query(() => User, {
+    nullable: true,
+    description: '1대1 채팅방에서 상대방 정보 조회',
+  })
+  async getPrivateChatPartner(
+    @CurrentUser() user: User,
+    @Args('roomId') roomId: string,
+  ): Promise<User | null> {
+    return await this.chatService.getPrivateChatPartner(roomId, user.id);
   }
 }

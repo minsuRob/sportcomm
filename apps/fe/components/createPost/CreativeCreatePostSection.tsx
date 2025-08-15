@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -53,6 +53,9 @@ export default function CreativeCreatePostSection(
     onPickMedia,
     selectedCount,
   } = props;
+
+  const titleInputRef = useRef<TextInput>(null);
+  const contentInputRef = useRef<TextInput>(null);
 
   return (
     <View style={{ gap: 12 }}>
@@ -111,6 +114,7 @@ export default function CreativeCreatePostSection(
         </TouchableOpacity>
         <View style={themed($stepBody)}>
           <TextInput
+            ref={titleInputRef}
             style={themed($inputLg)}
             placeholder="제목"
             placeholderTextColor={theme.colors.textDim}
@@ -118,8 +122,12 @@ export default function CreativeCreatePostSection(
             onChangeText={setTitle}
             maxLength={200}
             editable={!isSubmitting}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => contentInputRef.current?.focus()}
           />
           <TextInput
+            ref={contentInputRef}
             style={[themed($inputLg), { minHeight: 160 }]}
             placeholder={t(TRANSLATION_KEYS.CREATE_POST_PLACEHOLDER)}
             placeholderTextColor={theme.colors.textDim}
@@ -129,6 +137,8 @@ export default function CreativeCreatePostSection(
             textAlignVertical="top"
             maxLength={10000}
             editable={!isSubmitting}
+            returnKeyType="done"
+            blurOnSubmit={true}
           />
           <Text style={themed($muted)}>
             제목 {title.length}/200 · 내용 {content.length}/10000

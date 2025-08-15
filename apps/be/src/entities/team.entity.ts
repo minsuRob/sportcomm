@@ -12,6 +12,7 @@ import { IsString, MaxLength, MinLength, IsHexColor } from 'class-validator';
 import { BaseEntity } from './base.entity';
 import { Sport } from './sport.entity';
 import { UserTeam } from './user-team.entity';
+import { Post } from './post.entity';
 
 /**
  * 팀 엔티티
@@ -166,6 +167,9 @@ export class Team extends BaseEntity {
   @Field(() => [UserTeam], { description: '이 팀을 선택한 사용자들' })
   @OneToMany(() => UserTeam, (userTeam) => userTeam.team)
   userTeams: UserTeam[];
+
+  @OneToMany(() => Post, (post) => post.team)
+  posts: Post[];
 
   // === 헬퍼 메서드 ===
 

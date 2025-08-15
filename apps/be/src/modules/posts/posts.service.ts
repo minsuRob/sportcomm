@@ -206,6 +206,7 @@ export class PostsService {
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
       .leftJoinAndSelect('post.media', 'media')
+      .leftJoinAndSelect('post.team', 'team')
       .where('post.deletedAt IS NULL');
 
     // 필터 적용
@@ -280,6 +281,7 @@ export class PostsService {
         'media',
         'versions',
         'likes',
+        'team',
       ],
     });
 

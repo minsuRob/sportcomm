@@ -17,6 +17,7 @@ import { PostLike } from './post-like.entity';
 import { Bookmark } from './bookmark.entity';
 import { PostTag } from './post-tag.entity';
 import { Tag } from './tag.entity';
+import { Team } from './team.entity';
 
 /**
  * 팀 기반 게시물 분류
@@ -189,6 +190,14 @@ export class Post extends BaseEntity {
   })
   @JoinColumn({ name: 'authorId' })
   author: User;
+
+  @Field(() => Team, { description: '게시물 팀' })
+  @ManyToOne(() => Team, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'teamId' })
+  team: Team;
 
   /**
    * 게시물에 달린 댓글들

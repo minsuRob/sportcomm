@@ -23,6 +23,7 @@ export class LotteryResolver {
   @Query(() => LotteryStatusResponse, {
     description: '현재 진행 중인 추첨 상태 조회',
   })
+  @UseGuards(GqlAuthGuard)
   async currentLotteryStatus(
     @Context() context: any,
   ): Promise<LotteryStatusResponse> {

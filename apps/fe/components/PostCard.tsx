@@ -723,17 +723,30 @@ const PostCard = React.memo(function PostCard({
 
             {/* 프로필 정보 컨테이너 */}
             <View style={themed($profileContainer)}>
-              <UserAvatar
-                imageUrl={post.author.profileImageUrl}
-                name={post.author.nickname}
-                size={32}
-              />
-              <View style={themed($profileInfo)}>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push(`/(modals)/user-profile?userId=${post.author.id}`)
+                }
+                activeOpacity={0.7}
+              >
+                <UserAvatar
+                  imageUrl={post.author.profileImageUrl}
+                  name={post.author.nickname}
+                  size={32}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={themed($profileInfo)}
+                onPress={() =>
+                  router.push(`/(modals)/user-profile?userId=${post.author.id}`)
+                }
+                activeOpacity={0.7}
+              >
                 <Text style={themed($profileName)}>{post.author.nickname}</Text>
                 <Text style={themed($profileTime)}>
                   {formatTimeAgo(post.createdAt)}
                 </Text>
-              </View>
+              </TouchableOpacity>
 
               {/* 팔로우 버튼 - 자신의 게시물이 아닌 경우에만 표시 */}
               {currentUser && currentUser.id !== post.author.id && (

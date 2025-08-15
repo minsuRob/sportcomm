@@ -69,7 +69,7 @@ export default function LotteryScreen() {
   const { data, loading, error, refetch } = useQuery<{
     currentLotteryStatus: LotteryData;
   }>(GET_LOTTERY_STATUS, {
-    pollInterval: 5000, // 5초마다 폴링
+    pollInterval: 60000, // 60초마다 폴링
     fetchPolicy: "cache-and-network",
   });
 

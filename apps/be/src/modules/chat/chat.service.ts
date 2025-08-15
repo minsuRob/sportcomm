@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Brackets } from 'typeorm';
 import { ChatRoom } from '../../entities/chat-room.entity';
 import { ChatMessage } from '../../entities/chat-message.entity';
 import { User } from '../../entities/user.entity';
@@ -55,8 +55,14 @@ export class ChatService {
       .leftJoinAndSelect('chatRoom.participants', 'participants')
       .where('chatRoom.isRoomActive = :isActive', { isActive: true })
       .andWhere(
-        '(chatRoom.teamId IS NULL OR chatRoom.teamId IN (:...teamIds))',
-        { teamIds: userTeamIds.length > 0 ? userTeamIds : [''] },
+        new Brackets((qb) => {
+          qb.where('chatRoom.teamId IS NULL');
+          if (userTeamIds.length > 0) {
+            qb.orWhere('chatRoom.teamId IN (:...teamIds)', {
+              teamIds: userTeamIds,
+            });
+          }
+        }),
       )
       .orderBy('chatRoom.lastMessageAt', 'DESC')
       .addOrderBy('chatRoom.createdAt', 'DESC')

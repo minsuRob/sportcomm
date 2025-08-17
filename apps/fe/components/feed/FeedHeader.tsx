@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  GestureResponderEvent,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
@@ -44,14 +46,25 @@ export default function FeedHeader({
 }: FeedHeaderProps) {
   const { themed, theme } = useAppTheme();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
-  const anchorRef = React.useRef<View>(null);
+  const [popoverPosition, setPopoverPosition] = React.useState({
+    top: 0,
+    right: 0,
+  });
 
-  const handleProfilePress = () => {
+  const handleProfilePress = (event: GestureResponderEvent) => {
     if (currentUser) {
-      // 로그인 상태면 컨텍스트 메뉴 오픈
-      setProfileMenuVisible(true);
+      // @ts-ignore
+      event.target.measure((x, y, width, height, pageX, pageY) => {
+        const windowWidth = Dimensions.get("window").width;
+        const right = windowWidth - pageX - width;
+
+        setPopoverPosition({
+          top: pageY + height + 8,
+          right: right,
+        });
+        setProfileMenuVisible(true);
+      });
     } else {
-      // 비로그인 상태면 기존 프로필(=로그인/프로필) 화면 이동
       onProfilePress();
     }
   };
@@ -118,7 +131,6 @@ export default function FeedHeader({
           </>
         )}
         <TouchableOpacity
-          ref={anchorRef}
           style={themed($iconButton)}
           onPress={handleProfilePress}
         >
@@ -146,10 +158,7 @@ export default function FeedHeader({
             setProfileMenuVisible(false);
             onProfilePress();
           }}
-          anchorStyle={{
-            top: 46,
-            right: 10,
-          }}
+          anchorStyle={popoverPosition}
         />
       )}
     </View>

@@ -68,6 +68,7 @@ interface UserProfile {
   email: string;
   profileImageUrl?: string;
   bio?: string;
+  comment?: string;
   age?: number;
   role: string;
   isFollowing: boolean;
@@ -310,6 +311,9 @@ export default function UserProfileModal({
           <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
           <View style={themed($infoContainer)}>
             <Text style={themed($username)}>{userProfile.nickname}</Text>
+            {userProfile.comment && (
+              <Text style={themed($userComment)}>{userProfile.comment}</Text>
+            )}
             {userProfile.bio && (
               <Text style={themed($userDescription)}>{userProfile.bio}</Text>
             )}
@@ -508,6 +512,14 @@ const $username: ThemedStyle<TextStyle> = () => ({
   color: "#fff",
   fontSize: 24,
   fontWeight: "bold",
+});
+
+const $userComment: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  color: "#ddd",
+  fontSize: 16,
+  marginTop: spacing.xs,
+  fontStyle: "italic",
+  lineHeight: 22,
 });
 
 const $userDescription: ThemedStyle<TextStyle> = ({ spacing }) => ({

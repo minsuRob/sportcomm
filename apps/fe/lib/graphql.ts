@@ -245,6 +245,7 @@ export const GET_USER_PROFILE = gql`
       email
       profileImageUrl
       bio
+      comment
       age
       role
       isFollowing

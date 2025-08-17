@@ -789,19 +789,18 @@ const PostCard = React.memo(function PostCard({
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
             <View style={themed($topRightContainer)}>
               <View style={themed($topRightIcons)}>
-                {/* Sport Icon */}
-                <View style={themed($sportIconBadge)}>
-                  <Text style={themed($sportIconText)}>
-                    {post.team?.sport?.icon || "🏆"}
-                  </Text>
-                </View>
-
                 {/* Tags */}
                 {post.tags?.slice(0, 2).map((tag) => (
                   <View key={tag.id} style={themed($tagBadge)}>
                     <Text style={themed($tagText)}>#{tag.name}</Text>
                   </View>
                 ))}
+                {/* Sport Icon */}
+                <View style={themed($sportIconBadge)}>
+                  <Text style={themed($sportIconText)}>
+                    {post.team?.sport?.icon || "🏆"}
+                  </Text>
+                </View>
 
                 {/* 더보기 버튼 */}
                 <TouchableOpacity

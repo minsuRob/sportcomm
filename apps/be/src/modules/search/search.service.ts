@@ -157,11 +157,23 @@ export class SearchService {
     page: number,
     pageSize: number,
   ): Promise<[Post[], number]> {
+    // # 기호가 포함된 검색어인 경우 제거
+    const cleanQuery = searchQuery.startsWith('#')
+      ? searchQuery.substring(1)
+      : searchQuery;
+
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
-      .where('post.title ILIKE :query', { query: searchQuery })
-      .orWhere('post.content ILIKE :query', { query: searchQuery })
+      .leftJoinAndSelect('post.postTags', 'postTags')
+      .leftJoinAndSelect('postTags.tag', 'tag')
+      .where(
+        '(post.title ILIKE :query OR post.content ILIKE :query OR tag.name ILIKE :query OR tag.name ILIKE :cleanQuery)',
+        {
+          query: `%${searchQuery}%`,
+          cleanQuery: `%${cleanQuery}%`,
+        },
+      )
       .andWhere('post.isPublic = :isPublic', { isPublic: true });
 
     // 정렬 방식 적용
@@ -181,20 +193,29 @@ export class SearchService {
         break;
       case SearchSortBy.RELEVANCE:
       default:
-        // 관련성순: PostgreSQL의 ts_rank 사용 (Full-Text Search)
-        // 참고: 실제 구현에서는 tsvector와 tsquery를 사용해야 함
+        // 관련성순: 제목, 내용, 태그 일치도로 정렬
         queryBuilder
           .addSelect(
             `CASE
-              WHEN post.title ILIKE :exactQuery THEN 3
-              WHEN post.title ILIKE :startQuery THEN 2
-              WHEN post.title ILIKE :query THEN 1
-              ELSE 0.5
+              WHEN post.title ILIKE :exactQuery THEN 4
+              WHEN post.title ILIKE :startQuery THEN 3
+              WHEN post.title ILIKE :query THEN 2
+              WHEN tag.name ILIKE :exactQuery THEN 3
+              WHEN tag.name ILIKE :startQuery THEN 2
+              WHEN tag.name ILIKE :query THEN 1
+              WHEN tag.name ILIKE :cleanExactQuery THEN 3
+              WHEN tag.name ILIKE :cleanStartQuery THEN 2
+              WHEN tag.name ILIKE :cleanQuery THEN 1
+              WHEN post.content ILIKE :query THEN 0.5
+              ELSE 0.1
             END`,
             'relevance_score',
           )
           .setParameter('exactQuery', searchQuery.replace(/%/g, ''))
           .setParameter('startQuery', searchQuery.replace(/^%/, ''))
+          .setParameter('cleanExactQuery', cleanQuery.replace(/%/g, ''))
+          .setParameter('cleanStartQuery', cleanQuery.replace(/^%/, ''))
+          .setParameter('cleanQuery', `%${cleanQuery}%`)
           .orderBy('relevance_score', 'DESC')
           .addOrderBy('post.createdAt', 'DESC');
     }

@@ -18,6 +18,7 @@ import SearchResults, {
 } from "@/components/search/SearchResults";
 import { searchApi, getPopularSearchTerms } from "@/lib/api/search";
 import { debounce } from "lodash";
+import { TagSearchTest } from "@/components/test/TagSearchTest";
 // WebCenteredLayout 제거 - 전역 레이아웃 사용
 
 /**
@@ -35,6 +36,7 @@ export default function SearchScreen() {
   const [hasMore, setHasMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [popularTerms, setPopularTerms] = useState<string[]>([]);
+  const [showTagTest, setShowTagTest] = useState(false);
 
   // 디바운스된 검색 함수 생성
   const debouncedSearch = useCallback(
@@ -54,7 +56,7 @@ export default function SearchScreen() {
             page,
             pageSize: 10,
           },
-          tab,
+          tab
         );
 
         const newResults =
@@ -68,7 +70,7 @@ export default function SearchScreen() {
         setIsLoading(false);
       }
     }, 300),
-    [results],
+    [results]
   );
 
   /**
@@ -152,8 +154,21 @@ export default function SearchScreen() {
       {/* 검색 탭 - 전체 너비 사용 */}
       <SearchTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {/* 검색 결과 영역 */}
-      {!searchQuery.trim() && popularTerms.length > 0 ? (
+      {/* 태그 검색 테스트 토글 버튼 */}
+      <TouchableOpacity
+        style={themed($tagTestToggle)}
+        onPress={() => setShowTagTest(!showTagTest)}
+      >
+        <Text style={themed($tagTestToggleText)}>
+          {showTagTest ? "일반 검색으로" : "태그 검색 테스트"}
+        </Text>
+      </TouchableOpacity>
+
+      {/* 태그 검색 테스트 모드 */}
+      {showTagTest ? (
+        <TagSearchTest />
+      ) : /* 일반 검색 결과 영역 */
+      !searchQuery.trim() && popularTerms.length > 0 ? (
         <View style={themed($popularTermsContainer)}>
           <Text style={themed($sectionTitle)}>인기 검색어</Text>
           <View style={themed($termsContainer)}>
@@ -176,6 +191,7 @@ export default function SearchScreen() {
           hasMore={hasMore}
           loadMore={loadMore}
           searchQuery={searchQuery}
+          onTagPress={(tagName) => setSearchQuery(`#${tagName}`)}
         />
       )}
     </View>
@@ -282,4 +298,20 @@ const $termItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $termText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   fontSize: 14,
+});
+
+const $tagTestToggle: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.tint + "20",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 8,
+  marginHorizontal: spacing.md,
+  marginBottom: spacing.md,
+  alignItems: "center",
+});
+
+const $tagTestToggleText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+  fontSize: 14,
+  fontWeight: "600",
 });

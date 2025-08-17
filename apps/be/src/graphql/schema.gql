@@ -4,6 +4,154 @@ type Query {
   _empty: String
 }
 
+type Post {
+  id: ID!
+  title: String
+  content: String!
+  type: String!
+  viewCount: Int!
+  likeCount: Int!
+  commentCount: Int!
+  shareCount: Int!
+  isPinned: Boolean!
+  isPublic: Boolean!
+  teamId: String!
+  authorId: String!
+  authorTeams: String
+  createdAt: String!
+  updatedAt: String!
+  deletedAt: String
+
+  # 관계 필드
+  author: User!
+  team: Team
+  comments: [Comment!]
+  media: [Media!]
+  versions: [PostVersion!]
+  likes: [PostLike!]
+  bookmarks: [Bookmark!]
+  postTags: [PostTag!]
+  tags: [Tag!]
+
+  # 계산된 필드
+  isLiked: Boolean
+  isBookmarked: Boolean
+}
+
+type User {
+  id: ID!
+  nickname: String!
+  profileImageUrl: String
+  createdAt: String!
+  updatedAt: String!
+
+  # 관계 필드
+  posts: [Post!]
+  myTeams: [UserTeam!]
+}
+
+type Team {
+  id: ID!
+  name: String!
+  code: String!
+  color: String!
+  icon: String!
+  logoUrl: String
+  description: String
+  sortOrder: Int!
+  isActive: Boolean!
+  createdAt: String!
+  updatedAt: String!
+
+  # 관계 필드
+  posts: [Post!]
+}
+
+type Comment {
+  id: ID!
+  content: String!
+  postId: String!
+  authorId: String!
+  createdAt: String!
+  updatedAt: String!
+
+  # 관계 필드
+  post: Post!
+  author: User!
+}
+
+type PostVersion {
+  id: ID!
+  postId: String!
+  title: String
+  content: String!
+  editReason: String
+  createdAt: String!
+
+  # 관계 필드
+  post: Post!
+}
+
+type PostLike {
+  id: ID!
+  postId: String!
+  userId: String!
+  createdAt: String!
+
+  # 관계 필드
+  post: Post!
+  user: User!
+}
+
+type Bookmark {
+  id: ID!
+  postId: String!
+  userId: String!
+  createdAt: String!
+
+  # 관계 필드
+  post: Post!
+  user: User!
+}
+
+type PostTag {
+  id: ID!
+  postId: String!
+  tagId: String!
+  createdAt: String!
+
+  # 관계 필드
+  post: Post!
+  tag: Tag!
+}
+
+type Tag {
+  id: ID!
+  name: String!
+  color: String
+  description: String
+  usageCount: Int!
+  isActive: Boolean!
+  createdAt: String!
+  updatedAt: String!
+
+  # 관계 필드
+  postTags: [PostTag!]
+}
+
+type UserTeam {
+  id: ID!
+  userId: String!
+  teamId: String!
+  priority: Int!
+  notificationEnabled: Boolean!
+  createdAt: String!
+
+  # 관계 필드
+  user: User!
+  team: Team!
+}
+
 type Media {
   id: ID!
   originalName: String!
@@ -20,7 +168,56 @@ type Media {
   updatedAt: String
 }
 
+# 입력 타입들
+input CreatePostInput {
+  title: String
+  content: String!
+  teamId: String!
+  isPublic: Boolean
+  mediaIds: [String!]
+  tags: [String!]
+}
+
+input UpdatePostInput {
+  id: String!
+  title: String
+  content: String
+  teamId: String
+  isPublic: Boolean
+  isPinned: Boolean
+  editReason: String
+  mediaIds: [String!]
+}
+
+input FindPostsInput {
+  page: Int
+  limit: Int
+  teamIds: [String!]
+  authorId: String
+  publicOnly: Boolean
+  sortBy: String
+  sortOrder: String
+  search: String
+}
+
+# 응답 타입들
+type PostsResponse {
+  posts: [Post!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+  hasPrevious: Boolean!
+  hasNext: Boolean!
+}
+
 type Mutation {
   uploadFiles(files: [Upload!]!): [Media!]!
   uploadFile(file: Upload!): Media!
+  createPost(input: CreatePostInput!): Post!
+  updatePost(input: UpdatePostInput!): Post!
+  removePost(id: String!): Post!
+  togglePinPost(id: String!): Post!
+  likePost(id: String!): Boolean!
+  sharePost(id: String!): Boolean!
 }

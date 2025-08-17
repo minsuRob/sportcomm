@@ -61,6 +61,11 @@ export const GET_POSTS = gql`
         comments {
           id
         }
+        tags {
+          id
+          name
+          color
+        }
       }
       total
       page
@@ -98,6 +103,11 @@ export const CREATE_POST = gql`
       }
       comments {
         id
+      }
+      tags {
+        id
+        name
+        color
       }
     }
   }
@@ -158,6 +168,11 @@ export const GET_POST_DETAIL = gql`
           nickname
           profileImageUrl
         }
+      }
+      tags {
+        id
+        name
+        color
       }
     }
   }
@@ -302,6 +317,11 @@ export const GET_USER_POSTS = gql`
         }
         comments {
           id
+        }
+        tags {
+          id
+          name
+          color
         }
       }
       total
@@ -671,6 +691,11 @@ export const GET_STORY_POSTS = gql`
         }
         comments {
           id
+        }
+        tags {
+          id
+          name
+          color
         }
       }
       total

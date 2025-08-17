@@ -27,6 +27,7 @@ interface FeedHeaderProps {
   onProfilePress: () => void;
   onShopPress: () => void;
   onLotteryPress: () => void;
+  onBoardPress: () => void; // 상세 게시판 버튼 클릭 핸들러 추가
 }
 
 /**
@@ -43,6 +44,7 @@ export default function FeedHeader({
   onProfilePress,
   onShopPress,
   onLotteryPress,
+  onBoardPress, // 상세 게시판 버튼 클릭 핸들러 추가
 }: FeedHeaderProps) {
   const { themed, theme } = useAppTheme();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
@@ -85,6 +87,17 @@ export default function FeedHeader({
               <Text style={themed($pointsText)}>
                 💰 {currentUser.points ?? 0}P
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themed($boardButton)}
+              onPress={onBoardPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="list-outline"
+                size={20}
+                color={theme.colors.tint}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={themed($lotteryButton)}
@@ -242,6 +255,18 @@ const $lotteryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.tint + "15",
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+  marginRight: spacing.xs,
+});
+
+const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   width: 36,
   height: 36,
   borderRadius: 18,

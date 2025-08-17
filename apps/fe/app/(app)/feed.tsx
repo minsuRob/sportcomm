@@ -104,6 +104,17 @@ export default function FeedScreen() {
   };
 
   /**
+   * 상세 게시판 버튼 클릭 핸들러
+   */
+  const handleBoardPress = () => {
+    if (!currentUser) {
+      setAuthModalVisible(true);
+      return;
+    }
+    router.push("/(details)/board");
+  };
+
+  /**
    * 상점 아이템 구매 핸들러
    */
   const handleShopPurchase = async (item: any) => {
@@ -224,6 +235,7 @@ export default function FeedScreen() {
         }
         onShopPress={handleShopPress}
         onLotteryPress={handleLotteryPress}
+        onBoardPress={handleBoardPress}
       />
 
       {/* 상점 모달 */}

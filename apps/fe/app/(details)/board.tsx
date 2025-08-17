@@ -7,6 +7,7 @@ import {
   FlatList,
   ViewStyle,
   TextStyle,
+  ImageStyle,
   ActivityIndicator,
   Image,
 } from "react-native";
@@ -19,7 +20,26 @@ import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { GET_POSTS } from "@/lib/graphql";
 import { User, getSession } from "@/lib/auth";
 import { selectOptimizedImageUrl } from "@/lib/image";
-import { formatTimeAgo } from "@/lib/utils/dateUtils";
+
+// 날짜 포맷팅 함수 (임시로 여기에 정의)
+const formatTimeAgo = (createdAt: string): string => {
+  const now = new Date();
+  const postDate = new Date(createdAt);
+  const diffInMs = now.getTime() - postDate.getTime();
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  const diffInDays = Math.floor(diffInHours / 24);
+
+  if (diffInMinutes < 1) return "방금 전";
+  if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+  if (diffInHours < 24) return `${diffInHours}시간 전`;
+  if (diffInDays < 7) return `${diffInDays}일 전`;
+
+  return postDate.toLocaleDateString("ko-KR", {
+    month: "short",
+    day: "numeric",
+  });
+};
 
 // --- 타입 정의 ---
 interface BoardPost {
@@ -120,7 +140,7 @@ export default function BoardScreen() {
         onPress={() => handlePostPress(item.id)}
         activeOpacity={0.7}
       >
-        {/* 게시물 정보 */}
+        {/* 왼쪽: 게시물 정보 */}
         <View style={themed($postInfo)}>
           {/* 제목 */}
           <Text style={themed($postTitle)} numberOfLines={2}>
@@ -137,7 +157,7 @@ export default function BoardScreen() {
               <Text style={themed($authorName)}>{item.author.nickname}</Text>
             </TouchableOpacity>
 
-            {/* 사용자 레벨 표시 (임시로 4로 설정) */}
+            {/* 사용자 레벨 표시 */}
             <View style={themed($userLevel)}>
               <Text style={themed($userLevelText)}>4</Text>
             </View>
@@ -152,30 +172,33 @@ export default function BoardScreen() {
           </View>
         </View>
 
-        {/* 썸네일 및 댓글 */}
+        {/* 오른쪽: 썸네일과 댓글 */}
         <View style={themed($postRight)}>
-          {/* 썸네일 */}
-          {imageMedia && (
-            <View style={themed($thumbnailContainer)}>
-              <Image
-                source={{
-                  uri: selectOptimizedImageUrl(imageMedia, "thumbnails"),
-                }}
-                style={themed($thumbnail)}
-                resizeMode="cover"
-              />
-              {videoMedia && (
-                <View style={themed($playIcon)}>
-                  <Ionicons name="play" size={16} color="white" />
-                </View>
-              )}
-            </View>
-          )}
+          {/* 썸네일과 댓글을 가로로 배치 */}
+          <View style={themed($thumbnailAndCommentRow)}>
+            {/* 썸네일 */}
+            {imageMedia && (
+              <View style={themed($thumbnailContainer)}>
+                <Image
+                  source={{
+                    uri: selectOptimizedImageUrl(imageMedia, "thumbnails"),
+                  }}
+                  style={themed($thumbnail)}
+                  resizeMode="cover"
+                />
+                {videoMedia && (
+                  <View style={themed($playIcon)}>
+                    <Ionicons name="play" size={16} color="white" />
+                  </View>
+                )}
+              </View>
+            )}
 
-          {/* 댓글 수 */}
-          <View style={themed($commentCount)}>
-            <Text style={themed($commentCountText)}>{item.commentCount}</Text>
-            <Text style={themed($commentLabel)}>댓글</Text>
+            {/* 댓글 수 - 썸네일 오른쪽에 배치 */}
+            <View style={themed($commentCount)}>
+              <Text style={themed($commentCountText)}>{item.commentCount}</Text>
+              <Text style={themed($commentLabel)}>댓글</Text>
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -292,25 +315,29 @@ const $postItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   marginBottom: spacing.sm,
   borderWidth: 1,
   borderColor: colors.border,
+  minHeight: 80, // 최소 높이 설정으로 일관된 크기 보장
 });
 
-const $postInfo: ThemedStyle<ViewStyle> = () => ({
+const $postInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
-  marginRight: 12,
+  marginRight: spacing.md,
+  justifyContent: "space-between", // 세로 방향 균등 분배
 });
 
-const $postTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $postTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
   fontWeight: "600",
   color: colors.text,
-  marginBottom: 8,
+  marginBottom: spacing.sm,
   lineHeight: 22,
+  flex: 1, // 제목이 공간을 차지하도록 설정
 });
 
 const $postMeta: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   gap: spacing.xs,
+  flexWrap: "wrap", // 긴 내용일 때 줄바꿈 허용
 });
 
 const $authorName: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -319,13 +346,14 @@ const $authorName: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
 });
 
-const $userLevel: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $userLevel: ThemedStyle<ViewStyle> = () => ({
   width: 20,
   height: 20,
   borderRadius: 4,
   backgroundColor: "#4CAF50",
   justifyContent: "center",
   alignItems: "center",
+  marginLeft: 4,
 });
 
 const $userLevelText: ThemedStyle<TextStyle> = () => ({
@@ -334,31 +362,39 @@ const $userLevelText: ThemedStyle<TextStyle> = () => ({
   color: "white",
 });
 
-const $postTime: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $postTime: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 12,
-  color: colors.textSecondary,
+  color: colors.textDim,
+  marginLeft: spacing.xs,
 });
 
-const $viewCount: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $viewCount: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 12,
-  color: colors.textSecondary,
+  color: colors.textDim,
+  marginLeft: spacing.xs,
 });
 
-const $postRight: ThemedStyle<ViewStyle> = () => ({
-  alignItems: "flex-end",
-  justifyContent: "space-between",
+const $postRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "flex-end", // 오른쪽 정렬
+  justifyContent: "center", // 세로 중앙 정렬
+  minWidth: 120, // 썸네일과 댓글을 포함할 수 있는 최소 너비
 });
 
-const $thumbnailContainer: ThemedStyle<ViewStyle> = () => ({
+const $thumbnailAndCommentRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row", // 가로 배치
+  alignItems: "center", // 세로 중앙 정렬
+  gap: spacing.sm, // 썸네일과 댓글 사이 간격
+});
+
+const $thumbnailContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "relative",
   width: 60,
   height: 60,
   borderRadius: 8,
   overflow: "hidden",
-  marginBottom: 8,
 });
 
-const $thumbnail: ThemedStyle<ViewStyle> = () => ({
+const $thumbnail: ThemedStyle<ImageStyle> = () => ({
   width: "100%",
   height: "100%",
 });
@@ -375,24 +411,28 @@ const $playIcon: ThemedStyle<ViewStyle> = () => ({
   alignItems: "center",
 });
 
-const $commentCount: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $commentCount: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
-  paddingHorizontal: 8,
-  paddingVertical: 4,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
   borderRadius: 6,
   alignItems: "center",
   minWidth: 50,
+  height: 60, // 썸네일과 같은 높이로 맞춤
+  justifyContent: "center",
 });
 
 const $commentCountText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   fontWeight: "600",
   color: colors.text,
+  lineHeight: 16,
 });
 
 const $commentLabel: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 10,
-  color: colors.textSecondary,
+  color: colors.textDim,
+  lineHeight: 12,
 });
 
 const $separator: ThemedStyle<ViewStyle> = ({ colors }) => ({
@@ -408,7 +448,7 @@ const $emptyContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingVertical: spacing.xl * 2,
 });
 
-const $emptyTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $emptyTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 18,
   fontWeight: "600",
   color: colors.text,
@@ -418,7 +458,7 @@ const $emptyTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $emptySubtitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
-  color: colors.textSecondary,
+  color: colors.textDim,
 });
 
 const $loadingContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -430,7 +470,7 @@ const $loadingContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 
 const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
-  color: colors.textSecondary,
+  color: colors.textDim,
   marginTop: spacing.md,
 });
 

@@ -319,9 +319,7 @@ export default function UserProfileModal({
               {createChatLoading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={themed($exchangeContactButtonText)}>
-                  Exchange Contact
-                </Text>
+                <Text style={themed($exchangeContactButtonText)}>DM</Text>
               )}
             </TouchableOpacity>
           </View>

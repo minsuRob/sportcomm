@@ -30,6 +30,36 @@ import TabSlider from "@/components/TabSlider";
 import type { Post } from "@/components/PostCard";
 import Toast from "react-native-toast-message";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import { extractTeams } from "@/lib/utils/userMeta";
+
+/**
+ * 팬이 된 날짜부터 오늘까지의 기간을 년, 월, 일로 계산합니다.
+ * @param favoriteDate 팬이 된 날짜 (ISO string)
+ * @returns 년, 월, 총 일수 객체
+ */
+const formatFanDuration = (
+  favoriteDate: string
+): { years: number; months: number; totalDays: number } => {
+  const startDate = new Date(favoriteDate);
+  const today = new Date();
+
+  // 시간, 분, 초를 0으로 설정하여 날짜만 비교
+  startDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = today.getTime() - startDate.getTime();
+  const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  let years = today.getFullYear() - startDate.getFullYear();
+  let months = today.getMonth() - startDate.getMonth();
+
+  if (months < 0 || (months === 0 && today.getDate() < startDate.getDate())) {
+    years--;
+    months += 12;
+  }
+
+  return { years, months, totalDays };
+};
 
 // 사용자 프로필 데이터 타입
 interface UserProfile {
@@ -280,19 +310,80 @@ export default function UserProfileModal({
           <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
           <View style={themed($infoContainer)}>
             <Text style={themed($username)}>{userProfile.nickname}</Text>
-            <Text style={themed($userDescription)}>
-              Certified Brand Ambassador
-            </Text>
-            {userProfile.myTeams && userProfile.myTeams.length > 0 && (
-              <View style={themed($teamLogoContainer)}>
-                <TeamLogo
-                  logoUrl={userProfile.myTeams[0].team.logoUrl}
-                  fallbackIcon={userProfile.myTeams[0].team.icon}
-                  teamName={userProfile.myTeams[0].team.name}
-                  size={32}
-                />
+            {userProfile.bio && (
+              <Text style={themed($userDescription)}>{userProfile.bio}</Text>
+            )}
+            {/* 연령대 배지 표시 */}
+            {userProfile.age && (
+              <View style={themed($ageBadge)}>
+                <Text style={themed($ageBadgeText)}>
+                  {(() => {
+                    const age = userProfile.age;
+                    if (age >= 40) return `40+ 🟪`;
+                    if (age >= 30) return `30-35 🟦`;
+                    if (age >= 26) return `26-29 🟩`;
+                    if (age >= 21) return `20-25 🟨`;
+                    if (age >= 16) return `16-20 🟧`;
+                    if (age >= 10) return `10-15 🟥`;
+                    return `${age}`;
+                  })()}
+                </Text>
               </View>
             )}
+          </View>
+        </View>
+
+        {/* 팀 정보 표시 */}
+        {userProfile.myTeams && userProfile.myTeams.length > 0 && (
+          <View style={themed($teamsContainer)}>
+            {[...userProfile.myTeams]
+              .sort((a, b) => a.priority - b.priority)
+              .slice(0, 3)
+              .map((userTeam) => (
+                <View key={userTeam.id} style={themed($teamItem)}>
+                  <TeamLogo
+                    logoUrl={userTeam.team.logoUrl}
+                    fallbackIcon={userTeam.team.icon}
+                    teamName={userTeam.team.name}
+                    size={24}
+                  />
+                  {/* 팀명과 일수 */}
+                  <Text style={themed($teamInfo)}>
+                    {userTeam.team.name}
+                    {userTeam.favoriteDate && (
+                      <Text style={themed($teamYear)}>
+                        {" "}
+                        {formatFanDuration(userTeam.favoriteDate).years > 0
+                          ? `${formatFanDuration(userTeam.favoriteDate).years}년째`
+                          : `${formatFanDuration(userTeam.favoriteDate).months}개월째`}
+                        <Text style={themed($teamDays)}>
+                          {" "}
+                          ({formatFanDuration(userTeam.favoriteDate).totalDays}
+                          일)
+                        </Text>
+                      </Text>
+                    )}
+                  </Text>
+                </View>
+              ))}
+          </View>
+        )}
+
+        {/* 통계 정보 */}
+        <View style={themed($statsSection)}>
+          <View style={themed($statItem)}>
+            <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
+            <Text style={themed($statLabel)}>게시물</Text>
+          </View>
+          <View style={themed($statItem)}>
+            <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
+            <Text style={themed($statLabel)}>팔로워</Text>
+          </View>
+          <View style={themed($statItem)}>
+            <Text style={themed($statNumber)}>
+              {userProfile.followingCount}
+            </Text>
+            <Text style={themed($statLabel)}>팔로잉</Text>
           </View>
         </View>
 
@@ -385,6 +476,7 @@ const $backButton: ThemedStyle<ViewStyle> = () => ({
 const $mainContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
   marginTop: -80, // 프로필 카드를 배경 이미지 위로 올림
+  paddingBottom: spacing.xl,
 });
 
 const $profileCard: ThemedStyle<ViewStyle> = ({ colors }) => ({
@@ -405,7 +497,7 @@ const $profileImage: ThemedStyle<ImageStyle> = () => ({
 const $infoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   backgroundColor: "#000",
   padding: spacing.md,
-  height: 120,
+  minHeight: 120,
   flex: 1,
   justifyContent: "center",
   borderTopRightRadius: 16,
@@ -422,12 +514,93 @@ const $userDescription: ThemedStyle<TextStyle> = ({ spacing }) => ({
   color: "#ccc",
   fontSize: 14,
   marginTop: spacing.xxs,
+  lineHeight: 20,
 });
 
-const $teamLogoContainer: ThemedStyle<ViewStyle> = () => ({
-  position: "absolute",
-  right: 12,
-  bottom: 12,
+const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.xs,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xxs,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+  backgroundColor: colors.card,
+  alignSelf: "flex-start",
+});
+
+const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.text,
+  fontWeight: "600",
+});
+
+// 팀 정보 스타일들
+const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $teamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.backgroundAlt,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 2,
+  elevation: 2,
+  minWidth: "80%",
+});
+
+const $teamInfo: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: colors.text,
+  marginLeft: spacing.sm,
+  flex: 1,
+});
+
+const $teamYear: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "400",
+  color: colors.textDim,
+});
+
+const $teamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 11,
+  fontWeight: "400",
+  color: colors.textDim,
+});
+
+const $statsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-around",
+  paddingVertical: spacing.lg,
+  marginTop: spacing.md,
+  borderTopWidth: 1,
+  borderBottomWidth: 1,
+  borderColor: colors.border,
+});
+
+const $statItem: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "center",
+});
+
+const $statNumber: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 20,
+  fontWeight: "bold",
+  color: colors.text,
+});
+
+const $statLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  marginTop: spacing.xxxs,
 });
 
 const $buttonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -467,7 +640,7 @@ const $exchangeContactButtonText: ThemedStyle<TextStyle> = () => ({
 });
 
 const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  marginTop: spacing.lg,
+  marginTop: spacing.md,
 });
 
 const $aboutSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({

@@ -304,93 +304,93 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 const $listContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.md,
+  padding: spacing.sm, // md에서 sm으로 줄임
 });
 
 const $postItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   backgroundColor: colors.card,
-  borderRadius: 12,
-  padding: spacing.md,
-  marginBottom: spacing.sm,
+  borderRadius: 8, // 12에서 8로 줄임
+  padding: spacing.sm, // md에서 sm으로 줄임
+  marginBottom: spacing.xs, // sm에서 xs로 줄임
   borderWidth: 1,
   borderColor: colors.border,
-  minHeight: 80, // 최소 높이 설정으로 일관된 크기 보장
+  minHeight: 70, // 80에서 70으로 줄임
 });
 
 const $postInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
-  marginRight: spacing.md,
-  justifyContent: "space-between", // 세로 방향 균등 분배
+  marginRight: spacing.sm, // md에서 sm으로 줄임
+  justifyContent: "space-between",
 });
 
 const $postTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 16,
+  fontSize: 15, // 16에서 15로 줄임
   fontWeight: "600",
   color: colors.text,
-  marginBottom: spacing.sm,
-  lineHeight: 22,
-  flex: 1, // 제목이 공간을 차지하도록 설정
+  marginBottom: spacing.xs, // sm에서 xs로 줄임
+  lineHeight: 20, // 22에서 20으로 줄임
+  flex: 1,
 });
 
 const $postMeta: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   gap: spacing.xs,
-  flexWrap: "wrap", // 긴 내용일 때 줄바꿈 허용
+  flexWrap: "wrap",
 });
 
 const $authorName: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
+  fontSize: 13, // 14에서 13으로 줄임
   fontWeight: "500",
   color: colors.text,
 });
 
 const $userLevel: ThemedStyle<ViewStyle> = () => ({
-  width: 20,
-  height: 20,
-  borderRadius: 4,
+  width: 18, // 20에서 18로 줄임
+  height: 18, // 20에서 18로 줄임
+  borderRadius: 3, // 4에서 3으로 줄임
   backgroundColor: "#4CAF50",
   justifyContent: "center",
   alignItems: "center",
-  marginLeft: 4,
+  marginLeft: 3, // 4에서 3으로 줄임
 });
 
 const $userLevelText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 12,
+  fontSize: 11, // 12에서 11로 줄임
   fontWeight: "bold",
   color: "white",
 });
 
 const $postTime: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 12,
+  fontSize: 11, // 12에서 11로 줄임
   color: colors.textDim,
   marginLeft: spacing.xs,
 });
 
 const $viewCount: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 12,
+  fontSize: 11, // 12에서 11로 줄임
   color: colors.textDim,
   marginLeft: spacing.xs,
 });
 
 const $postRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "flex-end", // 오른쪽 정렬
-  justifyContent: "center", // 세로 중앙 정렬
-  minWidth: 120, // 썸네일과 댓글을 포함할 수 있는 최소 너비
+  alignItems: "flex-end",
+  justifyContent: "center",
+  minWidth: 110, // 120에서 110으로 줄임
 });
 
 const $thumbnailAndCommentRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row", // 가로 배치
-  alignItems: "center", // 세로 중앙 정렬
-  gap: spacing.sm, // 썸네일과 댓글 사이 간격
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs, // sm에서 xs로 줄임
 });
 
 const $thumbnailContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "relative",
-  width: 60,
-  height: 60,
-  borderRadius: 8,
+  width: 50, // 60에서 50으로 줄임
+  height: 50, // 60에서 50으로 줄임
+  borderRadius: 6, // 8에서 6으로 줄임
   overflow: "hidden",
 });
 
@@ -401,11 +401,11 @@ const $thumbnail: ThemedStyle<ImageStyle> = () => ({
 
 const $playIcon: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
-  bottom: 4,
-  left: 4,
-  width: 24,
-  height: 24,
-  borderRadius: 12,
+  bottom: 3, // 4에서 3으로 줄임
+  left: 3, // 4에서 3으로 줄임
+  width: 20, // 24에서 20으로 줄임
+  height: 20, // 24에서 20으로 줄임
+  borderRadius: 10, // 12에서 10으로 줄임
   backgroundColor: "rgba(0, 0, 0, 0.7)",
   justifyContent: "center",
   alignItems: "center",
@@ -413,32 +413,32 @@ const $playIcon: ThemedStyle<ViewStyle> = () => ({
 
 const $commentCount: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
-  paddingHorizontal: spacing.sm,
+  paddingHorizontal: spacing.xs, // sm에서 xs로 줄임
   paddingVertical: spacing.xs,
-  borderRadius: 6,
+  borderRadius: 5, // 6에서 5로 줄임
   alignItems: "center",
-  minWidth: 50,
-  height: 60, // 썸네일과 같은 높이로 맞춤
+  minWidth: 45, // 50에서 45로 줄임
+  height: 50, // 60에서 50으로 줄임 (썸네일과 동일)
   justifyContent: "center",
 });
 
 const $commentCountText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
+  fontSize: 13, // 14에서 13으로 줄임
   fontWeight: "600",
   color: colors.text,
-  lineHeight: 16,
+  lineHeight: 14, // 16에서 14로 줄임
 });
 
 const $commentLabel: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 10,
+  fontSize: 9, // 10에서 9로 줄임
   color: colors.textDim,
-  lineHeight: 12,
+  lineHeight: 10, // 12에서 10으로 줄임
 });
 
 const $separator: ThemedStyle<ViewStyle> = ({ colors }) => ({
   height: 1,
   backgroundColor: colors.border,
-  marginVertical: 8,
+  marginVertical: 4, // 8에서 4로 줄임
 });
 
 const $emptyContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

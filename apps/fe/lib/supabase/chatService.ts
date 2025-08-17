@@ -34,6 +34,13 @@ export interface ChannelInfo {
     lastReadAt?: string;
   }[];
   createdAt: string;
+  team?: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+    logoUrl?: string;
+  };
 }
 
 // 메시지 전송 입력 타입
@@ -185,6 +192,13 @@ export class SupabaseChatService {
               nickname,
               profileImageUrl
             )
+          ),
+          teams (
+            id,
+            name,
+            color,
+            icon,
+            logoUrl
           )
         `
         )
@@ -602,6 +616,15 @@ export class SupabaseChatService {
         })
       ),
       createdAt: channel.createdAt,
+      team: channel.teams
+        ? {
+            id: channel.teams.id,
+            name: channel.teams.name,
+            color: channel.teams.color,
+            icon: channel.teams.icon,
+            logoUrl: channel.teams.logoUrl,
+          }
+        : undefined,
     };
   }
 

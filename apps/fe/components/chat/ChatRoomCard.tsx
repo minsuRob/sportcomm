@@ -9,6 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import TeamLogo from "@/components/TeamLogo";
 import {
   ChatRoom,
   formatChatDate,
@@ -61,25 +62,28 @@ export default function ChatRoomCard({
     >
       <View style={themed($roomHeader)}>
         {/* 채팅방 아이콘 */}
-        <View
-          style={[
-            themed($roomIconContainer),
-            sizeStyles.iconContainer,
-            { backgroundColor: typeInfo.color + "20" },
-          ]}
-        >
-          {typeInfo.teamIcon ? (
-            <Text style={[themed($teamIcon), sizeStyles.teamIcon]}>
-              {typeInfo.teamIcon}
-            </Text>
-          ) : (
+        {room.team ? (
+          <TeamLogo
+            logoUrl={room.team.logoUrl}
+            fallbackIcon={room.team.icon}
+            teamName={room.team.name}
+            size={sizeStyles.iconContainer.width}
+          />
+        ) : (
+          <View
+            style={[
+              themed($roomIconContainer),
+              sizeStyles.iconContainer,
+              { backgroundColor: typeInfo.color + "20" },
+            ]}
+          >
             <Ionicons
               name={typeInfo.icon as any}
               color={typeInfo.color}
               size={sizeStyles.iconSize}
             />
-          )}
-        </View>
+          </View>
+        )}
 
         {/* 채팅방 정보 */}
         <View style={themed($roomContent)}>
@@ -232,10 +236,6 @@ const $roomIconContainer: ThemedStyle<ViewStyle> = () => ({
   borderRadius: 18,
   justifyContent: "center",
   alignItems: "center",
-});
-
-const $teamIcon: ThemedStyle<TextStyle> = () => ({
-  // 동적 크기는 인라인으로 적용
 });
 
 const $roomContent: ThemedStyle<ViewStyle> = () => ({

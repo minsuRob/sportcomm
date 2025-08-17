@@ -34,6 +34,7 @@ export interface ChatRoom {
     name: string;
     color: string;
     icon: string;
+    logoUrl?: string;
   };
 }
 

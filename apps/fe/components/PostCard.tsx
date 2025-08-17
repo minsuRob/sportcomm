@@ -789,7 +789,7 @@ const PostCard = React.memo(function PostCard({
                 </View>
 
                 {/* Tags */}
-                {post.tags?.slice(0, 1).map((tag) => (
+                {post.tags?.slice(0, 2).map((tag) => (
                   <View key={tag.id} style={themed($tagBadge)}>
                     <Text style={themed($tagText)}>#{tag.name}</Text>
                   </View>

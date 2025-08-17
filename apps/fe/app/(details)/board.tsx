@@ -351,8 +351,8 @@ const $postRight: ThemedStyle<ViewStyle> = () => ({
 
 const $thumbnailContainer: ThemedStyle<ViewStyle> = () => ({
   position: "relative",
-  width: 80,
-  height: 80,
+  width: 60,
+  height: 60,
   borderRadius: 8,
   overflow: "hidden",
   marginBottom: 8,

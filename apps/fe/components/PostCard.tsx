@@ -299,6 +299,19 @@ const PostCard = React.memo(function PostCard({
     (item) => item.type === "video" || item.type === "VIDEO"
   );
 
+  /**
+   * 태그 클릭 시 검색 화면으로 이동
+   */
+  const handleTagPress = (tagName: string) => {
+    router.push({
+      pathname: "/(app)/search",
+      params: {
+        query: tagName,
+        autoSearch: "true",
+      },
+    });
+  };
+
   // 동영상 재생 상태 관리
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [showVideoControls, setShowVideoControls] = useState(false);
@@ -791,9 +804,14 @@ const PostCard = React.memo(function PostCard({
               <View style={themed($topRightIcons)}>
                 {/* Tags */}
                 {post.tags?.slice(0, 2).map((tag) => (
-                  <View key={tag.id} style={themed($tagBadge)}>
+                  <TouchableOpacity
+                    key={tag.id}
+                    style={themed($tagBadge)}
+                    onPress={() => handleTagPress(tag.name)}
+                    activeOpacity={0.7}
+                  >
                     <Text style={themed($tagText)}>#{tag.name}</Text>
-                  </View>
+                  </TouchableOpacity>
                 ))}
                 {/* Sport Icon */}
                 <View style={themed($sportIconBadge)}>

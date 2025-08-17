@@ -19,6 +19,8 @@ import SearchResults, {
 import { searchApi, getPopularSearchTerms } from "@/lib/api/search";
 import { debounce } from "lodash";
 import { TagSearchTest } from "@/components/test/TagSearchTest";
+import { TagNavigationTest } from "@/components/test/TagNavigationTest";
+import { useLocalSearchParams } from "expo-router";
 // WebCenteredLayout 제거 - 전역 레이아웃 사용
 
 /**
@@ -27,6 +29,7 @@ import { TagSearchTest } from "@/components/test/TagSearchTest";
  */
 export default function SearchScreen() {
   const { themed, theme } = useAppTheme();
+  const params = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<SearchTabType>("popular");
 
@@ -37,6 +40,7 @@ export default function SearchScreen() {
   const [currentPage, setCurrentPage] = useState(0);
   const [popularTerms, setPopularTerms] = useState<string[]>([]);
   const [showTagTest, setShowTagTest] = useState(false);
+  const [showNavigationTest, setShowNavigationTest] = useState(false);
 
   // 디바운스된 검색 함수 생성
   const debouncedSearch = useCallback(
@@ -119,6 +123,18 @@ export default function SearchScreen() {
     fetchPopularTerms();
   }, []);
 
+  // URL 파라미터에서 검색어 가져오기 및 자동 검색
+  useEffect(() => {
+    if (params.query && typeof params.query === "string") {
+      setSearchQuery(params.query);
+      // 자동 검색이 활성화된 경우 즉시 검색 실행
+      if (params.autoSearch === "true") {
+        setCurrentPage(0);
+        debouncedSearch(params.query, activeTab, 0);
+      }
+    }
+  }, [params.query, params.autoSearch]);
+
   // 검색어가 변경되면 자동 검색 실행
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -154,19 +170,38 @@ export default function SearchScreen() {
       {/* 검색 탭 - 전체 너비 사용 */}
       <SearchTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {/* 태그 검색 테스트 토글 버튼 */}
-      <TouchableOpacity
-        style={themed($tagTestToggle)}
-        onPress={() => setShowTagTest(!showTagTest)}
-      >
-        <Text style={themed($tagTestToggleText)}>
-          {showTagTest ? "일반 검색으로" : "태그 검색 테스트"}
-        </Text>
-      </TouchableOpacity>
+      {/* 테스트 모드 토글 버튼들 */}
+      <View style={themed($testButtonsContainer)}>
+        <TouchableOpacity
+          style={themed($tagTestToggle)}
+          onPress={() => {
+            setShowTagTest(!showTagTest);
+            setShowNavigationTest(false);
+          }}
+        >
+          <Text style={themed($tagTestToggleText)}>
+            {showTagTest ? "일반 검색으로" : "태그 검색 테스트"}
+          </Text>
+        </TouchableOpacity>
 
-      {/* 태그 검색 테스트 모드 */}
+        <TouchableOpacity
+          style={themed($tagTestToggle)}
+          onPress={() => {
+            setShowNavigationTest(!showNavigationTest);
+            setShowTagTest(false);
+          }}
+        >
+          <Text style={themed($tagTestToggleText)}>
+            {showNavigationTest ? "일반 검색으로" : "태그 네비게이션 테스트"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 테스트 모드들 */}
       {showTagTest ? (
         <TagSearchTest />
+      ) : showNavigationTest ? (
+        <TagNavigationTest />
       ) : /* 일반 검색 결과 영역 */
       !searchQuery.trim() && popularTerms.length > 0 ? (
         <View style={themed($popularTermsContainer)}>
@@ -314,4 +349,11 @@ const $tagTestToggleText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.tint,
   fontSize: 14,
   fontWeight: "600",
+});
+
+const $testButtonsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-around",
+  paddingHorizontal: spacing.md,
+  marginBottom: spacing.md,
 });

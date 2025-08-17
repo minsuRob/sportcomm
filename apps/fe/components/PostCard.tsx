@@ -37,6 +37,7 @@ import {
 import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
+import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
@@ -61,6 +62,13 @@ export interface User {
       logoUrl?: string;
       icon: string;
     };
+  }[];
+  // 호환성을 위한 추가 필드들
+  authorTeams?: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+    icon: string;
   }[];
 }
 
@@ -810,16 +818,27 @@ const PostCard = React.memo(function PostCard({
 
               {/* 팀 로고 목록 */}
               <View style={themed($teamLogoStack)}>
-                {post.authorTeams?.slice(0, 3).map((team) => (
-                  <View key={team.id} style={themed($teamLogoWrapper)}>
-                    <TeamLogo
-                      logoUrl={team.logoUrl}
-                      fallbackIcon={team.icon}
-                      teamName={team.name}
-                      size={28}
-                    />
-                  </View>
-                ))}
+                {(() => {
+                  // 작성자 팀 정보 추출 (우선순위: myTeams > authorTeams)
+                  const authorTeams = extractTeams(post.author, 3);
+
+                  // 팀 정보가 없으면 post.authorTeams 사용 (기존 호환성)
+                  const teamsToShow =
+                    authorTeams.length > 0
+                      ? authorTeams
+                      : post.authorTeams?.slice(0, 3) || [];
+
+                  return teamsToShow.map((team) => (
+                    <View key={team.id} style={themed($teamLogoWrapper)}>
+                      <TeamLogo
+                        logoUrl={team.logoUrl}
+                        fallbackIcon={team.icon}
+                        teamName={team.name}
+                        size={28}
+                      />
+                    </View>
+                  ));
+                })()}
               </View>
             </View>
 

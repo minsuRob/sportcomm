@@ -75,6 +75,14 @@ const GET_POSTS = gql`
           id
           nickname
           profileImageUrl
+          myTeams {
+            team {
+              id
+              name
+              logoUrl
+              icon
+            }
+          }
         }
         media {
           id

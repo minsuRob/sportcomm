@@ -14,8 +14,10 @@ import dayjs from "dayjs";
 import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
 import TeamLogo from "@/components/TeamLogo";
+import type { UserMeta } from "@/lib/utils/userMeta";
 
 /**
+ *
  * 메시지 타입 정의
  */
 export type Message = {
@@ -51,7 +53,7 @@ interface ChatMessageProps {
   highlightColor?: string; // 강조 색상 (필요시)
   onModerationAction?: (message: Message) => void; // 신고/차단 액션 콜백
   onMorePress?: (message: Message) => void;
-  userMeta?: { age?: number; teamLogos?: string[] };
+  userMeta?: UserMeta;
 }
 
 /**

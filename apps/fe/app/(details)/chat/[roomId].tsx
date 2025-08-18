@@ -8,6 +8,8 @@ import {
   Platform,
   ViewStyle,
   TextStyle,
+  Keyboard,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -71,6 +73,7 @@ interface ChatMessagesResponse {
  * 채팅방 화면
  *
  * 특정 채팅방의 메시지를 표시하고 새 메시지를 전송할 수 있습니다.
+ * 키보드가 올라갈 때 채팅창과 채팅본문이 모두 자연스럽게 올라가도록 최적화되었습니다.
  */
 export default function ChatRoomScreen() {
   const { themed, theme } = useAppTheme();
@@ -85,6 +88,10 @@ export default function ChatRoomScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const inputRef = useRef<TextInput>(null);
 
+  // 키보드 상태 관리
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
   // 채팅방 정보 상태
   const [channelInfo, setChannelInfo] = useState<any>(null);
   const [chatRoomTitle, setChatRoomTitle] = useState<string>(
@@ -97,6 +104,43 @@ export default function ChatRoomScreen() {
     skip: !roomId,
     fetchPolicy: "cache-and-network",
   });
+
+  // 키보드 이벤트 리스너 설정
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        setIsKeyboardVisible(true);
+        console.log("키보드 표시:", e.endCoordinates.height);
+      }
+    );
+
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => {
+        setKeyboardHeight(0);
+        setIsKeyboardVisible(false);
+        console.log("키보드 숨김");
+      }
+    );
+
+    // Android에서 키보드 높이 변화 감지
+    const keyboardDidChangeFrameListener =
+      Platform.OS === "android"
+        ? Keyboard.addListener("keyboardDidChangeFrame", (e) => {
+            if (e.endCoordinates.height > 0) {
+              setKeyboardHeight(e.endCoordinates.height);
+            }
+          })
+        : null;
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+      keyboardDidChangeFrameListener?.remove();
+    };
+  }, []);
 
   // 사용자 정보 로드 및 메시지 데이터 조회
   useEffect(() => {
@@ -317,6 +361,11 @@ export default function ChatRoomScreen() {
       style={themed($container)}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      enabled={true}
+      // Android에서 더 부드러운 키보드 처리
+      {...(Platform.OS === "android" && {
+        android_softInputMode: "adjustResize",
+      })}
     >
       {/* 채팅 메시지 목록 */}
       <ChatList
@@ -332,6 +381,8 @@ export default function ChatRoomScreen() {
           // TODO: 이전 메시지 로드 구현
           console.log("이전 메시지 로드 요청");
         }}
+        isKeyboardVisible={isKeyboardVisible}
+        keyboardHeight={keyboardHeight}
       />
 
       {/* 메시지 입력 영역 */}
@@ -363,6 +414,8 @@ export default function ChatRoomScreen() {
             duration: 1500,
           });
         }}
+        isKeyboardVisible={isKeyboardVisible}
+        keyboardHeight={keyboardHeight}
       />
     </KeyboardAvoidingView>
   );

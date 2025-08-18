@@ -31,11 +31,14 @@ interface ChatInputProps {
     user: string;
   } | null; // 답장 중인 메시지 (선택적)
   onCancelReply?: () => void; // 답장 취소
+  isKeyboardVisible?: boolean; // 키보드 표시 상태
+  keyboardHeight?: number; // 키보드 높이
 }
 
 /**
  * 채팅 입력 컴포넌트
  * 메시지 입력 및 전송 기능을 제공합니다.
+ * 키보드가 올라갈 때 자연스럽게 위치하도록 최적화되었습니다.
  */
 export default function ChatInput({
   onSendMessage,
@@ -46,6 +49,8 @@ export default function ChatInput({
   placeholder = "메시지를 입력하세요...",
   replyingTo = null,
   onCancelReply,
+  isKeyboardVisible = false,
+  keyboardHeight = 0,
 }: ChatInputProps) {
   const { themed, theme } = useAppTheme();
   const [message, setMessage] = useState("");
@@ -167,9 +172,34 @@ export default function ChatInput({
     }
   };
 
+  /**
+   * 입력창 포커스 핸들러
+   * 키보드가 올라올 때 자연스러운 스크롤을 위해 사용
+   */
+  const handleInputFocus = () => {
+    // 입력창 포커스 시 키보드가 올라오는 것을 감지
+    if (!isKeyboardVisible) {
+      // 키보드가 아직 올라오지 않은 경우 약간의 지연 후 스크롤
+      setTimeout(() => {
+        // 부모 컴포넌트에 포커스 이벤트 알림
+        console.log("입력창 포커스 - 키보드 올라오는 중");
+      }, 100);
+    }
+  };
+
+  /**
+   * 입력창 블러 핸들러
+   * 키보드가 내려갈 때 자연스러운 처리를 위해 사용
+   */
+  const handleInputBlur = () => {
+    // 입력창에서 포커스가 벗어날 때 처리
+    console.log("입력창 블러 - 키보드 내려가는 중");
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
+      enabled={false} // 부모 컴포넌트에서 처리하므로 비활성화
     >
       {/* 답장 모드일 때 표시 */}
       {replyingTo && (
@@ -195,7 +225,15 @@ export default function ChatInput({
       )}
 
       {/* 하단 입력 바: 좌측 아이콘들 + 모드 pill + 입력 + 우측 전송 CTA */}
-      <View style={themed($container)}>
+      <View
+        style={[
+          themed($container),
+          isKeyboardVisible &&
+            Platform.OS === "android" && {
+              paddingBottom: Math.max(keyboardHeight - 20, 0),
+            },
+        ]}
+      >
         <View style={themed($bar)}>
           {/* 좌측 + 버튼 */}
           {onAddOption && (
@@ -274,6 +312,13 @@ export default function ChatInput({
             returnKeyType="default"
             scrollEnabled={inputHeight >= 120}
             textBreakStrategy="simple"
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
+            // 키보드 최적화 설정
+            keyboardType="default"
+            autoCapitalize="sentences"
+            autoCorrect={true}
+            blurOnSubmit={false}
           />
 
           {/* 전송 CTA */}

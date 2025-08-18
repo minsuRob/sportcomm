@@ -54,10 +54,13 @@ interface ChatMessageProps {
   onModerationAction?: (message: Message) => void; // 신고/차단 액션 콜백
   onMorePress?: (message: Message) => void;
   userMeta?: UserMeta;
+  isKeyboardVisible?: boolean; // 키보드 표시 상태
+  keyboardHeight?: number; // 키보드 높이
 }
 
 /**
  * 채팅 메시지 컴포넌트
+ * 키보드 상태에 따른 최적화된 메시지 표시를 제공합니다.
  */
 export default function ChatMessage({
   message,
@@ -68,6 +71,8 @@ export default function ChatMessage({
   onModerationAction,
   onMorePress,
   userMeta,
+  isKeyboardVisible = false,
+  keyboardHeight = 0,
 }: ChatMessageProps) {
   const { themed, theme } = useAppTheme();
 

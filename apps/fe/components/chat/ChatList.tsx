@@ -62,6 +62,8 @@ interface ChatListProps {
   hasMoreMessages?: boolean;
   onBack?: () => void; // 뒤로가기 버튼 클릭 시 호출될 함수
   title?: string; // 채팅방 제목
+  isKeyboardVisible?: boolean; // 키보드 표시 상태
+  keyboardHeight?: number; // 키보드 높이
 }
 
 /**
@@ -138,6 +140,8 @@ export default function ChatList({
   hasMoreMessages = false,
   onBack,
   title = "채팅",
+  isKeyboardVisible = false,
+  keyboardHeight = 0,
 }: ChatListProps) {
   const { themed, theme } = useAppTheme();
   const flatListRef = useRef<FlatList>(null);
@@ -220,15 +224,45 @@ export default function ChatList({
   // 날짜 구분선이 있는 최종 데이터
   const listData = addDateSeparators(messagesWithIsMe);
 
-  // 메시지가 추가될 때 자동 스크롤
+  // 메시지가 추가될 때 자동 스크롤 (키보드 상태 고려)
   useEffect(() => {
     if (messages.length > 0 && flatListRef.current) {
-      // 약간의 지연 후 스크롤 (렌더링 완료 보장)
+      // 키보드가 보이는 경우 약간의 지연 후 스크롤
+      const delay = isKeyboardVisible ? 300 : 100;
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, delay);
+    }
+  }, [messages.length, isKeyboardVisible]);
+
+  // 키보드가 올라올 때 자동 스크롤
+  useEffect(() => {
+    if (isKeyboardVisible && flatListRef.current && messages.length > 0) {
+      // 키보드 애니메이션과 동기화하여 스크롤
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages.length]);
+  }, [isKeyboardVisible, keyboardHeight]);
+
+  /**
+   * 키보드 상태에 따른 스크롤 위치 조정
+   */
+  const adjustScrollForKeyboard = () => {
+    if (flatListRef.current && messages.length > 0) {
+      // 키보드가 올라올 때 최신 메시지가 보이도록 스크롤
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 200);
+    }
+  };
+
+  // 키보드 상태 변화 시 스크롤 조정
+  useEffect(() => {
+    if (isKeyboardVisible) {
+      adjustScrollForKeyboard();
+    }
+  }, [isKeyboardVisible]);
 
   /**
    * 새로고침 핸들러
@@ -238,6 +272,11 @@ export default function ChatList({
       setRefreshing(true);
       await onRefresh();
       setRefreshing(false);
+
+      // 새로고침 후 키보드가 보이는 경우 스크롤 조정
+      if (isKeyboardVisible) {
+        adjustScrollForKeyboard();
+      }
     }
   };
 
@@ -299,6 +338,8 @@ export default function ChatList({
         onModerationAction={handleModerationAction}
         userMeta={userMeta}
         onMorePress={handleMorePress}
+        isKeyboardVisible={isKeyboardVisible}
+        keyboardHeight={keyboardHeight}
       />
     );
   };

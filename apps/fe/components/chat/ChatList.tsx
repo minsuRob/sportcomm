@@ -423,6 +423,7 @@ const $flatList: ThemedStyle<ViewStyle> = () => ({
 });
 
 const $contentContainer: ThemedStyle<ViewStyle> = () => ({
+  flexGrow: 1,
   paddingVertical: 8,
 });
 

@@ -315,7 +315,7 @@ export default function ChatRoomScreen() {
   return (
     <KeyboardAvoidingView
       style={themed($container)}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       {/* 채팅 메시지 목록 */}

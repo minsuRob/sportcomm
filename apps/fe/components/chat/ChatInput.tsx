@@ -168,7 +168,9 @@ export default function ChatInput({
   };
 
   return (
-    <View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       {/* 답장 모드일 때 표시 */}
       {replyingTo && (
         <View style={themed($replyContainer)}>
@@ -303,7 +305,7 @@ export default function ChatInput({
         onClose={() => setOptionsModalVisible(false)}
         onSelectOption={handleSelectOption}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

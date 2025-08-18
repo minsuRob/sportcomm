@@ -417,3 +417,150 @@ export interface UserTeamsForChatResponse {
     };
   }[];
 }
+
+// === 1대1 개인 채팅 관련 ===
+
+// 1대1 개인 채팅방 생성 또는 조회
+export const CREATE_OR_GET_PRIVATE_CHAT = gql`
+  mutation CreateOrGetPrivateChat($targetUserId: String!) {
+    createOrGetPrivateChat(targetUserId: $targetUserId) {
+      id
+      name
+      description
+      type
+      isRoomActive
+      maxParticipants
+      currentParticipants
+      profileImageUrl
+      lastMessageContent
+      lastMessageAt
+      totalMessages
+      isPasswordProtected
+      teamId
+      createdAt
+      updatedAt
+      participants {
+        id
+        nickname
+        profileImageUrl
+        role
+        createdAt
+      }
+      team {
+        id
+        name
+        color
+        icon
+      }
+    }
+  }
+`;
+
+// 사용자의 1대1 개인 채팅방 목록 조회
+export const GET_USER_PRIVATE_CHATS = gql`
+  query GetUserPrivateChats($page: Int = 1, $limit: Int = 20) {
+    getUserPrivateChats(page: $page, limit: $limit) {
+      chatRooms {
+        id
+        name
+        description
+        type
+        isRoomActive
+        maxParticipants
+        currentParticipants
+        profileImageUrl
+        lastMessageContent
+        lastMessageAt
+        totalMessages
+        isPasswordProtected
+        teamId
+        createdAt
+        updatedAt
+        participants {
+          id
+          nickname
+          profileImageUrl
+          role
+          createdAt
+        }
+        team {
+          id
+          name
+          color
+          icon
+        }
+      }
+      total
+      page
+      limit
+      totalPages
+    }
+  }
+`;
+
+// 사용자 검색 (1대1 채팅 시작용)
+export const SEARCH_USERS_FOR_CHAT = gql`
+  query SearchUsersForChat(
+    $searchQuery: String!
+    $page: Int = 1
+    $limit: Int = 20
+  ) {
+    searchUsersForChat(searchQuery: $searchQuery, page: $page, limit: $limit) {
+      users {
+        id
+        nickname
+        profileImageUrl
+        role
+        createdAt
+        isActive
+      }
+      total
+      page
+      limit
+      totalPages
+    }
+  }
+`;
+
+// 1대1 채팅방에서 상대방 정보 조회
+export const GET_PRIVATE_CHAT_PARTNER = gql`
+  query GetPrivateChatPartner($roomId: String!) {
+    getPrivateChatPartner(roomId: $roomId) {
+      id
+      nickname
+      profileImageUrl
+      role
+      createdAt
+      isActive
+    }
+  }
+`;
+
+// === 1대1 개인 채팅 타입 정의 ===
+
+export interface SearchUser {
+  id: string;
+  nickname: string;
+  profileImageUrl?: string;
+  role: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
+export interface SearchUsersResponse {
+  searchUsersForChat: {
+    users: SearchUser[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface CreatePrivateChatResponse {
+  createOrGetPrivateChat: UserChatRoom;
+}
+
+export interface PrivateChatPartnerResponse {
+  getPrivateChatPartner: SearchUser | null;
+}

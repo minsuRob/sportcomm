@@ -328,8 +328,14 @@ export default function ChatScreen() {
       {/* 헤더 */}
       <View style={themed($header)}>
         <Text style={themed($headerTitle)}>채팅</Text>
-        <TouchableOpacity onPress={() => router.push("/(app)/chat/rooms")}>
-          <Ionicons name="add" color={theme.colors.tint} size={24} />
+        <TouchableOpacity
+          onPress={() => router.push("/(modals)/start-private-chat")}
+        >
+          <Ionicons
+            name="person-add-outline"
+            color={theme.colors.tint}
+            size={24}
+          />
         </TouchableOpacity>
       </View>
 
@@ -359,7 +365,7 @@ export default function ChatScreen() {
               </Text>
               <TouchableOpacity
                 style={themed($createButton)}
-                onPress={() => router.push("/(app)/chat/rooms")}
+                onPress={() => router.push("/(modals)/start-private-chat")}
               >
                 <Ionicons name="add" color="white" size={20} />
                 <Text style={themed($createButtonText)}>채팅방 찾기</Text>

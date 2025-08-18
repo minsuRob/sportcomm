@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  GestureResponderEvent,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
@@ -25,6 +27,7 @@ interface FeedHeaderProps {
   onProfilePress: () => void;
   onShopPress: () => void;
   onLotteryPress: () => void;
+  onBoardPress: () => void; // 상세 게시판 버튼 클릭 핸들러 추가
 }
 
 /**
@@ -41,17 +44,29 @@ export default function FeedHeader({
   onProfilePress,
   onShopPress,
   onLotteryPress,
+  onBoardPress, // 상세 게시판 버튼 클릭 핸들러 추가
 }: FeedHeaderProps) {
   const { themed, theme } = useAppTheme();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
-  const anchorRef = React.useRef<View>(null);
+  const [popoverPosition, setPopoverPosition] = React.useState({
+    top: 0,
+    right: 0,
+  });
 
-  const handleProfilePress = () => {
+  const handleProfilePress = (event: GestureResponderEvent) => {
     if (currentUser) {
-      // 로그인 상태면 컨텍스트 메뉴 오픈
-      setProfileMenuVisible(true);
+      // @ts-ignore
+      event.target.measure((x, y, width, height, pageX, pageY) => {
+        const windowWidth = Dimensions.get("window").width;
+        const right = windowWidth - pageX - width;
+
+        setPopoverPosition({
+          top: pageY + height + 8,
+          right: right,
+        });
+        setProfileMenuVisible(true);
+      });
     } else {
-      // 비로그인 상태면 기존 프로필(=로그인/프로필) 화면 이동
       onProfilePress();
     }
   };
@@ -72,6 +87,17 @@ export default function FeedHeader({
               <Text style={themed($pointsText)}>
                 💰 {currentUser.points ?? 0}P
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={themed($boardButton)}
+              onPress={onBoardPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="list-outline"
+                size={20}
+                color={theme.colors.tint}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={themed($lotteryButton)}
@@ -118,7 +144,6 @@ export default function FeedHeader({
           </>
         )}
         <TouchableOpacity
-          ref={anchorRef}
           style={themed($iconButton)}
           onPress={handleProfilePress}
         >
@@ -146,10 +171,7 @@ export default function FeedHeader({
             setProfileMenuVisible(false);
             onProfilePress();
           }}
-          anchorStyle={{
-            top: 46,
-            right: 10,
-          }}
+          anchorStyle={popoverPosition}
         />
       )}
     </View>
@@ -233,6 +255,18 @@ const $lotteryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: colors.tint + "15",
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+  marginRight: spacing.xs,
+});
+
+const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   width: 36,
   height: 36,
   borderRadius: 18,

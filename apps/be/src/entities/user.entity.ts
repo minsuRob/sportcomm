@@ -204,6 +204,21 @@ export class User {
   bio?: string;
 
   /**
+   * 사용자 코멘트
+   * 선택적 필드입니다.
+   */
+  @Field(() => String, { nullable: true, description: '사용자 코멘트' })
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: '사용자 코멘트',
+  })
+  @IsOptional()
+  @IsString({ message: '코멘트는 문자열이어야 합니다.' })
+  @MaxLength(200, { message: '코멘트는 최대 200자까지 가능합니다.' })
+  comment?: string;
+
+  /**
    * 사용자 나이
    * 선택적 필드입니다. 1-120 사이의 값만 허용됩니다.
    */

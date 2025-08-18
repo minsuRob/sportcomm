@@ -18,8 +18,10 @@
     "packages/*"
   ],
   "dependencies": {
+    "@apollo/client": "^3.13.9",
     "@types/sharp": "^0.31.1",
     "axios": "^1.11.0",
+    "cross-fetch": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "sharp": "^0.34.3"
   }

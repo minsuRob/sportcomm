@@ -20,6 +20,7 @@ import TabSlider from "@/components/TabSlider";
 import ChatRoomList from "@/components/chat/ChatRoomList";
 import { NotificationToast } from "@/components/notifications";
 import { showToast } from "@/components/CustomToast";
+import PostCardSkeleton from "@/components/PostCardSkeleton";
 
 import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
@@ -103,6 +104,17 @@ export default function FeedScreen() {
   };
 
   /**
+   * 상세 게시판 버튼 클릭 핸들러
+   */
+  const handleBoardPress = () => {
+    if (!currentUser) {
+      setAuthModalVisible(true);
+      return;
+    }
+    router.push("/(details)/board");
+  };
+
+  /**
    * 상점 아이템 구매 핸들러
    */
   const handleShopPurchase = async (item: any) => {
@@ -152,11 +164,27 @@ export default function FeedScreen() {
 
   if (fetching && posts.length === 0 && !isRefreshing) {
     return (
-      <View style={themed($centeredContainer)}>
-        <ActivityIndicator size="large" color={theme.colors.text} />
-        <Text style={themed($loadingText)}>
-          {t(TRANSLATION_KEYS.FEED_LOADING_POSTS)}
-        </Text>
+      <View style={themed($container)}>
+        <FeedHeader
+          currentUser={currentUser}
+          selectedTeamIds={selectedTeamIds}
+          onTeamSelect={handleTeamFilterChange}
+          loading={true}
+          onNotificationPress={handleNotificationPress}
+          onCreatePress={() => router.push("/(modals)/create-post")}
+          onProfilePress={() =>
+            currentUser
+              ? router.push("/(app)/profile")
+              : setAuthModalVisible(true)
+          }
+          onShopPress={handleShopPress}
+          onLotteryPress={handleLotteryPress}
+        />
+        <View>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <PostCardSkeleton key={index} />
+          ))}
+        </View>
       </View>
     );
   }
@@ -207,6 +235,7 @@ export default function FeedScreen() {
         }
         onShopPress={handleShopPress}
         onLotteryPress={handleLotteryPress}
+        onBoardPress={handleBoardPress}
       />
 
       {/* 상점 모달 */}

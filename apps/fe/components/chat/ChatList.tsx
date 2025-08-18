@@ -23,6 +23,7 @@ import ReportModal from "../ReportModal";
 import { useQuery } from "@apollo/client";
 import { GET_BLOCKED_USERS } from "@/lib/graphql";
 import UserContextMenu from "../shared/UserContextMenu";
+import { createChatUserMeta } from "@/lib/utils/userMeta";
 type MessageWithIsMe = Message & { isMe: boolean };
 
 // ChatList에서 사용하는 Message 타입 (GraphQL 응답과 호환)
@@ -268,24 +269,8 @@ export default function ChatList({
     const message = item as MessageWithIsMe;
     const convertedMessage = convertToChatMessage(message);
 
-    // 내 메시지인 경우, 프로필에서 age와 myTeams 로고를 함께 전달 (최대 3개 표시)
-    const userMeta = message.isMe
-      ? {
-          age: (currentUser as any)?.age ?? message.user.age,
-          teamLogos: (
-            (currentUser as any)?.myTeams
-              ?.filter((t: any) => t?.team?.logoUrl)
-              .map((t: any) => t.team.logoUrl) ||
-            message.user.myTeamLogos ||
-            []
-          ).slice(0, 3),
-        }
-      : message.user
-        ? {
-            age: message.user.age,
-            teamLogos: (message.user.myTeamLogos || []).slice(0, 3),
-          }
-        : undefined;
+    // 사용자 메타 데이터 생성 (공통 유틸리티 사용)
+    const userMeta = createChatUserMeta(message.user, currentUser as any);
 
     // 연속된 메시지인지 확인 (아바타 표시 여부 결정)
     const showAvatar = (() => {

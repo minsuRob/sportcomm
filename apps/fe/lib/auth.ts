@@ -68,7 +68,6 @@ export const saveSession = async (
         (tokenOrUser as any).points = 0;
       }
       await setItem(USER_KEY, JSON.stringify(tokenOrUser));
-      console.log("세션 저장 완료: 사용자 정보만 업데이트됨");
     }
   } catch (error) {
     console.error("Failed to save session", error);

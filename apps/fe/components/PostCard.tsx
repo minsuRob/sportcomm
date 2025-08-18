@@ -37,6 +37,7 @@ import {
 import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
+import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
@@ -61,6 +62,13 @@ export interface User {
       logoUrl?: string;
       icon: string;
     };
+  }[];
+  // 호환성을 위한 추가 필드들
+  authorTeams?: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+    icon: string;
   }[];
 }
 
@@ -112,6 +120,12 @@ export interface Post {
   commentCount?: number;
   viewCount?: number;
   isMock?: boolean;
+  authorTeams?: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+    icon: string;
+  }[];
 }
 
 export interface PostCardProps {
@@ -274,11 +288,6 @@ const PostCard = React.memo(function PostCard({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const { data: myTeamsData } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, {
-    skip: !currentUser || post.author.id !== currentUser.id,
-    fetchPolicy: "cache-and-network",
-  });
-
   // 개발 환경 체크
   const __DEV__ = process.env.NODE_ENV === "development";
 
@@ -289,6 +298,19 @@ const PostCard = React.memo(function PostCard({
   const videoMedia = post.media.filter(
     (item) => item.type === "video" || item.type === "VIDEO"
   );
+
+  /**
+   * 태그 클릭 시 검색 화면으로 이동
+   */
+  const handleTagPress = (tagName: string) => {
+    router.push({
+      pathname: "/(app)/search",
+      params: {
+        query: tagName,
+        autoSearch: "true",
+      },
+    });
+  };
 
   // 동영상 재생 상태 관리
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -723,17 +745,30 @@ const PostCard = React.memo(function PostCard({
 
             {/* 프로필 정보 컨테이너 */}
             <View style={themed($profileContainer)}>
-              <UserAvatar
-                imageUrl={post.author.profileImageUrl}
-                name={post.author.nickname}
-                size={32}
-              />
-              <View style={themed($profileInfo)}>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push(`/(modals)/user-profile?userId=${post.author.id}`)
+                }
+                activeOpacity={0.7}
+              >
+                <UserAvatar
+                  imageUrl={post.author.profileImageUrl}
+                  name={post.author.nickname}
+                  size={32}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={themed($profileInfo)}
+                onPress={() =>
+                  router.push(`/(modals)/user-profile?userId=${post.author.id}`)
+                }
+                activeOpacity={0.7}
+              >
                 <Text style={themed($profileName)}>{post.author.nickname}</Text>
                 <Text style={themed($profileTime)}>
                   {formatTimeAgo(post.createdAt)}
                 </Text>
-              </View>
+              </TouchableOpacity>
 
               {/* 팔로우 버튼 - 자신의 게시물이 아닌 경우에만 표시 */}
               {currentUser && currentUser.id !== post.author.id && (
@@ -767,19 +802,23 @@ const PostCard = React.memo(function PostCard({
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
             <View style={themed($topRightContainer)}>
               <View style={themed($topRightIcons)}>
+                {/* Tags */}
+                {post.tags?.slice(0, 2).map((tag) => (
+                  <TouchableOpacity
+                    key={tag.id}
+                    style={themed($tagBadge)}
+                    onPress={() => handleTagPress(tag.name)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={themed($tagText)}>#{tag.name}</Text>
+                  </TouchableOpacity>
+                ))}
                 {/* Sport Icon */}
                 <View style={themed($sportIconBadge)}>
                   <Text style={themed($sportIconText)}>
                     {post.team?.sport?.icon || "🏆"}
                   </Text>
                 </View>
-
-                {/* Tags */}
-                {post.tags?.slice(0, 1).map((tag) => (
-                  <View key={tag.id} style={themed($tagBadge)}>
-                    <Text style={themed($tagText)}>#{tag.name}</Text>
-                  </View>
-                ))}
 
                 {/* 더보기 버튼 */}
                 <TouchableOpacity
@@ -796,16 +835,27 @@ const PostCard = React.memo(function PostCard({
 
               {/* 팀 로고 목록 */}
               <View style={themed($teamLogoStack)}>
-                {myTeamsData?.myTeams?.slice(0, 3).map(({ team }) => (
-                  <View key={team.id} style={themed($teamLogoWrapper)}>
-                    <TeamLogo
-                      logoUrl={team.logoUrl}
-                      fallbackIcon={team.icon}
-                      teamName={team.name}
-                      size={28}
-                    />
-                  </View>
-                ))}
+                {(() => {
+                  // 작성자 팀 정보 추출 (우선순위: myTeams > authorTeams)
+                  const authorTeams = extractTeams(post.author, 3);
+
+                  // 팀 정보가 없으면 post.authorTeams 사용 (기존 호환성)
+                  const teamsToShow =
+                    authorTeams.length > 0
+                      ? authorTeams
+                      : post.authorTeams?.slice(0, 3) || [];
+
+                  return teamsToShow.map((team) => (
+                    <View key={team.id} style={themed($teamLogoWrapper)}>
+                      <TeamLogo
+                        logoUrl={team.logoUrl}
+                        fallbackIcon={team.icon}
+                        teamName={team.name}
+                        size={28}
+                      />
+                    </View>
+                  ));
+                })()}
               </View>
             </View>
 

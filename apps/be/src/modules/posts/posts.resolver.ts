@@ -25,6 +25,7 @@ import {
 import { PostsService, FindPostsOptions } from './posts.service';
 import { Post } from '../../entities/post.entity';
 import { User } from '../../entities/user.entity';
+import { Tag } from '../../entities/tag.entity';
 import { BookmarkService } from '../bookmarks/bookmark.service';
 import {
   GqlAuthGuard,
@@ -301,6 +302,45 @@ export class PostsResolver {
     const user = context.req?.user;
     if (!user) return false;
     return await this.bookmarkService.isBookmarkedByUser(user.id, post.id);
+  }
+
+  /**
+   * 게시물의 태그 목록을 계산하는 필드 리졸버
+   * PostTag 중간 테이블을 통해 태그 정보를 로드합니다.
+   */
+  @ResolveField(() => [Tag])
+  async tags(@Parent() post: Post): Promise<Tag[]> {
+    try {
+      // postTags 관계가 이미 로드되어 있다면 사용
+      if (post.postTags && post.postTags.length > 0) {
+        const tags = post.postTags
+          .map((postTag) => postTag.tag)
+          .filter((tag) => tag && tag.id && tag.name);
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[DEBUG] tags 리졸버 - postId: ${post.id}, postTags 길이: ${post.postTags.length}, tags 길이: ${tags.length}`,
+          );
+        }
+
+        return tags;
+      }
+
+      // postTags가 로드되지 않은 경우 별도로 조회
+      const postWithTags = await this.postsService.findById(post.id, false);
+      const tags = postWithTags.tags || [];
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `[DEBUG] tags 리졸버 - 별도 조회, postId: ${post.id}, tags 길이: ${tags.length}`,
+        );
+      }
+
+      return tags;
+    } catch (error) {
+      console.error(`[ERROR] tags 리졸버 오류 - postId: ${post.id}`, error);
+      return [];
+    }
   }
 
   /**

@@ -543,4 +543,157 @@ export class LotteryService {
       totalWinnings,
     };
   }
+
+  // === 관리자 전용 메서드 ===
+
+  /**
+   * 관리자: 현재 진행 중인 추첨 강제 중단
+   */
+  async adminStopCurrentLottery(): Promise<boolean> {
+    try {
+      const currentLottery = await this.lotteryRepository.findOne({
+        where: [
+          { status: LotteryStatus.ACTIVE },
+          { status: LotteryStatus.ANNOUNCING },
+        ],
+        order: { createdAt: 'DESC' },
+      });
+
+      if (!currentLottery) {
+        console.log('중단할 진행 중인 추첨이 없습니다.');
+        return false;
+      }
+
+      // 추첨 상태를 취소로 변경
+      currentLottery.status = LotteryStatus.CANCELLED;
+      currentLottery.updatedAt = new Date();
+      await this.lotteryRepository.save(currentLottery);
+
+      console.log(
+        `🛑 관리자에 의해 ${currentLottery.roundNumber}회차 추첨이 중단되었습니다.`,
+      );
+      return true;
+    } catch (error) {
+      console.error('❌ 추첨 중단 실패:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 관리자: 커스텀 설정으로 새 추첨 생성
+   */
+  async adminCreateCustomLottery(
+    totalPrize: number,
+    winnerCount: number,
+    durationMinutes: number = 50,
+  ): Promise<PointLottery | null> {
+    try {
+      // 기존 진행 중인 추첨 중단
+      await this.adminStopCurrentLottery();
+
+      // 다음 회차 번호 계산
+      const lastLottery = await this.lotteryRepository.findOne({
+        where: {},
+        order: { roundNumber: 'DESC' },
+      });
+      const nextRoundNumber = (lastLottery?.roundNumber || 0) + 1;
+
+      // 새 추첨 생성 - 현재 시간부터 시작
+      const startTime = new Date();
+      startTime.setSeconds(0, 0); // 초와 밀리초 초기화
+
+      const endTime = new Date(startTime);
+      endTime.setMinutes(endTime.getMinutes() + durationMinutes);
+
+      const announceTime = new Date(endTime);
+      const finalEndTime = new Date(announceTime);
+      finalEndTime.setMinutes(finalEndTime.getMinutes() + 10); // 10분간 발표
+
+      const prizePerWinner = Math.floor(totalPrize / winnerCount);
+
+      const newLottery = this.lotteryRepository.create({
+        roundNumber: nextRoundNumber,
+        startTime,
+        endTime,
+        announceTime,
+        finalEndTime,
+        status: LotteryStatus.ACTIVE,
+        totalPrize,
+        winnerCount,
+        prizePerWinner,
+        totalEntries: 0,
+      });
+
+      const savedLottery = await this.lotteryRepository.save(newLottery);
+
+      console.log(
+        `🎰 관리자가 ${nextRoundNumber}회차 커스텀 추첨을 생성했습니다!`,
+        `\n💰 총 상금: ${totalPrize}P (${winnerCount}명, 개별 ${prizePerWinner}P)`,
+        `\n📅 응모 기간: ${startTime.toLocaleTimeString()} ~ ${endTime.toLocaleTimeString()}`,
+        `\n🎊 발표 기간: ${announceTime.toLocaleTimeString()} ~ ${finalEndTime.toLocaleTimeString()}`,
+      );
+
+      return savedLottery;
+    } catch (error) {
+      console.error('❌ 관리자 커스텀 추첨 생성 실패:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 관리자: 추첨 통계 조회
+   */
+  async getAdminLotteryStats(): Promise<{
+    totalLotteries: number;
+    activeLotteries: number;
+    totalEntries: number;
+    totalPrizeDistributed: number;
+    averageParticipation: number;
+  }> {
+    try {
+      // 전체 추첨 수
+      const totalLotteries = await this.lotteryRepository.count();
+
+      // 진행 중인 추첨 수
+      const activeLotteries = await this.lotteryRepository.count({
+        where: [
+          { status: LotteryStatus.ACTIVE },
+          { status: LotteryStatus.ANNOUNCING },
+        ],
+      });
+
+      // 총 응모 수
+      const totalEntries = await this.entryRepository.count();
+
+      // 총 지급된 상금 (완료된 추첨만)
+      const completedLotteries = await this.lotteryRepository.find({
+        where: { status: LotteryStatus.COMPLETED },
+      });
+      const totalPrizeDistributed = completedLotteries.reduce(
+        (sum, lottery) => sum + lottery.totalPrize,
+        0,
+      );
+
+      // 평균 참여율
+      const averageParticipation =
+        totalLotteries > 0 ? totalEntries / totalLotteries : 0;
+
+      return {
+        totalLotteries,
+        activeLotteries,
+        totalEntries,
+        totalPrizeDistributed,
+        averageParticipation: Math.round(averageParticipation * 100) / 100,
+      };
+    } catch (error) {
+      console.error('❌ 관리자 통계 조회 실패:', error);
+      return {
+        totalLotteries: 0,
+        activeLotteries: 0,
+        totalEntries: 0,
+        totalPrizeDistributed: 0,
+        averageParticipation: 0,
+      };
+    }
+  }
 }

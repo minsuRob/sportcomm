@@ -59,7 +59,7 @@ export interface UseImageDimensionsResult {
  * @returns Promise<ImageDimensions>
  */
 export const getImageDimensions = (
-  imageUrl: string,
+  imageUrl: string
 ): Promise<ImageDimensions> => {
   return new Promise((resolve, reject) => {
     Image.getSize(
@@ -77,7 +77,7 @@ export const getImageDimensions = (
       },
       (error) => {
         reject(error);
-      },
+      }
     );
   });
 };
@@ -88,7 +88,7 @@ export const getImageDimensions = (
  * @returns 이미지 타입 (square, portrait, landscape)
  */
 export const detectImageType = (
-  aspectRatio: number,
+  aspectRatio: number
 ): "square" | "portrait" | "landscape" => {
   if (Math.abs(aspectRatio - 1) < 0.1) {
     return "square"; // 정사각형 (0.9 ~ 1.1 범위)
@@ -111,7 +111,7 @@ export const calculateOptimizedImageSize = (
   originalDimensions: ImageDimensions,
   screenDimensions: { width: number; height: number },
   isWeb: boolean = false,
-  options: ImageOptimizationOptions = {},
+  options: ImageOptimizationOptions = {}
 ): ImageDimensions => {
   const config = isWeb ? IMAGE_CONSTANTS.WEB : IMAGE_CONSTANTS.MOBILE;
 
@@ -130,14 +130,14 @@ export const calculateOptimizedImageSize = (
   const imageType = detectImageType(aspectRatio);
   const maxHeight = Math.min(
     screenDimensions.height * maxHeightRatio,
-    config.MAX_HEIGHT,
+    config.MAX_HEIGHT
   );
 
   // 정사각형 이미지 특별 처리
   if (imageType === "square") {
     const squareSize = Math.min(
       Math.max(minHeight, screenDimensions.width * 0.8), // 화면 너비의 80%
-      maxHeight,
+      maxHeight
     );
     return {
       width: squareSize,
@@ -193,7 +193,7 @@ export const calculateOptimizedImageSize = (
 export const useImageDimensions = (
   imageUrl: string | null,
   isWeb: boolean = false,
-  options: ImageOptimizationOptions = {},
+  options: ImageOptimizationOptions = {}
 ): UseImageDimensionsResult => {
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const [imageHeight, setImageHeight] = useState<number | null>(null);
@@ -220,7 +220,7 @@ export const useImageDimensions = (
           dimensions,
           { width: screenWidth, height: screenHeight },
           isWeb,
-          options,
+          options
         );
 
         setImageAspectRatio(optimizedSize.aspectRatio);
@@ -280,7 +280,7 @@ export const useStoryImageDimensions = (imageUrl: string | null) => {
  */
 export const usePostImageDimensions = (
   imageUrl: string | null,
-  isWeb: boolean = false,
+  isWeb: boolean = false
 ) => {
   const config = isWeb ? IMAGE_CONSTANTS.WEB : IMAGE_CONSTANTS.MOBILE;
 
@@ -298,10 +298,11 @@ export type MediaItem = {
 
 export const selectOptimizedImageUrl = (
   media: MediaItem | null | undefined,
-  mediaOptType: string,
+  mediaOptType: string
 ) => {
   if (!media) return undefined;
   const delimiter = "/public/";
   let url = `${media?.url.split(delimiter)[0] + delimiter}/${mediaOptType}/${media.id}.webp`;
+
   return normalizeUrl(url);
 };

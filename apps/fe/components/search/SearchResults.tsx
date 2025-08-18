@@ -56,6 +56,11 @@ interface SearchResultsProps {
    * 검색어
    */
   searchQuery: string;
+
+  /**
+   * 태그 클릭 시 호출되는 함수
+   */
+  onTagPress?: (tagName: string) => void;
 }
 
 /**
@@ -69,6 +74,7 @@ export default function SearchResults({
   hasMore,
   loadMore,
   searchQuery,
+  onTagPress,
 }: SearchResultsProps) {
   const { themed } = useAppTheme();
 
@@ -113,7 +119,7 @@ export default function SearchResults({
    */
   const renderItem = ({ item }: { item: SearchResultItem }) => {
     if (item.type === "post") {
-      return <PostItem post={item.data} />;
+      return <PostItem post={item.data} onTagPress={onTagPress} />;
     } else if (item.type === "user") {
       return <UserItem user={item.data} />;
     }

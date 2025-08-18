@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -11,44 +11,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User } from "@/lib/auth";
-import { showToast } from "@/components/CustomToast";
-
-// 채팅방 정보 타입
-interface ChatRoom {
-  id: string;
-  name: string;
-  description?: string;
-  isPrivate: boolean;
-  type?: "PRIVATE" | "GROUP" | "PUBLIC";
-  isRoomActive?: boolean;
-  maxParticipants?: number;
-  currentParticipants?: number;
-  lastMessage?: string;
-  lastMessageAt?: string;
-  unreadCount: number;
-  members: {
-    userId: string;
-    user: {
-      id: string;
-      nickname: string;
-      profileImageUrl?: string;
-    };
-    isAdmin: boolean;
-    joinedAt: string;
-    lastReadAt: string;
-  }[];
-  createdAt: string;
-  team?: {
-    id: string;
-    name: string;
-    color: string;
-    icon: string;
-  };
-}
+import { ChatRoom } from "@/lib/chat/chatUtils";
+import ChatRoomCard from "./ChatRoomCard";
+import ChatRoomHeader from "./ChatRoomHeader";
 
 interface ChatRoomListProps {
   currentUser: User | null;
@@ -56,6 +24,10 @@ interface ChatRoomListProps {
   rooms: ChatRoom[];
   isLoading?: boolean;
   onRefresh?: () => void;
+  onAddRoom?: () => void;
+  cardSize?: "small" | "medium" | "large";
+  emptyMessage?: string;
+  emptyDescription?: string;
 }
 
 /**
@@ -69,15 +41,18 @@ export default function ChatRoomList({
   rooms = [],
   isLoading = false,
   onRefresh,
+  onAddRoom,
+  cardSize = "medium",
+  emptyMessage = "참여 중인 채팅방이 없습니다",
+  emptyDescription = "새로운 채팅방을 찾아보세요",
 }: ChatRoomListProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
 
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  // 채팅방 입장 핸들러 (임시로 자동 참여 기능 비활성화)
+  // 채팅방 입장 핸들러
   const handleEnterRoom = async (room: ChatRoom) => {
-    // 임시로 바로 채팅방으로 이동 (백엔드 뮤테이션 문제로 인해)
     router.push({
       pathname: "/(details)/chat/[roomId]",
       params: {
@@ -87,71 +62,7 @@ export default function ChatRoomList({
     });
   };
 
-  // 날짜 포맷팅
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "";
-
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMins < 1) return "방금 전";
-    if (diffMins < 60) return `${diffMins}분 전`;
-    if (diffHours < 24) return `${diffHours}시간 전`;
-    if (diffDays < 7) return `${diffDays}일 전`;
-
-    return date.toLocaleDateString("ko-KR", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // 채팅방 타입별 아이콘 및 색상 반환
-  const getRoomTypeInfo = (room: ChatRoom) => {
-    // 팀 채팅방인 경우 팀 색상 사용
-    if (room.team) {
-      return {
-        icon: "people-outline",
-        color: room.team.color,
-        label: room.team.name,
-        teamIcon: room.team.icon,
-      };
-    }
-
-    // 공용 채팅방인 경우
-    if (room.type) {
-      switch (room.type) {
-        case "PUBLIC":
-          return { icon: "globe-outline", color: "#3B82F6", label: "공용" };
-        case "GROUP":
-          return { icon: "people-outline", color: "#10B981", label: "그룹" };
-        case "PRIVATE":
-          return {
-            icon: "lock-closed-outline",
-            color: "#8B5CF6",
-            label: "개인",
-          };
-        default:
-          return {
-            icon: "chatbubbles-outline",
-            color: theme.colors.tint,
-            label: "채팅",
-          };
-      }
-    }
-
-    // 기존 채팅방 (isPrivate 기반)
-    return {
-      icon: room.isPrivate ? "lock-closed" : "chatbubbles",
-      color: theme.colors.tint,
-      label: room.isPrivate ? "개인" : "채팅",
-    };
-  };
-
-  // 새로고침 핸들러 - 통합된 버전
+  // 새로고침 핸들러
   const handleRefresh = async () => {
     if (onRefresh) {
       setRefreshing(true);
@@ -164,106 +75,14 @@ export default function ChatRoomList({
   };
 
   // 채팅방 아이템 렌더링
-  const renderChatRoom = ({ item }: { item: ChatRoom }) => {
-    const memberCount = item.currentParticipants || item.members.length;
-    const hasUnread = item.unreadCount > 0;
-    const typeInfo = getRoomTypeInfo(item);
-
-    // 비활성화된 채팅방은 표시하지 않음
-    if (item.isRoomActive === false) {
-      return null;
-    }
-
-    return (
-      <TouchableOpacity
-        style={themed($roomCard)}
-        onPress={() => handleEnterRoom(item)}
-      >
-        <View style={themed($roomHeader)}>
-          <View
-            style={[
-              themed($roomIconContainer),
-              { backgroundColor: typeInfo.color + "20" },
-            ]}
-          >
-            {typeInfo.teamIcon ? (
-              <Text style={{ fontSize: 18 }}>{typeInfo.teamIcon}</Text>
-            ) : (
-              <Ionicons
-                name={typeInfo.icon as any}
-                color={typeInfo.color}
-                size={20}
-              />
-            )}
-          </View>
-
-          <View style={themed($roomContent)}>
-            <View style={themed($roomTitleRow)}>
-              <Text style={themed($roomName)} numberOfLines={1}>
-                {item.name}
-              </Text>
-              {item.lastMessageAt && (
-                <Text style={themed($roomTime)}>
-                  {formatDate(item.lastMessageAt)}
-                </Text>
-              )}
-            </View>
-
-            <View style={themed($roomInfoRow)}>
-              <Text style={themed($roomLastMessage)} numberOfLines={1}>
-                {item.lastMessage || "메시지가 없습니다"}
-              </Text>
-              <View style={themed($roomBadges)}>
-                {/* 채팅방 타입 표시 */}
-                {item.type && (
-                  <View
-                    style={[
-                      themed($typeBadge),
-                      { backgroundColor: typeInfo.color + "20" },
-                    ]}
-                  >
-                    <Text
-                      style={[themed($typeText), { color: typeInfo.color }]}
-                    >
-                      {typeInfo.label}
-                    </Text>
-                  </View>
-                )}
-
-                {/* 멤버 수 표시 */}
-                <View style={themed($memberBadge)}>
-                  <Ionicons
-                    name="people"
-                    color={theme.colors.textDim}
-                    size={10}
-                  />
-                  <Text style={themed($memberCount)}>
-                    {memberCount}
-                    {item.maxParticipants && `/${item.maxParticipants}`}
-                  </Text>
-                </View>
-
-                {/* 읽지 않은 메시지 수 */}
-                {hasUnread && (
-                  <View style={themed($unreadBadge)}>
-                    <Text style={themed($unreadCount)}>
-                      {item.unreadCount > 99 ? "99+" : item.unreadCount}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {item.description && (
-              <Text style={themed($roomDescription)} numberOfLines={1}>
-                {item.description}
-              </Text>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderChatRoom = ({ item }: { item: ChatRoom }) => (
+    <ChatRoomCard
+      room={item}
+      onPress={handleEnterRoom}
+      currentUserName={currentUser?.nickname}
+      size={cardSize}
+    />
+  );
 
   if (isLoading && rooms.length === 0) {
     return (
@@ -278,17 +97,16 @@ export default function ChatRoomList({
     <View style={themed($container)}>
       {/* 헤더 (옵션) */}
       {showHeader && (
-        <View style={themed($header)}>
-          <Text style={themed($headerTitle)}>채팅</Text>
-          <TouchableOpacity onPress={() => router.push("/(app)/chat/rooms")}>
-            <Ionicons name="add" color={theme.colors.tint} size={24} />
-          </TouchableOpacity>
-        </View>
+        <ChatRoomHeader
+          title="채팅"
+          showAddButton={!!onAddRoom}
+          onAdd={onAddRoom}
+        />
       )}
 
       {/* 채팅방 목록 */}
       <FlatList
-        data={rooms.filter((room) => room.isRoomActive !== false)} // 비활성화된 채팅방 제외
+        data={rooms.filter((room) => room.isRoomActive !== false)}
         renderItem={renderChatRoom}
         keyExtractor={(item) => item.id}
         style={themed($flatList)}
@@ -307,19 +125,17 @@ export default function ChatRoomList({
                 color={theme.colors.textDim}
                 size={48}
               />
-              <Text style={themed($emptyTitle)}>
-                참여 중인 채팅방이 없습니다
-              </Text>
-              <Text style={themed($emptyDescription)}>
-                새로운 채팅방을 찾아보세요
-              </Text>
-              <TouchableOpacity
-                style={themed($createButton)}
-                onPress={() => router.push("/(app)/chat/rooms")}
-              >
-                <Ionicons name="add" color="white" size={16} />
-                <Text style={themed($createButtonText)}>채팅방 찾기</Text>
-              </TouchableOpacity>
+              <Text style={themed($emptyTitle)}>{emptyMessage}</Text>
+              <Text style={themed($emptyDescription)}>{emptyDescription}</Text>
+              {onAddRoom && (
+                <TouchableOpacity
+                  style={themed($createButton)}
+                  onPress={onAddRoom}
+                >
+                  <Ionicons name="add" color="white" size={16} />
+                  <Text style={themed($createButtonText)}>채팅방 찾기</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : null
         }
@@ -328,26 +144,11 @@ export default function ChatRoomList({
   );
 }
 
-// --- 스타일 정의 ---
+// === 스타일 정의 ===
+
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
   backgroundColor: colors.background,
-});
-
-const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.md,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
-});
-
-const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 20,
-  fontWeight: "bold",
-  color: colors.text,
 });
 
 const $flatList: ThemedStyle<ViewStyle> = () => ({
@@ -368,107 +169,6 @@ const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.textDim,
-});
-
-const $roomCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.card,
-  borderRadius: 8,
-  padding: spacing.sm,
-  marginBottom: spacing.xs,
-  borderWidth: 1,
-  borderColor: colors.border,
-});
-
-const $roomHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  alignItems: "flex-start",
-  gap: spacing.sm,
-});
-
-const $roomIconContainer: ThemedStyle<ViewStyle> = () => ({
-  width: 36,
-  height: 36,
-  borderRadius: 18,
-  justifyContent: "center",
-  alignItems: "center",
-});
-
-const $roomContent: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-});
-
-const $roomTitleRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: spacing.xs,
-});
-
-const $roomName: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
-  fontWeight: "600",
-  color: colors.text,
-  flex: 1,
-});
-
-const $roomTime: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 10,
-  color: colors.textDim,
-});
-
-const $roomInfoRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: spacing.xs,
-});
-
-const $roomLastMessage: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
-  color: colors.textDim,
-  flex: 1,
-});
-
-const $roomBadges: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  gap: spacing.xs,
-});
-
-const $memberBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: colors.border + "50",
-  paddingHorizontal: spacing.xs,
-  paddingVertical: 2,
-  borderRadius: 8,
-  gap: 2,
-});
-
-const $memberCount: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 10,
-  color: colors.textDim,
-});
-
-const $unreadBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.tint,
-  paddingHorizontal: spacing.xs,
-  paddingVertical: 2,
-  borderRadius: 8,
-  minWidth: 16,
-  alignItems: "center",
-});
-
-const $unreadCount: ThemedStyle<TextStyle> = () => ({
-  fontSize: 10,
-  color: "white",
-  fontWeight: "600",
-});
-
-const $roomDescription: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 10,
-  color: colors.textDim,
-  fontStyle: "italic",
 });
 
 const $emptyContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -494,18 +194,6 @@ const $emptyDescription: ThemedStyle<TextStyle> = ({ colors }) => ({
   lineHeight: 20,
 });
 
-const $emptyLoadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.xl,
-  alignItems: "center",
-  gap: spacing.md,
-});
-
-const $emptyLoadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 16,
-  color: colors.textDim,
-  textAlign: "center",
-});
-
 const $createButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
@@ -520,15 +208,4 @@ const $createButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 12,
   color: "white",
   fontWeight: "600",
-});
-
-const $typeBadge: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.xs,
-  paddingVertical: 2,
-  borderRadius: 8,
-});
-
-const $typeText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 9,
-  fontWeight: "500",
 });

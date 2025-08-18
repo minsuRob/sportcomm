@@ -34,6 +34,7 @@ interface UserProfile {
   email: string;
   profileImageUrl?: string;
   bio?: string;
+  comment?: string;
   age?: number;
   role: string; // 사용자 역할 필드 추가
   isFollowing: boolean;
@@ -279,6 +280,9 @@ export default function ProfileScreen() {
       <View style={themed($profileSection)}>
         <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
         <Text style={themed($username)}>{userProfile.nickname}</Text>
+        {userProfile.comment && (
+          <Text style={themed($userComment)}>{userProfile.comment}</Text>
+        )}
         {/* 연령대 배지 표시 */}
         {userProfile?.age || currentUser?.age ? (
           <View style={themed($ageBadge)}>
@@ -459,6 +463,15 @@ const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontWeight: "bold",
   color: colors.text,
   marginTop: spacing.md,
+});
+
+const $userComment: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+  marginTop: spacing.xs,
+  fontStyle: "italic",
+  textAlign: "center",
+  lineHeight: 22,
 });
 
 const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

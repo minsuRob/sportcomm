@@ -14,6 +14,13 @@ export interface ChatRoomSummary {
   unreadCount: number;
   members?: any[];
   createdAt?: string;
+  team?: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+    logoUrl?: string;
+  };
 }
 
 interface UseChatRoomsOptions {
@@ -52,6 +59,7 @@ export function useChatRooms(options: UseChatRoomsOptions = {}) {
         unreadCount: 0,
         members: room.members,
         createdAt: room.createdAt,
+        team: room.team,
       })) as ChatRoomSummary[];
       setChatRooms(transformed);
     } catch (err) {

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   ViewStyle,
   TextStyle,
@@ -48,6 +47,7 @@ import { UploadProgress } from "@/lib/api/common";
 import TrendyCreatePostSection from "@/components/createPost/TrendyCreatePostSection";
 import CreativeCreatePostSection from "@/components/createPost/CreativeCreatePostSection";
 import TagInput from "@/components/createPost/TagInput";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 // --- 타입 정의 ---
 interface TeamOption {
@@ -645,10 +645,7 @@ export default function CreatePostScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={themed($container)}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <View style={themed($container)}>
       {/* 헤더 */}
       <View style={themed($header)}>
         <TouchableOpacity onPress={handleGoBack} style={themed($backButton)}>
@@ -715,9 +712,11 @@ export default function CreatePostScreen() {
         </View>
       )}
 
-      <ScrollView
+      <KeyboardAwareScrollView
         style={themed($scrollContainer)}
         showsVerticalScrollIndicator={false}
+        extraScrollHeight={100}
+        enableOnAndroid={true}
       >
         {/* 사용자 정보 */}
         <View style={themed($userSection)}>
@@ -925,7 +924,7 @@ export default function CreatePostScreen() {
             selectedCount={selectedImages.length + selectedVideos.length}
           />
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <AppDialog
         visible={dialog.visible}
         onClose={() => setDialog({ ...dialog, visible: false })}
@@ -939,7 +938,7 @@ export default function CreatePostScreen() {
         showCancel={dialog.showCancel}
         cancelText="취소"
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

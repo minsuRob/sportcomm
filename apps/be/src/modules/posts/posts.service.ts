@@ -12,6 +12,7 @@ import { PostLike } from '../../entities/post-like.entity';
 import { Tag } from '../../entities/tag.entity';
 import { PostTag } from '../../entities/post-tag.entity';
 import { User } from '../../entities/user.entity';
+import { UserTeam } from '../../entities/user-team.entity';
 import { Media } from '../../entities/media.entity';
 import { MediaService } from '../media/media.service';
 
@@ -118,6 +119,8 @@ export class PostsService {
     private readonly postTagRepository: Repository<PostTag>,
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
+    @InjectRepository(UserTeam)
+    private readonly userTeamRepository: Repository<UserTeam>,
     private dataSource: DataSource,
     private readonly mediaService: MediaService,
     private readonly eventEmitter: EventEmitter2,
@@ -146,6 +149,13 @@ export class PostsService {
     // 팀 연관 게시물 로깅
     console.log(`게시물 생성 - 팀 ID: ${teamId}`);
 
+    // 작성자의 팀 정보 조회
+    const authorTeams = await this.userTeamRepository.find({
+      where: { userId: authorId },
+      relations: ['team'],
+      order: { priority: 'ASC' },
+    });
+
     // 게시물 생성
     const post = this.postRepository.create({
       title,
@@ -153,6 +163,12 @@ export class PostsService {
       content,
       isPublic,
       authorId,
+      authorTeams: authorTeams.map((ut) => ({
+        id: ut.team.id,
+        name: ut.team.name,
+        logoUrl: ut.team.logoUrl,
+        icon: ut.team.icon,
+      })),
       viewCount: 0,
       likeCount: 0,
       commentCount: 0,
@@ -207,6 +223,8 @@ export class PostsService {
       .leftJoinAndSelect('post.author', 'author')
       .leftJoinAndSelect('post.media', 'media')
       .leftJoinAndSelect('post.team', 'team')
+      .leftJoinAndSelect('post.postTags', 'postTags')
+      .leftJoinAndSelect('postTags.tag', 'tag')
       .where('post.deletedAt IS NULL');
 
     // 필터 적용
@@ -242,6 +260,28 @@ export class PostsService {
 
     // 페이지네이션 적용 및 데이터 조회
     const posts = await queryBuilder.skip(skip).take(limit).getMany();
+
+    // tags 필드 계산 (postTags에서 추출)
+    posts.forEach((post) => {
+      if (post.postTags && post.postTags.length > 0) {
+        post.tags = post.postTags
+          .map((postTag) => postTag.tag)
+          .filter((tag) => tag && tag.id && tag.name);
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[DEBUG] PostService - postId: ${post.id}, postTags 길이: ${post.postTags.length}, tags 길이: ${post.tags.length}`,
+          );
+        }
+      } else {
+        post.tags = [];
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[DEBUG] PostService - postId: ${post.id}, postTags 없음`,
+          );
+        }
+      }
+    });
 
     // 페이지네이션 정보 계산
     const totalPages = Math.ceil(total / limit);
@@ -282,11 +322,33 @@ export class PostsService {
         'versions',
         'likes',
         'team',
+        'postTags',
+        'postTags.tag',
       ],
     });
 
     if (!post) {
       throw new NotFoundException('게시물을 찾을 수 없습니다.');
+    }
+
+    // tags 필드 계산 (postTags에서 추출)
+    if (post.postTags && post.postTags.length > 0) {
+      post.tags = post.postTags
+        .map((postTag) => postTag.tag)
+        .filter((tag) => tag && tag.id && tag.name);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `[DEBUG] PostService findById - postId: ${post.id}, postTags 길이: ${post.postTags.length}, tags 길이: ${post.tags.length}`,
+        );
+      }
+    } else {
+      post.tags = [];
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `[DEBUG] PostService findById - postId: ${post.id}, postTags 없음`,
+        );
+      }
     }
 
     // 조회수 증가

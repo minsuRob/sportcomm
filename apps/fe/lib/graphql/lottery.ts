@@ -214,3 +214,67 @@ export interface UserWinHistoryData {
   page: number;
   limit: number;
 }
+
+// === 관리자 전용 GraphQL 쿼리 및 뮤테이션 ===
+
+/**
+ * 관리자: 현재 추첨 중단 뮤테이션
+ */
+export const ADMIN_STOP_CURRENT_LOTTERY = gql`
+  mutation AdminStopCurrentLottery {
+    adminStopCurrentLottery
+  }
+`;
+
+/**
+ * 관리자: 커스텀 추첨 생성 뮤테이션
+ */
+export const ADMIN_CREATE_CUSTOM_LOTTERY = gql`
+  mutation AdminCreateCustomLottery(
+    $totalPrize: Int!
+    $winnerCount: Int!
+    $durationMinutes: Int = 50
+  ) {
+    adminCreateCustomLottery(
+      totalPrize: $totalPrize
+      winnerCount: $winnerCount
+      durationMinutes: $durationMinutes
+    ) {
+      id
+      roundNumber
+      startTime
+      endTime
+      announceTime
+      finalEndTime
+      status
+      totalPrize
+      winnerCount
+      prizePerWinner
+      totalEntries
+    }
+  }
+`;
+
+/**
+ * 관리자: 추첨 통계 조회 쿼리
+ */
+export const GET_ADMIN_LOTTERY_STATS = gql`
+  query GetAdminLotteryStats {
+    adminLotteryStats {
+      totalLotteries
+      activeLotteries
+      totalEntries
+      totalPrizeDistributed
+      averageParticipation
+    }
+  }
+`;
+
+// 관리자 타입 정의
+export interface AdminLotteryStatsData {
+  totalLotteries: number;
+  activeLotteries: number;
+  totalEntries: number;
+  totalPrizeDistributed: number;
+  averageParticipation: number;
+}

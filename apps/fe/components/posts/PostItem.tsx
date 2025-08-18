@@ -33,6 +33,11 @@ export interface PostItemType {
   teamId: string; // 게시물은 이제 teamId로만 분류됩니다
   mediaUrl?: string;
   isLiked?: boolean;
+  tags?: Array<{
+    id: string;
+    name: string;
+    color?: string;
+  }>;
 }
 
 /**
@@ -48,13 +53,18 @@ interface PostItemProps {
    * 클릭 이벤트 핸들러 (선택 사항)
    */
   onPress?: (post: PostItemType) => void;
+
+  /**
+   * 태그 클릭 시 호출되는 함수 (선택 사항)
+   */
+  onTagPress?: (tagName: string) => void;
 }
 
 /**
  * 게시물 아이템 컴포넌트
  * 검색 결과나 피드에서 게시물을 표시하는 데 사용됩니다.
  */
-export default function PostItem({ post, onPress }: PostItemProps) {
+export default function PostItem({ post, onPress, onTagPress }: PostItemProps) {
   const { themed, theme } = useAppTheme();
 
   /**
@@ -179,6 +189,32 @@ export default function PostItem({ post, onPress }: PostItemProps) {
       {/* 게시물 내용 (요약) */}
       <Text style={themed($content)}>{contentSummary}</Text>
 
+      {/* 게시물 태그 (있는 경우) */}
+      {post.tags && post.tags.length > 0 && (
+        <View style={themed($tagsContainer)}>
+          {post.tags.map((tag) => (
+            <TouchableOpacity
+              key={tag.id}
+              style={[
+                themed($tagItem),
+                { backgroundColor: tag.color ? tag.color + "20" : undefined },
+              ]}
+              onPress={() => onTagPress?.(tag.name)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  themed($tagText),
+                  { color: tag.color || theme.colors.tint },
+                ]}
+              >
+                #{tag.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* 게시물 미디어 (있는 경우) */}
       {post.mediaUrl && (
         <Image
@@ -281,6 +317,26 @@ const $content: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   lineHeight: 20,
   marginBottom: 10,
+});
+
+const $tagsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  marginBottom: spacing.sm,
+});
+
+const $tagItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  backgroundColor: "#f0f0f0",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 12,
+  marginRight: spacing.xs,
+  marginBottom: spacing.xs,
+});
+
+const $tagText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 12,
+  fontWeight: "500",
 });
 
 const $media: ThemedStyle<ImageStyle> = () => ({

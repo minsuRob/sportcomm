@@ -178,6 +178,21 @@ export class Post extends BaseEntity {
   })
   authorId: string;
 
+  /**
+   * 작성자의 팀 정보 (JSON)
+   * 게시물 생성 시점의 작성자 팀 정보를 저장합니다.
+   */
+  @Field(() => String, {
+    nullable: true,
+    description: '작성자의 팀 정보 (JSON)',
+  })
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    comment: '작성자의 팀 정보',
+  })
+  authorTeams?: any;
+
   // === 관계 설정 ===
 
   /**

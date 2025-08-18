@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { UserRole } from '../../entities/user.entity';
@@ -22,7 +23,7 @@ export class AdminGuard implements CanActivate {
     const user = req?.user;
 
     if (!user) {
-      throw new ForbiddenException('인증이 필요합니다.');
+      throw new UnauthorizedException('인증이 필요합니다.');
     }
 
     if (user.role !== UserRole.ADMIN) {

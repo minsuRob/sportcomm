@@ -191,7 +191,8 @@ export class Post extends BaseEntity {
     nullable: true,
     comment: '작성자의 팀 정보',
   })
-  authorTeams?: any;
+  authorTeams?: { id: string; name: string; logoUrl?: string; icon: string }[];
+  //TODO: AuthorTeamInfo와 같은 타입을 정의하고 authorTeams?: AuthorTeamInfo[]로 사용
 
   // === 관계 설정 ===
 

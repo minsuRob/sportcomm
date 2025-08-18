@@ -20,7 +20,6 @@ export const setItem = async (key: string, value: string): Promise<void> => {
         return;
       }
       localStorage.setItem(key, value);
-      console.log(`웹 스토리지에 저장 완료: ${key}`);
     } catch (e) {
       console.error("Error saving to localStorage", e);
     }

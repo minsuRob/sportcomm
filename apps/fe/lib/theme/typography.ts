@@ -16,9 +16,13 @@ export const customFontsToLoad = {
   spaceGroteskMedium,
   spaceGroteskSemiBold,
   spaceGroteskBold,
+  TTTogether: require("@/assets/fonts/TTTogetherA.woff"),
 };
 
 const fonts = {
+  ttTogether: {
+    normal: "TTTogether",
+  },
   spaceGrotesk: {
     // Cross-platform Google font.
     light: "spaceGroteskLight",
@@ -71,4 +75,8 @@ export const typography = {
    * Lets get fancy with a monospace font!
    */
   code: Platform.select({ ios: fonts.courier, android: fonts.monospace }),
+  /**
+   * A special font for logos or headings.
+   */
+  logo: fonts.ttTogether,
 };

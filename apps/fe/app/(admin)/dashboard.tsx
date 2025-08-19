@@ -24,6 +24,8 @@ import {
   ADMIN_CREATE_CUSTOM_LOTTERY,
   type AdminLotteryStatsData,
 } from "@/lib/graphql/lottery";
+import { TagSearchTest } from "./test/TagSearchTest";
+import { TagNavigationTest } from "./test/TagNavigationTest";
 
 // 대시보드 통계 타입
 interface DashboardStats {
@@ -286,6 +288,9 @@ export default function AdminDashboardScreen() {
 
         {/* 추첨 관리 섹션 */}
         <LotteryManagementSection />
+
+        {/* 테스트 관리 섹션 */}
+        <TestManagementSection />
 
         {/* 관리 메뉴 */}
         <View style={themed($section)}>
@@ -1112,4 +1117,247 @@ const $confirmButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 16,
   fontWeight: "600",
   color: "white",
+});
+
+// === 테스트 관리 컴포넌트 ===
+
+/**
+ * 테스트 관리 섹션 컴포넌트
+ * 확장 가능한 테스트 시스템을 제공합니다.
+ */
+function TestManagementSection() {
+  const { themed, theme } = useAppTheme();
+  const [activeTest, setActiveTest] = useState<string | null>(null);
+  const [showTestPanel, setShowTestPanel] = useState(false);
+
+  // 테스트 메뉴 데이터 - 새로운 테스트를 쉽게 추가할 수 있습니다
+  const testMenus = [
+    {
+      id: "tag-search",
+      title: "태그 검색 테스트",
+      description: "태그 기반 검색 기능을 테스트합니다",
+      icon: "search-outline",
+      color: "#007AFF",
+      component: TagSearchTest,
+    },
+    {
+      id: "tag-navigation",
+      title: "태그 네비게이션 테스트",
+      description: "태그 클릭 시 네비게이션을 테스트합니다",
+      icon: "navigate-outline",
+      color: "#8B5CF6",
+      component: TagNavigationTest,
+    },
+    // 새로운 테스트를 여기에 추가하세요
+    // {
+    //   id: "new-test",
+    //   title: "새로운 테스트",
+    //   description: "새로운 테스트 설명",
+    //   icon: "flask-outline",
+    //   color: "#10B981",
+    //   component: NewTestComponent,
+    // },
+  ];
+
+  /**
+   * 테스트 실행
+   */
+  const runTest = (testId: string) => {
+    setActiveTest(testId);
+    setShowTestPanel(true);
+  };
+
+  /**
+   * 테스트 패널 닫기
+   */
+  const closeTestPanel = () => {
+    setShowTestPanel(false);
+    setActiveTest(null);
+  };
+
+  /**
+   * 현재 활성 테스트 컴포넌트 렌더링
+   */
+  const renderActiveTest = () => {
+    const test = testMenus.find((t) => t.id === activeTest);
+    if (!test) return null;
+
+    const TestComponent = test.component;
+    return <TestComponent />;
+  };
+
+  return (
+    <>
+      <View style={themed($section)}>
+        <View style={themed($testSectionHeader)}>
+          <Text style={themed($sectionTitle)}>테스트 관리</Text>
+          <TouchableOpacity
+            style={themed($testToggleButton)}
+            onPress={() => setShowTestPanel(!showTestPanel)}
+          >
+            <Text style={themed($testToggleButtonText)}>
+              {showTestPanel ? "테스트 패널 숨기기" : "테스트 패널 보기"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {showTestPanel && (
+          <>
+            {/* 테스트 메뉴 */}
+            <View style={themed($testMenuGrid)}>
+              {testMenus.map((test) => (
+                <TouchableOpacity
+                  key={test.id}
+                  style={themed($testMenuCard)}
+                  onPress={() => runTest(test.id)}
+                >
+                  <View
+                    style={[
+                      themed($testMenuIconContainer),
+                      { backgroundColor: test.color + "20" },
+                    ]}
+                  >
+                    <Ionicons
+                      name={test.icon as any}
+                      color={test.color}
+                      size={24}
+                    />
+                  </View>
+                  <View style={themed($testMenuContent)}>
+                    <Text style={themed($testMenuTitle)}>{test.title}</Text>
+                    <Text style={themed($testMenuDescription)}>
+                      {test.description}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="play-circle-outline"
+                    color={test.color}
+                    size={24}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* 테스트 실행 패널 */}
+            {activeTest && (
+              <View style={themed($testPanel)}>
+                <View style={themed($testPanelHeader)}>
+                  <Text style={themed($testPanelTitle)}>
+                    {testMenus.find((t) => t.id === activeTest)?.title}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={closeTestPanel}
+                    style={themed($testPanelCloseButton)}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={24}
+                      color={theme.colors.text}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <View style={themed($testPanelContent)}>
+                  {renderActiveTest()}
+                </View>
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    </>
+  );
+}
+
+// === 테스트 관리 스타일 ===
+
+const $testSectionHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: spacing.md,
+});
+
+const $testToggleButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.tint + "20",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 8,
+});
+
+const $testToggleButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+  fontSize: 14,
+  fontWeight: "600",
+});
+
+const $testMenuGrid: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  gap: spacing.sm,
+  marginBottom: spacing.md,
+});
+
+const $testMenuCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.card,
+  padding: spacing.md,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $testMenuIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  width: 48,
+  height: 48,
+  borderRadius: 24,
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: spacing.md,
+});
+
+const $testMenuContent: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $testMenuTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: colors.text,
+  marginBottom: spacing.xs,
+});
+
+const $testMenuDescription: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+});
+
+const $testPanel: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.card,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+  overflow: "hidden",
+});
+
+const $testPanelHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  backgroundColor: colors.background,
+});
+
+const $testPanelTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "700",
+  color: colors.text,
+});
+
+const $testPanelCloseButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
+});
+
+const $testPanelContent: ThemedStyle<ViewStyle> = () => ({
+  maxHeight: 600,
 });

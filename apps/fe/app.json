@@ -31,8 +31,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png",
-      "publicPath": "/sportcomm/"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -50,8 +49,7 @@
       "iosDisplayInForeground": true
     },
     "experiments": {
-      "typedRoutes": true,
-      "baseUrl": "/sportcomm"
+      "typedRoutes": true
     },
     "extra": {
       "GRAPHQL_URL": "${GRAPHQL_URL}"

@@ -2,7 +2,6 @@
   "name": "fe",
   "main": "index.js",
   "version": "1.0.0",
-  "homepage": "https://minsuRob.github.io/sportcomm",
   "private": true,
   "scripts": {
     "android": "expo start -c --android",

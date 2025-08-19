@@ -202,11 +202,11 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   textAlign: "center",
 });
 
-const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $logoText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
   fontSize: 18,
   fontWeight: "900",
   color: colors.tint,
-  fontStyle: "italic",
+  fontFamily: typography.logo.normal,
 });
 
 const $headerRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({

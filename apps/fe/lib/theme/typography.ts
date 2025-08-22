@@ -19,7 +19,7 @@ export const fonts = {
   spaceGroteskBold,
 };
 
-// 폰트 패밀리 이름들
+// 플랫폼별 폰트 패밀리 이름
 export const fontFamily = {
   // 시스템 폰트
   regular: "SpaceGrotesk-Regular",
@@ -27,8 +27,11 @@ export const fontFamily = {
   semiBold: "SpaceGrotesk-SemiBold",
   bold: "SpaceGrotesk-Bold",
 
-  // 커스텀 폰트 - 웹 폰트 사용
-  custom: "TTTogether", // 웹 폰트 패밀리 이름
+  // 커스텀 폰트 - 플랫폼별로 다른 이름 사용
+  custom: Platform.select({
+    web: "TTTogether", // 웹: 웹 폰트 패밀리 이름
+    default: "TTTogetherA", // iOS/Android: TTF 파일의 PostScript 이름
+  }),
 };
 
 // 폰트 크기 상수

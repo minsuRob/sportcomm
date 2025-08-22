@@ -5,6 +5,9 @@ const projectRoot = __dirname;
 
 const config = getDefaultConfig(projectRoot);
 
+// 모바일에서 TTF 폰트 파일 지원을 위한 assetExts 설정
+config.resolver.assetExts.push("ttf");
+
 // 1. 모노레포의 node_modules를 보도록 설정
 config.watchFolders = [
   path.resolve(projectRoot, "..", "..", "node_modules"),

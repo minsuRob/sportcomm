@@ -1,8 +1,7 @@
 import { useFonts } from "expo-font";
-import { customFonts } from "./config";
+import { getFontConfig } from "./config";
 
 export function useLoadFonts() {
-  return useFonts({
-    TTTogether: { uri: customFonts.TTTogether },
-  });
+  const fontConfig = getFontConfig();
+  return useFonts(fontConfig);
 }

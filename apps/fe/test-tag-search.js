@@ -91,13 +91,13 @@ async function searchWithTag(tagQuery, searchCount = 1) {
       console.log(`   내용: ${post.content?.substring(0, 100)}...`);
       console.log(`   작성자: ${post.author?.nickname || "알 수 없음"}`);
       console.log(
-        `   조회수: ${post.viewCount}, 좋아요: ${post.likeCount}, 댓글: ${post.commentCount}`
+        `   조회수: ${post.viewCount}, 좋아요: ${post.likeCount}, 댓글: ${post.commentCount}`,
       );
 
       // 태그 정보 표시
       if (post.tags && post.tags.length > 0) {
         console.log(
-          `   태그: ${post.tags.map((tag) => `#${tag.name}`).join(", ")}`
+          `   태그: ${post.tags.map((tag) => `#${tag.name}`).join(", ")}`,
         );
       } else {
         console.log(`   태그: 없음`);
@@ -138,10 +138,10 @@ async function runRepeatedSearchTest() {
       console.log(`\n📊 "${tag}" 검색 결과 요약:`);
       console.log(`   - 총 게시물: ${result.metadata.totalCount}개`);
       console.log(
-        `   - 현재 페이지: ${result.metadata.currentPage + 1}/${result.metadata.totalPages}`
+        `   - 현재 페이지: ${result.metadata.currentPage + 1}/${result.metadata.totalPages}`,
       );
       console.log(
-        `   - 다음 페이지: ${result.metadata.hasNextPage ? "있음" : "없음"}`
+        `   - 다음 페이지: ${result.metadata.hasNextPage ? "있음" : "없음"}`,
       );
     }
 
@@ -150,7 +150,7 @@ async function runRepeatedSearchTest() {
   }
 
   console.log(
-    `\n🎉 모든 태그 검색 테스트 완료! 총 ${totalSearchCount}번의 검색을 수행했습니다.`
+    `\n🎉 모든 태그 검색 테스트 완료! 총 ${totalSearchCount}번의 검색을 수행했습니다.`,
   );
 }
 
@@ -159,7 +159,7 @@ async function runRepeatedSearchTest() {
  */
 async function runSpecificTagRepeatedTest(tagQuery, repeatCount = 5) {
   console.log(
-    `🔄 "${tagQuery}" 태그로 ${repeatCount}번 반복 검색 테스트 시작\n`
+    `🔄 "${tagQuery}" 태그로 ${repeatCount}번 반복 검색 테스트 시작\n`,
   );
 
   for (let i = 1; i <= repeatCount; i++) {

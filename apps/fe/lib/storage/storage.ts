@@ -57,7 +57,7 @@ export const getItem = async (key: string): Promise<string | null> => {
     try {
       const value = await AsyncStorage.getItem(key);
       console.log(
-        `AsyncStorage에서 조회: [키: ${key}], [결과: ${value ? "값 있음" : "값 없음"}]`
+        `AsyncStorage에서 조회: [키: ${key}], [결과: ${value ? "값 있음" : "값 없음"}]`,
       );
       return value;
     } catch (e) {

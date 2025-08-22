@@ -129,7 +129,7 @@ export class NewsService {
       limit?: number;
       page?: number;
       sources?: string[];
-    } = {}
+    } = {},
   ): Promise<NewsApiResponse> {
     const {
       category = "general",
@@ -263,13 +263,13 @@ export class NewsService {
    */
   async fetchLatestByCategory(
     category: string,
-    limit: number = 3
+    limit: number = 3,
   ): Promise<NewsArticle[]> {
     try {
       const response = await this.fetchNews({ category, limit });
       return response.articles.sort(
         (a, b) =>
-          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
       );
     } catch (error) {
       console.error(`${category} 카테고리 뉴스 로드 실패:`, error);
@@ -282,14 +282,14 @@ export class NewsService {
    */
   async fetchTeamNews(
     teamSectionId: string,
-    limit: number = 5
+    limit: number = 5,
   ): Promise<NewsArticle[]> {
     try {
       console.log(`팀별 뉴스 크롤링: ${teamSectionId}`);
 
       const crawlResult = await crawlerManager.crawlNaverTeamNews(
         teamSectionId,
-        limit
+        limit,
       );
       return crawlResult.articles.map(this.convertCrawledToNews);
     } catch (error) {

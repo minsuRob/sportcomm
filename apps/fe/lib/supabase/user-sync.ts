@@ -123,7 +123,7 @@ export class UserSyncService {
    */
   static async syncUser(
     input: SyncUserInput,
-    accessToken: string
+    accessToken: string,
   ): Promise<User> {
     try {
       console.log("🔄 사용자 정보 동기화 시작:", input);
@@ -166,7 +166,7 @@ export class UserSyncService {
    */
   static async updateUserProfile(
     input: UpdateUserProfileInput,
-    accessToken: string
+    accessToken: string,
   ): Promise<User> {
     try {
       console.log("🔄 사용자 프로필 업데이트 시작:", input);
@@ -243,7 +243,7 @@ export class UserSyncService {
    */
   static async checkNicknameTaken(
     nickname: string,
-    accessToken: string
+    accessToken: string,
   ): Promise<boolean> {
     try {
       console.log("🔄 닉네임 중복 확인 시작:", nickname);
@@ -262,7 +262,7 @@ export class UserSyncService {
       const isTaken = data?.checkNicknameTaken ?? false;
 
       console.log(
-        `✅ 닉네임 중복 확인 완료: ${nickname} -> ${isTaken ? "사용 불가" : "사용 가능"}`
+        `✅ 닉네임 중복 확인 완료: ${nickname} -> ${isTaken ? "사용 불가" : "사용 가능"}`,
       );
       return isTaken;
     } catch (error: any) {
@@ -288,7 +288,7 @@ export async function syncUserAfterSignUp(
     email: string;
     role?: string;
   },
-  accessToken: string
+  accessToken: string,
 ): Promise<User> {
   try {
     console.log("🔄 회원가입 후 자동 사용자 동기화 시작:", userProfile);
@@ -315,7 +315,7 @@ export async function syncUserAfterSignUp(
  * @returns 사용자 정보 (없으면 null)
  */
 export async function checkAndSyncUserAfterSignIn(
-  accessToken: string
+  accessToken: string,
 ): Promise<User | null> {
   try {
     console.log("🔄 로그인 후 사용자 정보 확인 시작");
@@ -328,7 +328,7 @@ export async function checkAndSyncUserAfterSignIn(
   } catch (error) {
     console.warn(
       "⚠️ 로그인 후 사용자 정보 확인 실패 (동기화되지 않은 사용자일 수 있음):",
-      error
+      error,
     );
 
     // 사용자 정보가 없으면 null 반환

@@ -46,7 +46,7 @@ export function useCurrentUser() {
         // 네트워크 실패 시 로컬 값 유지
         console.warn(
           "useCurrentUser: 원격 사용자 동기화 실패",
-          (e as any)?.message
+          (e as any)?.message,
         );
       }
     }

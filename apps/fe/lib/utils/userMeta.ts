@@ -51,7 +51,7 @@ export interface ExtendedUser extends BaseUser {
  */
 export function extractTeamLogos(
   user: ExtendedUser | any,
-  maxCount: number = 3
+  maxCount: number = 3,
 ): string[] {
   // 1. myTeamLogos 필드가 있는 경우 (채팅 메시지 등)
   if (user.myTeamLogos && Array.isArray(user.myTeamLogos)) {
@@ -85,7 +85,7 @@ export function extractTeamLogos(
  */
 export function extractTeams(
   user: ExtendedUser | any,
-  maxCount: number = 3
+  maxCount: number = 3,
 ): TeamInfo[] {
   // 1. myTeams 필드가 있는 경우
   if (user.myTeams && Array.isArray(user.myTeams)) {
@@ -115,7 +115,7 @@ export function createUserMeta(
     maxTeamLogos?: number;
     includeAge?: boolean;
     includeTeams?: boolean;
-  } = {}
+  } = {},
 ): UserMeta {
   const { maxTeamLogos = 3, includeAge = true, includeTeams = false } = options;
 
@@ -151,7 +151,7 @@ export function createUserMeta(
  */
 export function isSameUser(
   currentUser: BaseUser | null,
-  targetUser: BaseUser | any
+  targetUser: BaseUser | any,
 ): boolean {
   return (
     currentUser?.id === targetUser?.id ||
@@ -167,7 +167,7 @@ export function isSameUser(
  */
 export function createChatUserMeta(
   user: ExtendedUser | any,
-  currentUser?: ExtendedUser | any
+  currentUser?: ExtendedUser | any,
 ): UserMeta | undefined {
   // 사용자 정보가 없으면 undefined 반환
   if (!user) return undefined;

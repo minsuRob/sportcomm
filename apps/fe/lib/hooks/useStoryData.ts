@@ -35,7 +35,7 @@ interface StoryDataResult {
  */
 const transformPostToStory = (post: any, type: StoryType): StoryItem => {
   const imageMedia = post.media?.find(
-    (item: any) => item.type === "IMAGE" || item.type === "image"
+    (item: any) => item.type === "IMAGE" || item.type === "image",
   );
 
   return {
@@ -203,14 +203,14 @@ export const useStoryData = ({
 
         // 4. 중복 제거 및 정렬
         const uniqueStories = Array.from(
-          new Map(combinedStories.map((story) => [story.id, story])).values()
+          new Map(combinedStories.map((story) => [story.id, story])).values(),
         );
 
         // 5. 생성 시간 기준으로 정렬 및 제한
         const sortedStories = uniqueStories
           .sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
           )
           .slice(0, maxItems);
 

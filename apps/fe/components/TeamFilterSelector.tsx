@@ -39,7 +39,7 @@ export default function TeamFilterSelector({
   const [modalVisible, setModalVisible] = useState(false);
   // 체크박스처럼 모달 내에서만 임시 선택 상태를 유지하고, 적용 버튼에서만 반영
   const [pendingSelectedIds, setPendingSelectedIds] = useState<string[]>(
-    selectedTeamIds ?? []
+    selectedTeamIds ?? [],
   );
 
   // 사용자가 선택한 팀 목록 조회
@@ -96,7 +96,7 @@ export default function TeamFilterSelector({
     setPendingSelectedIds((prev) =>
       prev.includes(teamId)
         ? prev.filter((id) => id !== teamId)
-        : [...prev, teamId]
+        : [...prev, teamId],
     );
   };
 

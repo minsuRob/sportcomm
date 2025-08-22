@@ -17,11 +17,11 @@ export interface ModerationTarget {
  * 신고/차단 기능을 위한 공통 훅
  */
 export function useModerationActions(
-  onBlockSuccess?: (blockedUserId: string) => void
+  onBlockSuccess?: (blockedUserId: string) => void,
 ) {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTarget, setReportTarget] = useState<ModerationTarget | null>(
-    null
+    null,
   );
   const [executeBlockUser] = useMutation(BLOCK_USER);
 
@@ -116,7 +116,7 @@ export function useModerationActions(
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -152,7 +152,7 @@ export function useModerationActions(
         text: option.text,
         onPress: option.onPress,
         style: option.style,
-      }))
+      })),
     );
   };
 

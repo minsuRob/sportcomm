@@ -251,7 +251,7 @@ export default function StorySection({
         }
       }
     },
-    [onStoryPress, router]
+    [onStoryPress, router],
   );
 
   // 스크롤 끝 감지 (추가 로드)

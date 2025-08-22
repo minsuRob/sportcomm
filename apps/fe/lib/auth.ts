@@ -25,7 +25,7 @@ export interface User {
 
 export const saveSession = async (
   tokenOrUser: string | User,
-  user?: User
+  user?: User,
 ): Promise<void> => {
   try {
     // 두 개의 매개변수가 전달된 경우 (기존 방식)

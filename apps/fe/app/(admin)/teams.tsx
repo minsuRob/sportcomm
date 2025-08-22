@@ -80,7 +80,7 @@ export default function AdminTeamsScreen() {
   const [categoryToDelete, setCategoryToDelete] =
     useState<SportCategoryInfo | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   // GraphQL 쿼리 및 뮤테이션
@@ -89,7 +89,7 @@ export default function AdminTeamsScreen() {
     {
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    }
+    },
   );
 
   const [createTeam, { loading: createLoading }] = useMutation(CREATE_TEAM, {
@@ -207,7 +207,7 @@ export default function AdminTeamsScreen() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   const [deleteSport] = useMutation(DELETE_SPORT, {
@@ -257,7 +257,7 @@ export default function AdminTeamsScreen() {
   const categories = data?.adminGetTeamsByCategory || [];
   const totalTeams = categories.reduce(
     (sum, category) => sum + category.teams.length,
-    0
+    0,
   );
 
   // 에러 처리
@@ -461,7 +461,7 @@ export default function AdminTeamsScreen() {
         const safeName = generateSafeFileName(
           asset.fileName || "team_logo.jpg",
           "team_logo",
-          selectedTeam?.id || formData.name || "team"
+          selectedTeam?.id || formData.name || "team",
         );
         const file = new File([blob], safeName, {
           type: asset.mimeType || "image/jpeg",
@@ -471,7 +471,7 @@ export default function AdminTeamsScreen() {
         const safeName = generateSafeFileName(
           asset.fileName || "team_logo.jpg",
           "team_logo",
-          selectedTeam?.id || formData.name || "team"
+          selectedTeam?.id || formData.name || "team",
         );
         uploaded = await uploadFilesMobile(
           [
@@ -481,7 +481,7 @@ export default function AdminTeamsScreen() {
               type: asset.mimeType || "image/jpeg",
             },
           ],
-          progress
+          progress,
         );
       }
 
@@ -650,7 +650,7 @@ export default function AdminTeamsScreen() {
                 {categories.reduce(
                   (sum, category) =>
                     sum + category.teams.filter((team) => team.isActive).length,
-                  0
+                  0,
                 )}
               </Text>
               <Text style={themed($statLabel)}>활성 팀</Text>

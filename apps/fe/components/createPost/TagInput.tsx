@@ -46,7 +46,7 @@ export default function TagInput({
     (suggestion) =>
       suggestion.toLowerCase().includes(inputValue.toLowerCase()) &&
       !tags.includes(suggestion) &&
-      inputValue.length > 0
+      inputValue.length > 0,
   );
 
   /**

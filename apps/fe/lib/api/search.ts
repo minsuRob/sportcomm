@@ -85,7 +85,7 @@ export interface SearchParams {
  * @returns 정렬 방식
  */
 const getSortByFromTab = (
-  tab: SearchTabType
+  tab: SearchTabType,
 ): "POPULAR" | "RECENT" | "RELEVANCE" => {
   switch (tab) {
     case "popular":
@@ -108,7 +108,7 @@ const getSortByFromTab = (
  */
 export const searchApi = async (
   params: SearchParams,
-  tab: SearchTabType
+  tab: SearchTabType,
 ): Promise<{
   items: SearchResultItem[];
   metadata: {

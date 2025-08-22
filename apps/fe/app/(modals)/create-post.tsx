@@ -204,7 +204,7 @@ export default function CreatePostScreen() {
       ...selectedImages.map((img) => ({ type: "image" as const, ...img })),
       ...selectedVideos.map((vid) => ({ type: "video" as const, ...vid })),
     ],
-    [selectedImages, selectedVideos]
+    [selectedImages, selectedVideos],
   );
 
   /**
@@ -291,7 +291,7 @@ export default function CreatePostScreen() {
                   `video_${index}_${Date.now()}.mp4`,
                   {
                     type: "video/mp4",
-                  }
+                  },
                 );
 
                 // 메타데이터 추출
@@ -328,7 +328,7 @@ export default function CreatePostScreen() {
                 } catch (compressionError) {
                   console.warn(
                     "동영상 압축 실패, 원본 사용:",
-                    compressionError
+                    compressionError,
                   );
                   // 압축 실패 시 원본 정보 사용
                   processedVideo = {

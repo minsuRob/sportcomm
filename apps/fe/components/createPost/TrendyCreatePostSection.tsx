@@ -36,7 +36,7 @@ export interface TrendyCreatePostSectionProps {
 }
 
 export default function TrendyCreatePostSection(
-  props: TrendyCreatePostSectionProps
+  props: TrendyCreatePostSectionProps,
 ) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();

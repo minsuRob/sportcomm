@@ -106,7 +106,7 @@ export class NaverSportsCrawler extends BaseCrawler {
   private buildUrl(
     category: string,
     sectionId?: string,
-    page: number = 1
+    page: number = 1,
   ): string {
     let url = `${this.config.baseUrl}/${category}/news`;
 
@@ -248,7 +248,7 @@ export class NaverSportsCrawler extends BaseCrawler {
    */
   async crawlTeamNews(
     teamSectionId: string,
-    limit: number = 5
+    limit: number = 5,
   ): Promise<CrawlerResult> {
     return this.crawl({
       category: NAVER_SPORTS_CATEGORIES.BASEBALL,
@@ -262,7 +262,7 @@ export class NaverSportsCrawler extends BaseCrawler {
    */
   async crawlByCategory(
     category: string,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<CrawlerResult> {
     return this.crawl({
       category,

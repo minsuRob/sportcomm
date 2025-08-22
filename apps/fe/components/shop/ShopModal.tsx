@@ -125,7 +125,7 @@ export default function ShopModal({
 
   // 카테고리별 필터링
   const filteredItems = SHOP_ITEMS.filter(
-    (item) => selectedCategory === "all" || item.category === selectedCategory
+    (item) => selectedCategory === "all" || item.category === selectedCategory,
   );
 
   // 구매 처리
@@ -141,7 +141,7 @@ export default function ShopModal({
       Alert.alert(
         "포인트 부족",
         `이 아이템을 구매하려면 ${finalPrice}P가 필요합니다.\n현재 보유: ${userPoints}P`,
-        [{ text: "확인", style: "default" }]
+        [{ text: "확인", style: "default" }],
       );
       return;
     }
@@ -162,7 +162,7 @@ export default function ShopModal({
               }
               Alert.alert(
                 "구매 완료",
-                `${item.name}을(를) 성공적으로 구매했습니다!`
+                `${item.name}을(를) 성공적으로 구매했습니다!`,
               );
             } catch (error) {
               Alert.alert("구매 실패", "구매 중 오류가 발생했습니다.");
@@ -171,7 +171,7 @@ export default function ShopModal({
             }
           },
         },
-      ]
+      ],
     );
   };
 

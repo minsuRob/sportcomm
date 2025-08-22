@@ -805,7 +805,6 @@ const PostCard = React.memo(function PostCard({
               <View
                 style={[
                   themed($gradientOverlay),
-                  { backgroundColor: teamPalette.overlayGradient },
                   // { backgroundColor: teamPalette.overlayGradient },
                 ]}
               />

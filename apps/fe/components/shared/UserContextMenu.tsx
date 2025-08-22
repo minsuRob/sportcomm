@@ -67,7 +67,7 @@ export default function UserContextMenu({
               size={20}
             />
           ),
-        }
+        },
       );
     }
 

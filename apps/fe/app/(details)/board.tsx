@@ -128,10 +128,10 @@ export default function BoardScreen() {
    */
   const renderPostItem = ({ item }: { item: BoardPost }) => {
     const imageMedia = item.media.find(
-      (media) => media.type === "image" || media.type === "IMAGE"
+      (media) => media.type === "image" || media.type === "IMAGE",
     );
     const videoMedia = item.media.find(
-      (media) => media.type === "video" || media.type === "VIDEO"
+      (media) => media.type === "video" || media.type === "VIDEO",
     );
 
     return (

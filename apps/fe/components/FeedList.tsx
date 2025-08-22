@@ -53,14 +53,14 @@ export default function FeedList({
         <PostCard post={item} onPostUpdated={onPostUpdated} />
       </View>
     ),
-    [themed, onPostUpdated]
+    [themed, onPostUpdated],
   );
 
   const keyExtractor = useCallback((item: Post) => item.id, []);
 
   const ItemSeparator = useCallback(
     () => <View style={themed($separator)} />,
-    [themed]
+    [themed],
   );
 
   const EmptyComponent = useCallback(
@@ -76,7 +76,7 @@ export default function FeedList({
         </View>
       </View>
     ),
-    [themed, t]
+    [themed, t],
   );
 
   // 플랫폼별 성능 최적화 설정
@@ -112,7 +112,7 @@ export default function FeedList({
       onEndReached,
       ListFooterComponent,
       optimizationProps,
-    ]
+    ],
   );
 
   if (isWeb()) {

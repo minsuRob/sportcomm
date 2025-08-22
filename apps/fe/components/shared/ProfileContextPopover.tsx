@@ -126,7 +126,7 @@ export default function ProfileContextPopover({
       onOpenProfile,
       onClose,
       router,
-    ]
+    ],
   );
 
   if (!visible) return null;

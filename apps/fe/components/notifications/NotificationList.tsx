@@ -60,7 +60,7 @@ function NotificationTestButton() {
         <TouchableOpacity
           key={index}
           style={themed(
-            action.isDestructive ? $dialogButtonDestructive : $dialogButton
+            action.isDestructive ? $dialogButtonDestructive : $dialogButton,
           )}
           onPress={() => {
             action.onPress();
@@ -71,7 +71,7 @@ function NotificationTestButton() {
             style={themed(
               action.isDestructive
                 ? $dialogButtonDestructiveText
-                : $dialogButtonText
+                : $dialogButtonText,
             )}
           >
             {action.text}
@@ -178,7 +178,7 @@ export default function NotificationList({
     ({ item }: { item: Notification }) => (
       <NotificationItem notification={item} onMarkAsRead={onMarkAsRead} />
     ),
-    [onMarkAsRead]
+    [onMarkAsRead],
   );
 
   /**

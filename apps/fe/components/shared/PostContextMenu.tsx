@@ -219,7 +219,7 @@ export default function PostContextMenu({
         icon: (
           <Ionicons name="trash-outline" color={theme.colors.error} size={20} />
         ),
-      }
+      },
     );
   } else {
     // 다른 사용자의 게시물인 경우 신고/차단 옵션 추가
@@ -243,7 +243,7 @@ export default function PostContextMenu({
             size={20}
           />
         ),
-      }
+      },
     );
   }
 

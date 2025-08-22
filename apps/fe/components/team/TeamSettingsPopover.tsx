@@ -65,7 +65,7 @@ export default function TeamSettingsPopover({
         onPress: handleOpenPhotoCard,
       },
     ],
-    [onClose, onSelectFavoriteDate, theme.colors.text, handleOpenPhotoCard]
+    [onClose, onSelectFavoriteDate, theme.colors.text, handleOpenPhotoCard],
   );
 
   if (!visible) return null;

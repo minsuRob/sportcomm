@@ -36,7 +36,7 @@ export interface CreativeCreatePostSectionProps {
 }
 
 export default function CreativeCreatePostSection(
-  props: CreativeCreatePostSectionProps
+  props: CreativeCreatePostSectionProps,
 ) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();

@@ -85,7 +85,7 @@ export abstract class BaseCrawler {
    */
   protected async fetchWithTimeout(
     url: string,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<Response> {
     const timeout = this.config.timeout || 10000;
     const controller = new AbortController();

@@ -507,7 +507,7 @@ function LotteryManagementSection() {
     GET_LOTTERY_STATUS,
     {
       pollInterval: 30000, // 30초마다 폴링
-    }
+    },
   );
 
   const { data: statsData, refetch: refetchStats } = useQuery<{
@@ -537,7 +537,7 @@ function LotteryManagementSection() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   const [createLottery, { loading: creating }] = useMutation(
@@ -566,7 +566,7 @@ function LotteryManagementSection() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   // 추첨 중단 처리
@@ -581,7 +581,7 @@ function LotteryManagementSection() {
           style: "destructive",
           onPress: () => stopLottery(),
         },
-      ]
+      ],
     );
   };
 
@@ -623,7 +623,7 @@ function LotteryManagementSection() {
             });
           },
         },
-      ]
+      ],
     );
   };
 
@@ -831,7 +831,7 @@ function LotteryManagementSection() {
                 <Text style={themed($previewText)}>
                   개별 상금:{" "}
                   {Math.floor(
-                    (parseInt(totalPrize) || 0) / (parseInt(winnerCount) || 1)
+                    (parseInt(totalPrize) || 0) / (parseInt(winnerCount) || 1),
                   )}
                   P
                 </Text>

@@ -78,7 +78,7 @@ export default function LotteryScreen() {
     {
       variables: { page: 1, limit: 5 },
       fetchPolicy: "cache-and-network",
-    }
+    },
   );
 
   const [enterLottery] = useMutation(ENTER_LOTTERY, {
@@ -86,7 +86,7 @@ export default function LotteryScreen() {
       Alert.alert(
         "응모 완료! 🎉",
         "포인트 추첨에 성공적으로 응모했습니다!\n결과는 추첨 종료 후 확인할 수 있습니다.",
-        [{ text: "확인", style: "default" }]
+        [{ text: "확인", style: "default" }],
       );
       await refetch();
       await reloadCurrentUser(); // 포인트 업데이트
@@ -101,7 +101,7 @@ export default function LotteryScreen() {
       Alert.alert(
         "응모 실패",
         error.message || "응모 중 오류가 발생했습니다.",
-        [{ text: "확인", style: "default" }]
+        [{ text: "확인", style: "default" }],
       );
     },
   });
@@ -116,7 +116,7 @@ export default function LotteryScreen() {
       skip:
         !lotteryData?.lottery?.id || lotteryData?.currentPhase !== "announce",
       fetchPolicy: "cache-and-network",
-    }
+    },
   );
 
   // 새로고침 처리
@@ -169,7 +169,7 @@ export default function LotteryScreen() {
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     pulse.start();
 
@@ -184,7 +184,7 @@ export default function LotteryScreen() {
         duration: 3000,
         easing: Easing.linear,
         useNativeDriver: true,
-      })
+      }),
     );
     rotate.start();
 
@@ -207,7 +207,7 @@ export default function LotteryScreen() {
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     sparkle.start();
 
@@ -387,7 +387,7 @@ export default function LotteryScreen() {
                       ? Math.round(
                           (lotteryData.lottery!.winnerCount /
                             lotteryData.totalEntries) *
-                            100
+                            100,
                         )
                       : 0}
                     %
@@ -461,7 +461,7 @@ export default function LotteryScreen() {
                                 +{winner.prizePoints?.toLocaleString()}P
                               </Text>
                             </View>
-                          )
+                          ),
                         )}
                       </View>
                     ) : (

@@ -401,7 +401,7 @@ export default function ChatOptionsModal({
       acc[item.category].push(item);
       return acc;
     },
-    {} as Record<string, ChatOption[]>
+    {} as Record<string, ChatOption[]>,
   );
 
   const handleSelectOption = (option: ChatOption) => {

@@ -77,7 +77,7 @@ export const formatChatDate = (dateString?: string): string => {
  */
 export const getRoomTypeInfo = (
   room: ChatRoom,
-  tintColor: string
+  tintColor: string,
 ): RoomTypeInfo => {
   // 팀 채팅방인 경우 팀 색상 사용
   if (room.team) {
@@ -124,7 +124,7 @@ export const getRoomTypeInfo = (
  */
 export const generatePrivateChatName = (
   user1: string,
-  user2: string
+  user2: string,
 ): string => {
   const names = [user1, user2].sort();
   return `${names[0]} & ${names[1]}`;
@@ -135,7 +135,7 @@ export const generatePrivateChatName = (
  */
 export const getPrivateChatPartnerName = (
   chatRoomName: string,
-  currentUserName: string
+  currentUserName: string,
 ): string => {
   if (chatRoomName.includes(" & ")) {
     const names = chatRoomName.split(" & ");
@@ -156,7 +156,7 @@ export const isPrivateChat = (room: ChatRoom): boolean => {
  */
 export const getChatRoomDisplayName = (
   room: ChatRoom,
-  currentUserName?: string
+  currentUserName?: string,
 ): string => {
   if (isPrivateChat(room) && currentUserName) {
     return getPrivateChatPartnerName(room.name, currentUserName);

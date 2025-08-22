@@ -38,7 +38,7 @@ import { extractTeams } from "@/lib/utils/userMeta";
  * @returns 년, 월, 총 일수 객체
  */
 const formatFanDuration = (
-  favoriteDate: string
+  favoriteDate: string,
 ): { years: number; months: number; totalDays: number } => {
   const startDate = new Date(favoriteDate);
   const today = new Date();

@@ -30,7 +30,7 @@ export class ChatService {
   private async initialize(): Promise<void> {
     try {
       console.log(
-        `채팅 서비스 초기화 중... (${this.dataSource.getDataSourceType()})`
+        `채팅 서비스 초기화 중... (${this.dataSource.getDataSourceType()})`,
       );
       this.isInitialized = true;
       console.log("채팅 서비스 초기화 완료");
@@ -64,7 +64,7 @@ export class ChatService {
    */
   async getPublicChatRooms(
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<{
     chatRooms: ChannelInfo[];
     total: number;
@@ -100,7 +100,7 @@ export class ChatService {
   async getChatMessages(
     channelId: string,
     limit: number = 50,
-    before?: string
+    before?: string,
   ): Promise<Message[]> {
     this.ensureInitialized();
 
@@ -108,7 +108,7 @@ export class ChatService {
       const messages = await this.dataSource.getChatMessages(
         channelId,
         limit,
-        before
+        before,
       );
 
       return messages;
@@ -130,7 +130,7 @@ export class ChatService {
     channelId: string,
     content: string,
     currentUser: User,
-    replyToId?: string
+    replyToId?: string,
   ): Promise<Message | null> {
     this.ensureInitialized();
 
@@ -175,7 +175,7 @@ export class ChatService {
     description?: string,
     isPrivate: boolean = false,
     type: string = "GENERAL",
-    maxParticipants: number = 100
+    maxParticipants: number = 100,
   ): Promise<ChannelInfo | null> {
     this.ensureInitialized();
 
@@ -288,7 +288,7 @@ export class ChatService {
    */
   subscribeToMessages(
     channelId: string,
-    onMessage: (message: Message) => void
+    onMessage: (message: Message) => void,
   ): () => void {
     this.ensureInitialized();
 
@@ -301,7 +301,7 @@ export class ChatService {
         (message: Message) => {
           console.log(`새 메시지 수신: ${message.id} (채널: ${channelId})`);
           onMessage(message);
-        }
+        },
       );
 
       // 구독 해제 함수 저장

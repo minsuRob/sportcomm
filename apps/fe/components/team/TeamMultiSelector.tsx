@@ -209,9 +209,9 @@ export default function TeamMultiSelector({
                 key={`empty-${index}`}
                 style={[themed($teamCard), { opacity: 0 }]}
               />
-            )
+            ),
           )}
-        </View>
+        </View>,
       );
     }
 

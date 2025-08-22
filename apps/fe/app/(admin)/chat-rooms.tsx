@@ -82,7 +82,7 @@ export default function AdminChatRoomsScreen() {
       variables: { page, limit: 20 },
       fetchPolicy: "cache-and-network",
       errorPolicy: "all",
-    }
+    },
   );
 
   const [createChatRoom, { loading: createLoading }] = useMutation(
@@ -110,7 +110,7 @@ export default function AdminChatRoomsScreen() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   const [updateChatRoom, { loading: updateLoading }] = useMutation(
@@ -139,7 +139,7 @@ export default function AdminChatRoomsScreen() {
           duration: 3000,
         });
       },
-    }
+    },
   );
 
   const [deleteChatRoom, { loading: deleteLoading }] = useMutation(
@@ -164,7 +164,7 @@ export default function AdminChatRoomsScreen() {
           "❌ 에러 상세:",
           error.message,
           error.graphQLErrors,
-          error.networkError
+          error.networkError,
         );
         showToast({
           type: "error",
@@ -174,7 +174,7 @@ export default function AdminChatRoomsScreen() {
         });
         setDeletingRoomId(null); // 삭제 중인 방 ID 초기화
       },
-    }
+    },
   );
 
   // 폼 상태
@@ -385,7 +385,7 @@ export default function AdminChatRoomsScreen() {
             <Text style={themed($statNumber)}>
               {chatRooms.reduce(
                 (sum, room) => sum + room.currentParticipants,
-                0
+                0,
               )}
             </Text>
             <Text style={themed($statLabel)}>총 참여자</Text>

@@ -74,7 +74,7 @@ export default function EditProfileScreen() {
    * 세분화된 에러 처리와 함께 구현
    */
   const uploadProfileImage = async (
-    file: File | { uri: string; name: string; type: string }
+    file: File | { uri: string; name: string; type: string },
   ): Promise<string | null> => {
     try {
       setIsImageUploading(true);
@@ -99,14 +99,14 @@ export default function EditProfileScreen() {
       } else {
         uploadedFiles = await uploadFilesMobile(
           [file as { uri: string; name: string; type: string }],
-          progressCallback
+          progressCallback,
         );
       }
 
       // 업로드 결과 검증
       if (!uploadedFiles || uploadedFiles.length === 0) {
         throw new Error(
-          "업로드 응답이 비어있습니다. 서버 연결을 확인해주세요."
+          "업로드 응답이 비어있습니다. 서버 연결을 확인해주세요.",
         );
       }
 
@@ -123,7 +123,7 @@ export default function EditProfileScreen() {
       // URL 유효성 검증
       if (!uploadedMedia.url || uploadedMedia.url.trim() === "") {
         throw new Error(
-          "업로드는 완료되었지만 이미지 URL을 받지 못했습니다. 잠시 후 다시 시도해주세요."
+          "업로드는 완료되었지만 이미지 URL을 받지 못했습니다. 잠시 후 다시 시도해주세요.",
         );
       }
 
@@ -230,7 +230,7 @@ export default function EditProfileScreen() {
             // 한글 파일명 문제 해결: 안전한 파일명 생성
             const safeFileName = generateAvatarFileName(
               selectedAsset.fileName || "avatar.jpg",
-              currentUser?.id || "user"
+              currentUser?.id || "user",
             );
 
             uploadFile = new File([blob], safeFileName, {
@@ -240,7 +240,7 @@ export default function EditProfileScreen() {
             // 모바일 환경 - 한글 파일명 문제 해결
             const safeFileName = generateAvatarFileName(
               selectedAsset.fileName || "avatar.jpg",
-              currentUser?.id || "user"
+              currentUser?.id || "user",
             );
 
             uploadFile = {

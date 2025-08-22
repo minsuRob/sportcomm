@@ -53,7 +53,7 @@ export default function TabSlider({
         mass: 0.8,
       });
     },
-    [onTabChange, progress]
+    [onTabChange, progress],
   );
 
   const activeIndex = tabs.findIndex((tab) => tab.key === activeTab);
@@ -106,7 +106,7 @@ export default function TabSlider({
               color: interpolateColor(
                 progress.value,
                 [index - 1, index, index + 1],
-                [inactiveColor, activeColor, inactiveColor]
+                [inactiveColor, activeColor, inactiveColor],
               ),
             } as TextStyle;
           }, [index, theme.colors.tint, theme.colors.textDim]);

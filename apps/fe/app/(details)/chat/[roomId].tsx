@@ -95,7 +95,7 @@ export default function ChatRoomScreen() {
   // 채팅방 정보 상태
   const [channelInfo, setChannelInfo] = useState<any>(null);
   const [chatRoomTitle, setChatRoomTitle] = useState<string>(
-    roomName || "채팅방"
+    roomName || "채팅방",
   );
 
   // 1대1 채팅방인 경우 상대방 정보 조회
@@ -113,7 +113,7 @@ export default function ChatRoomScreen() {
         setKeyboardHeight(e.endCoordinates.height);
         setIsKeyboardVisible(true);
         console.log("키보드 표시:", e.endCoordinates.height);
-      }
+      },
     );
 
     const keyboardDidHideListener = Keyboard.addListener(
@@ -122,7 +122,7 @@ export default function ChatRoomScreen() {
         setKeyboardHeight(0);
         setIsKeyboardVisible(false);
         console.log("키보드 숨김");
-      }
+      },
     );
 
     // Android에서 키보드 높이 변화 감지
@@ -182,7 +182,7 @@ export default function ChatRoomScreen() {
       const loadedMessages = await chatService.getChatMessages(roomId);
       setMessages(loadedMessages);
       console.log(
-        `채팅방 ${roomId}의 메시지 ${loadedMessages.length}개 로드 완료`
+        `채팅방 ${roomId}의 메시지 ${loadedMessages.length}개 로드 완료`,
       );
     } catch (error) {
       console.error("메시지 로드 실패:", error);
@@ -204,7 +204,7 @@ export default function ChatRoomScreen() {
       // 공개 채팅방 목록에서 현재 채팅방 정보 찾기
       const result = await chatService.getPublicChatRooms(1, 100);
       const currentChannel = result.chatRooms.find(
-        (room) => room.id === roomId
+        (room) => room.id === roomId,
       );
 
       if (currentChannel) {
@@ -221,7 +221,7 @@ export default function ChatRoomScreen() {
             unreadCount: 0,
             members: [],
           },
-          currentUser?.nickname
+          currentUser?.nickname,
         );
         setChatRoomTitle(displayName);
 
@@ -251,7 +251,7 @@ export default function ChatRoomScreen() {
       const newMessage = await chatService.sendMessage(
         roomId,
         messageContent,
-        currentUser
+        currentUser,
       );
 
       if (newMessage) {
@@ -297,7 +297,7 @@ export default function ChatRoomScreen() {
         if (newMessage.user_id !== currentUser.id) {
           setMessages((prev) => [...prev, newMessage]);
         }
-      }
+      },
     );
 
     // 컴포넌트 언마운트 시 구독 해제

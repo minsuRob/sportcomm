@@ -94,7 +94,7 @@ export class CrawlerManager {
         console.log(`크롤링 시작: ${source}`);
         const result = await crawler.crawl(crawlerOptions);
         console.log(
-          `크롤링 완료: ${source}, 기사 수: ${result.articles.length}`
+          `크롤링 완료: ${source}, 기사 수: ${result.articles.length}`,
         );
         return { source, result };
       } catch (error) {
@@ -135,7 +135,7 @@ export class CrawlerManager {
    */
   async crawlBySource(
     source: string,
-    options: CrawlerOptions = {}
+    options: CrawlerOptions = {},
   ): Promise<CrawlerResult> {
     const crawler = this.crawlers.get(source);
 
@@ -155,7 +155,7 @@ export class CrawlerManager {
    */
   async crawlNaverTeamNews(
     teamSectionId: string,
-    limit: number = 5
+    limit: number = 5,
   ): Promise<CrawlerResult> {
     const naverCrawler = this.crawlers.get("naver") as NaverSportsCrawler;
 
@@ -171,7 +171,7 @@ export class CrawlerManager {
    */
   async crawlByCategory(
     category: string,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<CrawlerResult> {
     return this.crawlAll({
       category,
@@ -200,7 +200,7 @@ export class CrawlerManager {
     // 발행 시간 기준으로 정렬 (최신순)
     uniqueArticles.sort(
       (a, b) =>
-        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
     );
 
     return {

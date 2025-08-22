@@ -162,7 +162,7 @@ export const TagSearchTest: React.FC = () => {
               >
                 <Text style={styles.quickTagText}>{tag}</Text>
               </TouchableOpacity>
-            )
+            ),
           )}
         </View>
       </View>

@@ -161,7 +161,7 @@ export default function ChatInput({
     const calculatedHeight = height + 20;
     const newHeight = Math.max(
       minHeight,
-      Math.min(maxHeight, calculatedHeight)
+      Math.min(maxHeight, calculatedHeight),
     );
 
     // 계산된 높이가 기본 높이와 크게 다르지 않으면 기본값 유지

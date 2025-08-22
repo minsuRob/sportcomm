@@ -38,6 +38,7 @@ import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
 import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
+import { UniformPlaceholder } from "./uniform/UniformPlaceholder";
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
@@ -772,10 +773,16 @@ const PostCard = React.memo(function PostCard({
                   </Pressable>
                 )
               ) : (
-                // 미디어가 없는 경우
-                <View style={themed($emptyMediaContainer)}>
-                  <Ionicons name="image" size={48} color="#gray" />
-                </View>
+                // 미디어가 없는 경우 - 유니폼 스타일 플레이스홀더
+                <UniformPlaceholder
+                  text="김택연"
+                  number="63"
+                  size="medium"
+                  mainColor={palette.primary}
+                  subColor={palette.secondary}
+                  outlineColor={palette.accent}
+                  style={$uniformPlaceholder}
+                />
               )}
 
               {/* 그라디언트 오버레이 - 팀 색상 기반 반투명 오버레이 */}
@@ -1312,6 +1319,14 @@ const $emptyMediaContainer: ThemedStyle<ViewStyle> = () => ({
   height: 300,
   justifyContent: "center",
   alignItems: "center",
+});
+
+// 유니폼 플레이스홀더 스타일
+const $uniformPlaceholder: ThemedStyle<ViewStyle> = () => ({
+  height: 300,
+  justifyContent: "center",
+  alignItems: "center",
+  borderRadius: 8,
 });
 
 // 더보기 버튼

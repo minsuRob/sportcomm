@@ -123,20 +123,6 @@ async function bootstrap() {
       },
     });
 
-    app.useStaticAssets(join(__dirname, '../../fe/assets'), {
-      prefix: '/assets/', // 직접 /assets 경로로 접근
-      setHeaders: (res) => {
-        res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-        res.set('Access-Control-Allow-Origin', '*');
-        res.set('Cache-Control', 'public, max-age=3600');
-        res.set(
-          'Access-Control-Allow-Methods',
-          'GET, POST, PUT, DELETE, OPTIONS',
-        );
-        res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      },
-    });
-
     console.log(`✅ 정적 파일 서빙 설정 완료: ${uploadsPath}`);
 
     // 설정 서비스 가져오기

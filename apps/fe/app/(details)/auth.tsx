@@ -28,8 +28,10 @@ const SocialLogins = ({
 }: {
   onSocialLogin: (provider: string) => void;
 }) => {
+  // 소셜 로그인 다이얼로그 표시 상태
   const [isDialogVisible, setDialogVisible] = useState(false);
-  const { themed } = useAppTheme();
+  // theme 객체까지 함께 사용 (아이콘 색상 등)
+  const { themed, theme } = useAppTheme();
 
   return (
     <>
@@ -38,29 +40,63 @@ const SocialLogins = ({
         <Text style={themed($dividerText)}>또는</Text>
         <View style={themed($dividerLine)} />
       </View>
+
       <View style={themed($socialButtonsContainer)}>
+        {/* Google 로그인 */}
         <Button
           variant="outline"
           size="lg"
+          style={themed($socialButton)}
           onPress={() => onSocialLogin("google")}
         >
-          <Text style={themed($socialButtonText)}>Google로 계속하기</Text>
+          <View style={themed($socialButtonContent)}>
+            <Ionicons
+              name="logo-google"
+              size={18}
+              color={theme.colors.text}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={themed($socialButtonText)}>Google로 계속하기</Text>
+          </View>
         </Button>
+
+        {/* Apple 로그인 */}
         <Button
           variant="outline"
           size="lg"
+          style={themed($socialButton)}
           onPress={() => onSocialLogin("apple")}
         >
-          <Text style={themed($socialButtonText)}>Apple로 계속하기</Text>
+          <View style={themed($socialButtonContent)}>
+            <Ionicons
+              name="logo-apple"
+              size={20}
+              color={theme.colors.text}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={themed($socialButtonText)}>Apple로 계속하기</Text>
+          </View>
         </Button>
+
+        {/* 전화번호 로그인 (준비중) */}
         <Button
           variant="outline"
           size="lg"
+          style={themed($socialButton)}
           onPress={() => setDialogVisible(true)}
         >
-          <Text style={themed($socialButtonText)}>폰으로 계속하기</Text>
+          <View style={themed($socialButtonContent)}>
+            <Ionicons
+              name="call-outline"
+              size={18}
+              color={theme.colors.text}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={themed($socialButtonText)}>폰으로 계속하기</Text>
+          </View>
         </Button>
       </View>
+
       <AppDialog
         visible={isDialogVisible}
         onClose={() => setDialogVisible(false)}
@@ -131,7 +167,7 @@ export default function AuthScreen() {
   const handleLoginSuccess = (user: User) => {
     console.log(
       "✅ AuthScreen: 로그인 성공, 메인 화면으로 이동:",
-      user.nickname
+      user.nickname,
     );
     // 메인 앱으로 이동 (스택을 초기화하여 뒤로가기 방지)
     router.replace("/(app)/feed");
@@ -171,7 +207,7 @@ export default function AuthScreen() {
         const errorMessage = result.error.message;
         console.error(
           `${isLoginAction ? "로그인" : "회원가입"} 실패:`,
-          errorMessage
+          errorMessage,
         );
 
         // 에러 메시지에 따라 적절한 필드에 에러 설정
@@ -245,7 +281,7 @@ export default function AuthScreen() {
             } else {
               console.log(
                 "⚠️ 백엔드에 사용자 정보가 없습니다:",
-                syncResult.error
+                syncResult.error,
               );
             }
           } else {
@@ -256,7 +292,7 @@ export default function AuthScreen() {
             if (syncResult.success && syncResult.user) {
               console.log(
                 "✅ 회원가입 후 사용자 정보 동기화 완료:",
-                syncResult.user
+                syncResult.user,
               );
             } else {
               console.warn("⚠️ 회원가입 후 동기화 실패:", syncResult.error);
@@ -265,7 +301,7 @@ export default function AuthScreen() {
         } catch (syncError: any) {
           console.warn(
             "⚠️ 사용자 정보 동기화 실패 (로그인은 계속 진행):",
-            syncError.message
+            syncError.message,
           );
           // 동기화 실패해도 로그인은 계속 진행
           // 필요시 나중에 수동으로 동기화할 수 있음
@@ -290,7 +326,7 @@ export default function AuthScreen() {
     } catch (error: any) {
       console.error(
         `${isLoginAction ? "로그인" : "회원가입"} 중 예외 발생:`,
-        error
+        error,
       );
 
       const errorMessage = error?.message || "오류가 발생했습니다";
@@ -615,14 +651,23 @@ const $inputContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $inputField: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  height: 48,
-  paddingHorizontal: spacing.md,
-  backgroundColor: colors.card, // colors.input 대신 colors.card 사용
+  // 디자인: 둥근 필(pill) 형태 입력창
+  height: 52,
+  paddingHorizontal: spacing.lg,
+  backgroundColor: colors.card,
   borderWidth: 1,
   borderColor: colors.border,
-  borderRadius: 6,
+  borderRadius: 28,
   color: colors.text,
-  fontSize: 16, // typography.fontSize.base 대신 직접 값 사용
+  fontSize: 16,
+  fontWeight: "500",
+  // 살짝 들어올려 보이는 효과 (iOS)
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+  // Android elevation 대응
+  elevation: 1,
 });
 
 const $inputFieldError: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -640,7 +685,8 @@ const $passwordInput: ThemedStyle<TextStyle> = ({ spacing }) => ({
 const $eyeButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   right: spacing.md,
-  top: 14,
+  // 높이 증가(52)에 맞춰 중앙 정렬
+  top: 16,
 });
 
 const $errorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -665,12 +711,35 @@ const $forgotPasswordText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "600",
 });
 
-const $continueButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+// 추가: 소셜 버튼 전용 스타일 (필 형태 + 아이콘 정렬)
+const $socialButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  borderRadius: 28,
+  height: 52,
+  justifyContent: "center",
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $socialButtonContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: spacing.md,
+});
+
+const $continueButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  // 메인 액션: 검은색(또는 텍스트 컬러) 배경의 두꺼운 필 버튼
   backgroundColor: colors.text,
+  borderRadius: 30,
+  height: 56,
+  justifyContent: "center",
+  marginTop: spacing.sm,
 });
 
 const $continueButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.background,
+  fontSize: 17,
+  fontWeight: "600",
 });
 
 const $toggleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -692,7 +761,7 @@ const $toggleLinkText: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $dividerContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  marginVertical: spacing.md,
+  marginVertical: spacing.lg,
 });
 
 const $dividerLine: ThemedStyle<ViewStyle> = ({ colors }) => ({
@@ -708,8 +777,11 @@ const $dividerText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
 
 const $socialButtonsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.sm,
+  marginTop: spacing.md,
 });
 
 const $socialButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
+  fontSize: 15,
+  fontWeight: "500",
 });

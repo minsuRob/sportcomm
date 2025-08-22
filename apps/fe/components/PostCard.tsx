@@ -539,7 +539,6 @@ const PostCard = React.memo(function PostCard({
 
   const palette = getTeamPalette(
     {
-      color: (post.team as any)?.color,
       mainColor: (post.team as any)?.mainColor,
       subColor: (post.team as any)?.subColor,
       darkMainColor: (post.team as any)?.darkMainColor,

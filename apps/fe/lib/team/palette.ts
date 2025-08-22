@@ -22,9 +22,7 @@
 export interface TeamLike {
   id?: string;
   name?: string;
-  // (Deprecated) 단일 색상
-  color?: string | null;
-  // 신규 팔레트
+  // 팔레트 컬러만 사용 (legacy 단일 color 제거)
   mainColor?: string | null;
   subColor?: string | null;
   darkMainColor?: string | null;
@@ -60,10 +58,6 @@ export interface TeamPalette {
  */
 export interface GetTeamPaletteOptions {
   themeMode?: "light" | "dark";
-  /**
-   * legacy color 존재 시 우선 사용할지 여부 (기본 false)
-   */
-  preferLegacy?: boolean;
   /**
    * 대비 기준 (WCAG AA 일반 텍스트 4.5 이상 권장)
    */
@@ -185,43 +179,25 @@ export function getTeamPalette(
   team: TeamLike | null | undefined,
   options: GetTeamPaletteOptions = {},
 ): TeamPalette {
-  const {
-    themeMode = "light",
-    preferLegacy = false,
-    minContrast = 4.5,
-  } = options;
+  const { themeMode = "light", minContrast = 4.5 } = options;
 
-  // 1. 원본 컬러 후보 추출
-  const legacy = normalizeHex(team?.color);
+  // 1. 팔레트 컬러 후보 추출 (legacy 제거)
   const lightMain = normalizeHex(team?.mainColor);
   const lightSub = normalizeHex(team?.subColor);
   const darkMain = normalizeHex(team?.darkMainColor);
   const darkSub = normalizeHex(team?.darkSubColor);
 
-  const usingLegacy =
-    !!legacy &&
-    (preferLegacy ||
-      (!lightMain && !lightSub && !darkMain && !darkSub && !!legacy));
+  // 2. 모드별 primary/secondary 계산
+  let primary: string;
+  let secondary: string;
+  let source: TeamPalette["source"] = "palette";
 
-  // 2. 모드별 기반 primary/secondary 결정
-  let primary: string | null = null;
-  let secondary: string | null = null;
-  let source: TeamPalette["source"] = "generated";
-
-  if (usingLegacy) {
-    primary = legacy!;
-    secondary = darken(legacy!, 20); // 보조색 임의 생성
-    source = "legacy";
+  if (themeMode === "light") {
+    primary = lightMain || "#2D2F33";
+    secondary = lightSub || adjust(primary, 20);
   } else {
-    if (themeMode === "light") {
-      primary = lightMain || legacy || "#2D2F33";
-      secondary = lightSub || (primary ? adjust(primary, 20) : "#555555"); // primary를 조금 밝게
-    } else {
-      primary = darkMain || lightMain || legacy || "#1A1C1F";
-      secondary =
-        darkSub || lightSub || (primary ? adjust(primary, 25) : "#444444"); // 다크에서 살짝 밝은 보조
-    }
-    source = "palette";
+    primary = darkMain || lightMain || "#1A1C1F";
+    secondary = darkSub || lightSub || adjust(primary, 25);
   }
 
   // 3. 파생 색상 산출

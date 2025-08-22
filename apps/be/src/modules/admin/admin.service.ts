@@ -134,6 +134,11 @@ export class AdminService {
     user.role = newRole;
     await this.userRepository.save(user);
 
+    // Log the role change
+    console.log(
+      `Admin ${adminUser.id} changed user ${userId}'s role to ${newRole}`,
+    );
+
     return user;
   }
 

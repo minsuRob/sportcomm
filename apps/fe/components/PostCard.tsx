@@ -293,10 +293,10 @@ const PostCard = React.memo(function PostCard({
 
   // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE"
+    (item) => item.type === "image" || item.type === "IMAGE",
   );
   const videoMedia = post.media.filter(
-    (item) => item.type === "video" || item.type === "VIDEO"
+    (item) => item.type === "video" || item.type === "VIDEO",
   );
 
   /**
@@ -329,7 +329,7 @@ const PostCard = React.memo(function PostCard({
   const { imageAspectRatio, imageHeight, imageLoading } =
     usePostImageDimensions(
       imageMedia.length > 0 ? imageMedia[0]?.url : null,
-      isWeb()
+      isWeb(),
     );
 
   // 현재 사용자 정보 가져오기
@@ -403,7 +403,7 @@ const PostCard = React.memo(function PostCard({
     if (__DEV__) {
       // 게시물 디버깅 로그를 한 줄로 통합
       console.log(
-        `PostCard - post.id: ${post.id}, post.title: ${post.title || "제목 없음"}, post.content: ${post.content.substring(0, 20)}...`
+        `PostCard - post.id: ${post.id}, post.title: ${post.title || "제목 없음"}, post.content: ${post.content.substring(0, 20)}...`,
       );
     }
   }, [post.id]);
@@ -525,7 +525,7 @@ const PostCard = React.memo(function PostCard({
     const authorMyTeams = anyPost?.author?.myTeams;
     if (Array.isArray(authorMyTeams)) {
       const found = authorMyTeams.find(
-        (ut: any) => ut?.team?.id === post.teamId
+        (ut: any) => ut?.team?.id === post.teamId,
       );
       if (found?.team?.name) return found.team.name as string;
     }
@@ -533,14 +533,69 @@ const PostCard = React.memo(function PostCard({
   };
   const teamName = deriveTeamName();
 
+  // --- 팀 팔레트: 팀 로고 색상 기반 동적 UI 색상 정의 (확장 가능) ---
+  interface TeamPalette {
+    cardBg: string;
+    overlayGradient: string;
+    badgeBg: string;
+    iconBadgeBg: string;
+    moreButtonBg: string;
+    glowColor: string;
+    borderColor: string;
+  }
+
+  const getTeamPalette = (
+    teamId: string,
+    teamNameValue: string,
+    base: any,
+  ): TeamPalette => {
+    const key = (teamNameValue || "").toLowerCase();
+    // 두산 베어스
+    if (key.includes("doosan") || key.includes("bear")) {
+      return {
+        cardBg: "#00204B",
+        overlayGradient: "rgba(0,32,75,0.55)",
+        badgeBg: "rgba(237,28,36,0.75)",
+        iconBadgeBg: "rgba(0,32,75,0.6)",
+        moreButtonBg: "rgba(237,28,36,0.8)",
+        glowColor: "#ED1C24",
+        borderColor: "#ED1C24",
+      };
+    }
+    // 한화 이글스
+    if (key.includes("hanwha") || key.includes("eagle")) {
+      return {
+        cardBg: "#FF6600",
+        overlayGradient: "rgba(255,102,0,0.55)",
+        badgeBg: "rgba(10,37,64,0.65)",
+        iconBadgeBg: "rgba(10,37,64,0.55)",
+        moreButtonBg: "rgba(255,102,0,0.8)",
+        glowColor: "#FF6600",
+        borderColor: "#0A2540",
+      };
+    }
+    // 기본(카테고리 색상 활용)
+    return {
+      cardBg: base.colors?.primary || "#222",
+      overlayGradient: (base.colors?.primary || "#000000") + "88",
+      badgeBg: (base.colors?.primary || "#000000") + "AA",
+      iconBadgeBg: "rgba(0,0,0,0.5)",
+      moreButtonBg: (base.colors?.border || "#000000") + "AA",
+      glowColor: base.colors?.glow || base.colors?.primary || "#555",
+      borderColor: base.colors?.border || base.colors?.primary || "#555",
+    };
+  };
+
+  const teamPalette = getTeamPalette(post.teamId, teamName, categoryInfo);
+
   return (
     <View style={themed($outerContainer)}>
-      {/* 외부 글로우 효과 */}
+      {/* 외부 글로우 효과 - 팀 색상 반영 */}
       <View
         style={[
           themed($outerGlow),
           {
-            shadowColor: categoryInfo.colors.glow,
+            shadowColor: teamPalette.glowColor || categoryInfo.colors.glow,
           },
         ]}
       >
@@ -549,22 +604,29 @@ const PostCard = React.memo(function PostCard({
           style={[
             themed($glowBackground),
             {
-              backgroundColor: categoryInfo.colors.glow + "05",
+              backgroundColor:
+                (teamPalette.glowColor || categoryInfo.colors.glow) + "10",
             },
           ]}
         />
 
-        {/* 테두리 레이어 */}
+        {/* 테두리/배경 레이어 (팀 팔레트 적용) */}
         <View
           style={[
             themed($borderLayer),
             {
-              borderColor: categoryInfo.colors.border,
-              borderLeftColor: categoryInfo.colors.border,
-              borderTopColor: categoryInfo.colors.border + "15",
-              borderRightColor: categoryInfo.colors.border,
-              borderBottomColor: categoryInfo.colors.border + "15",
-              shadowColor: categoryInfo.colors.glow,
+              borderColor:
+                teamPalette.borderColor || categoryInfo.colors.border,
+              borderLeftColor:
+                teamPalette.borderColor || categoryInfo.colors.border,
+              borderTopColor:
+                (teamPalette.borderColor || categoryInfo.colors.border) + "15",
+              borderRightColor:
+                teamPalette.borderColor || categoryInfo.colors.border,
+              borderBottomColor:
+                (teamPalette.borderColor || categoryInfo.colors.border) + "15",
+              shadowColor: teamPalette.glowColor || categoryInfo.colors.glow,
+              backgroundColor: teamPalette.cardBg,
             },
           ]}
         >
@@ -665,7 +727,7 @@ const PostCard = React.memo(function PostCard({
                     <Text style={themed($videoDurationText)}>
                       {videoMedia[0]
                         ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
-                            ((videoMedia[0] as any).duration || 0) % 60
+                            ((videoMedia[0] as any).duration || 0) % 60,
                           )
                             .toString()
                             .padStart(2, "0")}`
@@ -701,7 +763,7 @@ const PostCard = React.memo(function PostCard({
                       source={{
                         uri: selectOptimizedImageUrl(
                           imageMedia[0],
-                          isDesktop ? "desktop" : "mobile"
+                          isDesktop ? "desktop" : "mobile",
                         ),
                       }}
                       style={{
@@ -739,8 +801,14 @@ const PostCard = React.memo(function PostCard({
                 </View>
               )}
 
-              {/* 그라디언트 오버레이 */}
-              <View style={themed($gradientOverlay)} />
+              {/* 그라디언트 오버레이 - 팀 색상 기반 반투명 오버레이 */}
+              <View
+                style={[
+                  themed($gradientOverlay),
+                  { backgroundColor: teamPalette.overlayGradient },
+                  // { backgroundColor: teamPalette.overlayGradient },
+                ]}
+              />
             </View>
 
             {/* 프로필 정보 컨테이너 */}
@@ -806,7 +874,10 @@ const PostCard = React.memo(function PostCard({
                 {post.tags?.slice(0, 2).map((tag) => (
                   <TouchableOpacity
                     key={tag.id}
-                    style={themed($tagBadge)}
+                    style={[
+                      themed($tagBadge),
+                      { backgroundColor: teamPalette.badgeBg },
+                    ]}
                     onPress={() => handleTagPress(tag.name)}
                     activeOpacity={0.7}
                   >
@@ -814,7 +885,12 @@ const PostCard = React.memo(function PostCard({
                   </TouchableOpacity>
                 ))}
                 {/* Sport Icon */}
-                <View style={themed($sportIconBadge)}>
+                <View
+                  style={[
+                    themed($sportIconBadge),
+                    { backgroundColor: teamPalette.iconBadgeBg },
+                  ]}
+                >
                   <Text style={themed($sportIconText)}>
                     {post.team?.sport?.icon || "🏆"}
                   </Text>
@@ -822,7 +898,10 @@ const PostCard = React.memo(function PostCard({
 
                 {/* 더보기 버튼 */}
                 <TouchableOpacity
-                  style={themed($moreButton)}
+                  style={[
+                    themed($moreButton),
+                    { backgroundColor: teamPalette.moreButtonBg },
+                  ]}
                   onPress={handleMorePress}
                 >
                   <Ionicons

@@ -338,6 +338,10 @@ const PostCard = React.memo(function PostCard({
       isWeb()
     );
 
+  // 미디어 컨테이너의 실제 너비 계산 (화면 너비 - 좌우 패딩)
+  const mediaContainerWidth = screenWidth - 32; // 좌우 패딩 16px씩 제외 (총 32px)
+  const mediaContainerHeight = screenHeight; // 좌우 패딩 16px씩 제외 (총 32px)
+
   // 현재 사용자 정보 가져오기
   useEffect(() => {
     const loadCurrentUser = async () => {
@@ -782,6 +786,7 @@ const PostCard = React.memo(function PostCard({
                   subColor={palette.secondary}
                   outlineColor={palette.accent}
                   style={$uniformPlaceholder}
+                  containerWidth={mediaContainerWidth} // 동적 계산된 컨테이너 너비 전달
                 />
               )}
 

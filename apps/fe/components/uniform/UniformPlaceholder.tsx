@@ -13,6 +13,8 @@ interface UniformPlaceholderProps {
   subColor?: string;
   outlineColor?: string;
   style?: ThemedStyle<ViewStyle>;
+  containerWidth?: number; // 부모 컨테이너의 너비를 받는 prop 추가
+  containerHeight?: number;
 }
 
 /**
@@ -29,6 +31,8 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
   subColor,
   outlineColor,
   style,
+  containerWidth = 300, // 기본값 300px
+  containerHeight = 350,
 }) => {
   const { themed, theme } = useAppTheme();
 
@@ -47,6 +51,8 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
         size={size}
         color={textColor}
         style={$archedTextContainer}
+        containerWidth={containerWidth} // containerWidth prop 전달
+        containerHeight={containerHeight} // containerHeight prop 전달
       />
 
       {/* 유니폼 번호 */}

@@ -8,26 +8,33 @@ interface ArchedTextProps {
   size?: "small" | "medium" | "large";
   color?: string;
   style?: ThemedStyle<ViewStyle>;
+  containerWidth?: number; // 부모 컨테이너의 너비를 받는 prop 추가
+  containerHeight?: number;
 }
 
 /**
  * 아치형 텍스트 컴포넌트
  *
  * 제공된 텍스트를 아치형으로 배치하여 유니폼 스타일의 디자인을 구현합니다.
- * 텍스트 길이에 따라 동적으로 아치 반지름을 조정합니다.
+ * 텍스트 길이에 따라 동적으로 아치 반지름을 조정하며, 부모 컨테이너의 너비에 따라 위치를 동적 계산합니다.
  */
 export const ArchedText: React.FC<ArchedTextProps> = ({
   text,
   size = "medium",
   color,
   style,
+  containerWidth = 300, // 기본값 300px (기존 하드코딩값과 동일)
+  containerHeight = 350,
 }) => {
   const { themed, theme } = useAppTheme();
+
+  // 컨테이너 중앙 좌표 동적 계산
+  const centerX = containerWidth / 2;
+  const centerY = (containerHeight ?? containerWidth) / 2; // 정사각형 컨테이너 가정
 
   // 텍스트 길이에 따른 동적 아치 계산 (글씨 겹침 방지)
   const archConfig = useMemo(() => {
     const BASE_CHARS = 3; // 김택연 3글자를 기준
-    const BASE_RADIUS = size === "small" ? 120 : size === "large" ? 180 : 150;
     const BASE_RADIUS = size === "small" ? 80 : size === "large" ? 120 : 100;
     const RADIUS_PER_CHAR = size === "small" ? 30 : size === "large" ? 45 : 35;
 
@@ -76,7 +83,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     // 디버깅 로그
     if (__DEV__) {
       console.log(
-        `Char ${index}: rotation=${rotation}°, radius=${radius}, platform=${Platform.OS}`
+        `Char ${index}: rotation=${rotation}°, radius=${radius}, platform=${Platform.OS}, center=(${centerX}, ${centerY})`
       );
     }
 
@@ -88,8 +95,8 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
 
       return {
         position: "absolute" as const,
-        left: 150 + x, // 컨테이너 중앙 (400/2) + 각도별 x 오프셋
-        top: 150 + y, // 컨테이너 중앙 (400/2) + 각도별 y 오프셋
+        left: centerX + x, // 동적 계산된 중앙 좌표 + 각도별 x 오프셋
+        top: centerY + y, // 동적 계산된 중앙 좌표 + 각도별 y 오프셋
         transform: [{ rotate: `${rotation}deg` }] as any,
       };
     } else {
@@ -100,8 +107,8 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
 
       return {
         position: "absolute" as const,
-        left: 150 + x, // 컨테이너 중앙 (300/2) + 각도별 x 오프셋
-        top: 150 + y, // 컨테이너 중앙 (300/2) + 각도별 y 오프셋
+        left: centerX + x, // 동적 계산된 중앙 좌표 + 각도별 x 오프셋
+        top: centerY + y, // 동적 계산된 중앙 좌표 + 각도별 y 오프셋
       };
     }
   };
@@ -110,13 +117,10 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const getTextStyle = () => {
     switch (size) {
       case "small":
-        return { fontSize: 16, fontWeight: "bold" as const };
         return { fontSize: 20, fontWeight: "bold" as const };
       case "large":
-        return { fontSize: 24, fontWeight: "bold" as const };
         return { fontSize: 28, fontWeight: "bold" as const };
       default:
-        return { fontSize: 20, fontWeight: "bold" as const };
         return { fontSize: 24, fontWeight: "bold" as const };
     }
   };
@@ -125,7 +129,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const textColor = color || theme.colors.text;
 
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View style={[styles.container, containerStyle, { width: containerWidth, height: containerWidth }]}>
       {text.split("").map((char, index) => (
         <Text
           key={`${char}-${index}`}
@@ -150,8 +154,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
 
 // 기본 스타일
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  width: 300, // 반지름 증가에 맞춰 너비 확장
-  height: 300, // 반지름 증가에 맞춰 높이 확장
+  // width, height는 props로 동적 설정되므로 제거
   justifyContent: "center",
   alignItems: "center",
   position: "relative",
@@ -162,8 +165,7 @@ const styles = StyleSheet.create({
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
-    width: 300,
-    height: 300,
+    // width, height는 props로 동적 설정
   },
   char: {
     textAlign: "center",

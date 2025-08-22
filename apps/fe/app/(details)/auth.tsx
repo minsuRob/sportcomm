@@ -5,6 +5,8 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  ViewStyle,
+  TextStyle,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,8 @@ import { saveSession, getSession, User } from "@/lib/auth";
 import { signIn, signUp } from "@/lib/supabase/auth";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useAppTheme } from "@/lib/theme/context";
+import { typography } from "@/lib/theme/typography";
+import type { ThemedStyle } from "@/lib/theme/types";
 import AppDialog from "@/components/ui/AppDialog";
 
 /**
@@ -25,34 +29,36 @@ const SocialLogins = ({
   onSocialLogin: (provider: string) => void;
 }) => {
   const [isDialogVisible, setDialogVisible] = useState(false);
+  const { themed } = useAppTheme();
+
   return (
     <>
-      <View className="flex-row items-center my-4">
-        <View className="flex-1 h-px bg-border" />
-        <Text className="mx-4 text-muted-foreground">또는</Text>
-        <View className="flex-1 h-px bg-border" />
+      <View style={themed($dividerContainer)}>
+        <View style={themed($dividerLine)} />
+        <Text style={themed($dividerText)}>또는</Text>
+        <View style={themed($dividerLine)} />
       </View>
-      <View className="space-y-3">
+      <View style={themed($socialButtonsContainer)}>
         <Button
           variant="outline"
           size="lg"
           onPress={() => onSocialLogin("google")}
         >
-          <Text className="text-foreground">Google로 계속하기</Text>
+          <Text style={themed($socialButtonText)}>Google로 계속하기</Text>
         </Button>
         <Button
           variant="outline"
           size="lg"
           onPress={() => onSocialLogin("apple")}
         >
-          <Text className="text-foreground">Apple로 계속하기</Text>
+          <Text style={themed($socialButtonText)}>Apple로 계속하기</Text>
         </Button>
         <Button
           variant="outline"
           size="lg"
           onPress={() => setDialogVisible(true)}
         >
-          <Text className="text-foreground">폰으로 계속하기</Text>
+          <Text style={themed($socialButtonText)}>폰으로 계속하기</Text>
         </Button>
       </View>
       <AppDialog
@@ -73,7 +79,7 @@ const SocialLogins = ({
  */
 export default function AuthScreen() {
   const router = useRouter();
-  const { theme } = useAppTheme();
+  const { themed, theme } = useAppTheme();
 
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -410,23 +416,24 @@ export default function AuthScreen() {
       />
 
       <ScrollView
-        className="flex-1 bg-background"
-        contentContainerStyle={{ flexGrow: 1 }}
+        style={themed($container)}
+        contentContainerStyle={themed($contentContainer)}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-1 justify-center p-8">
-          <Text className="text-3xl font-bold text-center text-foreground mb-8">
+        <View style={themed($mainContent)}>
+          <Text style={themed($titleText)}>
             {isLogin ? "다시 오신 걸 환영합니다" : "계정 만들기"}
           </Text>
 
           {/* 이메일 입력 필드 */}
-          <View className="mb-4">
+          <View style={themed($inputContainer)}>
             <TextInput
-              className={`h-12 px-4 bg-input border rounded-md text-foreground text-base ${
-                emailError ? "border-red-500" : "border-border"
-              }`}
+              style={[
+                themed($inputField),
+                emailError && themed($inputFieldError),
+              ]}
               placeholder="이메일 주소"
-              placeholderTextColor="hsl(var(--muted-foreground))"
+              placeholderTextColor={theme.colors.textDim}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -444,23 +451,24 @@ export default function AuthScreen() {
               }}
             />
             {emailError ? (
-              <View className="flex-row items-center mt-2">
+              <View style={themed($errorContainer)}>
                 <Ionicons name="alert-circle" color="#ef4444" size={16} />
-                <Text className="text-red-500 text-sm ml-2">{emailError}</Text>
+                <Text style={themed($errorText)}>{emailError}</Text>
               </View>
             ) : null}
           </View>
 
           {/* 닉네임 입력 필드 (회원가입 시에만) */}
           {!isLogin && (
-            <View className="mb-4">
+            <View style={themed($inputContainer)}>
               <TextInput
                 ref={nicknameInputRef}
-                className={`h-12 px-4 bg-input border rounded-md text-foreground text-base ${
-                  nicknameError ? "border-red-500" : "border-border"
-                }`}
+                style={[
+                  themed($inputField),
+                  nicknameError && themed($inputFieldError),
+                ]}
                 placeholder="닉네임"
-                placeholderTextColor="hsl(var(--muted-foreground))"
+                placeholderTextColor={theme.colors.textDim}
                 value={nickname}
                 onChangeText={(text) => {
                   setNickname(text);
@@ -471,26 +479,26 @@ export default function AuthScreen() {
                 onSubmitEditing={() => passwordInputRef.current?.focus()}
               />
               {nicknameError ? (
-                <View className="flex-row items-center mt-2">
+                <View style={themed($errorContainer)}>
                   <Ionicons name="alert-circle" color="#ef4444" size={16} />
-                  <Text className="text-red-500 text-sm ml-2">
-                    {nicknameError}
-                  </Text>
+                  <Text style={themed($errorText)}>{nicknameError}</Text>
                 </View>
               ) : null}
             </View>
           )}
 
           {/* 비밀번호 입력 필드 */}
-          <View className="mb-4">
-            <View className="relative">
+          <View style={themed($inputContainer)}>
+            <View style={themed($passwordContainer)}>
               <TextInput
                 ref={passwordInputRef}
-                className={`h-12 px-4 pr-12 bg-input border rounded-md text-foreground text-base ${
-                  passwordError ? "border-red-500" : "border-border"
-                }`}
+                style={[
+                  themed($inputField),
+                  themed($passwordInput),
+                  passwordError && themed($inputFieldError),
+                ]}
                 placeholder="비밀번호"
-                placeholderTextColor="hsl(var(--muted-foreground))"
+                placeholderTextColor={theme.colors.textDim}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
@@ -502,47 +510,41 @@ export default function AuthScreen() {
               />
               <TouchableOpacity
                 onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-                className="absolute right-4 top-3.5"
+                style={themed($eyeButton)}
               >
                 {isPasswordVisible ? (
                   <Ionicons
                     name="eye-off"
-                    color="hsl(var(--muted-foreground))"
+                    color={theme.colors.textDim}
                     size={20}
                   />
                 ) : (
-                  <Ionicons
-                    name="eye"
-                    color="hsl(var(--muted-foreground))"
-                    size={20}
-                  />
+                  <Ionicons name="eye" color={theme.colors.textDim} size={20} />
                 )}
               </TouchableOpacity>
             </View>
             {passwordError ? (
-              <View className="flex-row items-center mt-2">
+              <View style={themed($errorContainer)}>
                 <Ionicons name="alert-circle" color="#ef4444" size={16} />
-                <Text className="text-red-500 text-sm ml-2">
-                  {passwordError}
-                </Text>
+                <Text style={themed($errorText)}>{passwordError}</Text>
               </View>
             ) : null}
           </View>
 
           {/* 일반 에러 메시지 */}
           {generalError ? (
-            <View className="flex-row items-center mb-4">
+            <View style={themed($errorContainer)}>
               <Ionicons name="alert-circle" color="#ef4444" size={16} />
-              <Text className="text-red-500 text-sm ml-2">{generalError}</Text>
+              <Text style={themed($errorText)}>{generalError}</Text>
             </View>
           ) : null}
 
           {isLogin && (
             <TouchableOpacity
-              className="mb-6 self-start"
+              style={themed($forgotPasswordButton)}
               onPress={handleForgotPassword}
             >
-              <Text className="text-primary font-semibold">
+              <Text style={themed($forgotPasswordText)}>
                 비밀번호를 잊으셨나요?
               </Text>
             </TouchableOpacity>
@@ -550,19 +552,19 @@ export default function AuthScreen() {
 
           <Button
             size="lg"
-            className="bg-foreground"
+            style={themed($continueButton)}
             onPress={handleContinue}
             disabled={loginLoading || registerLoading}
           >
-            <Text className="text-background">계속</Text>
+            <Text style={themed($continueButtonText)}>계속</Text>
           </Button>
 
-          <View className="flex-row justify-center items-center my-6">
-            <Text className="text-muted-foreground">
+          <View style={themed($toggleContainer)}>
+            <Text style={themed($toggleText)}>
               {isLogin ? "계정이 없으신가요? " : "이미 계정이 있으신가요? "}
             </Text>
             <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
-              <Text className="text-primary font-semibold">
+              <Text style={themed($toggleLinkText)}>
                 {isLogin ? "회원 가입" : "로그인"}
               </Text>
             </TouchableOpacity>
@@ -582,3 +584,132 @@ export default function AuthScreen() {
     </>
   );
 }
+
+// === 스타일 정의 ===
+
+const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+});
+
+const $contentContainer: ThemedStyle<ViewStyle> = () => ({
+  flexGrow: 1,
+});
+
+const $mainContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  padding: spacing.xl,
+});
+
+const $titleText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 30, // typography.fontSize["3xl"] 대신 직접 값 사용
+  fontWeight: "bold",
+  textAlign: "center",
+  color: colors.text,
+  marginBottom: 32,
+});
+
+const $inputContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginBottom: spacing.md,
+});
+
+const $inputField: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  height: 48,
+  paddingHorizontal: spacing.md,
+  backgroundColor: colors.card, // colors.input 대신 colors.card 사용
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 6,
+  color: colors.text,
+  fontSize: 16, // typography.fontSize.base 대신 직접 값 사용
+});
+
+const $inputFieldError: ThemedStyle<TextStyle> = ({ colors }) => ({
+  borderColor: "#ef4444",
+});
+
+const $passwordContainer: ThemedStyle<ViewStyle> = () => ({
+  position: "relative",
+});
+
+const $passwordInput: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  paddingRight: 48,
+});
+
+const $eyeButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  right: spacing.md,
+  top: 14,
+});
+
+const $errorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: spacing.xs,
+});
+
+const $errorText: ThemedStyle<TextStyle> = () => ({
+  color: "#ef4444",
+  fontSize: 14,
+  marginLeft: 8,
+});
+
+const $forgotPasswordButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginBottom: 24,
+  alignSelf: "flex-start",
+});
+
+const $forgotPasswordText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint, // colors.primary 대신 colors.tint 사용
+  fontWeight: "600",
+});
+
+const $continueButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.text,
+});
+
+const $continueButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.background,
+});
+
+const $toggleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+  marginVertical: 24,
+});
+
+const $toggleText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim, // colors.textSecondary 대신 colors.textDim 사용
+});
+
+const $toggleLinkText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint, // colors.primary 대신 colors.tint 사용
+  fontWeight: "600",
+});
+
+const $dividerContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginVertical: spacing.md,
+});
+
+const $dividerLine: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  height: 1,
+  backgroundColor: colors.border,
+});
+
+const $dividerText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginHorizontal: spacing.md,
+  color: colors.textDim, // colors.muted 대신 colors.textDim 사용
+});
+
+const $socialButtonsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  gap: spacing.sm,
+});
+
+const $socialButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+});

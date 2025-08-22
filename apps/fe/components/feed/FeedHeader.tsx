@@ -14,6 +14,7 @@ import ProfileContextPopover from "@/components/shared/ProfileContextPopover";
 import TeamFilterSelector from "@/components/TeamFilterSelector";
 import { NotificationBadge } from "@/components/notifications";
 import { useAppTheme } from "@/lib/theme/context";
+import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
 import type { User } from "@/lib/auth";
 
@@ -202,7 +203,7 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   textAlign: "center",
 });
 
-const $logoText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
+const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "900",
   color: colors.tint,

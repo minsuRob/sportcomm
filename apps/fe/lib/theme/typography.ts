@@ -10,73 +10,70 @@ import {
   SpaceGrotesk_700Bold as spaceGroteskBold,
 } from "@expo-google-fonts/space-grotesk";
 
-export const customFontsToLoad = {
-  spaceGroteskLight,
+// 기본 폰트 설정
+export const fonts = {
+  // 시스템 기본 폰트들
   spaceGroteskRegular,
   spaceGroteskMedium,
   spaceGroteskSemiBold,
   spaceGroteskBold,
-  TTTogether: require("@/assets/fonts/TTTogetherA.woff"),
 };
 
-const fonts = {
-  ttTogether: {
-    normal: "TTTogether",
-  },
-  spaceGrotesk: {
-    // Cross-platform Google font.
-    light: "spaceGroteskLight",
-    normal: "spaceGroteskRegular",
-    medium: "spaceGroteskMedium",
-    semiBold: "spaceGroteskSemiBold",
-    bold: "spaceGroteskBold",
-  },
-  helveticaNeue: {
-    // iOS only font.
-    thin: "HelveticaNeue-Thin",
-    light: "HelveticaNeue-Light",
-    normal: "Helvetica Neue",
-    medium: "HelveticaNeue-Medium",
-  },
-  courier: {
-    // iOS only font.
-    normal: "Courier",
-  },
-  sansSerif: {
-    // Android only font.
-    thin: "sans-serif-thin",
-    light: "sans-serif-light",
-    normal: "sans-serif",
-    medium: "sans-serif-medium",
-  },
-  monospace: {
-    // Android only font.
-    normal: "monospace",
-  },
+// 폰트 패밀리 이름들
+export const fontFamily = {
+  // 시스템 폰트
+  regular: "SpaceGrotesk-Regular",
+  medium: "SpaceGrotesk-Medium",
+  semiBold: "SpaceGrotesk-SemiBold",
+  bold: "SpaceGrotesk-Bold",
+
+  // 커스텀 폰트 - 웹 폰트 사용
+  custom: "TTTogether", // 웹 폰트 패밀리 이름
 };
 
+// 폰트 크기 상수
+export const fontSize = {
+  xs: 12,
+  sm: 14,
+  base: 16,
+  lg: 18,
+  xl: 20,
+  "2xl": 24,
+  "3xl": 30,
+  "4xl": 36,
+  "5xl": 48,
+  "6xl": 60,
+};
+
+// 폰트 스타일 정의
 export const typography = {
-  /**
-   * The fonts are available to use, but prefer using the semantic name.
-   */
-  fonts,
-  /**
-   * The primary font. Used in most places.
-   */
-  primary: fonts.spaceGrotesk,
-  /**
-   * An alternate font used for perhaps titles and stuff.
-   */
-  secondary: Platform.select({
-    ios: fonts.helveticaNeue,
-    android: fonts.sansSerif,
-  }),
-  /**
-   * Lets get fancy with a monospace font!
-   */
-  code: Platform.select({ ios: fonts.courier, android: fonts.monospace }),
-  /**
-   * A special font for logos or headings.
-   */
-  logo: fonts.ttTogether,
+  // 기본 텍스트 스타일
+  body: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.base,
+  },
+
+  // 제목 스타일
+  heading: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize["2xl"],
+  },
+
+  // 커스텀 폰트 스타일
+  custom: {
+    fontFamily: fontFamily.custom,
+    fontSize: fontSize.base,
+  },
+
+  // 로고 스타일
+  logo: {
+    normal: fontFamily.custom, // TTTogether 폰트 사용
+    bold: fontFamily.custom, // 필요시 별도 볼드 폰트 설정
+  },
+
+  // 기존 호환성 유지
+  regular: fontFamily.regular,
+  medium: fontFamily.medium,
+  semiBold: fontFamily.semiBold,
+  bold: fontFamily.bold,
 };

@@ -70,12 +70,6 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     const anglePerChar = arcAngle / (totalChars - 1);
     const rotation = index * anglePerChar - arcAngle / 2;
 
-    if (__DEV__) {
-      console.log(
-        `Char ${index} rotation: ${rotation}° (anglePerChar: ${anglePerChar}, arcAngle: ${arcAngle})`
-      );
-    }
-
     return rotation;
   };
 
@@ -83,13 +77,6 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const getCharStyle = (index: number) => {
     const rotation = getCharRotation(index);
     const { radius } = archConfig;
-
-    // 디버깅 로그
-    if (__DEV__) {
-      console.log(
-        `Char ${index}: rotation=${rotation}°, radius=${radius}, platform=${Platform.OS}, center=(${centerX}, ${centerY})`
-      );
-    }
 
     if (isDesktop) {
       const angleRad = (rotation * Math.PI) / 180;

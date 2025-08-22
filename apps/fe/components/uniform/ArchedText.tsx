@@ -80,11 +80,15 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     }
 
     if (Platform.OS === "web") {
-      // 웹에서는 transform rotate 사용
+      // 웹에서는 test.html과 동일한 방식으로 위치 계산
+      const angleRad = (rotation * Math.PI) / 180;
+      const x = Math.sin(angleRad) * radius;
+      const y = -Math.cos(angleRad) * radius;
+
       return {
         position: "absolute" as const,
-        left: 150, // 컨테이너 중앙 (300/2)
-        top: 250 - radius, // 반지름만큼 위로 이동
+        left: 150 + x, // 컨테이너 중앙 (400/2) + 각도별 x 오프셋
+        top: 150 + y, // 컨테이너 중앙 (400/2) + 각도별 y 오프셋
         transform: [{ rotate: `${rotation}deg` }] as any,
       };
     } else {

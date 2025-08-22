@@ -28,6 +28,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const archConfig = useMemo(() => {
     const BASE_CHARS = 3; // 김택연 3글자를 기준
     const BASE_RADIUS = size === "small" ? 120 : size === "large" ? 180 : 150;
+    const BASE_RADIUS = size === "small" ? 80 : size === "large" ? 120 : 100;
     const RADIUS_PER_CHAR = size === "small" ? 30 : size === "large" ? 45 : 35;
 
     const extraChars = text.length - BASE_CHARS;
@@ -110,10 +111,13 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     switch (size) {
       case "small":
         return { fontSize: 16, fontWeight: "bold" as const };
+        return { fontSize: 20, fontWeight: "bold" as const };
       case "large":
         return { fontSize: 24, fontWeight: "bold" as const };
+        return { fontSize: 28, fontWeight: "bold" as const };
       default:
         return { fontSize: 20, fontWeight: "bold" as const };
+        return { fontSize: 24, fontWeight: "bold" as const };
     }
   };
 

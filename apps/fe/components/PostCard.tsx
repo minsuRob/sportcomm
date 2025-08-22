@@ -533,60 +533,35 @@ const PostCard = React.memo(function PostCard({
   };
   const teamName = deriveTeamName();
 
-  // --- 팀 팔레트: 팀 로고 색상 기반 동적 UI 색상 정의 (확장 가능) ---
-  interface TeamPalette {
-    cardBg: string;
-    overlayGradient: string;
-    badgeBg: string;
-    iconBadgeBg: string;
-    moreButtonBg: string;
-    glowColor: string;
-    borderColor: string;
-  }
+  // --- 팀 팔레트 유틸 사용: DB 확장 컬러(main/sub/dark) 기반 ---
+  // 동적 import (정적 import 추가 수정 없이 교체, Metro/Web 번들 모두 호환)
+  const { getTeamPalette } = require("@/lib/team/palette");
 
-  const getTeamPalette = (
-    teamId: string,
-    teamNameValue: string,
-    base: any,
-  ): TeamPalette => {
-    const key = (teamNameValue || "").toLowerCase();
-    // 두산 베어스
-    if (key.includes("doosan") || key.includes("bear")) {
-      return {
-        cardBg: "#00204B",
-        overlayGradient: "rgba(0,32,75,0.55)",
-        badgeBg: "rgba(237,28,36,0.75)",
-        iconBadgeBg: "rgba(0,32,75,0.6)",
-        moreButtonBg: "rgba(237,28,36,0.8)",
-        glowColor: "#ED1C24",
-        borderColor: "#ED1C24",
-      };
-    }
-    // 한화 이글스
-    if (key.includes("hanwha") || key.includes("eagle")) {
-      return {
-        cardBg: "#FF6600",
-        overlayGradient: "rgba(255,102,0,0.55)",
-        badgeBg: "rgba(10,37,64,0.65)",
-        iconBadgeBg: "rgba(10,37,64,0.55)",
-        moreButtonBg: "rgba(255,102,0,0.8)",
-        glowColor: "#FF6600",
-        borderColor: "#0A2540",
-      };
-    }
-    // 기본(카테고리 색상 활용)
-    return {
-      cardBg: base.colors?.primary || "#222",
-      overlayGradient: (base.colors?.primary || "#000000") + "88",
-      badgeBg: (base.colors?.primary || "#000000") + "AA",
-      iconBadgeBg: "rgba(0,0,0,0.5)",
-      moreButtonBg: (base.colors?.border || "#000000") + "AA",
-      glowColor: base.colors?.glow || base.colors?.primary || "#555",
-      borderColor: base.colors?.border || base.colors?.primary || "#555",
-    };
+  const palette = getTeamPalette(
+    {
+      color: (post.team as any)?.color,
+      mainColor: (post.team as any)?.mainColor,
+      subColor: (post.team as any)?.subColor,
+      darkMainColor: (post.team as any)?.darkMainColor,
+      darkSubColor: (post.team as any)?.darkSubColor,
+      name: teamName,
+    },
+    {
+      // 테마 모드: 현재 전역 테마 연동 가능 (light 고정 후속 개선 지점)
+      themeMode: "light",
+    },
+  );
+
+  // 기존 teamPalette 구조에 맞춘 매핑 (기존 스타일 코드 최소 변경)
+  const teamPalette = {
+    cardBg: palette.primary,
+    overlayGradient: palette.primary + "88", // 반투명 오버레이
+    badgeBg: palette.secondary + "CC",
+    iconBadgeBg: palette.secondary + "99",
+    moreButtonBg: palette.accent + "CC",
+    glowColor: palette.accent,
+    borderColor: palette.border,
   };
-
-  const teamPalette = getTeamPalette(post.teamId, teamName, categoryInfo);
 
   return (
     <View style={themed($outerContainer)}>
@@ -1332,7 +1307,7 @@ const $contentText: ThemedStyle<TextStyle> = () => ({
 });
 
 const $emptyMediaContainer: ThemedStyle<ViewStyle> = () => ({
-  height: 200,
+  height: 300,
   justifyContent: "center",
   alignItems: "center",
 });

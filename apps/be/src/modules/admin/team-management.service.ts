@@ -52,7 +52,12 @@ export class TeamManagementService {
     return {
       id: team.id,
       name: team.name,
-      color: team.color,
+      // Deprecated 단일 색상 호환 (없으면 mainColor 사용)
+      color: team.color ?? team.mainColor,
+      mainColor: team.mainColor,
+      subColor: team.subColor,
+      darkMainColor: team.darkMainColor,
+      darkSubColor: team.darkSubColor,
       icon: team.icon,
       sport: team.sport,
       isActive: team.isActive,
@@ -156,7 +161,12 @@ export class TeamManagementService {
     const team = this.teamRepository.create({
       name: input.name,
       code: input.name.substring(0, 3).toUpperCase(),
-      color: input.color,
+      // 구(color)는 선택적. 없으면 mainColor로 초기 채움 (하위 호환)
+      color: input.color ?? input.mainColor,
+      mainColor: input.mainColor,
+      subColor: input.subColor,
+      darkMainColor: input.darkMainColor,
+      darkSubColor: input.darkSubColor,
       icon: input.icon,
       sport: sport,
       sortOrder,
@@ -226,6 +236,10 @@ export class TeamManagementService {
     // 팀 정보 업데이트
     if (input.name) team.name = input.name;
     if (input.color) team.color = input.color;
+    if (input.mainColor) team.mainColor = input.mainColor;
+    if (input.subColor) team.subColor = input.subColor;
+    if (input.darkMainColor) team.darkMainColor = input.darkMainColor;
+    if (input.darkSubColor) team.darkSubColor = input.darkSubColor;
     if (input.icon) team.icon = input.icon;
     if (input.logoUrl) team.logoUrl = input.logoUrl;
     team.updatedAt = new Date();
@@ -296,7 +310,11 @@ export class TeamManagementService {
         .map((team) => ({
           id: team.id,
           name: team.name,
-          color: team.color,
+          color: team.color ?? team.mainColor, // legacy fallback
+          mainColor: team.mainColor,
+          subColor: team.subColor,
+          darkMainColor: team.darkMainColor,
+          darkSubColor: team.darkSubColor,
           icon: team.icon,
           logoUrl: team.logoUrl,
         })),

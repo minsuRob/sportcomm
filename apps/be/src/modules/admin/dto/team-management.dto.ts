@@ -25,8 +25,29 @@ export class TeamInfo {
   @Field(() => String, { description: '팀 이름' })
   name: string;
 
-  @Field(() => String, { description: '팀 색상' })
-  color: string;
+  /**
+   * Deprecated: 단일 색상 (이전 호환용)
+   */
+  @Field(() => String, {
+    nullable: true,
+    description: '기존 단일 팀 색상 (Deprecated)',
+    deprecationReason: 'Use mainColor/subColor/darkMainColor/darkSubColor',
+  })
+  color?: string;
+
+  // 팔레트 컬러 (라이트)
+  @Field(() => String, { description: '라이트 메인 색상 (HEX)' })
+  mainColor: string;
+
+  @Field(() => String, { description: '라이트 서브 색상 (HEX)' })
+  subColor: string;
+
+  // 팔레트 컬러 (다크)
+  @Field(() => String, { description: '다크 메인 색상 (HEX)' })
+  darkMainColor: string;
+
+  @Field(() => String, { description: '다크 서브 색상 (HEX)' })
+  darkSubColor: string;
 
   @Field(() => String, { description: '팀 아이콘' })
   icon: string;
@@ -55,9 +76,28 @@ export class CreateTeamInput {
   @MaxLength(100, { message: '팀 이름은 최대 100자까지 가능합니다.' })
   name: string;
 
-  @Field(() => String, { description: '팀 색상 (HEX 코드)' })
-  @IsString({ message: '팀 색상은 문자열이어야 합니다.' })
-  color: string;
+  /**
+   * Deprecated: 단일 구식 컬러 (선택적, 뒤 호환)
+   */
+  @Field(() => String, {
+    nullable: true,
+    description: '기존 단일 팀 색상 (선택적, Deprecated)',
+    deprecationReason: 'Use palette fields instead',
+  })
+  color?: string;
+
+  // 신규 팔레트 필수 컬러
+  @Field(() => String, { description: '라이트 메인 색상 (HEX)' })
+  mainColor: string;
+
+  @Field(() => String, { description: '라이트 서브 색상 (HEX)' })
+  subColor: string;
+
+  @Field(() => String, { description: '다크 메인 색상 (HEX)' })
+  darkMainColor: string;
+
+  @Field(() => String, { description: '다크 서브 색상 (HEX)' })
+  darkSubColor: string;
 
   @Field(() => String, { description: '팀 아이콘 (이모지)' })
   @IsString({ message: '팀 아이콘은 문자열이어야 합니다.' })
@@ -80,10 +120,44 @@ export class UpdateTeamInput {
   @MaxLength(100, { message: '팀 이름은 최대 100자까지 가능합니다.' })
   name?: string;
 
-  @Field(() => String, { nullable: true, description: '팀 색상 (HEX 코드)' })
+  /**
+   * Deprecated 단일 색상
+   */
+  @Field(() => String, {
+    nullable: true,
+    description: '기존 단일 팀 색상 (Deprecated)',
+    deprecationReason: 'Use palette colors instead',
+  })
   @IsOptional()
   @IsString({ message: '팀 색상은 문자열이어야 합니다.' })
   color?: string;
+
+  // 팔레트 컬러 (모두 선택적)
+  @Field(() => String, {
+    nullable: true,
+    description: '라이트 메인 색상 (HEX)',
+  })
+  @IsOptional()
+  @IsString({ message: '라이트 메인 색상은 문자열이어야 합니다.' })
+  mainColor?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: '라이트 서브 색상 (HEX)',
+  })
+  @IsOptional()
+  @IsString({ message: '라이트 서브 색상은 문자열이어야 합니다.' })
+  subColor?: string;
+
+  @Field(() => String, { nullable: true, description: '다크 메인 색상 (HEX)' })
+  @IsOptional()
+  @IsString({ message: '다크 메인 색상은 문자열이어야 합니다.' })
+  darkMainColor?: string;
+
+  @Field(() => String, { nullable: true, description: '다크 서브 색상 (HEX)' })
+  @IsOptional()
+  @IsString({ message: '다크 서브 색상은 문자열이어야 합니다.' })
+  darkSubColor?: string;
 
   @Field(() => String, { nullable: true, description: '팀 아이콘 (이모지)' })
   @IsOptional()

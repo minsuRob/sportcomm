@@ -263,6 +263,10 @@ export const GET_ADMIN_TEAMS_BY_CATEGORY = gql`
         id
         name
         color
+        mainColor
+        subColor
+        darkMainColor
+        darkSubColor
         icon
         sport {
           id
@@ -282,6 +286,10 @@ export const CREATE_TEAM = gql`
       id
       name
       color
+      mainColor
+      subColor
+      darkMainColor
+      darkSubColor
       icon
       sport {
         id
@@ -300,6 +308,10 @@ export const UPDATE_TEAM = gql`
       id
       name
       color
+      mainColor
+      subColor
+      darkMainColor
+      darkSubColor
       icon
       sport {
         id
@@ -324,6 +336,10 @@ export const TOGGLE_TEAM_STATUS = gql`
       id
       name
       color
+      mainColor
+      subColor
+      darkMainColor
+      darkSubColor
       icon
       sport {
         id

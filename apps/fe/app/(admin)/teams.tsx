@@ -40,7 +40,16 @@ import TeamLogo from "@/components/TeamLogo";
 interface TeamInfo {
   id: string;
   name: string;
-  color: string;
+  /** (Deprecated) 단일 컬러 */
+  color?: string;
+  /** 라이트 메인 */
+  mainColor: string;
+  /** 라이트 서브 */
+  subColor: string;
+  /** 다크 메인 */
+  darkMainColor: string;
+  /** 다크 서브 */
+  darkSubColor: string;
   icon: string;
   sport: {
     id: string;
@@ -234,7 +243,12 @@ export default function AdminTeamsScreen() {
   // 폼 상태
   const [formData, setFormData] = useState({
     name: "",
-    color: "#000000",
+    // legacy 단일 컬러 (선택)
+    color: "",
+    mainColor: "#00204B",
+    subColor: "#ED1C24",
+    darkMainColor: "#00132E",
+    darkSubColor: "#8C1218",
     icon: "🏆",
     sportId: "",
   });
@@ -302,7 +316,12 @@ export default function AdminTeamsScreen() {
         variables: {
           input: {
             name: formData.name,
-            color: formData.color,
+            // 하위호환 color 필드(옵션)
+            color: formData.color || formData.mainColor,
+            mainColor: formData.mainColor,
+            subColor: formData.subColor,
+            darkMainColor: formData.darkMainColor,
+            darkSubColor: formData.darkSubColor,
             icon: formData.icon,
             sportId: formData.sportId,
           },
@@ -335,7 +354,11 @@ export default function AdminTeamsScreen() {
           teamId: selectedTeam.id,
           input: {
             name: formData.name,
-            color: formData.color,
+            color: formData.color || formData.mainColor,
+            mainColor: formData.mainColor,
+            subColor: formData.subColor,
+            darkMainColor: formData.darkMainColor,
+            darkSubColor: formData.darkSubColor,
             icon: formData.icon,
             sportId: formData.sportId,
             logoUrl: logoUrl || undefined,
@@ -381,7 +404,13 @@ export default function AdminTeamsScreen() {
     setSelectedTeam(team);
     setFormData({
       name: team.name,
-      color: team.color,
+      color: team.color ?? "",
+      mainColor: team.mainColor || team.color || "#000000",
+      subColor: team.subColor || team.color || "#000000",
+      darkMainColor:
+        team.darkMainColor || team.mainColor || team.color || "#000000",
+      darkSubColor:
+        team.darkSubColor || team.subColor || team.color || "#000000",
       icon: team.icon,
       sportId: team.sport.id,
     });
@@ -393,7 +422,11 @@ export default function AdminTeamsScreen() {
   const resetForm = () => {
     setFormData({
       name: "",
-      color: "#000000",
+      color: "",
+      mainColor: "#00204B",
+      subColor: "#ED1C24",
+      darkMainColor: "#00132E",
+      darkSubColor: "#8C1218",
       icon: "🏆",
       sportId: "",
     });
@@ -818,15 +851,66 @@ export default function AdminTeamsScreen() {
                   />
                 </View>
 
+                {/* 팔레트 컬러 입력 (생성) */}
                 <View style={themed($inputGroup)}>
-                  <Text style={themed($inputLabel)}>팀 색상</Text>
+                  <Text style={themed($inputLabel)}>라이트 메인 색상 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.mainColor}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, mainColor: text })
+                    }
+                    placeholder="#00204B"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>라이트 서브 색상 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.subColor}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, subColor: text })
+                    }
+                    placeholder="#ED1C24"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>다크 메인 색상 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.darkMainColor}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, darkMainColor: text })
+                    }
+                    placeholder="#00132E"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>다크 서브 색상 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.darkSubColor}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, darkSubColor: text })
+                    }
+                    placeholder="#8C1218"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>
+                    (선택) Legacy 단일 색상
+                  </Text>
                   <TextInput
                     style={themed($textInput)}
                     value={formData.color}
                     onChangeText={(text) =>
                       setFormData({ ...formData, color: text })
                     }
-                    placeholder="#000000"
+                    placeholder="#FF6600"
                     placeholderTextColor={theme.colors.textDim}
                   />
                 </View>
@@ -984,15 +1068,66 @@ export default function AdminTeamsScreen() {
                   />
                 </View>
 
+                {/* 팔레트 컬러 입력 (수정) */}
                 <View style={themed($inputGroup)}>
-                  <Text style={themed($inputLabel)}>팀 색상</Text>
+                  <Text style={themed($inputLabel)}>라이트 메인 색상 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.mainColor}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, mainColor: text })
+                    }
+                    placeholder="#00204B"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>라이트 서브 색상 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.subColor}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, subColor: text })
+                    }
+                    placeholder="#ED1C24"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>다크 메인 색상 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.darkMainColor}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, darkMainColor: text })
+                    }
+                    placeholder="#00132E"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>다크 서브 색상 *</Text>
+                  <TextInput
+                    style={themed($textInput)}
+                    value={formData.darkSubColor}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, darkSubColor: text })
+                    }
+                    placeholder="#8C1218"
+                    placeholderTextColor={theme.colors.textDim}
+                  />
+                </View>
+                <View style={themed($inputGroup)}>
+                  <Text style={themed($inputLabel)}>
+                    (선택) Legacy 단일 색상
+                  </Text>
                   <TextInput
                     style={themed($textInput)}
                     value={formData.color}
                     onChangeText={(text) =>
                       setFormData({ ...formData, color: text })
                     }
-                    placeholder="#000000"
+                    placeholder="#FF6600"
                     placeholderTextColor={theme.colors.textDim}
                   />
                 </View>

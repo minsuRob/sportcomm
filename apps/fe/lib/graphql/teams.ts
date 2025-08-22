@@ -23,6 +23,10 @@ export const TEAM_FRAGMENT = gql`
     name
     code
     color
+    mainColor
+    subColor
+    darkMainColor
+    darkSubColor
     icon
     logoUrl
     description
@@ -181,7 +185,16 @@ export interface Team {
   id: string;
   name: string;
   code: string;
-  color: string;
+  /** (Deprecated) 단일 색상 */
+  color?: string;
+  /** 라이트 메인 색상 */
+  mainColor: string;
+  /** 라이트 서브 색상 */
+  subColor: string;
+  /** 다크 메인 색상 */
+  darkMainColor: string;
+  /** 다크 서브 색상 */
+  darkSubColor: string;
   icon: string;
   logoUrl?: string;
   description?: string;

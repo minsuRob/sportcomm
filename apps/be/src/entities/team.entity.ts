@@ -56,18 +56,79 @@ export class Team extends BaseEntity {
   code: string;
 
   /**
-   * 팀 대표 색상
-   * UI에서 팀을 표시할 때 사용하는 색상입니다.
+   * (Deprecated) 기존 단일 팀 대표 색상
+   * 하위 호환을 위해 유지되며, 새로운 팔레트 구조(mainColor 등)를 사용하세요.
    */
-  @Field(() => String, { description: '팀 대표 색상' })
+  @Field(() => String, {
+    description: '팀 대표 색상 (Deprecated: mainColor 사용 권장)',
+    deprecationReason: 'Use mainColor instead',
+    nullable: true,
+  })
   @Column({
     type: 'varchar',
     length: 7,
-    comment: '팀 대표 색상 (HEX 코드)',
+    comment: '구(舊) 단일 팀 대표 색상 (향후 mainColor로 대체 예정)',
+    nullable: true,
   })
   @IsString({ message: '팀 색상은 문자열이어야 합니다.' })
   @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
-  color: string;
+  color?: string;
+
+  /**
+   * 라이트 테마 메인 색상
+   * 기본 배경 / 주요 강조에 사용
+   */
+  @Field(() => String, { description: '라이트 테마 메인 색상 (HEX)' })
+  @Column({
+    type: 'varchar',
+    length: 7,
+    comment: '라이트 메인 색상 (HEX)',
+  })
+  @IsString({ message: '메인 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
+  mainColor: string;
+
+  /**
+   * 라이트 테마 서브 색상
+   * 보조 강조, 배지, 경계선 등에 사용
+   */
+  @Field(() => String, { description: '라이트 테마 서브 색상 (HEX)' })
+  @Column({
+    type: 'varchar',
+    length: 7,
+    comment: '라이트 서브 색상 (HEX)',
+  })
+  @IsString({ message: '서브 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
+  subColor: string;
+
+  /**
+   * 다크 테마 메인 색상
+   * 다크 모드에서 기본 배경 / 주요 강조에 사용
+   */
+  @Field(() => String, { description: '다크 테마 메인 색상 (HEX)' })
+  @Column({
+    type: 'varchar',
+    length: 7,
+    comment: '다크 메인 색상 (HEX)',
+  })
+  @IsString({ message: '다크 메인 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
+  darkMainColor: string;
+
+  /**
+   * 다크 테마 서브 색상
+   * 다크 모드 보조 요소(배지, 테두리 등)에 사용
+   */
+  @Field(() => String, { description: '다크 테마 서브 색상 (HEX)' })
+  @Column({
+    type: 'varchar',
+    length: 7,
+    comment: '다크 서브 색상 (HEX)',
+  })
+  @IsString({ message: '다크 서브 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
+  darkSubColor: string;
 
   /**
    * 팀 아이콘 (이모지)

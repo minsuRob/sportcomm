@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 import { entities } from '../entities';
+import { log } from 'console';
 
 // 환경 변수 로드
 config();
@@ -31,11 +32,11 @@ export const AppDataSource = new DataSource({
   url: process.env.DATABASE_URL,
 
   // 개별 설정 (DATABASE_URL이 없을 때 사용)
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_DATABASE || 'postgres',
+  // host: process.env.DB_HOST || 'localhost',
+  // port: parseInt(process.env.DB_PORT || '5432'),
+  // username: process.env.DB_USERNAME || 'postgres',
+  // password: process.env.DB_PASSWORD || 'password',
+  // database: process.env.DB_DATABASE || 'postgres',
 
   // 엔티티 설정
   entities: entities,
@@ -79,6 +80,8 @@ export async function initializeDatabase(): Promise<void> {
   try {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
+      console.log(AppDataSource);
+      console.log(AppDataSource.options);
       console.log('✅ 데이터베이스 연결이 성공적으로 설정되었습니다.');
     }
   } catch (error) {

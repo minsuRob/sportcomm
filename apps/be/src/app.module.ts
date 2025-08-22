@@ -343,21 +343,21 @@ export class AppModule {
    * 애플리케이션 시작 정보 출력
    */
   private printStartupInfo(): void {
-    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
-    const port = this.configService.get<number>('PORT', 3000);
-    const dbHost = this.configService.get<string>('DB_HOST');
-    const dbPort = this.configService.get<number>('DB_PORT');
-    const dbName = this.configService.get<string>('DB_DATABASE');
+    // const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+    // const port = this.configService.get<number>('PORT', 3000);
+    // const dbHost = this.configService.get<string>('DB_HOST');
+    // const dbPort = this.configService.get<number>('DB_PORT');
+    // const dbName = this.configService.get<string>('DB_DATABASE');
 
     console.log('\n🚀 스포츠 커뮤니티 백엔드 서버 시작 중...\n');
     console.log('📊 서버 정보:');
-    console.log(`   - 환경: ${nodeEnv}`);
-    console.log(`   - 포트: ${port}`);
-    console.log(`   - GraphQL: http://localhost:${port}/graphql`);
+    // console.log(`   - 환경: ${nodeEnv}`);
+    // console.log(`   - 포트: ${port}`);
+    // console.log(`   - GraphQL: http://localhost:${port}/graphql`);
 
-    if (nodeEnv === 'development') {
-      console.log(`   - GraphQL Playground: http://localhost:${port}/graphql`);
-    }
+    // if (nodeEnv === 'development') {
+    //   console.log(`   - GraphQL Playground: http://localhost:${port}/graphql`);
+    // }
 
     const databaseUrl = this.configService.get<string>('DATABASE_URL');
 
@@ -365,11 +365,11 @@ export class AppModule {
     console.log(
       `   - 연결 방식: ${databaseUrl ? 'DATABASE_URL' : '개별 환경변수'}`,
     );
-    console.log(`   - 호스트: ${dbHost}:${dbPort}`);
-    console.log(`   - 데이터베이스: ${dbName}`);
-    console.log(
-      `   - 스키마 동기화: ${nodeEnv === 'development' ? '활성화' : '비활성화'}`,
-    );
+    // console.log(`   - 호스트: ${dbHost}:${dbPort}`);
+    // console.log(`   - 데이터베이스: ${dbName}`);
+    // console.log(
+    //   `   - 스키마 동기화: ${nodeEnv === 'development' ? '활성화' : '비활성화'}`,
+    // );
 
     console.log('\n🔐 인증 정보:');
     console.log(`   - JWT 알고리즘: HS256`);

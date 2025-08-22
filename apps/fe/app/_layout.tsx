@@ -16,8 +16,7 @@ import {
   ThemeProvider as AppThemeProvider,
   useAppTheme,
 } from "@/lib/theme/context";
-import { customFontsToLoad } from "@/lib/theme/typography";
-import { useFonts } from "expo-font";
+import { useLoadFonts } from "@/lib/fonts/useLoadFonts";
 import * as SplashScreen from "expo-splash-screen";
 import { initializeI18n } from "@/lib/i18n";
 import { initializeSupabase, supabase } from "@/lib/supabase/client";
@@ -52,7 +51,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts(customFontsToLoad);
+  const [fontsLoaded] = useLoadFonts();
   const [appInitialized, setAppInitialized] = React.useState(false);
   const router = useRouter();
 
@@ -70,13 +69,13 @@ export default function RootLayout() {
             onReceive: (n) =>
               console.log(
                 "Push received:",
-                n.request?.content?.title || n.request?.identifier,
+                n.request?.content?.title || n.request?.identifier
               ),
             onResponse: (r) => {
               console.log(
                 "Push tapped:",
                 r.notification?.request?.content?.title ||
-                  r.notification?.request?.identifier,
+                  r.notification?.request?.identifier
               );
               // 알림 탭 시 적절한 화면으로 네비게이션
               handleNotificationResponse(r, router);
@@ -91,7 +90,7 @@ export default function RootLayout() {
           onSyncSuccess: (user) => {
             console.log(
               "✅ [_layout.tsx] 전역 인증 동기화 성공:",
-              user.nickname,
+              user.nickname
             );
           },
           onError: (error) => {

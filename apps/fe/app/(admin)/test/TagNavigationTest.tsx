@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
-import PostCard from "../PostCard";
+import PostCard from "../../../components/PostCard";
 
 /**
  * 태그 네비게이션 테스트 컴포넌트

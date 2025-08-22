@@ -122,6 +122,7 @@ async function bootstrap() {
         res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       },
     });
+
     console.log(`✅ 정적 파일 서빙 설정 완료: ${uploadsPath}`);
 
     // 설정 서비스 가져오기
@@ -149,7 +150,7 @@ async function bootstrap() {
 
     // 전역 접두사 설정
     app.setGlobalPrefix('api', {
-      exclude: ['/graphql', '/health', '/uploads'],
+      exclude: ['/graphql', '/health', '/uploads', '/assets'],
     });
 
     // CORS 설정

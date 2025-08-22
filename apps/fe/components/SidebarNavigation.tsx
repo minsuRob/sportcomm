@@ -104,11 +104,12 @@ const $logoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.xl,
 });
 
-const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $logoText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
   fontSize: 28,
   fontWeight: "bold",
   color: colors.tint,
   letterSpacing: -0.5,
+  fontFamily: typography.logo.normal,
 });
 
 const $menuContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

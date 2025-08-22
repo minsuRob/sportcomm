@@ -101,6 +101,11 @@ export interface Post {
   team: {
     id: string;
     name: string;
+    // 팀 팔레트 컬러 (DB에서 로드)
+    mainColor?: string;
+    subColor?: string;
+    darkMainColor?: string;
+    darkSubColor?: string;
     sport: {
       id: string;
       name: string;
@@ -293,10 +298,10 @@ const PostCard = React.memo(function PostCard({
 
   // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
+    (item) => item.type === "image" || item.type === "IMAGE"
   );
   const videoMedia = post.media.filter(
-    (item) => item.type === "video" || item.type === "VIDEO",
+    (item) => item.type === "video" || item.type === "VIDEO"
   );
 
   /**
@@ -329,7 +334,7 @@ const PostCard = React.memo(function PostCard({
   const { imageAspectRatio, imageHeight, imageLoading } =
     usePostImageDimensions(
       imageMedia.length > 0 ? imageMedia[0]?.url : null,
-      isWeb(),
+      isWeb()
     );
 
   // 현재 사용자 정보 가져오기
@@ -402,9 +407,7 @@ const PostCard = React.memo(function PostCard({
   useEffect(() => {
     if (__DEV__) {
       // 게시물 디버깅 로그를 한 줄로 통합
-      console.log(
-        `PostCard - post.id: ${post.id}, post.title: ${post.title || "제목 없음"}, post.content: ${post.content.substring(0, 20)}...`,
-      );
+      console.log("post", post);
     }
   }, [post.id]);
 
@@ -525,7 +528,7 @@ const PostCard = React.memo(function PostCard({
     const authorMyTeams = anyPost?.author?.myTeams;
     if (Array.isArray(authorMyTeams)) {
       const found = authorMyTeams.find(
-        (ut: any) => ut?.team?.id === post.teamId,
+        (ut: any) => ut?.team?.id === post.teamId
       );
       if (found?.team?.name) return found.team.name as string;
     }
@@ -548,7 +551,7 @@ const PostCard = React.memo(function PostCard({
     {
       // 테마 모드: 현재 전역 테마 연동 가능 (light 고정 후속 개선 지점)
       themeMode: "light",
-    },
+    }
   );
 
   // 기존 teamPalette 구조에 맞춘 매핑 (기존 스타일 코드 최소 변경)
@@ -701,7 +704,7 @@ const PostCard = React.memo(function PostCard({
                     <Text style={themed($videoDurationText)}>
                       {videoMedia[0]
                         ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
-                            ((videoMedia[0] as any).duration || 0) % 60,
+                            ((videoMedia[0] as any).duration || 0) % 60
                           )
                             .toString()
                             .padStart(2, "0")}`
@@ -737,7 +740,7 @@ const PostCard = React.memo(function PostCard({
                       source={{
                         uri: selectOptimizedImageUrl(
                           imageMedia[0],
-                          isDesktop ? "desktop" : "mobile",
+                          isDesktop ? "desktop" : "mobile"
                         ),
                       }}
                       style={{

@@ -21,6 +21,16 @@ interface GqlPost {
   team: {
     id: string;
     name: string;
+    /** 라이트 메인 팔레트 컬러 */
+    mainColor?: string;
+    /** 라이트 서브 팔레트 컬러 */
+    subColor?: string;
+    /** 다크 메인 팔레트 컬러 */
+    darkMainColor?: string;
+    /** 다크 서브 팔레트 컬러 */
+    darkSubColor?: string;
+    /** (Deprecated) 단일 컬러 */
+    color?: string;
     sport: {
       id: string;
       name: string;
@@ -92,6 +102,11 @@ const GET_POSTS = gql`
         team {
           id
           name
+          color
+          mainColor
+          subColor
+          darkMainColor
+          darkSubColor
           sport {
             id
             name

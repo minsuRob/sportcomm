@@ -218,11 +218,25 @@ export class PostsService {
     const skip = (page - 1) * limit;
 
     // 쿼리 빌더 생성
+    // 성능 최적화: team 전체 컬럼 로딩 대신 필요한 팔레트 컬럼만 선택
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
       .leftJoinAndSelect('post.media', 'media')
-      .leftJoinAndSelect('post.team', 'team')
+      // team 은 선택 컬럼만 addSelect
+      .leftJoin('post.team', 'team')
+      .addSelect([
+        'team.id',
+        'team.name',
+        'team.code',
+        'team.color',
+        'team.mainColor',
+        'team.subColor',
+        'team.darkMainColor',
+        'team.darkSubColor',
+        'team.icon',
+        'team.logoUrl',
+      ])
       .leftJoinAndSelect('post.postTags', 'postTags')
       .leftJoinAndSelect('postTags.tag', 'tag')
       .where('post.deletedAt IS NULL');
@@ -312,20 +326,33 @@ export class PostsService {
     incrementView: boolean = false,
     userId?: string,
   ): Promise<Post> {
-    const post = await this.postRepository.findOne({
-      where: { id },
-      relations: [
-        'author',
-        'comments',
-        'comments.author',
-        'media',
-        'versions',
-        'likes',
-        'team',
-        'postTags',
-        'postTags.tag',
-      ],
-    });
+    // queryBuilder 사용으로 findAll 과 일관성 + team 팔레트 컬럼만 선택
+    const post = await this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.author', 'author')
+      .leftJoinAndSelect('post.media', 'media')
+      .leftJoinAndSelect('post.comments', 'comments')
+      .leftJoinAndSelect('comments.author', 'commentAuthor')
+      .leftJoinAndSelect('post.versions', 'versions')
+      .leftJoinAndSelect('post.likes', 'likes')
+      .leftJoin('post.team', 'team')
+      .addSelect([
+        'team.id',
+        'team.name',
+        'team.code',
+        'team.color',
+        'team.mainColor',
+        'team.subColor',
+        'team.darkMainColor',
+        'team.darkSubColor',
+        'team.icon',
+        'team.logoUrl',
+      ])
+      .leftJoinAndSelect('post.postTags', 'postTags')
+      .leftJoinAndSelect('postTags.tag', 'tag')
+      .where('post.id = :id', { id })
+      .andWhere('post.deletedAt IS NULL')
+      .getOne();
 
     if (!post) {
       throw new NotFoundException('게시물을 찾을 수 없습니다.');

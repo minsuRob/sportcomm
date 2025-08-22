@@ -24,6 +24,21 @@ export const GET_POSTS = gql`
         content
         createdAt
         teamId
+        team {
+          id
+          name
+          code
+          color
+          mainColor
+          subColor
+          darkMainColor
+          darkSubColor
+          sport {
+            id
+            name
+            icon
+          }
+        }
         viewCount
         likeCount
         commentCount
@@ -45,6 +60,10 @@ export const GET_POSTS = gql`
               name
               code
               color
+              mainColor
+              subColor
+              darkMainColor
+              darkSubColor
               icon
               logoUrl
               description
@@ -90,6 +109,21 @@ export const CREATE_POST = gql`
       content
       createdAt
       teamId
+      team {
+        id
+        name
+        code
+        color
+        mainColor
+        subColor
+        darkMainColor
+        darkSubColor
+        sport {
+          id
+          name
+          icon
+        }
+      }
       viewCount
       author {
         id
@@ -140,6 +174,21 @@ export const GET_POST_DETAIL = gql`
       content
       createdAt
       teamId
+      team {
+        id
+        name
+        code
+        color
+        mainColor
+        subColor
+        darkMainColor
+        darkSubColor
+        sport {
+          id
+          name
+          icon
+        }
+      }
       viewCount
       likeCount
       commentCount

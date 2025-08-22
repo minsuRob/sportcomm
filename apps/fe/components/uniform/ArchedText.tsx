@@ -2,10 +2,6 @@ import React, { useMemo } from "react";
 import { View, Text, StyleSheet, ViewStyle, Platform } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { useResponsive } from "@/lib/hooks/useResponsive";
-
-const { isDesktop } = useResponsive();
-
 
 interface ArchedTextProps {
   text: string;
@@ -70,6 +66,12 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     const anglePerChar = arcAngle / (totalChars - 1);
     const rotation = index * anglePerChar - arcAngle / 2;
 
+    if (__DEV__) {
+      console.log(
+        `Char ${index} rotation: ${rotation}° (anglePerChar: ${anglePerChar}, arcAngle: ${arcAngle})`
+      );
+    }
+
     return rotation;
   };
 
@@ -78,7 +80,9 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     const rotation = getCharRotation(index);
     const { radius } = archConfig;
 
-    if (isDesktop) {
+
+    if (Platform.OS === "web") {
+      // 웹에서는 test.html과 동일한 방식으로 위치 계산
       const angleRad = (rotation * Math.PI) / 180;
       const x = Math.sin(angleRad) * radius;
       const y = -Math.cos(angleRad) * radius;
@@ -97,7 +101,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
 
       return {
         position: "absolute" as const,
-        left: centerX + x - 10, // 동적 계산된 중앙 좌표 + 각도별 x 오프셋
+        left: centerX + x, // 동적 계산된 중앙 좌표 + 각도별 x 오프셋
         top: centerY + y, // 동적 계산된 중앙 좌표 + 각도별 y 오프셋
       };
     }

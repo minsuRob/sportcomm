@@ -50,15 +50,17 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   const containerStyle = style ? themed(style) : themed($container);
   const numberStyle = getNumberStyle();
 
-  // 동적 위치 스타일 계산
+  // 동적 위치 스타일 계산 - ArchedText와 동일한 중앙 정렬 방식
   const dynamicPositionStyle = React.useMemo(() => {
-    if (topPosition !== undefined) {
+    if (topPosition !== undefined && containerWidth) {
+      const centerX = containerWidth / 2; // ArchedText와 동일한 centerX 계산
       return {
         position: "absolute" as const,
         top: topPosition,
-        left: containerWidth ? containerWidth / 2 - 20 : 0, // 중앙에서 약간 왼쪽으로 조정
-        width: 40, // 숫자 컨테이너 너비 고정
+        left: 0,
+        right: 0,
         alignItems: "center" as const,
+        justifyContent: "center" as const,
       };
     }
     return {};
@@ -82,6 +84,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
             textShadowColor: numberOutlineColor,
             textShadowOffset: { width: 1, height: 1 },
             textShadowRadius: 0,
+            textAlign: "center", // 텍스트 자체도 중앙 정렬
           },
         ]}
       >

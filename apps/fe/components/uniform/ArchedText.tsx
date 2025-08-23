@@ -11,6 +11,7 @@ interface ArchedTextProps {
   containerWidth?: number; // 부모 컨테이너의 너비를 받는 prop 추가
   containerHeight?: number;
   onArchBoundsCalculated?: (bounds: { bottomY: number; centerX: number }) => void; // 아치 경계 정보 콜백
+  topPosition?: number; // UniformNumber와 유사한 동적 위치 조정
 }
 
 /**
@@ -27,6 +28,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   containerWidth = 300, // 기본값 300px (기존 하드코딩값과 동일)
   containerHeight = 350,
   onArchBoundsCalculated,
+  topPosition,
 }) => {
   const { themed, theme } = useAppTheme();
   const containerRef = React.useRef<View>(null);
@@ -143,10 +145,37 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const containerStyle = style ? themed(style) : themed($container);
   const textColor = color || theme.colors.text;
 
+  // UniformNumber와 동일한 중앙 정렬 방식
+  const dynamicPositionStyle = React.useMemo(() => {
+    if (topPosition !== undefined && containerWidth) {
+      return {
+        position: "absolute" as const,
+        top: topPosition - 130, // UniformNumber 위 50px
+        left: 0,
+        right: 0,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+      };
+    }
+    return {
+      position: "absolute" as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    };
+  }, [topPosition, containerWidth]);
+
   return (
     <View
       ref={containerRef}
-      style={[styles.container, containerStyle, { width: containerWidth, height: containerWidth }]}
+      style={[
+        styles.container,
+        containerStyle,
+        dynamicPositionStyle,
+        { width: containerWidth, height: containerHeight }
+      ]}
     >
       {text.split("").map((char, index) => (
         <Text
@@ -173,19 +202,17 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
 // 기본 스타일
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   // width, height는 props로 동적 설정되므로 제거
-  position: "absolute",
-  top: 0,
-  left: 0,
+  // position과 위치는 dynamicPositionStyle에서 처리
   justifyContent: "center",
   alignItems: "center",
 });
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
     justifyContent: "center",
     alignItems: "center",
     // width, height는 props로 동적 설정
+    // position은 dynamicPositionStyle에서 처리
   },
   char: {
     textAlign: "center",

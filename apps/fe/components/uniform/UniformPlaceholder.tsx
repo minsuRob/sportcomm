@@ -61,6 +61,7 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
           containerWidth={containerWidth} // containerWidth prop 전달
           containerHeight={containerHeight} // containerHeight prop 전달
           onArchBoundsCalculated={handleArchBoundsCalculated} // 위치 정보 콜백 전달
+          topPosition={numberTopPosition} // ArchedText도 동적 위치 전달
         />
 
         {/* 유니폼 번호 - 같은 컨테이너 내에서 절대 위치 */}

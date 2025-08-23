@@ -25,6 +25,7 @@ import { initExpoNotifications } from "@/lib/notifications/expoNotifications";
 import { client } from "@/lib/api/client";
 import { useRouter } from "expo-router";
 import { handleNotificationResponse } from "@/lib/notifications/foregroundNotificationHandler";
+import { initializeTeamCustomizations } from "@/lib/team-customization";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -63,6 +64,7 @@ export default function RootLayout() {
         await Promise.all([
           initializeI18n(),
           initializeSupabase(),
+          initializeTeamCustomizations(),
           initExpoNotifications({
             apolloClient: client,
             onToken: (t) => console.log("Expo token:", t),

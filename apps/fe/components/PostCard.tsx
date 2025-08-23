@@ -39,7 +39,7 @@ import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
 import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
 import { UniformPlaceholder } from "./uniform/UniformPlaceholder";
-import { DoosanSamsunStripes } from "./uniform/svg-components/DoosanSamsunStripes";
+import { useTeamCustomization } from "@/lib/team-customization";
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
@@ -585,6 +585,17 @@ const PostCard = React.memo(function PostCard({
     borderColor: palette.border,
   };
 
+  // 팀 커스터마이징 시스템 적용
+  const teamCustomization = useTeamCustomization(post.teamId, {
+    id: post.teamId,
+    name: teamName,
+    mainColor: (post.team as any)?.mainColor,
+    subColor: (post.team as any)?.subColor,
+    darkMainColor: (post.team as any)?.darkMainColor,
+    darkSubColor: (post.team as any)?.darkSubColor,
+    sport: (post.team as any)?.sport
+  });
+
   return (
     <View style={themed($outerContainer)}>
       {/* 외부 글로우 효과 - 팀 색상 반영 */}
@@ -985,15 +996,25 @@ const PostCard = React.memo(function PostCard({
         </View>
       </View>
 
-      {/* 왼쪽 하단 스트라이프 */}
-      <View style={themed($stripesContainer)}>
-        <DoosanSamsunStripes
-          width={24}
-          height={120}
-          color={teamPalette.borderColor || categoryInfo.colors.border}
-          strokeWidth={6}
-        />
-      </View>
+      {/* 팀별 커스터마이징 장식 요소 */}
+      {teamCustomization.hasDecoration && teamCustomization.DecorationComponent && (
+        <View style={[themed($decorationContainer), teamCustomization.styles.decoration && themed(teamCustomization.styles.decoration)]}>
+          <teamCustomization.DecorationComponent
+            teamId={post.teamId}
+            teamData={{
+              id: post.teamId,
+              name: teamName,
+              mainColor: (post.team as any)?.mainColor,
+              subColor: (post.team as any)?.subColor,
+              darkMainColor: (post.team as any)?.darkMainColor,
+              darkSubColor: (post.team as any)?.darkSubColor,
+              sport: (post.team as any)?.sport
+            }}
+            color={teamPalette.borderColor || categoryInfo.colors.border}
+            {...teamCustomization.decorationProps}
+          />
+        </View>
+      )}
 
       {/* 컨텍스트 메뉴 */}
       <PostContextMenu
@@ -1420,10 +1441,9 @@ const $videoPlaceholderText: ThemedStyle<TextStyle> = () => ({
   textAlign: "center",
 });
 
-const $stripesContainer: ThemedStyle<ViewStyle> = () => ({
+const $decorationContainer: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
   bottom: 16,
   left: 16,
   zIndex: 10,
-  opacity: 0.6,
 });

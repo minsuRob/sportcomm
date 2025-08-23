@@ -31,10 +31,37 @@ export function useTeamCustomization(
     return unsubscribe;
   }, []);
 
-  // 팀 커스터마이징 설정 조회
+  // 팀 커스터마이징 설정 조회 (팀 이름 기반 fallback 포함)
   const teamConfig = useMemo(() => {
-    return TeamCustomizationRegistry.get(teamId);
-  }, [teamId]);
+    // 1차: teamId로 직접 조회
+    let config = TeamCustomizationRegistry.get(teamId);
+
+    // 2차: 팀 이름으로 fallback 조회
+    if (!config && teamData?.name) {
+      const teamName = teamData.name.trim();
+
+      // 팀 이름 기반 매핑 테이블
+      const teamNameMapping: { [key: string]: string } = {
+        '두산': 'doosan',
+        '두산베어스': 'doosan',
+        '두산 베어스': 'doosan',
+        'Doosan': 'doosan',
+        'Doosan Bears': 'doosan',
+        '삼성': 'samsung',
+        '삼성라이온즈': 'samsung',
+        '삼성 라이온즈': 'samsung',
+        'Samsung': 'samsung',
+        'Samsung Lions': 'samsung'
+      };
+
+      const mappedTeamId = teamNameMapping[teamName];
+      if (mappedTeamId) {
+        config = TeamCustomizationRegistry.get(mappedTeamId);
+      }
+    }
+
+    return config;
+  }, [teamId, teamData?.name]);
 
   // 커스터마이징 여부 확인
   const isCustomized = useMemo(() => {

@@ -1,7 +1,16 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, ViewStyle } from 'react-native';
 import { isWeb } from '@/lib/platform';
 import type { TeamDecorationProps } from '../../types';
+
+// ThemedStyle을 ViewStyle로 변환하는 헬퍼 함수
+const resolveStyle = (style: any): ViewStyle => {
+  if (typeof style === 'function') {
+    // 임시로 빈 테마 객체 전달
+    return style({});
+  }
+  return (style as ViewStyle) || {};
+};
 
 // react-native-svg는 조건부로 import (웹에서 문제 발생 방지)
 let Svg: any = null;
@@ -34,6 +43,7 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   // 두산 팀 색상 사용 (teamData에서 가져오거나 기본값 사용)
   const stripeColor = color || teamData?.mainColor || '#34445F';
   const strokeWidth = Math.max(4, Math.floor(width / 8)); // 너비에 비례한 선 굵기
+  const resolvedStyle = resolveStyle(style);
 
   // 웹 환경에서는 CSS로 스트라이프 구현
   if (isWeb()) {
@@ -48,7 +58,7 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
             alignItems: 'stretch',
             opacity,
           },
-          style
+          resolvedStyle,
         ]}
       >
         <View
@@ -78,41 +88,26 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
 
   // 모바일 환경에서는 react-native-svg 사용
   if (!Svg || !Path) {
-    return (
-      <View
-        style={[
-          { width, height, opacity },
-          style
-        ]}
-      />
-    );
+    return <View style={[{ width, height, opacity }, resolvedStyle]} />; // fallback
   }
 
-  // SVG 좌표 계산 (동적 크기에 맞춤)
-  const leftX = Math.floor(width * 0.125); // width의 1/8 지점
-  const centerX = Math.floor(width * 0.5); // width의 중앙
-  const rightX = Math.floor(width * 0.875); // width의 7/8 지점
-
   return (
-    <View style={[{ opacity }, style]}>
+    <View style={[{ opacity }, resolvedStyle]}>
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} fill="none">
         <Path
-          d={`M${leftX} ${height}L${leftX} 0`}
+          d={`M4 ${height}L4 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
-          strokeLinecap="round"
         />
         <Path
-          d={`M${centerX} ${height}L${centerX} 0`}
+          d={`M${Math.floor(width/2)} ${height}L${Math.floor(width/2)} 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
-          strokeLinecap="round"
         />
         <Path
-          d={`M${rightX} ${height}L${rightX} 0`}
+          d={`M${width-4} ${height}L${width-4} 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
-          strokeLinecap="round"
         />
       </Svg>
     </View>

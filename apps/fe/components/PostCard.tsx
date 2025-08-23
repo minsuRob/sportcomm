@@ -586,6 +586,7 @@ const PostCard = React.memo(function PostCard({
   };
 
   // 팀 커스터마이징 시스템 적용
+
   const teamCustomization = useTeamCustomization(post.teamId, {
     id: post.teamId,
     name: teamName,

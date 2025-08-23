@@ -46,18 +46,20 @@ export { SamsungCircles, SamsungUniform } from './teams/samsung';
 
 // 편의 함수: 모든 팀 커스터마이징 설정을 자동으로 등록
 export function initializeTeamCustomizations(): void {
-  // 동적 import를 통해 필요한 팀 설정들만 로드
-  import('./teams/doosan').then(({ default: doosanConfig }) => {
-    TeamCustomizationRegistry.register(doosanConfig);
+  // 레지스트리를 import
+  import('./registry').then(({ TeamCustomizationRegistry }) => {
+    // 동적 import를 통해 필요한 팀 설정들만 로드
+    import('./teams/doosan').then(({ default: doosanConfig }) => {
+      // 기본 두산 설정 등록 (팀 이름 기반 매칭용)
+      TeamCustomizationRegistry.register(doosanConfig);
+    });
+
+    import('./teams/samsung').then(({ default: samsungConfig }) => {
+      TeamCustomizationRegistry.register(samsungConfig);
+    });
   });
 
-  import('./teams/samsung').then(({ default: samsungConfig }) => {
-    TeamCustomizationRegistry.register(samsungConfig);
-  });
 
-  if (__DEV__) {
-    console.log('팀 커스터마이징 시스템이 초기화되었습니다.');
-  }
 }
 
 // 기본 사용법 예시 (JSDoc으로 문서화)

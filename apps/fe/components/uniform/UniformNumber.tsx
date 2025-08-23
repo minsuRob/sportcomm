@@ -9,6 +9,8 @@ interface UniformNumberProps {
   mainColor?: string;
   outlineColor?: string;
   style?: ThemedStyle<ViewStyle>;
+  topPosition?: number; // 동적 위치 조정을 위한 prop 추가
+  containerWidth?: number; // 중앙 정렬을 위한 컨테이너 너비
 }
 
 /**
@@ -23,8 +25,11 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   mainColor,
   outlineColor,
   style,
+  topPosition,
+  containerWidth,
 }) => {
   const { themed, theme } = useAppTheme();
+  const numberRef = React.useRef<View>(null);
 
   // 색상 결정
   const numberMainColor = mainColor || theme.colors.text;
@@ -45,8 +50,29 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   const containerStyle = style ? themed(style) : themed($container);
   const numberStyle = getNumberStyle();
 
+  // 동적 위치 스타일 계산
+  const dynamicPositionStyle = React.useMemo(() => {
+    if (topPosition !== undefined) {
+      return {
+        position: "absolute" as const,
+        top: topPosition,
+        left: containerWidth ? containerWidth / 2 - 20 : 0, // 중앙에서 약간 왼쪽으로 조정
+        width: 40, // 숫자 컨테이너 너비 고정
+        alignItems: "center" as const,
+      };
+    }
+    return {};
+  }, [topPosition, containerWidth]);
+
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View
+      ref={numberRef}
+      style={[
+        styles.container,
+        containerStyle,
+        dynamicPositionStyle
+      ]}
+    >
       <Text
         style={[
           styles.number,
@@ -69,7 +95,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   justifyContent: "center",
   alignItems: "center",
-  marginTop: 10,
+  // marginTop 제거 - 동적 위치 조정으로 대체
 });
 
 const styles = StyleSheet.create({

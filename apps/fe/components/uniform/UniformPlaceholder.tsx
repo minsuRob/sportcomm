@@ -35,6 +35,7 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
   containerHeight = 350,
 }) => {
   const { themed, theme } = useAppTheme();
+  const [numberTopPosition, setNumberTopPosition] = React.useState<number | undefined>(undefined);
 
   // 색상 결정
   const textColor = mainColor || theme.colors.text;
@@ -43,26 +44,35 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
 
   const containerStyle = style ? themed(style) : themed($container);
 
+  // ArchedText의 경계 정보를 받아 UniformNumber 위치 조정
+  const handleArchBoundsCalculated = React.useCallback((bounds: { bottomY: number; centerX: number }) => {
+    setNumberTopPosition(bounds.bottomY);
+  }, []);
+
   return (
     <View style={[styles.container, containerStyle]}>
-      {/* 아치형 텍스트 */}
-      <ArchedText
-        text={text}
-        size={size}
-        color={textColor}
-        style={$archedTextContainer}
-        containerWidth={containerWidth} // containerWidth prop 전달
-        containerHeight={containerHeight} // containerHeight prop 전달
-      />
+      {/* 통합 컨테이너 - 아치형 텍스트와 번호가 같은 영역에 위치 */}
+      <View style={[themed($unifiedContainer), { width: containerWidth, height: containerHeight }]}>
+        {/* 아치형 텍스트 */}
+        <ArchedText
+          text={text}
+          size={size}
+          color={textColor}
+          containerWidth={containerWidth} // containerWidth prop 전달
+          containerHeight={containerHeight} // containerHeight prop 전달
+          onArchBoundsCalculated={handleArchBoundsCalculated} // 위치 정보 콜백 전달
+        />
 
-      {/* 유니폼 번호 */}
-      <UniformNumber
-        number={number}
-        size={size}
-        mainColor={numberColor}
-        outlineColor={numberOutline}
-        style={$numberContainer}
-      />
+        {/* 유니폼 번호 - 같은 컨테이너 내에서 절대 위치 */}
+        <UniformNumber
+          number={number}
+          size={size}
+          mainColor={numberColor}
+          outlineColor={numberOutline}
+          topPosition={numberTopPosition} // 동적 위치 전달
+          containerWidth={containerWidth} // 중앙 정렬을 위한 너비 전달
+        />
+      </View>
     </View>
   );
 };
@@ -78,16 +88,10 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   padding: 16,
 });
 
-const $archedTextContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
+const $unifiedContainer: ThemedStyle<ViewStyle> = () => ({
+  position: "relative",
   justifyContent: "center",
   alignItems: "center",
-});
-
-const $numberContainer: ThemedStyle<ViewStyle> = () => ({
-  justifyContent: "center",
-  alignItems: "center",
-  marginTop: 8,
 });
 
 const styles = StyleSheet.create({

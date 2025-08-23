@@ -10,6 +10,7 @@ interface ArchedTextProps {
   style?: ThemedStyle<ViewStyle>;
   containerWidth?: number; // 부모 컨테이너의 너비를 받는 prop 추가
   containerHeight?: number;
+  onArchBoundsCalculated?: (bounds: { bottomY: number; centerX: number }) => void; // 아치 경계 정보 콜백
 }
 
 /**
@@ -25,8 +26,10 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   style,
   containerWidth = 300, // 기본값 300px (기존 하드코딩값과 동일)
   containerHeight = 350,
+  onArchBoundsCalculated,
 }) => {
   const { themed, theme } = useAppTheme();
+  const containerRef = React.useRef<View>(null);
 
   // 컨테이너 중앙 좌표 동적 계산
   const centerX = containerWidth / 2;
@@ -56,6 +59,20 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
       totalChars: text.length,
     };
   }, [text, size]);
+
+  // 아치의 최하단 위치 계산 및 콜백 호출
+  React.useEffect(() => {
+    if (onArchBoundsCalculated && containerRef.current) {
+      const { radius } = archConfig;
+      // 아치의 최하단 Y 좌표 계산 (중앙 + 반지름)
+      const bottomY = centerY + radius + 20; // 여백 20px 추가
+
+      onArchBoundsCalculated({
+        bottomY,
+        centerX,
+      });
+    }
+  }, [archConfig, centerX, centerY, onArchBoundsCalculated]);
 
   // 각 문자별 회전 각도 계산 (CSS 로직과 동일)
   const getCharRotation = (index: number) => {
@@ -117,7 +134,10 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const textColor = color || theme.colors.text;
 
   return (
-    <View style={[styles.container, containerStyle, { width: containerWidth, height: containerWidth }]}>
+    <View
+      ref={containerRef}
+      style={[styles.container, containerStyle, { width: containerWidth, height: containerWidth }]}
+    >
       {text.split("").map((char, index) => (
         <Text
           key={`${char}-${index}`}
@@ -143,14 +163,16 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
 // 기본 스타일
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   // width, height는 props로 동적 설정되므로 제거
+  position: "absolute",
+  top: 0,
+  left: 0,
   justifyContent: "center",
   alignItems: "center",
-  position: "relative",
 });
 
 const styles = StyleSheet.create({
   container: {
-    position: "relative",
+    position: "absolute",
     justifyContent: "center",
     alignItems: "center",
     // width, height는 props로 동적 설정

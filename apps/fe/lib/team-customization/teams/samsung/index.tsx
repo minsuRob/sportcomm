@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
-import { UniformPlaceholder } from '@/components/uniform/UniformPlaceholder';
+import { UniformPlaceholder } from '../../common/uniform/UniformPlaceholder';
 import { isWeb } from '@/lib/platform';
 import type { TeamCustomizationConfig, TeamDecorationProps, TeamUniformProps } from '../../types';
 

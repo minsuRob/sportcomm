@@ -28,6 +28,19 @@ export {
   hasTeamCustomization
 } from './registry';
 
+// 공용 컴포넌트들 (팀 커스터마이징이 없는 경우에도 사용 가능)
+export {
+  UniformPlaceholder,
+  ArchedText,
+  UniformNumber,
+  BaseSVGDecoration,
+  createVerticalStripes,
+  createCirclePattern,
+  createDiagonalLines
+} from './common';
+
+export type { BaseSVGDecorationProps } from './common';
+
 // 훅들
 export {
   useTeamCustomization,

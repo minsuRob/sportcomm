@@ -1,5 +1,5 @@
 import React from 'react';
-import { UniformPlaceholder } from '@/components/uniform/UniformPlaceholder';
+import { UniformPlaceholder } from '../../common/uniform/UniformPlaceholder';
 import type { TeamUniformProps } from '../../types';
 
 /**

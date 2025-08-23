@@ -5,7 +5,6 @@ import type { ThemedStyle } from "@/lib/theme/types";
 
 interface UniformNumberProps {
   number: string | number;
-  size?: "small" | "medium" | "large";
   mainColor?: string;
   outlineColor?: string;
   style?: ThemedStyle<ViewStyle>;
@@ -21,7 +20,6 @@ interface UniformNumberProps {
  */
 export const UniformNumber: React.FC<UniformNumberProps> = ({
   number,
-  size = "medium",
   mainColor,
   outlineColor,
   style,
@@ -35,16 +33,9 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   const numberMainColor = mainColor || theme.colors.text;
   const numberOutlineColor = outlineColor || theme.colors.tint;
 
-  // 크기별 스타일 결정
+  // 고정 스타일 (medium 사이즈)
   const getNumberStyle = () => {
-    switch (size) {
-      case "small":
-        return { fontSize: 32, fontWeight: "bold" as const };
-      case "large":
-        return { fontSize: 48, fontWeight: "bold" as const };
-      default:
-        return { fontSize: 40, fontWeight: "bold" as const };
-    }
+    return { fontSize: 40, fontWeight: "bold" as const };
   };
 
   const containerStyle = style ? themed(style) : themed($container);

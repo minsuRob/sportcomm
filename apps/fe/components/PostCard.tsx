@@ -351,7 +351,7 @@ const PostCard = React.memo(function PostCard({
       imageMedia.length > 0 ? imageMedia[0]?.url : null,
       isWeb()
     );
-  
+
   // 미디어 컨테이너의 실제 너비 계산 (화면 너비 - 좌우 패딩)
   const mediaContainerWidth = postCardWidth - 32; // 좌우 패딩 16px씩 제외 (총 32px)
   const mediaContainerHeight = screenHeight; // 좌우 패딩 16px씩 제외 (총 32px)
@@ -795,7 +795,6 @@ const PostCard = React.memo(function PostCard({
                 <UniformPlaceholder
                   text="김택연"
                   number="63"
-                  size="medium"
                   mainColor={palette.primary}
                   subColor={palette.secondary}
                   outlineColor={palette.accent}

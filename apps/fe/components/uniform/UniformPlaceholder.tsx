@@ -8,7 +8,6 @@ import { UniformNumber } from "./UniformNumber";
 interface UniformPlaceholderProps {
   text?: string;
   number?: string | number;
-  size?: "small" | "medium" | "large";
   mainColor?: string;
   subColor?: string;
   outlineColor?: string;
@@ -26,7 +25,6 @@ interface UniformPlaceholderProps {
 export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
   text = "김택연",
   number = "63",
-  size = "medium",
   mainColor,
   subColor,
   outlineColor,
@@ -56,18 +54,17 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
         {/* 아치형 텍스트 */}
         <ArchedText
           text={text}
-          size={size}
           color={textColor}
           containerWidth={containerWidth} // containerWidth prop 전달
           containerHeight={containerHeight} // containerHeight prop 전달
           onArchBoundsCalculated={handleArchBoundsCalculated} // 위치 정보 콜백 전달
-          topPosition={numberTopPosition} // ArchedText도 동적 위치 전달
+          topPosition={numberTopPosition} // 동적 위치 전달
+
         />
 
         {/* 유니폼 번호 - 같은 컨테이너 내에서 절대 위치 */}
         <UniformNumber
           number={number}
-          size={size}
           mainColor={numberColor}
           outlineColor={numberOutline}
           topPosition={numberTopPosition} // 동적 위치 전달

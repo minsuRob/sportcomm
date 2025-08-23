@@ -5,13 +5,12 @@ import type { ThemedStyle } from "@/lib/theme/types";
 
 interface ArchedTextProps {
   text: string;
-  size?: "small" | "medium" | "large";
   color?: string;
   style?: ThemedStyle<ViewStyle>;
   containerWidth?: number; // 부모 컨테이너의 너비를 받는 prop 추가
   containerHeight?: number;
   onArchBoundsCalculated?: (bounds: { bottomY: number; centerX: number }) => void; // 아치 경계 정보 콜백
-  topPosition?: number; // UniformNumber와 유사한 동적 위치 조정
+  topPosition?: number; // 동적 위치 조정을 위한 prop
 }
 
 /**
@@ -22,7 +21,6 @@ interface ArchedTextProps {
  */
 export const ArchedText: React.FC<ArchedTextProps> = ({
   text,
-  size = "medium",
   color,
   style,
   containerWidth = 300, // 기본값 300px (기존 하드코딩값과 동일)
@@ -40,8 +38,8 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   // 텍스트 길이에 따른 동적 아치 계산 (글씨 겹침 방지)
   const archConfig = useMemo(() => {
     const BASE_CHARS = 3; // 김택연 3글자를 기준
-    const BASE_RADIUS = size === "small" ? 80 : size === "large" ? 120 : 100;
-    const RADIUS_PER_CHAR = size === "small" ? 30 : size === "large" ? 45 : 35;
+    const BASE_RADIUS = 100; // medium 사이즈 고정값
+    const RADIUS_PER_CHAR = 35; // medium 사이즈 고정값
 
     const extraChars = text.length - BASE_CHARS;
     const dynamicRadius = BASE_RADIUS + extraChars * RADIUS_PER_CHAR;
@@ -60,7 +58,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
       arcAngle,
       totalChars: text.length,
     };
-  }, [text, size]);
+  }, [text]);
 
   // 아치의 최하단 위치 계산 및 콜백 호출
   React.useEffect(() => {
@@ -73,7 +71,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
       const actualBottomOffset = Math.cos(maxAngleRad) * radius; // 실제 아래쪽 거리
 
       // 텍스트 높이 고려 (폰트 크기에 따른 글자 높이)
-      const fontSize = size === "small" ? 20 : size === "large" ? 28 : 24;
+      const fontSize = 24; // medium 사이즈 고정값
       const textHeight = fontSize * 1.2; // 줄 높이 고려
 
       // 김택연 글자 최하단에서 50px 아래로 계산
@@ -84,7 +82,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
         centerX,
       });
     }
-  }, [archConfig, centerX, centerY, onArchBoundsCalculated, size]);
+  }, [archConfig, centerX, centerY, onArchBoundsCalculated]);
 
   // 각 문자별 회전 각도 계산 (CSS 로직과 동일)
   const getCharRotation = (index: number) => {
@@ -130,22 +128,15 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     }
   };
 
-  // 크기별 텍스트 스타일 결정
+  // 고정 텍스트 스타일 (medium 사이즈)
   const getTextStyle = () => {
-    switch (size) {
-      case "small":
-        return { fontSize: 20, fontWeight: "bold" as const };
-      case "large":
-        return { fontSize: 28, fontWeight: "bold" as const };
-      default:
-        return { fontSize: 24, fontWeight: "bold" as const };
-    }
+    return { fontSize: 24, fontWeight: "bold" as const };
   };
 
   const containerStyle = style ? themed(style) : themed($container);
   const textColor = color || theme.colors.text;
 
-  // UniformNumber와 동일한 중앙 정렬 방식
+  // 동적 위치 스타일 계산
   const dynamicPositionStyle = React.useMemo(() => {
     if (topPosition !== undefined && containerWidth) {
       return {
@@ -166,6 +157,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
       justifyContent: "center" as const,
     };
   }, [topPosition, containerWidth]);
+
 
   return (
     <View

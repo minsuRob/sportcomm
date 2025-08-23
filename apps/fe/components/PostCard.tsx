@@ -288,7 +288,21 @@ const PostCard = React.memo(function PostCard({
 }: PostCardProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight } = useWindowDimensions();
+  const [postCardWidth, setPostCardWidth] = useState(0);
+  const postCardRef = useRef<View>(null);
+
+  useEffect(() => {
+    const measurePostCardWidth = () => {
+      if (postCardRef.current) {
+        postCardRef.current.measure((_x, _y, width) => {
+          setPostCardWidth(width);
+        });
+      }
+    };
+
+    measurePostCardWidth();
+  }, []);
 
   // 컨텍스트 메뉴 상태 관리
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -337,9 +351,9 @@ const PostCard = React.memo(function PostCard({
       imageMedia.length > 0 ? imageMedia[0]?.url : null,
       isWeb()
     );
-
+  
   // 미디어 컨테이너의 실제 너비 계산 (화면 너비 - 좌우 패딩)
-  const mediaContainerWidth = screenWidth - 32; // 좌우 패딩 16px씩 제외 (총 32px)
+  const mediaContainerWidth = postCardWidth - 32; // 좌우 패딩 16px씩 제외 (총 32px)
   const mediaContainerHeight = screenHeight; // 좌우 패딩 16px씩 제외 (총 32px)
 
   // 현재 사용자 정보 가져오기

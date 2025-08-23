@@ -1,9 +1,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import { TeamCustomizationRegistry } from './registry';
+import { getDecorations, hasActiveDecorations } from './utils/decorationUtils';
 import type {
   UseTeamCustomizationResult,
   TeamData,
-  TeamCustomizationConfig
+  TeamCustomizationConfig,
+  DecorationItem
 } from './types';
 
 /**
@@ -68,26 +70,40 @@ export function useTeamCustomization(
     return teamConfig !== null;
   }, [teamConfig]);
 
-  // 장식 컴포넌트 (SVG 등) 설정
+  // 장식 컴포넌트 (SVG 등) 설정 - 다중 decoration 지원
   const decorationConfig = useMemo(() => {
-    if (!teamConfig?.decoration?.enabled) {
+    const decorations = getDecorations(teamConfig);
+    const hasDecoration = hasActiveDecorations(teamConfig);
+
+    if (!hasDecoration) {
       return {
         component: null,
         props: {},
-        hasDecoration: false
+        hasDecoration: false,
+        decorations: []
       };
     }
 
+    // 기존 호환성을 위해 첫 번째 decoration을 기본으로 사용
+    const firstDecoration = decorations[0];
     const baseProps = {
       teamId,
       teamData,
-      ...teamConfig.decoration.props
+      ...firstDecoration?.props
     };
 
     return {
-      component: teamConfig.decoration.component,
+      component: firstDecoration?.component || null,
       props: baseProps,
-      hasDecoration: true
+      hasDecoration: true,
+      decorations: decorations.map(decoration => ({
+        ...decoration,
+        props: {
+          teamId,
+          teamData,
+          ...decoration.props
+        }
+      }))
     };
   }, [teamConfig, teamId, teamData]);
 
@@ -145,10 +161,13 @@ export function useTeamCustomization(
 
   // 결과 객체 구성
   const result: UseTeamCustomizationResult = useMemo(() => ({
-    // 장식 컴포넌트
+    // 장식 컴포넌트 (기존 호환성)
     DecorationComponent: decorationConfig.component,
     decorationProps: decorationConfig.props,
     hasDecoration: decorationConfig.hasDecoration,
+
+    // 다중 decoration 지원
+    decorations: decorationConfig.decorations || [],
 
     // 유니폼 컴포넌트
     UniformComponent: uniformConfig.component,

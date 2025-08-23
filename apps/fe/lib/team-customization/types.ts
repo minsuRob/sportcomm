@@ -38,12 +38,16 @@ export interface TeamCustomizationConfig {
   teamId: string;
   teamName: string;
 
-  // 장식 요소 설정
+  // 장식 요소 설정 (단일 또는 다중 지원)
   decoration?: {
     component: ComponentType<TeamDecorationProps>;
     props?: Partial<TeamDecorationProps>;
     enabled: boolean;
-  };
+  } | {
+    component: ComponentType<TeamDecorationProps>;
+    props?: Partial<TeamDecorationProps>;
+    enabled: boolean;
+  }[];
 
   // 유니폼 플레이스홀더 설정
   uniform?: {
@@ -65,6 +69,7 @@ export interface TeamCustomizationConfig {
   styles?: {
     postCard?: ThemedStyle<ViewStyle>;
     decoration?: ThemedStyle<ViewStyle>;
+    decorationRight?: ThemedStyle<ViewStyle>;
     uniform?: ThemedStyle<ViewStyle>;
   };
 }
@@ -80,6 +85,9 @@ export interface UseTeamCustomizationResult {
   DecorationComponent: ComponentType<TeamDecorationProps> | null;
   decorationProps: Partial<TeamDecorationProps>;
   hasDecoration: boolean;
+
+  // 다중 decoration 지원
+  decorations: DecorationItem[];
 
   // 유니폼 컴포넌트
   UniformComponent: ComponentType<TeamUniformProps> | null;
@@ -123,6 +131,16 @@ export interface TeamData {
 
 // 포지션 타입
 export type DecorationPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+// Decoration 아이템 타입 (다중 decoration 지원)
+export interface DecorationItem {
+  component: ComponentType<TeamDecorationProps>;
+  props?: Partial<TeamDecorationProps>;
+  enabled: boolean;
+}
+
+// 다중 decoration 헬퍼 함수 타입
+export type GetDecorations = (config: TeamCustomizationConfig) => DecorationItem[];
 
 // 커스터마이징 컴포넌트 등록 함수 타입
 export type RegisterTeamCustomization = (config: TeamCustomizationConfig) => void;

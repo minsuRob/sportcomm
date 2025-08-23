@@ -28,6 +28,7 @@ import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
 import TeamLogo from "./TeamLogo";
 import PostActions from "./shared/PostActions";
 import PostContextMenu from "./shared/PostContextMenu";
+import { TeamDecorationRenderer } from "@/lib/team-customization/components/TeamDecorationRenderer";
 import { isWeb } from "@/lib/platform";
 import {
   usePostImageDimensions,
@@ -820,6 +821,10 @@ const PostCard = React.memo(function PostCard({
               <View
                 style={[
                   themed($gradientOverlay),
+                  // 이미지가 없으면 투명도 제거
+                  videoMedia.length === 0 && imageMedia.length === 0 && {
+                    backgroundColor: "rgba(0, 0, 0, 0)",
+                  },
                   // { backgroundColor: teamPalette.overlayGradient },
                 ]}
               />
@@ -998,23 +1003,23 @@ const PostCard = React.memo(function PostCard({
       </View>
 
       {/* 팀별 커스터마이징 장식 요소 */}
-      {teamCustomization.hasDecoration && teamCustomization.DecorationComponent && (
-        <View style={[themed($decorationContainer), teamCustomization.styles.decoration && themed(teamCustomization.styles.decoration)]}>
-          <teamCustomization.DecorationComponent
-            teamId={post.teamId}
-            teamData={{
-              id: post.teamId,
-              name: teamName,
-              mainColor: (post.team as any)?.mainColor,
-              subColor: (post.team as any)?.subColor,
-              darkMainColor: (post.team as any)?.darkMainColor,
-              darkSubColor: (post.team as any)?.darkSubColor,
-              sport: (post.team as any)?.sport
-            }}
-            color={teamPalette.borderColor || categoryInfo.colors.border}
-            {...teamCustomization.decorationProps}
-          />
-        </View>
+      {teamCustomization.hasDecoration && (
+        <TeamDecorationRenderer
+          teamId={post.teamId}
+          teamData={{
+            id: post.teamId,
+            name: teamName,
+            mainColor: (post.team as any)?.mainColor,
+            subColor: (post.team as any)?.subColor,
+            darkMainColor: (post.team as any)?.darkMainColor,
+            darkSubColor: (post.team as any)?.darkSubColor,
+            sport: (post.team as any)?.sport
+          }}
+          decorations={teamCustomization.decorations}
+          color={teamPalette.borderColor || categoryInfo.colors.border}
+          teamPalette={teamPalette}
+          categoryInfo={categoryInfo}
+        />
       )}
 
       {/* 컨텍스트 메뉴 */}
@@ -1440,11 +1445,4 @@ const $videoPlaceholderText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   marginTop: 8,
   textAlign: "center",
-});
-
-const $decorationContainer: ThemedStyle<ViewStyle> = () => ({
-  position: "absolute",
-  bottom: 16,
-  left: 16,
-  zIndex: 10,
 });

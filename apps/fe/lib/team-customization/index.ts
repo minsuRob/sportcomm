@@ -57,6 +57,20 @@ export { default as samsungCustomization } from './teams/samsung';
 export { DoosanStripes, DoosanUniform } from './teams/doosan';
 export { SamsungCircles, SamsungUniform } from './teams/samsung';
 
+// 커스터마이징 시스템 컴포넌트들
+export { TeamDecorationRenderer } from './components';
+export type { TeamDecorationRendererProps } from './components';
+
+// 유틸리티 함수들
+export {
+  getDecorations,
+  hasActiveDecorations,
+  hasDecorationAtPosition,
+  groupDecorationsByPosition,
+  getDecorationCount,
+  mergeDecorationProps
+} from './utils/decorationUtils';
+
 // 편의 함수: 모든 팀 커스터마이징 설정을 자동으로 등록
 export function initializeTeamCustomizations(): void {
   // 레지스트리를 import

@@ -14,17 +14,29 @@ export const doosanCustomization: TeamCustomizationConfig = {
   teamId: 'doosan',
   teamName: '두산 베어스',
 
-  // 장식 요소 (스트라이프)
-  decoration: {
-    component: DoosanStripes,
-    props: {
-      width: 24,
-      height: 120,
-      opacity: 0.6,
-      position: 'bottom-left'
+  // 장식 요소 (스트라이프) - 양쪽 배치
+  decoration: [
+    {
+      component: DoosanStripes,
+      props: {
+        width: 24,
+        height: 120,
+        opacity: 0.6,
+        position: 'bottom-left'
+      },
+      enabled: true
     },
-    enabled: true
-  },
+    {
+      component: DoosanStripes,
+      props: {
+        width: 24,
+        height: 120,
+        opacity: 0.6,
+        position: 'bottom-right'
+      },
+      enabled: true
+    }
+  ],
 
   // 유니폼 플레이스홀더
   uniform: {
@@ -38,12 +50,18 @@ export const doosanCustomization: TeamCustomizationConfig = {
     enabled: true
   },
 
-  // 팀별 스타일 오버라이드
+  // 팀별 스타일 오버라이드 (새로운 다중 decoration 시스템에서는 사용하지 않음)
   styles: {
     decoration: () => ({
       position: 'absolute',
       bottom: 16,
       left: 16,
+      zIndex: 10,
+    }),
+    decorationRight: () => ({
+      position: 'absolute',
+      bottom: 16,
+      right: 16,
       zIndex: 10,
     }),
     uniform: () => ({

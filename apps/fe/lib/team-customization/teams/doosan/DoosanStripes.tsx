@@ -38,12 +38,18 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   height = 120,
   color,
   opacity = 0.6,
+  position,
   style,
 }) => {
   // 두산 팀 색상 사용 (teamData에서 가져오거나 기본값 사용)
   const stripeColor = color || teamData?.mainColor || '#34445F';
   const strokeWidth = Math.max(4, Math.floor(width / 8)); // 너비에 비례한 선 굵기
   const resolvedStyle = resolveStyle(style);
+
+  // position에 따른 추가 스타일 적용
+  const positionStyle = position === 'bottom-right' ? {
+    // 오른쪽 배치 시 스트라이프 방향이나 색상을 다르게 할 수 있음
+  } : {};
 
   // 웹 환경에서는 CSS로 스트라이프 구현
   if (isWeb()) {
@@ -58,6 +64,7 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
             alignItems: 'stretch',
             opacity,
           },
+          positionStyle,
           resolvedStyle,
         ]}
       >
@@ -92,7 +99,7 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   }
 
   return (
-    <View style={[{ opacity }, resolvedStyle]}>
+    <View style={[{ opacity }, positionStyle, resolvedStyle]}>
       <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} fill="none">
         <Path
           d={`M4 ${height}L4 0`}

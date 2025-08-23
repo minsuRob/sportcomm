@@ -1,13 +1,13 @@
 const palette = {
-  neutral100: "#FFFFFF",
-  neutral200: "#F5F7FA",
-  neutral300: "#E4E8ED",
-  neutral400: "#C5CCD6",
-  neutral500: "#A2AAB8",
-  neutral600: "#64748B",
-  neutral700: "#475569",
-  neutral800: "#1E293B",
-  neutral900: "#0F172A",
+  neutral100: "#FDFBF6",
+  neutral200: "#F0ECE3",
+  neutral300: "#D9D3C6",
+  neutral400: "#C2BBA9",
+  neutral500: "#AAA28C",
+  neutral600: "#938A6F",
+  neutral700: "#7C7252",
+  neutral800: "#655A35",
+  neutral900: "#4E4218",
 
   // 기본 파란색 계열
   primary100: "#E0F2FE",

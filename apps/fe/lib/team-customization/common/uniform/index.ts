@@ -10,4 +10,4 @@ export { ArchedText } from './ArchedText';
 export { UniformNumber } from './UniformNumber';
 
 // 타입들도 함께 export (향후 확장성을 위해)
-export type { default as UniformPlaceholderProps } from './UniformPlaceholder';
+// export type { UniformPlaceholderProps } from './UniformPlaceholder';

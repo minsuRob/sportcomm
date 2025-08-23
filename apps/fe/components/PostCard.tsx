@@ -38,7 +38,7 @@ import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
 import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
-import { UniformPlaceholder } from "./uniform/UniformPlaceholder";
+import { UniformPlaceholder } from "@/lib/team-customization/common/uniform/UniformPlaceholder";
 import { useTeamCustomization } from "@/lib/team-customization";
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)

@@ -39,6 +39,7 @@ import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
 import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
 import { UniformPlaceholder } from "./uniform/UniformPlaceholder";
+import { DoosanSamsunStripes } from "./uniform/svg-components/DoosanSamsunStripes";
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
@@ -984,6 +985,16 @@ const PostCard = React.memo(function PostCard({
         </View>
       </View>
 
+      {/* 왼쪽 하단 스트라이프 */}
+      <View style={themed($stripesContainer)}>
+        <DoosanSamsunStripes
+          width={24}
+          height={120}
+          color={teamPalette.borderColor || categoryInfo.colors.border}
+          strokeWidth={6}
+        />
+      </View>
+
       {/* 컨텍스트 메뉴 */}
       <PostContextMenu
         visible={showContextMenu}
@@ -1407,4 +1418,12 @@ const $videoPlaceholderText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   marginTop: 8,
   textAlign: "center",
+});
+
+const $stripesContainer: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  bottom: 16,
+  left: 16,
+  zIndex: 10,
+  opacity: 0.6,
 });

@@ -568,8 +568,8 @@ const PostCard = React.memo(function PostCard({
       name: teamName,
     },
     {
-      // 테마 모드: 현재 전역 테마 연동 가능 (light 고정 후속 개선 지점)
-      themeMode: "light",
+      // 테마 모드: 현재 전역 테마에 따라 동적 설정
+      themeMode: theme.isDark ? "dark" : "light",
     }
   );
 

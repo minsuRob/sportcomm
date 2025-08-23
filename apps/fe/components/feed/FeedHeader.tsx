@@ -54,10 +54,13 @@ export default function FeedHeader({
     right: 0,
   });
 
+  // 프로필 버튼의 ref를 생성하여 위치 측정에 사용
+  const profileButtonRef = React.useRef<View>(null);
+
   const handleProfilePress = (event: GestureResponderEvent) => {
     if (currentUser) {
-      // @ts-ignore
-      event.target.measure((x, y, width, height, pageX, pageY) => {
+      // React Native에서는 ref를 통해 measure 함수에 접근해야 함
+      profileButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
         const windowWidth = Dimensions.get("window").width;
         const right = windowWidth - pageX - width;
 
@@ -145,6 +148,7 @@ export default function FeedHeader({
           </>
         )}
         <TouchableOpacity
+          ref={profileButtonRef}
           style={themed($iconButton)}
           onPress={handleProfilePress}
         >

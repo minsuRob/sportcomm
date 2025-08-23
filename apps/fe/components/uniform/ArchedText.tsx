@@ -63,16 +63,26 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   // 아치의 최하단 위치 계산 및 콜백 호출
   React.useEffect(() => {
     if (onArchBoundsCalculated && containerRef.current) {
-      const { radius } = archConfig;
-      // 아치의 최하단 Y 좌표 계산 (중앙 + 반지름)
-      const bottomY = centerY + radius + 20; // 여백 20px 추가
+      const { radius, arcAngle } = archConfig;
+
+      // 실제 아치형 글자의 최하단 위치 계산
+      // 아치의 중심에서 가장 아래쪽 글자까지의 실제 거리
+      const maxAngleRad = (arcAngle / 2) * (Math.PI / 180); // 최대 각도를 라디안으로 변환
+      const actualBottomOffset = Math.cos(maxAngleRad) * radius; // 실제 아래쪽 거리
+
+      // 텍스트 높이 고려 (폰트 크기에 따른 글자 높이)
+      const fontSize = size === "small" ? 20 : size === "large" ? 28 : 24;
+      const textHeight = fontSize * 1.2; // 줄 높이 고려
+
+      // 김택연 글자 최하단에서 50px 아래로 계산
+      const actualBottomY = centerY - actualBottomOffset + textHeight + 50;
 
       onArchBoundsCalculated({
-        bottomY,
+        bottomY: actualBottomY,
         centerX,
       });
     }
-  }, [archConfig, centerX, centerY, onArchBoundsCalculated]);
+  }, [archConfig, centerX, centerY, onArchBoundsCalculated, size]);
 
   // 각 문자별 회전 각도 계산 (CSS 로직과 동일)
   const getCharRotation = (index: number) => {

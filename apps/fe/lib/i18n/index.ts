@@ -88,11 +88,22 @@ export const initializeI18n = async (): Promise<void> => {
     },
 
     // 키 누락 시 처리
-    saveMissing: __DEV__, // 개발 모드에서만 누락된 키 저장
+    saveMissing: false, // 누락된 키 저장 비활성화로 무한루프 방지
     missingKeyHandler: (lng, ns, key) => {
       if (__DEV__) {
         console.warn(`Missing translation key: ${key} for language: ${lng}`);
       }
+      return key.split('.').pop() || key; // 키의 마지막 부분 반환
+    },
+
+    // 무한루프 방지를 위한 추가 설정
+    returnEmptyString: false,
+    returnNull: false,
+    returnObjects: false,
+
+    // 키가 누락된 경우 키의 마지막 부분을 반환
+    parseMissingKeyHandler: (key) => {
+      return key.split('.').pop() || key;
     },
   });
 };

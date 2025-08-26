@@ -166,9 +166,7 @@ export default function PostHeader({
                 { color: isFollowing ? theme.colors.text : "white" },
               ]}
             >
-              {isFollowing
-                ? t(TRANSLATION_KEYS.POST_FOLLOWING)
-                : t(TRANSLATION_KEYS.POST_FOLLOW)}
+              {isFollowing ? "팔로잉" : "팔로우"}
             </Text>
           </TouchableOpacity>
         )}

@@ -4,5 +4,94 @@
   "list-outline": "list-outline",
   "ticket-outline": "ticket-outline",
   "storefront-outline": "storefront-outline",
-  "person-outline": "person-outline"
+  "person-outline": "person-outline",
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "back": "Back",
+    "close": "Close",
+    "send": "Send"
+  },
+  "navigation": {
+    "feed": "Feed",
+    "search": "Search",
+    "profile": "Profile"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "signupLogin": "Sign Up/Login"
+  },
+  "feed": {
+    "title": "Feed",
+    "loadingPosts": "Loading posts...",
+    "noPostsAvailable": "No posts available",
+    "pullToRefresh": "Pull to refresh",
+    "errorFetching": "Failed to load posts",
+    "createPost": "Create Post",
+    "chat": "Chat"
+  },
+  "createPost": {
+    "title": "Create Post",
+    "contentPlaceholder": "What's happening?",
+    "selectType": "Select post type",
+    "publish": "Publish",
+    "publishing": "Publishing..."
+  },
+  "post": {
+    "title": "Post",
+    "like": "Like",
+    "comment": "Comment",
+    "share": "Share",
+    "loadingPost": "Loading post...",
+    "postNotFound": "Post not found",
+    "goBack": "Go Back",
+    "repost": "Repost",
+    "viewAllComments": "View all comments",
+    "likeCount": "{{count}} likes",
+    "commentCount": "{{count}} comments",
+    "viewCount": "{{count}} views",
+    "postTypes": {
+      "analysis": "Analysis",
+      "highlight": "Highlight",
+      "cheering": "Cheering"
+    },
+    "follow": "Follow",
+    "following": "Following",
+    "followSuccess": "Followed successfully",
+    "unfollowSuccess": "Unfollowed successfully",
+    "followError": "Error occurred while following",
+    "likeError": "Error occurred while liking",
+    "liking": "Liking...",
+    "unliking": "Unliking..."
+  },
+  "comments": {
+    "title": "Comments",
+    "placeholder": "Write a comment...",
+    "noComments": "No comments",
+    "loginRequired": "Please login to write a comment"
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "settings": "Settings",
+    "noPosts": "No posts",
+    "loadingProfile": "Loading profile..."
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Enter search term",
+    "searchButton": "Search",
+    "searchPrompt": "Please enter a search term"
+  },
+  "cache": {
+    "dataUsed": "Using cached data",
+    "networkErrorFallback": "Using cached data due to network error"
+  },
+  "optimization": {
+    "cacheHit": "Cache hit",
+    "networkSaved": "Network saved",
+    "loadingTime": "Loading time"
+  }
 }

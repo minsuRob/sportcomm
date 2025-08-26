@@ -31,13 +31,13 @@ export default function PostStats({
     return (
       <View style={themed($detailStatsSection)}>
         <Text style={themed($detailStatText)}>
-          {t(TRANSLATION_KEYS.POST_LIKE_COUNT, { count: likeCount })}
+          좋아요 {likeCount}개
         </Text>
         <Text style={themed($detailStatText)}>
-          {t(TRANSLATION_KEYS.POST_COMMENT_COUNT, { count: commentCount })}
+          댓글 {commentCount}개
         </Text>
         <Text style={themed($detailStatText)}>
-          {t(TRANSLATION_KEYS.POST_VIEW_COUNT, { count: viewCount })}
+          조회수 {viewCount}회
         </Text>
       </View>
     );
@@ -48,26 +48,26 @@ export default function PostStats({
       <View style={themed($statItem)}>
         <Ionicons
           name="heart-outline"
-          color={theme.colors.textDim}
           size={iconSize}
+          color={theme.colors.textDim}
         />
-        <Text style={themed($feedStatText)}>{likeCount}</Text>
+        <Text style={themed($statText)}>{likeCount}</Text>
       </View>
       <View style={themed($statItem)}>
         <Ionicons
           name="chatbubble-outline"
-          color={theme.colors.textDim}
           size={iconSize}
+          color={theme.colors.textDim}
         />
-        <Text style={themed($feedStatText)}>{commentCount}</Text>
+        <Text style={themed($statText)}>{commentCount}</Text>
       </View>
       <View style={themed($statItem)}>
         <Ionicons
-          name="paper-plane-outline"
-          color={theme.colors.textDim}
+          name="eye-outline"
           size={iconSize}
+          color={theme.colors.textDim}
         />
-        <Text style={themed($feedStatText)}>{viewCount}</Text>
+        <Text style={themed($statText)}>{viewCount}</Text>
       </View>
     </View>
   );
@@ -107,4 +107,11 @@ const $detailStatsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $detailStatText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.textDim,
+  marginBottom: 4,
+});
+
+const $statText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  marginLeft: spacing.xs,
 });

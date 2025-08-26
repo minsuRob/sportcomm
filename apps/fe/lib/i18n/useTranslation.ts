@@ -1,6 +1,7 @@
 import { useTranslation as useI18nTranslation } from "react-i18next";
 import { useEffect } from "react";
 import * as storage from "../storage";
+import i18n from "./index";
 import {
   changeLanguage,
   getCurrentLanguage,
@@ -15,7 +16,23 @@ import {
 const APP_LANGUAGE_KEY = "app-language";
 
 export const useTranslation = () => {
-  const { t, i18n } = useI18nTranslation();
+  const { t: originalT, i18n } = useI18nTranslation();
+
+  // 번역 키 누락 시 fallback을 제공하는 안전한 번역 함수
+  const t = (key: string, options?: any): string => {
+    try {
+      const result = originalT(key, options);
+      // 번역이 실패하면 키 자체를 반환 (무한루프 방지)
+      if (typeof result === 'string' && result === key) {
+        console.warn(`Missing translation key: ${key}`);
+        return key.split('.').pop() || key; // 키의 마지막 부분만 반환
+      }
+      return String(result);
+    } catch (error) {
+      console.warn(`Translation error for key: ${key}`, error);
+      return key.split('.').pop() || key;
+    }
+  };
 
   useEffect(() => {
     /**
@@ -69,6 +86,22 @@ export const useTranslation = () => {
  * 번역 키의 타입 안전성을 위한 헬퍼 함수들
  */
 export const createTranslationKey = (key: string) => key;
+
+/**
+ * 안전한 번역 함수 - 무한루프 방지
+ */
+export const safeTranslate = (key: string, fallback?: string, options?: any): string => {
+  try {
+    const result = i18n.t(key, options);
+    if (typeof result === 'string' && result === key) {
+      return fallback || key.split('.').pop() || key;
+    }
+    return String(result);
+  } catch (error) {
+    console.warn(`Translation error for key: ${key}`, error);
+    return fallback || key.split('.').pop() || key;
+  }
+};
 
 // 자주 사용되는 번역 키들을 상수로 정의
 export const TRANSLATION_KEYS = {
@@ -149,4 +182,11 @@ export const TRANSLATION_KEYS = {
   SEARCH_PLACEHOLDER: "search.placeholder",
   SEARCH_BUTTON: "search.searchButton",
   SEARCH_PROMPT: "search.searchPrompt",
+
+  // 캐시 및 최적화
+  CACHE_DATA_USED: "cache.dataUsed",
+  NETWORK_ERROR_CACHE_FALLBACK: "cache.networkErrorFallback",
+  OPTIMIZATION_CACHE_HIT: "optimization.cacheHit",
+  OPTIMIZATION_NETWORK_SAVED: "optimization.networkSaved",
+  OPTIMIZATION_LOADING_TIME: "optimization.loadingTime",
 } as const;

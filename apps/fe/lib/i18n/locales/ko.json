@@ -4,5 +4,94 @@
   "list-outline": "목록",
   "ticket-outline": "티켓",
   "storefront-outline": "상점",
-  "person-outline": "프로필"
+  "person-outline": "프로필",
+  "common": {
+    "loading": "로딩 중...",
+    "error": "오류가 발생했습니다",
+    "retry": "다시 시도",
+    "back": "뒤로",
+    "close": "닫기",
+    "send": "전송"
+  },
+  "navigation": {
+    "feed": "피드",
+    "search": "검색",
+    "profile": "프로필"
+  },
+  "auth": {
+    "login": "로그인",
+    "logout": "로그아웃",
+    "signupLogin": "회원가입/로그인"
+  },
+  "feed": {
+    "title": "피드",
+    "loadingPosts": "게시물을 불러오는 중...",
+    "noPostsAvailable": "게시물이 없습니다",
+    "pullToRefresh": "당겨서 새로고침",
+    "errorFetching": "게시물을 불러오는데 실패했습니다",
+    "createPost": "게시물 작성",
+    "chat": "채팅"
+  },
+  "createPost": {
+    "title": "게시물 작성",
+    "contentPlaceholder": "무슨 일이 일어나고 있나요?",
+    "selectType": "게시물 타입 선택",
+    "publish": "게시",
+    "publishing": "게시 중..."
+  },
+  "post": {
+    "title": "게시물",
+    "like": "좋아요",
+    "comment": "댓글",
+    "share": "공유",
+    "loadingPost": "게시물을 불러오는 중...",
+    "postNotFound": "게시물을 찾을 수 없습니다",
+    "goBack": "뒤로 가기",
+    "repost": "리포스트",
+    "viewAllComments": "모든 댓글 보기",
+    "likeCount": "좋아요 {{count}}개",
+    "commentCount": "댓글 {{count}}개",
+    "viewCount": "조회수 {{count}}회",
+    "postTypes": {
+      "analysis": "분석",
+      "highlight": "하이라이트",
+      "cheering": "응원"
+    },
+    "follow": "팔로우",
+    "following": "팔로잉",
+    "followSuccess": "팔로우했습니다",
+    "unfollowSuccess": "언팔로우했습니다",
+    "followError": "팔로우 중 오류가 발생했습니다",
+    "likeError": "좋아요 중 오류가 발생했습니다",
+    "liking": "좋아요 중...",
+    "unliking": "좋아요 취소 중..."
+  },
+  "comments": {
+    "title": "댓글",
+    "placeholder": "댓글을 입력하세요...",
+    "noComments": "댓글이 없습니다",
+    "loginRequired": "댓글을 작성하려면 로그인이 필요합니다"
+  },
+  "profile": {
+    "title": "프로필",
+    "editProfile": "프로필 편집",
+    "settings": "설정",
+    "noPosts": "게시물이 없습니다",
+    "loadingProfile": "프로필을 불러오는 중..."
+  },
+  "search": {
+    "title": "검색",
+    "placeholder": "검색어를 입력하세요",
+    "searchButton": "검색",
+    "searchPrompt": "검색어를 입력해주세요"
+  },
+  "cache": {
+    "dataUsed": "캐시된 데이터 사용",
+    "networkErrorFallback": "네트워크 오류로 인해 캐시된 데이터를 사용합니다"
+  },
+  "optimization": {
+    "cacheHit": "캐시 적중",
+    "networkSaved": "네트워크 절약",
+    "loadingTime": "로딩 시간"
+  }
 }

@@ -197,7 +197,7 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $headerLeft: ThemedStyle<ViewStyle> = () => ({
-  width: 100,
+  width: 120,
   justifyContent: "center",
 });
 

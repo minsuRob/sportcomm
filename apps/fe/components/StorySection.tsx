@@ -81,6 +81,7 @@ interface StorySectionProps {
   storyTypes?: StoryType[]; // 표시할 스토리 타입들
   maxItems?: number; // 최대 표시 개수
   teamIds?: string[] | null; // 팀 필터 (null이면 모든 팀)
+  currentUser?: any; // 피드에서 전달받은 사용자 정보 (중복 API 호출 방지)
 }
 
 /**
@@ -219,10 +220,14 @@ export default function StorySection({
   storyTypes = DEFAULT_STORY_TYPES,
   maxItems = 8,
   teamIds,
+  currentUser: propCurrentUser,
 }: StorySectionProps) {
   const { themed } = useAppTheme();
   const router = useRouter();
-  const { currentUser } = useCurrentUser();
+
+  // prop으로 전달받은 currentUser 우선 사용, 없으면 훅 사용 (폴백)
+  const { currentUser: hookCurrentUser } = useCurrentUser();
+  const currentUser = propCurrentUser || hookCurrentUser;
 
   const { stories, loading, error, refresh, hasMore } = useStoryData({
     storyTypes,

@@ -11,9 +11,116 @@ import { gql } from "@apollo/client";
 export * from "./graphql/admin";
 
 /**
- * Fetches a paginated list of posts for the main feed.
- * It retrieves all necessary fields to render a post card, along with pagination metadata.
- * The query now uses an 'input' object to pass arguments, matching the backend resolver.
+ * 통합 피드 데이터 쿼리 - 네트워크 요청 최소화
+ * 피드 게시물, 내 팀 목록, 차단 사용자를 한 번에 가져옵니다.
+ */
+export const GET_FEED_DATA = gql`
+  query GetFeedData($input: FindPostsInput, $includeBlockedUsers: Boolean = false) {
+    posts(input: $input) {
+      posts {
+        id
+        title
+        content
+        createdAt
+        teamId
+        team {
+          id
+          name
+          code
+          color
+          mainColor
+          subColor
+          darkMainColor
+          darkSubColor
+          sport {
+            id
+            name
+            icon
+          }
+        }
+        viewCount
+        likeCount
+        commentCount
+        isLiked
+        isBookmarked
+        author {
+          id
+          nickname
+          profileImageUrl
+          myTeams {
+            id
+            userId
+            teamId
+            priority
+            notificationEnabled
+            createdAt
+            team {
+              id
+              name
+              code
+              color
+              mainColor
+              subColor
+              darkMainColor
+              darkSubColor
+              icon
+              logoUrl
+              description
+              sortOrder
+              isActive
+            }
+          }
+        }
+        media {
+          id
+          url
+          type
+        }
+        comments {
+          id
+        }
+        tags {
+          id
+          name
+          color
+        }
+      }
+      total
+      page
+      limit
+      totalPages
+      hasPrevious
+      hasNext
+    }
+    myTeams {
+      id
+      userId
+      teamId
+      priority
+      notificationEnabled
+      createdAt
+      team {
+        id
+        name
+        code
+        color
+        mainColor
+        subColor
+        darkMainColor
+        darkSubColor
+        icon
+        logoUrl
+        description
+        sortOrder
+        isActive
+      }
+    }
+    blockedUsers: getBlockedUsers @include(if: $includeBlockedUsers)
+  }
+`;
+
+/**
+ * 레거시 호환성을 위한 기존 쿼리 (점진적 마이그레이션용)
  */
 export const GET_POSTS = gql`
   query GetPosts($input: FindPostsInput) {
@@ -93,6 +200,15 @@ export const GET_POSTS = gql`
       hasPrevious
       hasNext
     }
+  }
+`;
+
+/**
+ * 조건부 차단 사용자 목록 조회 (필요 시에만 로드)
+ */
+export const GET_BLOCKED_USERS_LAZY = gql`
+  query GetBlockedUsersLazy {
+    getBlockedUsers
   }
 `;
 

@@ -50,6 +50,8 @@ export default function FeedScreen() {
     handleLoadMore,
     selectedTeamIds,
     handleTeamFilterChange,
+    performanceMetrics,
+    getOptimizationReport,
   } = useFeedPosts();
 
   const {
@@ -131,6 +133,33 @@ export default function FeedScreen() {
       message: `${item.name}을(를) 성공적으로 구매했습니다!`,
       duration: 3000,
     });
+  };
+
+  /**
+   * 성능 최적화 결과 표시 (JWT 토큰 정보 포함)
+   */
+  const showOptimizationReport = () => {
+    const report = getOptimizationReport();
+
+    console.log
+    (
+      "🚀 피드 최적화 성과 리포트",
+      `📊 최적화 점수: ${report.summary.optimizationScore}/100\n\n` +
+      `🔐 JWT 토큰 상태:\n` +
+      `• 토큰 유효: ${currentUser ? '✅ 유효' : '❌ 만료'}\n` +
+      `• JWT 기반 최적화: ${report.networkRequests.jwtBasedOptimizations}회\n\n` +
+      `⚡ 성능 개선사항:\n${report.summary.improvements.map(imp => `• ${imp}`).join('\n')}\n\n` +
+      `🌐 네트워크 효율성: ${report.summary.networkEfficiency}\n` +
+      `⏱️ 총 실행 시간: ${report.summary.totalExecutionTime}ms\n\n` +
+      `📈 세부 메트릭:\n` +
+      `• 초기 네트워크 요청: ${report.networkRequests.initial}회\n` +
+      `• 중복 요청 방지: ${report.optimization.redundantCallsPrevented}회\n` +
+      `• 백그라운드 작업 지연: ${report.optimization.backgroundTasksDeferred}회\n` +
+      `• 캐시 히트: ${report.networkRequests.cacheHits}회\n` +
+      `• 토큰 검증 시간: ${report.timing.tokenValidationTime}ms\n` +
+      `• JWT 인식 캐싱: ${report.optimization.jwtAwareCaching}회`,
+      [{ text: "확인" }]
+    );
   };
 
   /**
@@ -238,6 +267,17 @@ export default function FeedScreen() {
         onBoardPress={handleBoardPress}
       />
 
+      {/* 성능 최적화 리포트 버튼 */}
+      <TouchableOpacity
+        style={themed($optimizationButton)}
+        onPress={showOptimizationReport}
+      >
+        <Ionicons name="speedometer-outline" size={16} color={theme.colors.text} />
+        <Text style={themed($optimizationButtonText)}>
+          JWT 기반 최적화 결과 보기 (점수: {getOptimizationReport().summary.optimizationScore}/100)
+        </Text>
+      </TouchableOpacity>
+
       {/* 상점 모달 */}
       <ShopModal
         visible={shopModalVisible}
@@ -273,7 +313,12 @@ export default function FeedScreen() {
           onRefresh={handleRefresh}
           onEndReached={handleLoadMore}
           ListHeaderComponent={
-            currentUser ? <StorySection teamIds={selectedTeamIds} /> : null
+            currentUser ? (
+              <StorySection
+                teamIds={selectedTeamIds}
+                currentUser={currentUser}
+              />
+            ) : null
           }
           ListFooterComponent={
             <ListFooter loading={footerLoading} error={error} />
@@ -394,6 +439,24 @@ const $loadingFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   paddingVertical: spacing.lg,
   gap: spacing.sm,
+});
+
+const $optimizationButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  backgroundColor: colors.backgroundAlt,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+  gap: spacing.xs,
+});
+
+const $optimizationButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "600",
 });
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

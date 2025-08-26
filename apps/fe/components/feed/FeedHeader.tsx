@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -47,6 +48,7 @@ export default function FeedHeader({
   onLotteryPress,
   onBoardPress, // 상세 게시판 버튼 클릭 핸들러 추가
 }: FeedHeaderProps) {
+  const { t } = useTranslation();
   const { themed, theme } = useAppTheme();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
   const [popoverPosition, setPopoverPosition] = React.useState({
@@ -78,7 +80,7 @@ export default function FeedHeader({
   return (
     <View style={themed($header)}>
       <View style={themed($headerLeft)}>
-        <Text style={themed($logoText)}>SportCom</Text>
+        <Text style={themed($logoText)}>{t("SportCom")}</Text>
       </View>
       <View style={themed($headerRight)}>
         {currentUser && (
@@ -89,7 +91,7 @@ export default function FeedHeader({
               activeOpacity={0.7}
             >
               <Text style={themed($pointsText)}>
-                💰 {currentUser.points ?? 0}P
+                {t('points', { points: currentUser.points ?? 0 })}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -98,7 +100,7 @@ export default function FeedHeader({
               activeOpacity={0.7}
             >
               <Ionicons
-                name="list-outline"
+                name={t("list-outline")}
                 size={20}
                 color={theme.colors.tint}
               />
@@ -109,7 +111,7 @@ export default function FeedHeader({
               activeOpacity={0.7}
             >
               <Ionicons
-                name="ticket-outline"
+                name={t("ticket-outline")}
                 size={20}
                 color={theme.colors.tint}
               />
@@ -120,7 +122,7 @@ export default function FeedHeader({
               activeOpacity={0.7}
             >
               <Ionicons
-                name="storefront-outline"
+                name={t("storefront-outline")}
                 size={20}
                 color={theme.colors.tint}
               />
@@ -160,7 +162,7 @@ export default function FeedHeader({
             />
           ) : (
             <Ionicons
-              name="person-outline"
+              name={t("person-outline")}
               size={22}
               color={theme.colors.text}
             />

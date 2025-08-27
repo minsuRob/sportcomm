@@ -14,6 +14,8 @@ export const renderStrokedText = ({
   lineHeight = 32,
   numberOfLines = 4,
   borderThickness = 2, // 테두리 두께 (기본값: 2)
+  mainColor = "white", // 메인 텍스트 색상 (기본값: 흰색)
+  strokeColor = "black", // 테두리 색상 (기본값: 검은색)
 }: {
   content: string;
   themed: any;
@@ -22,6 +24,8 @@ export const renderStrokedText = ({
   lineHeight?: number;
   numberOfLines?: number;
   borderThickness?: number; // 테두리 두께 파라미터
+  mainColor?: string; // 메인 텍스트 색상
+  strokeColor?: string; // 테두리 색상
 }) => {
   // 테두리 레이어를 동적으로 생성
   const generateBorderLayers = () => {
@@ -47,7 +51,7 @@ export const renderStrokedText = ({
             key={`border-${i}-${index}`}
             style={[
               themed($contentTextStroke),
-              { fontSize, lineHeight, ...direction },
+              { fontSize, lineHeight, color: strokeColor, ...direction },
             ]}
             numberOfLines={numberOfLines}
           >
@@ -67,7 +71,7 @@ export const renderStrokedText = ({
       
       {/* 메인 텍스트 */}
       <Text
-        style={[themed($contentText), { fontSize, lineHeight }]}
+        style={[themed($contentText), { fontSize, lineHeight, color: mainColor }]}
         numberOfLines={numberOfLines}
       >
         {content}
@@ -83,7 +87,6 @@ const $titleContainer: ThemedStyle<ViewStyle> = () => ({
 
 const $contentTextStroke: ThemedStyle<TextStyle> = () => ({
   position: "absolute",
-  color: "black",
   fontWeight: "bold",
   textAlign: "left",
 });
@@ -92,7 +95,6 @@ const $contentTextStroke: ThemedStyle<TextStyle> = () => ({
 
 const $contentText: ThemedStyle<TextStyle> = () => ({
   position: "relative",
-  color: "white",
   fontWeight: "bold",
   textAlign: "left",
 });

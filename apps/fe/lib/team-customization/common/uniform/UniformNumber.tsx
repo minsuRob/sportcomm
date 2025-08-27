@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ViewStyle } from "react-native";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { renderStrokedText } from "@/lib/utils/strokedText";
 
 interface UniformNumberProps {
   number: string | number; // 표시할 등번호
@@ -9,6 +10,7 @@ interface UniformNumberProps {
   outlineColor?: string; // 외곽선 색상
   style?: ThemedStyle<ViewStyle>; // 추가 컨테이너 스타일 (테마 적용 함수)
   fontSize?: number; // 필요 시 커스텀 폰트 크기
+  borderThickness?: number; // 테두리 두께 (기본값: 1.0)
 }
 
 /**
@@ -24,6 +26,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   outlineColor,
   style,
   fontSize = 40,
+  borderThickness = 1.0,
 }) => {
   const { themed, theme } = useAppTheme();
 
@@ -50,15 +53,16 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
 
   return (
     <View style={[containerStyle, userThemedStyle]} pointerEvents="none">
-      <Text
-        style={[styles.number, numberStyle]}
-        allowFontScaling={false}
-        // iOS 접근성: 스크린리더용 라벨
-        accessibilityRole="text"
-        accessibilityLabel={`Uniform number ${number}`}
-      >
-        {number}
-      </Text>
+      {renderStrokedText({
+        content: String(number),
+        themed: themed,
+        fontSize: fontSize,
+        lineHeight: fontSize * 1.2, // 폰트 크기에 비례한 줄 높이
+        numberOfLines: 1,
+        borderThickness: borderThickness,
+        mainColor: mainColor || theme.colors.text,
+        strokeColor: outlineColor || theme.colors.tint,
+      })}
     </View>
   );
 };

@@ -795,10 +795,26 @@ const PostCard = React.memo(function PostCard({
                 }
                 activeOpacity={0.7}
               >
-                <Text style={themed($profileName)}>{post.author.nickname}</Text>
-                <Text style={themed($profileTime)}>
-                  {formatTimeAgo(post.createdAt)}
-                </Text>
+                {renderStrokedText({
+                  content: post.author.nickname,
+                  themed: themed,
+                  fontSize: 14,
+                  lineHeight: 18,
+                  numberOfLines: 1,
+                  borderThickness: 0.5, // 프로필 이름 테두리 두께
+                  mainColor: theme.colors.text,
+                  strokeColor: theme.colors.background,
+                })}
+                {renderStrokedText({
+                  content: formatTimeAgo(post.createdAt),
+                  themed: themed,
+                  fontSize: 12,
+                  lineHeight: 16,
+                  numberOfLines: 1,
+                  borderThickness: 0.3, // 시간 테두리 두께
+                  mainColor: theme.colors.textDim,
+                  strokeColor: theme.colors.background,
+                })}
               </TouchableOpacity>
 
               {/* 팔로우 버튼 - 자신의 게시물이 아닌 경우에만 표시 */}

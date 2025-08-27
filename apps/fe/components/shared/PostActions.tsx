@@ -80,7 +80,7 @@ export default function PostActions({
           size={iconSize}
           color={isLiked ? (teamColors?.actionButtonActive || theme.colors.error) : (teamColors?.actionButtonInactive || theme.colors.textDim)}
         />
-        <Text style={themed($actionCount)}>{likeCount}</Text>
+        <Text style={[themed($actionCount), { color: teamColors?.actionButtonInactive || theme.colors.textDim }]}>{likeCount}</Text>
       </TouchableOpacity>
 
       {/* 댓글 버튼 */}
@@ -90,7 +90,7 @@ export default function PostActions({
           size={iconSize}
           color={teamColors?.actionButtonInactive || theme.colors.textDim}
         />
-        <Text style={themed($actionCount)}>{commentCount}</Text>
+        <Text style={[themed($actionCount), { color: teamColors?.actionButtonInactive || theme.colors.textDim }]}>{commentCount}</Text>
       </TouchableOpacity>
 
       {/* 북마크 버튼 */}
@@ -134,10 +134,9 @@ const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.xs,
 });
 
-const $actionCount: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $actionCount: ThemedStyle<TextStyle> = () => ({
   fontSize: 13,
   fontWeight: "bold",
-  color: colors.textDim,
 });
 
 const $actionText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({

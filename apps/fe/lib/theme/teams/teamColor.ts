@@ -112,9 +112,9 @@ export const teamColors = {
       // 유니폼 배경색
       uniformBackground: "#FFFFFF", // 흰색 유니폼
       // 유니폼 글씨색
-      uniformText: "#074CA1", // 진한 빨간색
+      uniformText: "#074CA1", // 
       // 유니폼 데코레이션 색상
-      uniformDecoration: "#EF4444", // 빨간색
+      uniformDecoration: "#EF4444", // 
       // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
       actionButtonActive: "#848484", 
       actionButtonInactive: "#848484", 
@@ -133,12 +133,12 @@ export const teamColors = {
       // 카드 테두리 (PostCard 등)
       cardBorder: "#D1D5DB", // 중간 회색
       // 프로필 텍스트 색상
-      profileText: "#DC2626", // 진한 빨간색
-      profileTime: "#6B7280", // 회색
+      profileText: "#074CA1", // 진한 빨간색
+      profileTime: "#074CA1", // 회색
       profileStroke: "#FFFFFF", // 흰색 테두리
       // 유니폼 번호 색상
-      uniformNumberText: "#074CA1", // 진한 빨간색
-      uniformNumberStroke: "#074CA1", // 검은색 테두리
+      uniformNumberText: "#074CA1", // 파란색
+      uniformNumberStroke: "#074CA1", // 파란색
     },
     dark: {
       // 유니폼 배경색

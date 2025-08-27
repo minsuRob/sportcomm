@@ -28,7 +28,7 @@ export const renderStrokedText = ({
     const layers = [];
     
     // 테두리 두께에 따라 레이어 생성
-    for (let i = 1; i <= borderThickness; i++) {
+    for (let i = 0.1; i <= borderThickness; i += 0.1) {
       // 8방향 테두리 레이어 생성
       const directions = [
         { left: -i, top: -i },   // 왼쪽 위

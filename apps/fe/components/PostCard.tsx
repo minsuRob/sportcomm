@@ -23,6 +23,7 @@ import { useRouter } from "expo-router";
 import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { getTeamColors } from "@/lib/theme/teams/teamColor";
 import { usePostInteractions } from "../hooks/usePostInteractions";
 import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
 import TeamLogo from "./TeamLogo";
@@ -560,6 +561,16 @@ const PostCard = React.memo(function PostCard({
   };
   const teamName = deriveTeamName();
 
+  // 디버깅을 위한 로그 (개발 환경에서만)
+  if (__DEV__) {
+    console.log('PostCard 팀 정보:', { 
+      teamId: post.teamId, 
+      teamName, 
+      postTeamName: (post as any)?.team?.name,
+      postTeamNameField: (post as any)?.teamName 
+    });
+  }
+
   // --- 팀 팔레트 유틸 사용: DB 확장 컬러(main/sub/dark) 기반 ---
   // 동적 import (정적 import 추가 수정 없이 교체, Metro/Web 번들 모두 호환)
   const { getTeamPalette } = require("@/lib/team/palette");
@@ -578,15 +589,18 @@ const PostCard = React.memo(function PostCard({
     }
   );
 
-  // 기존 teamPalette 구조에 맞춘 매핑 (기존 스타일 코드 최소 변경)
+  // 팀별 색상 가져오기 (다크모드/라이트모드 구분)
+  const teamColors = getTeamColors(post.teamId, theme.isDark, teamName);
+  
+  // 기존 teamPalette 구조에 맞춘 매핑 (팀별 색상 적용)
   const teamPalette = {
-    cardBg: palette.primary,
-    overlayGradient: palette.primary + "88", // 반투명 오버레이
-    badgeBg: palette.secondary + "CC",
-    iconBadgeBg: palette.secondary + "99",
-    moreButtonBg: palette.accent + "CC",
-    glowColor: palette.accent,
-    borderColor: palette.border,
+    cardBg: teamColors.uniformBackground,
+    overlayGradient: teamColors.uniformBackground + "88", // 반투명 오버레이
+    badgeBg: teamColors.uniformDecoration + "CC",
+    iconBadgeBg: teamColors.uniformDecoration + "99",
+    moreButtonBg: teamColors.likeButton + "CC",
+    glowColor: teamColors.uniformDecoration,
+    borderColor: teamColors.border,
   };
 
   // 팀 커스터마이징 시스템 적용
@@ -644,7 +658,7 @@ const PostCard = React.memo(function PostCard({
           ]}
         >
           <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
-            <View style={themed($mediaContainer)}>
+            <View style={[themed($mediaContainer), { backgroundColor: teamColors.uniformBackground }]}>
               {videoMedia.length > 0 ? (
                 // 동영상이 있는 경우
                 <Pressable
@@ -751,8 +765,8 @@ const PostCard = React.memo(function PostCard({
               ) : imageMedia.length > 0 ? (
                 imageLoading ? (
                   // 이미지 로딩 중
-                  <View style={themed($loadingContainer)}>
-                    <ActivityIndicator size="large" color={theme.colors.text} />
+                  <View style={[themed($loadingContainer), { backgroundColor: teamColors.uniformBackground }]}>
+                    <ActivityIndicator size="large" color={teamColors.uniformText} />
                   </View>
                 ) : (
                   // 이미지가 있고 로딩 완료된 상태
@@ -820,9 +834,9 @@ const PostCard = React.memo(function PostCard({
                       (t) => t.team.id === post.teamId
                     )?.favoritePlayerNumber ?? "40"
                   )}
-                  mainColor={palette.primary}
-                  subColor={palette.secondary}
-                  outlineColor={palette.accent}
+                  mainColor={teamColors.uniformText}
+                  subColor={teamColors.uniformNumber}
+                  outlineColor={teamColors.uniformDecoration}
                   style={$uniformPlaceholder}
                   containerWidth={mediaContainerWidth}
                 />
@@ -1009,6 +1023,10 @@ const PostCard = React.memo(function PostCard({
             isBookmarkProcessing={isBookmarkProcessing}
             isLikeError={isLikeError}
             variant="feed"
+            teamColors={{
+              likeButton: teamColors.likeButton,
+              likeButtonBackground: teamColors.likeButtonBackground,
+            }}
           />
         </View>
       </View>
@@ -1105,21 +1123,19 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   elevation: 6,
 });
 
-const $mediaContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $mediaContainer: ThemedStyle<ViewStyle> = () => ({
   position: "relative",
   width: "100%",
   borderRadius: 16,
   overflow: "hidden",
-  backgroundColor: colors.backgroundDim,
 });
 
-const $loadingContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
   height: isWeb()
     ? IMAGE_CONSTANTS.WEB.MIN_HEIGHT
     : IMAGE_CONSTANTS.MOBILE.MIN_HEIGHT,
   justifyContent: "center",
   alignItems: "center",
-  backgroundColor: colors.backgroundDim,
 });
 
 const $gradientOverlay: ThemedStyle<ViewStyle> = () => ({

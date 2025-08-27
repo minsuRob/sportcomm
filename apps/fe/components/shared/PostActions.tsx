@@ -26,6 +26,10 @@ interface PostActionsProps {
   likeCount?: number;
   commentCount?: number;
   shareCount?: number;
+  teamColors?: {
+    likeButton: string;
+    likeButtonBackground: string;
+  };
 }
 
 /**
@@ -47,6 +51,7 @@ export default function PostActions({
   likeCount = 0,
   commentCount = 0,
   shareCount = 0,
+  teamColors,
 }: PostActionsProps) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
@@ -68,7 +73,7 @@ export default function PostActions({
         <Ionicons
           name={isLiked ? "heart" : "heart-outline"}
           size={iconSize}
-          color={isLiked ? theme.colors.error : theme.colors.textDim}
+          color={isLiked ? (teamColors?.likeButton || theme.colors.error) : theme.colors.textDim}
         />
         <Text style={themed($actionCount)}>{likeCount}</Text>
       </TouchableOpacity>

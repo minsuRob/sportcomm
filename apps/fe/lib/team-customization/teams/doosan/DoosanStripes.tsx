@@ -2,6 +2,7 @@ import React from 'react';
 import { View, ViewStyle } from 'react-native';
 import { isWeb } from '@/lib/platform';
 import type { TeamDecorationProps } from '../../types';
+import { getTeamColors } from '@/lib/theme/teams/teamColor';
 
 // ThemedStyle을 ViewStyle로 변환하는 헬퍼 함수
 const resolveStyle = (style: any): ViewStyle => {
@@ -42,7 +43,7 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   style,
 }) => {
   // 두산 팀 색상 사용 (teamData에서 가져오거나 기본값 사용)
-  const stripeColor = color || teamData?.mainColor || '#34445F';
+  const stripeColor = color || teamData?.mainColor || '#1E3A8A'; // 두산 팀 파란색
   const strokeWidth = Math.max(4, Math.floor(width / 8)); // 너비에 비례한 선 굵기
   const resolvedStyle = resolveStyle(style);
 

@@ -813,12 +813,12 @@ const PostCard = React.memo(function PostCard({
                   text={
                     post.author.myTeams?.find(
                       (t) => t.team.id === post.teamId
-                    )?.favoritePlayerName || "김택연"
+                    )?.favoritePlayerName || "니퍼트"
                   }
                   number={String(
                     post.author.myTeams?.find(
                       (t) => t.team.id === post.teamId
-                    )?.favoritePlayerNumber ?? "63"
+                    )?.favoritePlayerNumber ?? "40"
                   )}
                   mainColor={palette.primary}
                   subColor={palette.secondary}

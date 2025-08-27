@@ -4,80 +4,58 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
 interface UniformNumberProps {
-  number: string | number;
-  mainColor?: string;
-  outlineColor?: string;
-  style?: ThemedStyle<ViewStyle>;
-  topPosition?: number; // 동적 위치 조정을 위한 prop 추가
-  containerWidth?: number; // 중앙 정렬을 위한 컨테이너 너비
+  number: string | number; // 표시할 등번호
+  mainColor?: string; // 메인 색상 (전경)
+  outlineColor?: string; // 외곽선 색상
+  style?: ThemedStyle<ViewStyle>; // 추가 컨테이너 스타일 (테마 적용 함수)
+  fontSize?: number; // 필요 시 커스텀 폰트 크기
 }
 
 /**
- * 유니폼 번호 컴포넌트
- *
- * 아치형 텍스트 아래에 큰 숫자를 표시하며,
- * 메인 색상과 아웃라인 색상을 지원합니다.
+ * UniformNumber
+ * 350px 고정 높이 영역 중앙에 등번호를 크게 렌더링하는 컴포넌트
+ * - iOS 에서 보이지 않는 문제를 해결하기 위해 절대 위치/동적 계산 제거
+ * - flex 중앙 정렬만 사용
+ * - topPosition, containerWidth 등 불필요한 prop 제거
  */
 export const UniformNumber: React.FC<UniformNumberProps> = ({
   number,
   mainColor,
   outlineColor,
   style,
-  topPosition,
-  containerWidth,
+  fontSize = 40,
 }) => {
   const { themed, theme } = useAppTheme();
-  const numberRef = React.useRef<View>(null);
 
-  // 색상 결정
+  // 색상 결정 (테마 fallback)
   const numberMainColor = mainColor || theme.colors.text;
   const numberOutlineColor = outlineColor || theme.colors.tint;
 
-  // 고정 스타일 (medium 사이즈)
-  const getNumberStyle = () => {
-    return { fontSize: 40, fontWeight: "bold" as const };
-  };
+  // 숫자 텍스트 스타일 구성 (memoization으로 불필요한 렌더 방지)
+  const numberStyle = React.useMemo(
+    () => ({
+      fontSize,
+      fontWeight: "bold" as const,
+      color: numberMainColor,
+      textShadowColor: numberOutlineColor,
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 0,
+    }),
+    [fontSize, numberMainColor, numberOutlineColor]
+  );
 
-  const containerStyle = style ? themed(style) : themed($container);
-  const numberStyle = getNumberStyle();
-
-  // 동적 위치 스타일 계산 - ArchedText와 동일한 중앙 정렬 방식
-  const dynamicPositionStyle = React.useMemo(() => {
-    if (topPosition !== undefined && containerWidth) {
-      const centerX = containerWidth / 2; // ArchedText와 동일한 centerX 계산
-      return {
-        position: "absolute" as const,
-        top: topPosition,
-        left: 0,
-        right: 0,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-      };
-    }
-    return {};
-  }, [topPosition, containerWidth]);
+  // 컨테이너 스타일 (사용자 정의 테마 스타일 병합)
+  const containerStyle = themed($outerContainer);
+  const userThemedStyle = style ? themed(style) : undefined;
 
   return (
-    <View
-      ref={numberRef}
-      style={[
-        styles.container,
-        containerStyle,
-        dynamicPositionStyle
-      ]}
-    >
+    <View style={[containerStyle, userThemedStyle]} pointerEvents="none">
       <Text
-        style={[
-          styles.number,
-          numberStyle,
-          {
-            color: numberMainColor,
-            textShadowColor: numberOutlineColor,
-            textShadowOffset: { width: 1, height: 1 },
-            textShadowRadius: 0,
-            textAlign: "center", // 텍스트 자체도 중앙 정렬
-          },
-        ]}
+        style={[styles.number, numberStyle]}
+        allowFontScaling={false}
+        // iOS 접근성: 스크린리더용 라벨
+        accessibilityRole="text"
+        accessibilityLabel={`Uniform number ${number}`}
       >
         {number}
       </Text>
@@ -85,21 +63,19 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   );
 };
 
-// 기본 스타일
-const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+// 기본 컨테이너 스타일 (350px 고정 높이, 중앙 정렬)
+const $outerContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  height: 350,
+  width: "100%",
   justifyContent: "center",
   alignItems: "center",
-  // marginTop 제거 - 동적 위치 조정으로 대체
+  // 필요 시 배경 색상 적용 가능: backgroundColor: colors.background
 });
 
 const styles = StyleSheet.create({
-  container: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
   number: {
     textAlign: "center",
-    includeFontPadding: false,
+    includeFontPadding: false, // Android 내림/올림 공백 제거
     textAlignVertical: "center",
   },
 });

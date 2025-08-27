@@ -60,7 +60,7 @@ export const teamColors = {
       // 팀 액센트 컬러
       accent: "#EF4444", // 빨간색
       // 장식용 보더 (DoosanStripes 등)
-      decorationBorder: "#FFFFFF",
+      decorationBorder: "#000000",
       // 카드 테두리 (PostCard 등)
       cardBorder: "#000036",
       // 프로필 텍스트 색상

@@ -980,10 +980,15 @@ const PostCard = React.memo(function PostCard({
             subColor: (post.team as any)?.subColor,
             darkMainColor: (post.team as any)?.darkMainColor,
             darkSubColor: (post.team as any)?.darkSubColor,
-            sport: (post.team as any)?.sport
+            sport: (post.team as any)?.sport,
+            // 팀별 커스텀 색상 추가
+            decorationBorder: teamColors.decorationBorder,
+            cardBorder: teamColors.cardBorder,
+            // 기존 색상들도 유지
+            ...teamColors
           }}
           decorations={teamCustomization.decorations}
-          color={teamPalette.borderColor || categoryInfo.colors.border}
+          color={teamColors.decorationBorder || teamPalette.borderColor || categoryInfo.colors.border}
           teamPalette={teamPalette}
           categoryInfo={categoryInfo}
         />

@@ -20,117 +20,152 @@ export function useCurrentUser() {
   const userCacheRef = useRef<User | null>(null);
   const lastTokenExpiryRef = useRef<number>(0);
 
+  // --- 추가: 중복/폭풍 호출 방지용 Ref & 상수 ---
+  const lastFetchRef = useRef<number>(0);          // 마지막 네트워크 호출 시각 (ms)
+  const inFlightRef = useRef<Promise<void> | null>(null); // 진행 중 호출 Promise (동일 호출 합류)
+  const isLoadingRef = useRef<boolean>(false);     // 최신 로딩 상태 (useCallback 폐쇄 변수 stale 방지)
+  const THROTTLE_INTERVAL_MS = 5000;               // 동일 사용자 정보 재조회 최소 간격(5초)
+
+
   const load = useCallback(async (forceSync = false) => {
-    if (isLoading && !forceSync) return; // 중복 로딩 방지
+    // 1) 이미 진행 중인 호출이 있으면 합류 (강제 동기화 제외)
+    if (!forceSync && inFlightRef.current) {
+      await inFlightRef.current;
+      return;
+    }
 
-    setIsLoading(true);
+    // 2) UI 로딩 상태(stale closure 방지용 ref) 확인
+    if (isLoadingRef.current && !forceSync) return;
 
-    try {
-      const { user } = await getSession();
-      let nextUser = user ?? null;
+    // 3) 호출 빈도 제한 (THROTTLE)
+    const nowMs = Date.now();
+    if (!forceSync && nowMs - lastFetchRef.current < THROTTLE_INTERVAL_MS) {
+      // 캐시가 있으면 그대로 반환
+      if (userCacheRef.current) {
+        setCurrentUser(userCacheRef.current);
+      }
+      return;
+    }
 
-      if (!mountedRef.current) return;
+    // 실제 수행 로직을 Promise로 감싸 inFlightRef에 저장 (동시 호출 합류)
+    const exec = (async () => {
+      isLoadingRef.current = true;
+      setIsLoading(true);
+      lastFetchRef.current = nowMs; // 네트워크 시도 시각 기록
 
-      if (nextUser) {
-        // 관리자 플래그 보정
-        if (
-          nextUser.role === "ADMIN" &&
-          (nextUser as any).isAdmin === undefined
-        ) {
-          (nextUser as any).isAdmin = true;
-        }
+      try {
+        const { user } = await getSession();
+        let nextUser = user ?? null;
 
-        // JWT 토큰 기반 동기화 필요성 판단
-        const currentSession = getCurrentSession();
-        const now = Math.floor(Date.now() / 1000);
-        let shouldSync = forceSync;
+        if (!mountedRef.current) return;
 
-        if (currentSession?.expires_at) {
-          const tokenExpiresAt = currentSession.expires_at;
-          const timeUntilExpiry = tokenExpiresAt - now;
-          const tokenChanged = lastTokenExpiryRef.current !== tokenExpiresAt;
+        if (nextUser) {
+          // 관리자 플래그 보정
+            if (
+            nextUser.role === "ADMIN" &&
+            (nextUser as any).isAdmin === undefined
+          ) {
+            (nextUser as any).isAdmin = true;
+          }
 
-          // 다음 조건 중 하나라도 만족하면 동기화
-          shouldSync = shouldSync ||
-            tokenChanged ||                    // 토큰이 갱신됨
-            timeUntilExpiry < 600 ||          // 토큰이 10분 이내 만료
-            !userCacheRef.current ||          // 캐시된 사용자 없음
-            userCacheRef.current.id !== nextUser.id; // 다른 사용자
+          // JWT 토큰 기반 동기화 필요성 판단
+          const currentSession = getCurrentSession();
+          const now = Math.floor(Date.now() / 1000);
+          let shouldSync = forceSync;
 
-          lastTokenExpiryRef.current = tokenExpiresAt;
-        } else {
-          // 토큰 정보가 없으면 항상 동기화
-          shouldSync = true;
-        }
+            if (currentSession?.expires_at) {
+            const tokenExpiresAt = currentSession.expires_at;
+            const timeUntilExpiry = tokenExpiresAt - now;
+            const tokenChanged = lastTokenExpiryRef.current !== tokenExpiresAt;
 
-        // 캐시된 사용자와 동일하고 토큰이 유효하면 캐시 사용
-        if (userCacheRef.current &&
-            userCacheRef.current.id === nextUser.id &&
-            !shouldSync &&
-            isTokenValid()) {
-          setCurrentUser(userCacheRef.current);
-          setIsLoading(false);
-          return;
-        }
+            // 다음 조건 중 하나라도 만족하면 동기화
+            shouldSync = shouldSync ||
+              tokenChanged ||                    // 토큰이 갱신됨
+              timeUntilExpiry < 600 ||          // 토큰이 10분 이내 만료
+              !userCacheRef.current ||          // 캐시된 사용자 없음
+              userCacheRef.current.id !== nextUser.id; // 다른 사용자
 
-        if (shouldSync) {
-          try {
-            // 서버에서 최신 사용자 정보(포인트 포함) 동기화
-            const token = await getValidToken();
-            if (token && mountedRef.current) {
-              const remoteUser = await UserSyncService.getCurrentUserInfo(token);
+            lastTokenExpiryRef.current = tokenExpiresAt;
+          } else {
+            // 토큰 정보가 없으면 항상 동기화
+            shouldSync = true;
+          }
 
-              if (!mountedRef.current) return;
+          // 캐시된 사용자와 동일하고 토큰이 유효하면 캐시 사용
+          if (userCacheRef.current &&
+              userCacheRef.current.id === nextUser.id &&
+              !shouldSync &&
+              isTokenValid()) {
+            setCurrentUser(userCacheRef.current);
+            return;
+          }
 
-              // 로컬 세션 업데이트 (points 등 최신화)
-              await saveSession({
-                id: remoteUser.id,
-                nickname: remoteUser.nickname,
-                email: (nextUser as any).email,
-                role: remoteUser.role,
-                profileImageUrl: remoteUser.profileImageUrl,
-                bio: remoteUser.bio,
-                myTeams: (nextUser as any).myTeams,
-                userTeams: undefined,
-                points: (remoteUser as any).points ?? (nextUser as any).points ?? 0,
-              } as any);
+          if (shouldSync) {
+            try {
+              // 서버에서 최신 사용자 정보(포인트 포함) 동기화
+              const token = await getValidToken();
+              if (token && mountedRef.current) {
+                const remoteUser = await UserSyncService.getCurrentUserInfo(token);
 
-              nextUser = (await getSession()).user;
-              setLastSyncTime(Date.now());
-            }
-          } catch (e) {
-            // 네트워크 실패 시 로컬 값 유지
-            console.warn(
-              "useCurrentUser: 원격 사용자 동기화 실패",
-              (e as any)?.message,
-            );
+                if (!mountedRef.current) return;
 
-            // 토큰이 완전히 만료된 경우 로그아웃 처리
-            if ((e as any)?.message?.includes('refresh_token_not_found') ||
-                (e as any)?.message?.includes('invalid_grant')) {
-              console.log("JWT 토큰 만료, 사용자 정보 초기화");
-              nextUser = null;
-              userCacheRef.current = null;
+                // 로컬 세션 업데이트 (points 등 최신화)
+                await saveSession({
+                  id: remoteUser.id,
+                  nickname: remoteUser.nickname,
+                  email: (nextUser as any).email,
+                  role: remoteUser.role,
+                  profileImageUrl: remoteUser.profileImageUrl,
+                  bio: remoteUser.bio,
+                  myTeams: (nextUser as any).myTeams,
+                  userTeams: undefined,
+                  points: (remoteUser as any).points ?? (nextUser as any).points ?? 0,
+                } as any);
+
+                nextUser = (await getSession()).user;
+                setLastSyncTime(Date.now()); // UI 참고용 (effect 재호출 X)
+              }
+            } catch (e) {
+              // 네트워크 실패 시 로컬 값 유지
+              console.warn(
+                "useCurrentUser: 원격 사용자 동기화 실패",
+                (e as any)?.message,
+              );
+
+              // 토큰이 완전히 만료된 경우 로그아웃 처리
+              if ((e as any)?.message?.includes('refresh_token_not_found') ||
+                  (e as any)?.message?.includes('invalid_grant')) {
+                console.log("JWT 토큰 만료, 사용자 정보 초기화");
+                nextUser = null;
+                userCacheRef.current = null;
+              }
             }
           }
         }
-      }
 
-      if (mountedRef.current) {
-        userCacheRef.current = nextUser;
-        setCurrentUser(nextUser);
+        if (mountedRef.current) {
+          userCacheRef.current = nextUser;
+          setCurrentUser(nextUser);
+        }
+      } finally {
+        if (mountedRef.current) {
+          setIsLoading(false);
+        }
+        isLoadingRef.current = false;
+        inFlightRef.current = null; // 진행 중 표시 해제
       }
-    } finally {
-      if (mountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [lastSyncTime, isLoading]);
+    })();
 
+    inFlightRef.current = exec;
+    await exec;
+  }, []); // 의존성 제거: 내부는 ref 기반 상태로 자체 관리 (불필요한 재생성/재호출 방지)
+
+  // (중복되어 남아있던 이전 로직 블록 제거됨: 위에서 개선된 load 구현만 사용)
+
+  // 초기 마운트 시 1회 로드
   useEffect(() => {
     mountedRef.current = true;
     void load();
-
     return () => {
       mountedRef.current = false;
     };
@@ -142,8 +177,9 @@ export function useCurrentUser() {
     isLoading,
     lastSyncTime: lastSyncTime > 0 ? new Date(lastSyncTime) : null,
     isTokenValid: isTokenValid(),
-    tokenExpiresAt: getCurrentSession()?.expires_at ?
-      new Date(getCurrentSession()!.expires_at! * 1000) : null
+    tokenExpiresAt: getCurrentSession()?.expires_at
+      ? new Date(getCurrentSession()!.expires_at! * 1000)
+      : null,
   } as const;
 }
 

@@ -101,12 +101,12 @@ export const teamColors = {
       // 유니폼 데코레이션 색상
       uniformDecoration: "#EF4444", // 빨간색
       // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
-      actionButtonActive: "#DC2626", // 빨간색 (활성 상태)
-      actionButtonInactive: "#6B7280", // 회색 (비활성 상태)
+      actionButtonActive: "#848484", 
+      actionButtonInactive: "#848484", 
       // 좋아요 배경색
       likeBackground: "#FEF2F2", // 연한 빨간색
       // PostActions 배경색 (액션 바 배경)
-      postActionsBackground: "#FEF2F2", // 연한 빨간색
+      postActionsBackground: "#074CA1", 
       // 팀 메인 컬러
       mainColor: "#DC2626", // 진한 빨간색
       // 팀 서브 컬러

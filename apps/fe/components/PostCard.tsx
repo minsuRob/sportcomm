@@ -200,6 +200,7 @@ const renderContentText = ({
         fontSize,
         lineHeight,
         numberOfLines,
+        borderThickness:1,
       })}
     </View>
   );
@@ -911,6 +912,7 @@ const PostCard = React.memo(function PostCard({
                     fontSize: 24,
                     lineHeight: 42,
                     numberOfLines: 2,
+                    borderThickness: 2, // 테두리 두께 설정
                   })}
                 </View>
               )}

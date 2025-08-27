@@ -13,6 +13,7 @@ export const renderStrokedText = ({
   fontSize = 24,
   lineHeight = 32,
   numberOfLines = 4,
+  borderThickness = 2, // 테두리 두께 (기본값: 2)
 }: {
   content: string;
   themed: any;
@@ -20,64 +21,50 @@ export const renderStrokedText = ({
   fontSize?: number;
   lineHeight?: number;
   numberOfLines?: number;
+  borderThickness?: number; // 테두리 두께 파라미터
 }) => {
+  // 테두리 레이어를 동적으로 생성
+  const generateBorderLayers = () => {
+    const layers = [];
+    
+    // 테두리 두께에 따라 레이어 생성
+    for (let i = 1; i <= borderThickness; i++) {
+      // 8방향 테두리 레이어 생성
+      const directions = [
+        { left: -i, top: -i },   // 왼쪽 위
+        { left: i, top: -i },    // 오른쪽 위
+        { left: -i, top: i },    // 왼쪽 아래
+        { left: i, top: i },     // 오른쪽 아래
+        { left: -i, top: 0 },    // 왼쪽
+        { left: i, top: 0 },     // 오른쪽
+        { left: 0, top: -i },    // 위
+        { left: 0, top: i },     // 아래
+      ];
+      
+      directions.forEach((direction, index) => {
+        layers.push(
+          <Text
+            key={`border-${i}-${index}`}
+            style={[
+              themed($contentTextStroke),
+              { fontSize, lineHeight, ...direction },
+            ]}
+            numberOfLines={numberOfLines}
+          >
+            {content}
+          </Text>
+        );
+      });
+    }
+    
+    return layers;
+  };
+
   return (
     <View style={[themed($titleContainer), containerStyle]}>
-      {/* 테두리 효과를 위한 여러 레이어 */}
-      <Text
-        style={[
-          themed($contentTextStroke),
-          { fontSize, lineHeight, left: -1, top: -1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke2),
-          { fontSize, lineHeight, left: 1, top: -1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke3),
-          { fontSize, lineHeight, left: -1, top: 1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke4),
-          { fontSize, lineHeight, left: 1, top: 1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke5),
-          { fontSize, lineHeight, left: -2, top: 0 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke6),
-          { fontSize, lineHeight, left: 2, top: 0 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
+      {/* 동적으로 생성된 테두리 레이어들 */}
+      {generateBorderLayers()}
+      
       {/* 메인 텍스트 */}
       <Text
         style={[themed($contentText), { fontSize, lineHeight }]}
@@ -101,40 +88,7 @@ const $contentTextStroke: ThemedStyle<TextStyle> = () => ({
   textAlign: "left",
 });
 
-const $contentTextStroke2: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontWeight: "bold",
-  textAlign: "left",
-});
 
-const $contentTextStroke3: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontWeight: "bold",
-  textAlign: "left",
-});
-
-const $contentTextStroke4: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontWeight: "bold",
-  textAlign: "left",
-});
-
-const $contentTextStroke5: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontWeight: "bold",
-  textAlign: "left",
-});
-
-const $contentTextStroke6: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontWeight: "bold",
-  textAlign: "left",
-});
 
 const $contentText: ThemedStyle<TextStyle> = () => ({
   position: "relative",

@@ -21,7 +21,7 @@ export const doosanCustomization: TeamCustomizationConfig = {
       props: {
         width: 24,
         height: 120,
-        opacity: 0.6,
+        opacity: 0.9,
         position: 'bottom-left'
       },
       enabled: true
@@ -31,7 +31,7 @@ export const doosanCustomization: TeamCustomizationConfig = {
       props: {
         width: 24,
         height: 120,
-        opacity: 0.6,
+        opacity: 0.9,
         position: 'bottom-right'
       },
       enabled: true

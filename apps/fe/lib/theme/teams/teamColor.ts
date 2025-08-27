@@ -61,7 +61,7 @@ export const teamColors = {
       // 팀 액센트 컬러
       accent: "#EF4444", // 빨간색
       // 아디다스 삼선
-      border: "#E5E7EB", // 연한 회색
+      border: "#000000", // 연한 회색
     },
     dark: {
       // 유니폼 배경색

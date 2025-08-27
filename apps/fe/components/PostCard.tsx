@@ -40,6 +40,7 @@ import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
 import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
+import { renderStrokedText } from "@/lib/utils/strokedText";
 import { UniformPlaceholder } from "@/lib/team-customization/common/uniform/UniformPlaceholder";
 import { useTeamCustomization } from "@/lib/team-customization";
 
@@ -170,91 +171,8 @@ const formatTimeAgo = (createdAt: string): string => {
   });
 };
 
-/**
- * 테두리가 있는 텍스트 렌더링 함수
- */
-const renderStrokedText = ({
-  content,
-  themed,
-  containerStyle,
-  fontSize = 24,
-  lineHeight = 32,
-  numberOfLines = 4,
-}: {
-  content: string;
-  themed: any;
-  containerStyle?: ViewStyle;
-  fontSize?: number;
-  lineHeight?: number;
-  numberOfLines?: number;
-}) => {
-  return (
-    <View style={[themed($titleContainer), containerStyle]}>
-      {/* 테두리 효과를 위한 여러 레이어 */}
-      <Text
-        style={[
-          themed($contentTextStroke),
-          { fontSize, lineHeight, left: -1, top: -1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke2),
-          { fontSize, lineHeight, left: 1, top: -1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke3),
-          { fontSize, lineHeight, left: -1, top: 1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke4),
-          { fontSize, lineHeight, left: 1, top: 1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke5),
-          { fontSize, lineHeight, left: -2, top: 0 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke6),
-          { fontSize, lineHeight, left: 2, top: 0 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      {/* 메인 텍스트 */}
-      <Text
-        style={[themed($contentText), { fontSize, lineHeight }]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-    </View>
-  );
-};
+
+
 
 /**
  * 콘텐츠 텍스트 렌더링 함수
@@ -986,7 +904,7 @@ const PostCard = React.memo(function PostCard({
             <View style={themed($textContainer)}>
               {/* 제목 표시 */}
               {post.title && post.title.trim() && (
-                <View style={themed($titleContainer)}>
+                <View>
                   {renderStrokedText({
                     content: post.title,
                     themed: themed,
@@ -1321,83 +1239,14 @@ const $textContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.xxs,
 });
 
-// 제목 컨테이너
-const $titleContainer: ThemedStyle<ViewStyle> = () => ({
-  // position, bottom 속성 제거
-});
+
 
 // 콘텐츠 컨테이너
 const $contentContainer: ThemedStyle<ViewStyle> = () => ({
   // position, bottom 속성 제거
 });
 
-// 텍스트 스트로크 스타일들
-const $contentTextStroke: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: -1,
-  top: -1,
-});
 
-const $contentTextStroke2: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: 1,
-  top: -1,
-});
-
-const $contentTextStroke3: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: -1,
-  top: 1,
-});
-
-const $contentTextStroke4: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: 1,
-  top: 1,
-});
-
-const $contentTextStroke5: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: -2,
-  top: 0,
-});
-
-const $contentTextStroke6: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: 2,
-  top: 0,
-});
-
-const $contentText: ThemedStyle<TextStyle> = () => ({
-  color: "white",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-});
 
 const $emptyMediaContainer: ThemedStyle<ViewStyle> = () => ({
   height: 300,

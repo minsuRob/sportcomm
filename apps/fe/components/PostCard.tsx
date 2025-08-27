@@ -519,7 +519,7 @@ const PostCard = React.memo(function PostCard({
     iconBadgeBg: teamColors.uniformDecoration + "99",
     moreButtonBg: teamColors.actionButtonActive + "CC",
     glowColor: teamColors.uniformDecoration,
-    borderColor: teamColors.border,
+            borderColor: teamColors.cardBorder,
   };
 
   // 팀 커스터마이징 시스템 적용
@@ -754,7 +754,7 @@ const PostCard = React.memo(function PostCard({
                     )?.favoritePlayerNumber ?? "40"
                   )}
                   mainColor={teamColors.uniformText}
-                  subColor={teamColors.uniformNumber}
+                  subColor={teamColors.uniformNumberText}
                   outlineColor={teamColors.uniformDecoration}
                   style={$uniformPlaceholder}
                   containerWidth={mediaContainerWidth}

@@ -43,7 +43,7 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   style,
 }) => {
   // 두산 팀 색상 사용 (teamData에서 가져오거나 기본값 사용)
-  const stripeColor = color || teamData?.mainColor || '#1E3A8A'; // 두산 팀 파란색
+  const stripeColor = teamData?.decorationBorder || teamData?.mainColor || '#1E3A8A'; // 장식용 보더 우선 사용
   const strokeWidth = Math.max(4, Math.floor(width / 8)); // 너비에 비례한 선 굵기
   const resolvedStyle = resolveStyle(style);
 

@@ -43,8 +43,7 @@ export const teamColors = {
       uniformBackground: "#FFFFFF", // 흰색 유니폼
       // 유니폼 글씨색
       uniformText: "#000036", // 진한 파란색
-      // 유니폼 숫자색
-      uniformNumber: "#FF1620", // 빨강색
+
       // 유니폼 데코레이션 색상
       uniformDecoration: "#3B82F6", // 파란색
       // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
@@ -60,8 +59,10 @@ export const teamColors = {
       subColor: "#3B82F6", // 파란색
       // 팀 액센트 컬러
       accent: "#EF4444", // 빨간색
-      // 아디다스 삼선
-      border: "#000000",
+      // 장식용 보더 (DoosanStripes 등)
+      decorationBorder: "#FFFFFF",
+      // 카드 테두리 (PostCard 등)
+      cardBorder: "#000036",
       // 프로필 텍스트 색상
       profileText: "#000036", // 진한 파란색
       profileTime: "#6B7280", // 회색
@@ -92,8 +93,10 @@ export const teamColors = {
       subColor: "#93C5FD", // 연한 파란색
       // 팀 액센트 컬러
       accent: "#F87171", // 밝은 빨간색
-      // 팀 보더 컬러
-      border: "#374151", // 어두운 회색
+      // 장식용 보더 (DoosanStripes 등)
+      decorationBorder: "#374151", // 어두운 회색
+      // 카드 테두리 (PostCard 등)
+      cardBorder: "#4B5563", // 중간 회색
       // 프로필 텍스트 색상
       profileText: "#60A5FA", // 밝은 파란색
       profileTime: "#9CA3AF", // 밝은 회색
@@ -109,9 +112,7 @@ export const teamColors = {
       // 유니폼 배경색
       uniformBackground: "#FFFFFF", // 흰색 유니폼
       // 유니폼 글씨색
-      uniformText: "#DC2626", // 진한 빨간색
-      // 유니폼 숫자색
-      uniformNumber: "#DC2626", // 진한 빨간색
+      uniformText: "#074CA1", // 진한 빨간색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#EF4444", // 빨간색
       // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
@@ -127,23 +128,23 @@ export const teamColors = {
       subColor: "#EF4444", // 빨간색
       // 팀 액센트 컬러
       accent: "#1E3A8A", // 진한 파란색
-      // 팀 보더 컬러
-      border: "#E5E7EB", // 연한 회색
+      // 장식용 보더 (DoosanStripes 등)
+      decorationBorder: "#E5E7EB", // 연한 회색
+      // 카드 테두리 (PostCard 등)
+      cardBorder: "#D1D5DB", // 중간 회색
       // 프로필 텍스트 색상
       profileText: "#DC2626", // 진한 빨간색
       profileTime: "#6B7280", // 회색
       profileStroke: "#FFFFFF", // 흰색 테두리
       // 유니폼 번호 색상
-      uniformNumberText: "#DC2626", // 진한 빨간색
-      uniformNumberStroke: "#000000", // 검은색 테두리
+      uniformNumberText: "#074CA1", // 진한 빨간색
+      uniformNumberStroke: "#074CA1", // 검은색 테두리
     },
     dark: {
       // 유니폼 배경색
       uniformBackground: "#1F2937", // 어두운 회색
       // 유니폼 글씨색
       uniformText: "#F87171", // 밝은 빨간색
-      // 유니폼 숫자색
-      uniformNumber: "#F87171", // 밝은 빨간색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#FCA5A5", // 연한 빨간색
       // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
@@ -159,8 +160,10 @@ export const teamColors = {
       subColor: "#FCA5A5", // 연한 빨간색
       // 팀 액센트 컬러
       accent: "#60A5FA", // 밝은 파란색
-      // 팀 보더 컬러
-      border: "#374151", // 어두운 회색
+      // 장식용 보더 (DoosanStripes 등)
+      decorationBorder: "#374151", // 어두운 회색
+      // 카드 테두리 (PostCard 등)
+      cardBorder: "#4B5563", // 중간 회색
       // 프로필 텍스트 색상
       profileText: "#F87171", // 밝은 빨간색
       profileTime: "#9CA3AF", // 밝은 회색
@@ -213,7 +216,6 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
   return {
     uniformBackground: isDarkMode ? defaultColors.backgroundDim : defaultColors.background,
     uniformText: isDarkMode ? defaultColors.text : defaultColors.text,
-    uniformNumber: isDarkMode ? defaultColors.text : defaultColors.text,
     uniformDecoration: defaultColors.accent,
     actionButtonActive: defaultColors.error,
     actionButtonInactive: isDarkMode ? defaultColors.textDim : defaultColors.textDim,
@@ -222,7 +224,10 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
     mainColor: defaultColors.tint,
     subColor: defaultColors.accent,
     accent: defaultColors.energy,
-    border: defaultColors.border,
+    // 장식용 보더 (DoosanStripes 등)
+    decorationBorder: defaultColors.border,
+    // 카드 테두리 (PostCard 등)
+    cardBorder: defaultColors.border,
     // 프로필 텍스트 색상 (기본값)
     profileText: isDarkMode ? defaultColors.text : defaultColors.text,
     profileTime: isDarkMode ? defaultColors.textDim : defaultColors.textDim,

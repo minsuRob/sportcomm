@@ -758,6 +758,7 @@ const PostCard = React.memo(function PostCard({
                   outlineColor={teamColors.uniformDecoration}
                   style={$uniformPlaceholder}
                   containerWidth={mediaContainerWidth}
+                  teamColors={teamColors} // 팀별 커스텀 색상 전달
                 />
               )}
 
@@ -802,8 +803,8 @@ const PostCard = React.memo(function PostCard({
                   lineHeight: 18,
                   numberOfLines: 1,
                   borderThickness: 0.5, // 프로필 이름 테두리 두께
-                  mainColor: theme.colors.text,
-                  strokeColor: theme.colors.background,
+                  mainColor: teamColors?.profileText || theme.colors.text,
+                  strokeColor: teamColors?.profileStroke || theme.colors.background,
                 })}
                 {renderStrokedText({
                   content: formatTimeAgo(post.createdAt),
@@ -812,8 +813,8 @@ const PostCard = React.memo(function PostCard({
                   lineHeight: 16,
                   numberOfLines: 1,
                   borderThickness: 0.3, // 시간 테두리 두께
-                  mainColor: theme.colors.textDim,
-                  strokeColor: theme.colors.background,
+                  mainColor: teamColors?.profileTime || theme.colors.textDim,
+                  strokeColor: teamColors?.profileStroke || theme.colors.background,
                 })}
               </TouchableOpacity>
 

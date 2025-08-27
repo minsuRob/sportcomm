@@ -11,6 +11,7 @@ interface UniformNumberProps {
   style?: ThemedStyle<ViewStyle>; // 추가 컨테이너 스타일 (테마 적용 함수)
   fontSize?: number; // 필요 시 커스텀 폰트 크기
   borderThickness?: number; // 테두리 두께 (기본값: 1.0)
+  teamColors?: any; // 팀별 커스텀 색상
 }
 
 /**
@@ -27,6 +28,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   style,
   fontSize = 40,
   borderThickness = 1.0,
+  teamColors,
 }) => {
   const { themed, theme } = useAppTheme();
 
@@ -60,8 +62,8 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
         lineHeight: fontSize * 1.2, // 폰트 크기에 비례한 줄 높이
         numberOfLines: 1,
         borderThickness: borderThickness,
-        mainColor: mainColor || theme.colors.text,
-        strokeColor: outlineColor || theme.colors.tint,
+        mainColor: teamColors?.uniformNumberText || theme.colors.text,
+        strokeColor: teamColors?.uniformNumberStroke || theme.colors.tint,
       })}
     </View>
   );

@@ -14,6 +14,7 @@ interface UniformPlaceholderProps {
   style?: ThemedStyle<ViewStyle>;
   containerWidth?: number; // 부모 컨테이너의 너비를 받는 prop 추가
   containerHeight?: number;
+  teamColors?: any; // 팀별 커스텀 색상
 }
 
 /**
@@ -31,6 +32,7 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
   style,
   containerWidth = 300, // 기본값 300px
   containerHeight = 350,
+  teamColors,
 }) => {
   const { themed, theme } = useAppTheme();
   const [numberTopPosition, setNumberTopPosition] = React.useState<number | undefined>(undefined);
@@ -67,6 +69,7 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
           number={number}
           mainColor={numberColor}
           outlineColor={numberOutline}
+          teamColors={teamColors} // 팀별 커스텀 색상 전달
           // topPosition={numberTopPosition} // 동적 위치 전달
           // containerWidth={containerWidth} // 중앙 정렬을 위한 너비 전달
         />

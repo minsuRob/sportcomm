@@ -62,6 +62,13 @@ export const teamColors = {
       accent: "#EF4444", // 빨간색
       // 아디다스 삼선
       border: "#000000", // 연한 회색
+      // 프로필 텍스트 색상
+      profileText: "#000036", // 진한 파란색
+      profileTime: "#6B7280", // 회색
+      profileStroke: "#FFFFFF", // 흰색 테두리
+      // 유니폼 번호 색상
+      uniformNumberText: "#FF1620", // 빨간색
+      uniformNumberStroke: "#000000", // 검은색 테두리
     },
     dark: {
       // 유니폼 배경색
@@ -87,6 +94,13 @@ export const teamColors = {
       accent: "#F87171", // 밝은 빨간색
       // 팀 보더 컬러
       border: "#374151", // 어두운 회색
+      // 프로필 텍스트 색상
+      profileText: "#60A5FA", // 밝은 파란색
+      profileTime: "#9CA3AF", // 밝은 회색
+      profileStroke: "#1F2937", // 어두운 회색 테두리
+      // 유니폼 번호 색상
+      uniformNumberText: "#60A5FA", // 밝은 파란색
+      uniformNumberStroke: "#374151", // 어두운 회색 테두리
     },
   },
   // 삼성 라이온즈
@@ -115,6 +129,13 @@ export const teamColors = {
       accent: "#1E3A8A", // 진한 파란색
       // 팀 보더 컬러
       border: "#E5E7EB", // 연한 회색
+      // 프로필 텍스트 색상
+      profileText: "#DC2626", // 진한 빨간색
+      profileTime: "#6B7280", // 회색
+      profileStroke: "#FFFFFF", // 흰색 테두리
+      // 유니폼 번호 색상
+      uniformNumberText: "#DC2626", // 진한 빨간색
+      uniformNumberStroke: "#000000", // 검은색 테두리
     },
     dark: {
       // 유니폼 배경색
@@ -140,6 +161,13 @@ export const teamColors = {
       accent: "#60A5FA", // 밝은 파란색
       // 팀 보더 컬러
       border: "#374151", // 어두운 회색
+      // 프로필 텍스트 색상
+      profileText: "#F87171", // 밝은 빨간색
+      profileTime: "#9CA3AF", // 밝은 회색
+      profileStroke: "#1F2937", // 어두운 회색 테두리
+      // 유니폼 번호 색상
+      uniformNumberText: "#F87171", // 밝은 빨간색
+      uniformNumberStroke: "#374151", // 어두운 회색 테두리
     },
   },
 } as const;
@@ -195,5 +223,12 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
     subColor: defaultColors.accent,
     accent: defaultColors.energy,
     border: defaultColors.border,
+    // 프로필 텍스트 색상 (기본값)
+    profileText: isDarkMode ? defaultColors.text : defaultColors.text,
+    profileTime: isDarkMode ? defaultColors.textDim : defaultColors.textDim,
+    profileStroke: isDarkMode ? defaultColors.backgroundDim : defaultColors.background,
+    // 유니폼 번호 색상 (기본값)
+    uniformNumberText: isDarkMode ? defaultColors.text : defaultColors.text,
+    uniformNumberStroke: isDarkMode ? defaultColors.backgroundDim : defaultColors.background,
   };
 };

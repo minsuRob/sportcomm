@@ -65,6 +65,9 @@ export interface User {
       logoUrl?: string;
       icon: string;
     };
+    // 백엔드 UserTeam.favoritePlayerName / favoritePlayerNumber 매핑
+    favoritePlayerName?: string;
+    favoritePlayerNumber?: number;
   }[];
   // 호환성을 위한 추가 필드들
   authorTeams?: {
@@ -805,15 +808,23 @@ const PostCard = React.memo(function PostCard({
                   </Pressable>
                 )
               ) : (
-                // 미디어가 없는 경우 - 유니폼 스타일 플레이스홀더
+                // 미디어가 없는 경우 - 유니폼 스타일 플레이스홀더 (최애 선수 정보 동적 반영)
                 <UniformPlaceholder
-                  text="김택연"
-                  number="63"
+                  text={
+                    post.author.myTeams?.find(
+                      (t) => t.team.id === post.teamId
+                    )?.favoritePlayerName || "김택연"
+                  }
+                  number={String(
+                    post.author.myTeams?.find(
+                      (t) => t.team.id === post.teamId
+                    )?.favoritePlayerNumber ?? "63"
+                  )}
                   mainColor={palette.primary}
                   subColor={palette.secondary}
                   outlineColor={palette.accent}
                   style={$uniformPlaceholder}
-                  containerWidth={mediaContainerWidth} // 동적 계산된 컨테이너 너비 전달
+                  containerWidth={mediaContainerWidth}
                 />
               )}
 

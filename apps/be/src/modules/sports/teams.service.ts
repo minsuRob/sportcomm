@@ -210,7 +210,12 @@ export class TeamsService {
     // 새로운 팀 선택 생성
     const userTeams: UserTeam[] = [];
     for (let i = 0; i < teamsData.length; i++) {
-      const { teamId, favoriteDate } = teamsData[i];
+      const {
+        teamId,
+        favoriteDate,
+        favoritePlayerName,
+        favoritePlayerNumber,
+      } = teamsData[i];
 
       // 팀 존재 확인 및 조회
       const team = await this.findById(teamId);
@@ -221,6 +226,11 @@ export class TeamsService {
         priority: i, // 배열 순서대로 우선순위 설정
         notificationEnabled: true,
         favoriteDate: favoriteDate ? new Date(favoriteDate) : undefined,
+        favoritePlayerName: favoritePlayerName || undefined,
+        favoritePlayerNumber:
+          typeof favoritePlayerNumber === 'number'
+            ? favoritePlayerNumber
+            : undefined,
       });
 
       const savedUserTeam = await this.userTeamsRepository.save(userTeam);

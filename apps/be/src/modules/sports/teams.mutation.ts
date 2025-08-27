@@ -1,7 +1,7 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { InputType, Field } from '@nestjs/graphql';
-import { IsString, IsOptional, MaxLength, IsDateString } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsDateString, IsInt } from 'class-validator';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
@@ -39,6 +39,22 @@ export class UpdateMyTeamInput {
   @IsOptional()
   @IsDateString()
   favoriteDate?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: '최애 선수 이름 (선택)',
+  })
+  @IsOptional()
+  @MaxLength(50)
+  favoritePlayerName?: string;
+
+  @Field(() => Number, {
+    nullable: true,
+    description: '최애 선수 등번호 (선택)',
+  })
+  @IsOptional()
+  @IsInt()
+  favoritePlayerNumber?: number;
 }
 
 /**

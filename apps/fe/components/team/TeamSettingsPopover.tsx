@@ -15,7 +15,6 @@ import FavoritePlayerSelector from "./FavoritePlayerSelector";
 import {
   TEAM_IDS,
   type PlayerRecord,
-  type TeamId as PlayerTeamId,
 } from "@/lib/team-data/players";
 
 export interface TeamSettingsPopoverProps {
@@ -23,7 +22,7 @@ export interface TeamSettingsPopoverProps {
   onClose: () => void;
   anchorStyle?: ViewStyle; // 팝오버 위치 조정
   onSelectFavoriteDate: () => void;
-  teamId?: PlayerTeamId; // 선택된 팀 (없으면 기본 두산)
+  teamId?: string; // 선택된 팀 ID (없으면 기본 두산, 지원되지 않는 값은 두산으로 fallback)
   onSelectFavoritePlayer?: (player: PlayerRecord) => void; // 최애 선수 선택 콜백
 }
 
@@ -37,7 +36,7 @@ export default function TeamSettingsPopover({
   onClose,
   anchorStyle,
   onSelectFavoriteDate,
-  teamId = TEAM_IDS.DOOSAN, // 기본값: 두산 (차후 외부에서 주입)
+  teamId = TEAM_IDS.DOOSAN, // 기본값: 두산 (외부 주입 ID가 미지원이면 fallback)
   onSelectFavoritePlayer,
 }: TeamSettingsPopoverProps) {
   const { themed, theme } = useAppTheme();
@@ -49,6 +48,16 @@ export default function TeamSettingsPopover({
   // 최애 선수 모달
   const [favoritePlayerSelectorVisible, setFavoritePlayerSelectorVisible] =
     useState(false);
+
+  // FavoritePlayerSelector 가 지원하는 teamId만 허용 (현재: DOOSAN)
+  // 지원 목록 외 ID가 들어오면 두산으로 대체
+  const resolvedPlayerTeamId = useMemo(
+    () =>
+      (Object.values(TEAM_IDS) as string[]).includes(teamId)
+        ? (teamId as (typeof TEAM_IDS)[keyof typeof TEAM_IDS])
+        : TEAM_IDS.DOOSAN,
+    [teamId],
+  );
 
   // --- 핸들러: 포토카드 ---
   const handleOpenPhotoCard = () => {
@@ -162,7 +171,7 @@ export default function TeamSettingsPopover({
       <FavoritePlayerSelector
         visible={favoritePlayerSelectorVisible}
         onClose={() => setFavoritePlayerSelectorVisible(false)}
-        teamId={teamId}
+        teamId={resolvedPlayerTeamId}
         onSelect={handleSelectFavoritePlayer}
       />
     </>

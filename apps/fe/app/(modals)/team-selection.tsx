@@ -47,6 +47,10 @@ export default function TeamSelectionScreen() {
   const [teamFavoriteDates, setTeamFavoriteDates] = useState<
     Record<string, string>
   >({});
+  // 최애 선수 { name, number } 상태 (팀별)
+  const [teamFavoritePlayers, setTeamFavoritePlayers] = useState<
+    Record<string, { name?: string; number?: number }>
+  >({});
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -140,6 +144,10 @@ export default function TeamSelectionScreen() {
 
         const teamIds: string[] = [];
         const favoriteDates: Record<string, string> = {};
+        const favoritePlayers: Record<
+          string,
+          { name?: string; number?: number }
+        > = {};
 
         myTeamsData.myTeams.forEach((userTeam) => {
           console.log("UserTeam 객체:", userTeam);
@@ -155,12 +163,23 @@ export default function TeamSelectionScreen() {
           if (userTeam.favoriteDate) {
             favoriteDates[userTeam.team.id] = userTeam.favoriteDate;
           }
+          if (
+            (userTeam as any).favoritePlayerName ||
+            (userTeam as any).favoritePlayerNumber !== undefined
+          ) {
+            favoritePlayers[userTeam.team.id] = {
+              name: (userTeam as any).favoritePlayerName,
+              number: (userTeam as any).favoritePlayerNumber,
+            };
+          }
         });
 
         setSelectedTeams(teamIds);
         setTeamFavoriteDates(favoriteDates);
+        setTeamFavoritePlayers(favoritePlayers);
         console.log("사용자가 선택한 팀 목록 로드 성공:", teamIds);
         console.log("팀별 favoriteDate 로드 성공:", favoriteDates);
+        console.log("팀별 favoritePlayer 로드 성공:", favoritePlayers);
       } catch (error) {
         console.error("팀 목록 처리 중 오류 발생:", error);
       }
@@ -344,6 +363,9 @@ export default function TeamSelectionScreen() {
           teams: selectedTeams.map((teamId) => ({
             teamId,
             favoriteDate: teamFavoriteDates[teamId] || null,
+            favoritePlayerName: teamFavoritePlayers[teamId]?.name || null,
+            favoritePlayerNumber:
+              teamFavoritePlayers[teamId]?.number ?? null,
           })),
         },
         context: {
@@ -779,6 +801,18 @@ export default function TeamSelectionScreen() {
         onSelectFavoriteDate={() => {
           setShowSettings(false);
           setShowCalendar(true);
+        }}
+        teamId={pendingTeamId || undefined}
+        onSelectFavoritePlayer={(player) => {
+          if (pendingTeamId) {
+            setTeamFavoritePlayers((prev) => ({
+              ...prev,
+              [pendingTeamId]: {
+                name: player.name,
+                number: player.number,
+              },
+            }));
+          }
         }}
       />
 

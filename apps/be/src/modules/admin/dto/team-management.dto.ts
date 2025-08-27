@@ -9,7 +9,7 @@ import {
   IsOptional,
   MaxLength,
   MinLength,
-  IsEnum,
+  IsHexColor,
 } from 'class-validator';
 
 import { Sport } from '../../../entities/sport.entity';
@@ -84,19 +84,30 @@ export class CreateTeamInput {
     description: '기존 단일 팀 색상 (선택적, Deprecated)',
     deprecationReason: 'Use palette fields instead',
   })
+  @IsOptional()
+  @IsString({ message: '팀 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   color?: string;
 
   // 신규 팔레트 필수 컬러
   @Field(() => String, { description: '라이트 메인 색상 (HEX)' })
+  @IsString({ message: '라이트 메인 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   mainColor: string;
 
   @Field(() => String, { description: '라이트 서브 색상 (HEX)' })
+  @IsString({ message: '라이트 서브 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   subColor: string;
 
   @Field(() => String, { description: '다크 메인 색상 (HEX)' })
+  @IsString({ message: '다크 메인 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   darkMainColor: string;
 
   @Field(() => String, { description: '다크 서브 색상 (HEX)' })
+  @IsString({ message: '다크 서브 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   darkSubColor: string;
 
   @Field(() => String, { description: '팀 아이콘 (이모지)' })
@@ -130,6 +141,7 @@ export class UpdateTeamInput {
   })
   @IsOptional()
   @IsString({ message: '팀 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   color?: string;
 
   // 팔레트 컬러 (모두 선택적)
@@ -139,6 +151,7 @@ export class UpdateTeamInput {
   })
   @IsOptional()
   @IsString({ message: '라이트 메인 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   mainColor?: string;
 
   @Field(() => String, {
@@ -147,16 +160,19 @@ export class UpdateTeamInput {
   })
   @IsOptional()
   @IsString({ message: '라이트 서브 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   subColor?: string;
 
   @Field(() => String, { nullable: true, description: '다크 메인 색상 (HEX)' })
   @IsOptional()
   @IsString({ message: '다크 메인 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   darkMainColor?: string;
 
   @Field(() => String, { nullable: true, description: '다크 서브 색상 (HEX)' })
   @IsOptional()
   @IsString({ message: '다크 서브 색상은 문자열이어야 합니다.' })
+  @IsHexColor({ message: '올바른 HEX 색상 코드를 입력해주세요.' })
   darkSubColor?: string;
 
   @Field(() => String, { nullable: true, description: '팀 아이콘 (이모지)' })

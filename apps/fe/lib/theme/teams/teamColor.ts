@@ -42,23 +42,25 @@ export const teamColors = {
       // 유니폼 배경색
       uniformBackground: "#FFFFFF", // 흰색 유니폼
       // 유니폼 글씨색
-      uniformText: "#1E3A8A", // 진한 파란색
+      uniformText: "#000036", // 진한 파란색
       // 유니폼 숫자색
-      uniformNumber: "#FF1620", // 진한 파란색
+      uniformNumber: "#FF1620", // 빨강색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#3B82F6", // 파란색
       // 좋아요 및 버튼들 색상
       likeButton: "#EF4444", // 빨간색
       likeButtonBackground: "#FEE2E2", // 연한 빨간색
       // 좋아요 배경색
-      likeBackground: "#F0F9FF", // 연한 파란색
+      likeBackground: "#000036", // 연한 파란색
+      // PostActions 배경색 (액션 바 배경)
+      postActionsBackground: "#000036", // 연한 회색
       // 팀 메인 컬러
       mainColor: "#1E3A8A", // 진한 파란색
       // 팀 서브 컬러
       subColor: "#3B82F6", // 파란색
       // 팀 액센트 컬러
       accent: "#EF4444", // 빨간색
-      // 팀 보더 컬러
+      // 아디다스 삼선
       border: "#E5E7EB", // 연한 회색
     },
     dark: {
@@ -75,6 +77,8 @@ export const teamColors = {
       likeButtonBackground: "#7F1D1D", // 어두운 빨간색
       // 좋아요 배경색
       likeBackground: "#1E3A8A", // 어두운 파란색
+      // PostActions 배경색 (액션 바 배경)
+      postActionsBackground: "#1F2937", // 어두운 회색
       // 팀 메인 컬러
       mainColor: "#60A5FA", // 밝은 파란색
       // 팀 서브 컬러
@@ -101,6 +105,8 @@ export const teamColors = {
       likeButtonBackground: "#FEE2E2", // 연한 빨간색
       // 좋아요 배경색
       likeBackground: "#FEF2F2", // 연한 빨간색
+      // PostActions 배경색 (액션 바 배경)
+      postActionsBackground: "#FEF2F2", // 연한 빨간색
       // 팀 메인 컬러
       mainColor: "#DC2626", // 진한 빨간색
       // 팀 서브 컬러
@@ -124,6 +130,8 @@ export const teamColors = {
       likeButtonBackground: "#7F1D1D", // 어두운 빨간색
       // 좋아요 배경색
       likeBackground: "#991B1B", // 어두운 빨간색
+      // PostActions 배경색 (액션 바 배경)
+      postActionsBackground: "#1F2937", // 어두운 회색
       // 팀 메인 컬러
       mainColor: "#F87171", // 밝은 빨간색
       // 팀 서브 컬러
@@ -182,6 +190,7 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
     likeButton: defaultColors.error,
     likeButtonBackground: isDarkMode ? defaultColors.errorBackground : defaultColors.backgroundAlt,
     likeBackground: isDarkMode ? defaultColors.backgroundDim : defaultColors.backgroundAlt,
+    postActionsBackground: isDarkMode ? defaultColors.backgroundDim : defaultColors.backgroundAlt,
     mainColor: defaultColors.tint,
     subColor: defaultColors.accent,
     accent: defaultColors.energy,

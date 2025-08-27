@@ -1026,6 +1026,7 @@ const PostCard = React.memo(function PostCard({
             teamColors={{
               likeButton: teamColors.likeButton,
               likeButtonBackground: teamColors.likeButtonBackground,
+              postActionsBackground: teamColors.postActionsBackground,
             }}
           />
         </View>

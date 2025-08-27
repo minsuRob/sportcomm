@@ -29,6 +29,7 @@ interface PostActionsProps {
   teamColors?: {
     likeButton: string;
     likeButtonBackground: string;
+    postActionsBackground: string;
   };
 }
 
@@ -60,9 +61,13 @@ export default function PostActions({
 
   return (
     <View
-      style={themed(
-        variant === "detail" ? $detailActionSection : $feedActionBar,
-      )}
+      style={[
+        themed(variant === "detail" ? $detailActionSection : $feedActionBar),
+        // 팀별 PostActions 배경색 적용
+        teamColors?.postActionsBackground && {
+          backgroundColor: teamColors.postActionsBackground,
+        },
+      ]}
     >
       {/* 좋아요 버튼 */}
       <TouchableOpacity
@@ -73,7 +78,7 @@ export default function PostActions({
         <Ionicons
           name={isLiked ? "heart" : "heart-outline"}
           size={iconSize}
-          color={isLiked ? (teamColors?.likeButton || theme.colors.error) : theme.colors.textDim}
+          color={isLiked ? (teamColors?.likeButton || theme.colors.error) : "#FF1620"}
         />
         <Text style={themed($actionCount)}>{likeCount}</Text>
       </TouchableOpacity>

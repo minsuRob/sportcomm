@@ -1267,15 +1267,10 @@ const $contentContainer: ThemedStyle<ViewStyle> = () => ({
 
 
 
-const $emptyMediaContainer: ThemedStyle<ViewStyle> = () => ({
-  height: 300,
-  justifyContent: "center",
-  alignItems: "center",
-});
 
 // 유니폼 플레이스홀더 스타일
 const $uniformPlaceholder: ThemedStyle<ViewStyle> = () => ({
-  height: 300,
+  height: 350,
   justifyContent: "center",
   alignItems: "center",
   borderRadius: 8,

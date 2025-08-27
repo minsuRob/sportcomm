@@ -126,6 +126,9 @@ const GET_POSTS = gql`
               logoUrl
               icon
             }
+            favoriteDate
+            favoritePlayerName
+            favoritePlayerNumber
           }
         }
         media {

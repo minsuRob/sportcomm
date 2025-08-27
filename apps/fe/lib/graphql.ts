@@ -53,6 +53,9 @@ export const GET_FEED_DATA = gql`
             teamId
             priority
             notificationEnabled
+            favoriteDate
+            favoritePlayerName
+            favoritePlayerNumber
             createdAt
             team {
               id
@@ -98,6 +101,9 @@ export const GET_FEED_DATA = gql`
       teamId
       priority
       notificationEnabled
+      favoriteDate
+      favoritePlayerName
+      favoritePlayerNumber
       createdAt
       team {
         id
@@ -161,6 +167,9 @@ export const GET_POSTS = gql`
             teamId
             priority
             notificationEnabled
+            favoriteDate
+            favoritePlayerName
+            favoritePlayerNumber
             createdAt
             team {
               id
@@ -438,6 +447,8 @@ export const GET_USER_PROFILE = gql`
         teamId
         priority
         favoriteDate
+        favoritePlayerName
+        favoritePlayerNumber
         team {
           id
           name
@@ -474,6 +485,32 @@ export const GET_USER_POSTS = gql`
           id
           nickname
           profileImageUrl
+          myTeams {
+            id
+            userId
+            teamId
+            priority
+            notificationEnabled
+            favoriteDate
+            favoritePlayerName
+            favoritePlayerNumber
+            createdAt
+            team {
+              id
+              name
+              code
+              color
+              mainColor
+              subColor
+              darkMainColor
+              darkSubColor
+              icon
+              logoUrl
+              description
+              sortOrder
+              isActive
+            }
+          }
         }
         media {
           id

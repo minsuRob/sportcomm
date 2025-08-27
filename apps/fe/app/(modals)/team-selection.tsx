@@ -803,15 +803,35 @@ export default function TeamSelectionScreen() {
           setShowCalendar(true);
         }}
         teamId={pendingTeamId || undefined}
-        onSelectFavoritePlayer={(player) => {
-          if (pendingTeamId) {
-            setTeamFavoritePlayers((prev) => ({
-              ...prev,
-              [pendingTeamId]: {
-                name: player.name,
-                number: player.number,
+        onSelectFavoritePlayer={async (player) => {
+          // 최애 선수 로컬 상태 갱신 + 즉시 백엔드 반영
+          if (!pendingTeamId) return;
+          const updatedPlayers = {
+            ...teamFavoritePlayers,
+            [pendingTeamId]: {
+              name: player.name,
+              number: player.number,
+            },
+          };
+          // 1) 로컬 상태 먼저 업데이트 (UI 즉시 반영)
+          setTeamFavoritePlayers(updatedPlayers);
+          // 2) 기존 선택된 팀 전체를 그대로 다시 전송 (favoriteDate 로직과 동일한 패턴 유지)
+          try {
+            // NOTE: 즉시 저장 - 커스텀 헤더 제거 (CORS: 'x-refresh-session' 차단 이슈 해결)
+            await updateMyTeams({
+              variables: {
+                teams: selectedTeams.map((teamId) => ({
+                  teamId,
+                  favoriteDate: teamFavoriteDates[teamId] || null,
+                  favoritePlayerName: updatedPlayers[teamId]?.name || null,
+                  favoritePlayerNumber: updatedPlayers[teamId]?.number ?? null,
+                })),
               },
-            }));
+            });
+            // (선택) 추후 성공 토스트 추가 가능
+          } catch (error) {
+            console.error("최애 선수 즉시 저장 실패:", error);
+            // (선택) 실패 시 롤백 로직 또는 사용자 알림 추가 가능
           }
         }}
       />

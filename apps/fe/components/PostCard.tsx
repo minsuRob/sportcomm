@@ -598,7 +598,7 @@ const PostCard = React.memo(function PostCard({
     overlayGradient: teamColors.uniformBackground + "88", // 반투명 오버레이
     badgeBg: teamColors.uniformDecoration + "CC",
     iconBadgeBg: teamColors.uniformDecoration + "99",
-    moreButtonBg: teamColors.likeButton + "CC",
+    moreButtonBg: teamColors.actionButtonActive + "CC",
     glowColor: teamColors.uniformDecoration,
     borderColor: teamColors.border,
   };
@@ -1024,8 +1024,8 @@ const PostCard = React.memo(function PostCard({
             isLikeError={isLikeError}
             variant="feed"
             teamColors={{
-              likeButton: teamColors.likeButton,
-              likeButtonBackground: teamColors.likeButtonBackground,
+              actionButtonActive: teamColors.actionButtonActive,
+              actionButtonInactive: teamColors.actionButtonInactive,
               postActionsBackground: teamColors.postActionsBackground,
             }}
           />

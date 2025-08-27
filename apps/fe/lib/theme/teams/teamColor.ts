@@ -47,9 +47,9 @@ export const teamColors = {
       uniformNumber: "#FF1620", // 빨강색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#3B82F6", // 파란색
-      // 좋아요 및 버튼들 색상
-      likeButton: "#EF4444", // 빨간색
-      likeButtonBackground: "#FEE2E2", // 연한 빨간색
+      // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
+      actionButtonActive: "#FF1620", // 빨간색 (활성 상태)
+      actionButtonInactive: "#FF1620", // 회색 (비활성 상태)
       // 좋아요 배경색
       likeBackground: "#000036", // 연한 파란색
       // PostActions 배경색 (액션 바 배경)
@@ -72,9 +72,9 @@ export const teamColors = {
       uniformNumber: "#60A5FA", // 밝은 파란색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#93C5FD", // 연한 파란색
-      // 좋아요 및 버튼들 색상
-      likeButton: "#F87171", // 밝은 빨간색
-      likeButtonBackground: "#7F1D1D", // 어두운 빨간색
+      // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
+      actionButtonActive: "#F87171", // 밝은 빨간색 (활성 상태)
+      actionButtonInactive: "#9CA3AF", // 밝은 회색 (비활성 상태)
       // 좋아요 배경색
       likeBackground: "#1E3A8A", // 어두운 파란색
       // PostActions 배경색 (액션 바 배경)
@@ -100,9 +100,9 @@ export const teamColors = {
       uniformNumber: "#DC2626", // 진한 빨간색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#EF4444", // 빨간색
-      // 좋아요 및 버튼들 색상
-      likeButton: "#DC2626", // 빨간색
-      likeButtonBackground: "#FEE2E2", // 연한 빨간색
+      // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
+      actionButtonActive: "#DC2626", // 빨간색 (활성 상태)
+      actionButtonInactive: "#6B7280", // 회색 (비활성 상태)
       // 좋아요 배경색
       likeBackground: "#FEF2F2", // 연한 빨간색
       // PostActions 배경색 (액션 바 배경)
@@ -125,9 +125,9 @@ export const teamColors = {
       uniformNumber: "#F87171", // 밝은 빨간색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#FCA5A5", // 연한 빨간색
-      // 좋아요 및 버튼들 색상
-      likeButton: "#F87171", // 밝은 빨간색
-      likeButtonBackground: "#7F1D1D", // 어두운 빨간색
+      // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
+      actionButtonActive: "#F87171", // 밝은 빨간색 (활성 상태)
+      actionButtonInactive: "#9CA3AF", // 밝은 회색 (비활성 상태)
       // 좋아요 배경색
       likeBackground: "#991B1B", // 어두운 빨간색
       // PostActions 배경색 (액션 바 배경)
@@ -187,8 +187,8 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
     uniformText: isDarkMode ? defaultColors.text : defaultColors.text,
     uniformNumber: isDarkMode ? defaultColors.text : defaultColors.text,
     uniformDecoration: defaultColors.accent,
-    likeButton: defaultColors.error,
-    likeButtonBackground: isDarkMode ? defaultColors.errorBackground : defaultColors.backgroundAlt,
+    actionButtonActive: defaultColors.error,
+    actionButtonInactive: isDarkMode ? defaultColors.textDim : defaultColors.textDim,
     likeBackground: isDarkMode ? defaultColors.backgroundDim : defaultColors.backgroundAlt,
     postActionsBackground: isDarkMode ? defaultColors.backgroundDim : defaultColors.backgroundAlt,
     mainColor: defaultColors.tint,

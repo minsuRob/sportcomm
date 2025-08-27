@@ -27,8 +27,8 @@ interface PostActionsProps {
   commentCount?: number;
   shareCount?: number;
   teamColors?: {
-    likeButton: string;
-    likeButtonBackground: string;
+    actionButtonActive: string;
+    actionButtonInactive: string;
     postActionsBackground: string;
   };
 }
@@ -78,7 +78,7 @@ export default function PostActions({
         <Ionicons
           name={isLiked ? "heart" : "heart-outline"}
           size={iconSize}
-          color={isLiked ? (teamColors?.likeButton || theme.colors.error) : "#FF1620"}
+          color={isLiked ? (teamColors?.actionButtonActive || theme.colors.error) : (teamColors?.actionButtonInactive || theme.colors.textDim)}
         />
         <Text style={themed($actionCount)}>{likeCount}</Text>
       </TouchableOpacity>
@@ -88,7 +88,7 @@ export default function PostActions({
         <Ionicons
           name="chatbubble-outline"
           size={iconSize}
-          color={theme.colors.textDim}
+          color={teamColors?.actionButtonInactive || theme.colors.textDim}
         />
         <Text style={themed($actionCount)}>{commentCount}</Text>
       </TouchableOpacity>
@@ -102,7 +102,7 @@ export default function PostActions({
         <Ionicons
           name={isBookmarked ? "bookmark" : "bookmark-outline"}
           size={iconSize}
-          color={isBookmarked ? theme.colors.tint : theme.colors.textDim}
+          color={isBookmarked ? (teamColors?.actionButtonActive || theme.colors.tint) : (teamColors?.actionButtonInactive || theme.colors.textDim)}
         />
       </TouchableOpacity>
     </View>

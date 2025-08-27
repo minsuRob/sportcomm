@@ -61,14 +61,14 @@ export const teamColors = {
       // 팀 액센트 컬러
       accent: "#EF4444", // 빨간색
       // 아디다스 삼선
-      border: "#000000", // 연한 회색
+      border: "#000000",
       // 프로필 텍스트 색상
       profileText: "#000036", // 진한 파란색
       profileTime: "#6B7280", // 회색
       profileStroke: "#FFFFFF", // 흰색 테두리
       // 유니폼 번호 색상
-      uniformNumberText: "#FF1620", // 빨간색
-      uniformNumberStroke: "#000000", // 검은색 테두리
+      uniformNumberText: "#000036", 
+      uniformNumberStroke: "#FF1620", 
     },
     dark: {
       // 유니폼 배경색

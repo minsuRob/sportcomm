@@ -9,8 +9,7 @@ interface ArchedTextProps {
   style?: ThemedStyle<ViewStyle>;
   containerWidth?: number; // 부모 컨테이너의 너비를 받는 prop 추가
   containerHeight?: number;
-  onArchBoundsCalculated?: (bounds: { bottomY: number; centerX: number }) => void; // 아치 경계 정보 콜백
-  topPosition?: number; // 동적 위치 조정을 위한 prop
+  teamColors?: any; // 팀별 커스텀 색상
 }
 
 /**
@@ -18,6 +17,7 @@ interface ArchedTextProps {
  *
  * 제공된 텍스트를 아치형으로 배치하여 유니폼 스타일의 디자인을 구현합니다.
  * 텍스트 길이에 따라 동적으로 아치 반지름을 조정하며, 부모 컨테이너의 너비에 따라 위치를 동적 계산합니다.
+ * 각 컴포넌트는 독립적으로 위치를 계산합니다.
  */
 export const ArchedText: React.FC<ArchedTextProps> = ({
   text,
@@ -25,8 +25,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   style,
   containerWidth = 300, // 기본값 300px (기존 하드코딩값과 동일)
   containerHeight = 350,
-  onArchBoundsCalculated,
-  topPosition,
+  teamColors,
 }) => {
   const { themed, theme } = useAppTheme();
   const containerRef = React.useRef<View>(null);
@@ -64,30 +63,6 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     };
   }, [text]);
 
-  // 아치의 최하단 위치 계산 및 콜백 호출
-  React.useEffect(() => {
-    if (onArchBoundsCalculated && containerRef.current) {
-      const { radius, arcAngle } = archConfig;
-
-      // 실제 아치형 글자의 최하단 위치 계산
-      // 아치의 중심에서 가장 아래쪽 글자까지의 실제 거리
-      const maxAngleRad = (arcAngle / 2) * (Math.PI / 180); // 최대 각도를 라디안으로 변환
-      const actualBottomOffset = Math.cos(maxAngleRad) * radius; // 실제 아래쪽 거리
-
-      // 텍스트 높이 고려 (폰트 크기에 따른 글자 높이)
-      const fontSize = 24; // medium 사이즈 고정값
-      const textHeight = fontSize * 1.2; // 줄 높이 고려
-
-      // 김택연 글자 최하단에서 50px 아래로 계산
-      const actualBottomY = centerY - actualBottomOffset + textHeight + 50;
-
-      onArchBoundsCalculated({
-        bottomY: actualBottomY,
-        centerX,
-      });
-    }
-  }, [archConfig, centerX, centerY, onArchBoundsCalculated]);
-
   // 각 문자별 회전 각도 계산 (CSS 로직과 동일)
   const getCharRotation = (index: number) => {
     const { arcAngle, totalChars } = archConfig;
@@ -107,7 +82,6 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const getCharStyle = (index: number) => {
     const rotation = getCharRotation(index);
     const { radius } = archConfig;
-
 
     if (Platform.OS === "web") {
       // 웹에서는 test.html과 동일한 방식으로 위치 계산
@@ -143,28 +117,17 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const containerStyle = style ? themed(style) : themed($container);
   const textColor = color || theme.colors.text;
 
-  // 동적 위치 스타일 계산
-  const dynamicPositionStyle = React.useMemo(() => {
-    if (topPosition !== undefined && containerWidth) {
-      return {
-        position: "absolute" as const,
-        top: topPosition - 130, // UniformNumber 위 50px
-        left: 0,
-        right: 0,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-      };
-    }
+  // 독립적인 위치 스타일 계산 - 아치형 텍스트는 상단에 배치
+  const independentPositionStyle = React.useMemo(() => {
     return {
       position: "absolute" as const,
-      top: 0,
+      top: 20, // 상단에서 20px 아래
       left: 0,
       right: 0,
       alignItems: "center" as const,
       justifyContent: "center" as const,
     };
-  }, [topPosition, containerWidth]);
-
+  }, []);
 
   return (
     <View
@@ -172,7 +135,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
       style={[
         styles.container,
         containerStyle,
-        dynamicPositionStyle,
+        independentPositionStyle,
         { width: containerWidth, height: containerHeight }
       ]}
     >

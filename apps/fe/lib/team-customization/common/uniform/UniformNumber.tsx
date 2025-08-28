@@ -12,6 +12,8 @@ interface UniformNumberProps {
   fontSize?: number; // 필요 시 커스텀 폰트 크기
   borderThickness?: number; // 테두리 두께 (기본값: 1.0)
   teamColors?: any; // 팀별 커스텀 색상
+  containerWidth?: number; // 부모 컨테이너의 너비
+  containerHeight?: number; // 부모 컨테이너의 높이
 }
 
 /**
@@ -19,7 +21,7 @@ interface UniformNumberProps {
  * 350px 고정 높이 영역 중앙에 등번호를 크게 렌더링하는 컴포넌트
  * - iOS 에서 보이지 않는 문제를 해결하기 위해 절대 위치/동적 계산 제거
  * - flex 중앙 정렬만 사용
- * - topPosition, containerWidth 등 불필요한 prop 제거
+ * - 각 컴포넌트는 독립적으로 위치를 계산합니다
  */
 export const UniformNumber: React.FC<UniformNumberProps> = ({
   number,
@@ -29,6 +31,8 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   fontSize = 40,
   borderThickness = 1.0,
   teamColors,
+  containerWidth = 300,
+  containerHeight = 350,
 }) => {
   const { themed, theme } = useAppTheme();
 
@@ -53,8 +57,28 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   const containerStyle = themed($outerContainer);
   const userThemedStyle = style ? themed(style) : undefined;
 
+  // 독립적인 위치 스타일 계산 - 번호는 하단에 배치
+  const independentPositionStyle = React.useMemo(() => {
+    return {
+      position: "absolute" as const,
+      bottom: 50, // 하단에서 50px 위
+      left: 0,
+      right: 0,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    };
+  }, []);
+
   return (
-    <View style={[containerStyle, userThemedStyle]} pointerEvents="none">
+    <View 
+      style={[
+        containerStyle, 
+        userThemedStyle, 
+        independentPositionStyle,
+        { width: containerWidth, height: containerHeight }
+      ]} 
+      pointerEvents="none"
+    >
       {renderStrokedText({
         content: String(number),
         themed: themed,

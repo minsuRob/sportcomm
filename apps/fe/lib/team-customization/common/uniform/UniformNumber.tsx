@@ -49,8 +49,8 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   const { themed, theme } = useAppTheme();
 
   // 색상 결정 (테마 fallback)
-  const numberMainColor = mainColor || teamColors?.uniformNumberText || theme.colors.text;
-  const numberOutlineColor = outlineColor || teamColors?.uniformNumberStroke || theme.colors.tint;
+  const numberMainColor = teamColors?.uniformNumberText || theme.colors.text || mainColor ;
+  const numberOutlineColor = teamColors?.uniformNumberStroke || theme.colors.tint;
 
   // 컨테이너 크기 결정 (props로 전달받은 값 또는 기본값)
   const finalContainerWidth = containerWidth || 350;

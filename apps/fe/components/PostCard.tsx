@@ -757,7 +757,6 @@ const PostCard = React.memo(function PostCard({
                   subColor={teamColors.uniformNumberText}
                   outlineColor={teamColors.uniformDecoration}
                   style={$uniformPlaceholder}
-                  containerWidth={mediaContainerWidth}
                   teamColors={teamColors} // 팀별 커스텀 색상 전달
                 />
               )}

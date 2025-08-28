@@ -7,28 +7,23 @@ interface ArchedTextProps {
   text: string;
   color?: string;
   style?: ThemedStyle<ViewStyle>;
-  containerWidth?: number; // 부모 컨테이너의 너비를 받는 prop 추가
-  containerHeight?: number;
 }
 
 /**
  * 아치형 텍스트 컴포넌트
  *
  * 제공된 텍스트를 아치형으로 배치하여 유니폼 스타일의 디자인을 구현합니다.
- * 텍스트 길이에 따라 동적으로 아치 반지름을 조정하며, 자체 컨테이너 영역에서 독립적으로 동작합니다.
+ * 텍스트 길이에 따라 동적으로 아치 반지름을 조정하며, flex 기반 유동적 레이아웃으로 렌더링합니다.
  */
 export const ArchedText: React.FC<ArchedTextProps> = ({
   text,
   color,
   style,
-  containerWidth = 300, // 기본값 300px (기존 하드코딩값과 동일)
-  containerHeight = 200, // 아치형 텍스트에 적합한 높이로 조정
 }) => {
   const { themed, theme } = useAppTheme();
 
-  // 컨테이너 중앙 좌표 동적 계산
-  const centerX = containerWidth / 2;
-  const centerY = containerHeight / 2;
+  // 아치 기본 설정 (유동적 중앙 정렬 기준)
+  const ARCH_BASE_RADIUS = 100; // 기본 반지름
 
   // 텍스트 길이에 따른 동적 아치 계산 (글씨 겹침 방지)
   const archConfig = useMemo(() => {
@@ -59,6 +54,31 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     };
   }, [text]);
 
+  // 실제 아치형 텍스트의 bounding box 계산
+  const archBounds = useMemo(() => {
+    const { radius, arcAngle } = archConfig;
+    const fontSize = 24; // 고정 폰트 크기
+
+    // 아치의 최상단과 최하단 Y 좌표 계산
+    const maxAngleRad = (arcAngle / 2) * (Math.PI / 180);
+    const topY = -Math.cos(0) * radius - fontSize / 2; // 중앙 글자 상단
+    const bottomY = -Math.cos(maxAngleRad) * radius + fontSize / 2; // 양끝 글자 하단
+
+    // 실제 아치가 차지하는 높이
+    const actualHeight = bottomY - topY;
+    const padding = 4; // 최소 여백으로 줄임 (16 → 4)
+
+    return {
+      height: actualHeight + padding * 2,
+      centerY: (actualHeight + padding * 2) / 2,
+      topOffset: padding - topY, // 중앙 기준점에서 실제 렌더링 시작점까지의 오프셋
+    };
+  }, [archConfig]);
+
+  // 유동적 크기 기반 최적화된 컨테이너
+  const optimizedHeight = archBounds.height;
+  const centerY = archBounds.centerY;
+
 
 
   // 각 문자별 회전 각도 계산 (CSS 로직과 동일)
@@ -76,34 +96,33 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     return rotation;
   };
 
-  // 각 문자별 스타일 계산 (플랫폼별 처리)
+  // 각 문자별 스타일 계산 (유동적 중앙 기준)
   const getCharStyle = (index: number) => {
     const rotation = getCharRotation(index);
     const { radius } = archConfig;
 
+    const angleRad = (rotation * Math.PI) / 180;
+    const x = Math.sin(angleRad) * radius;
+    const y = -Math.cos(angleRad) * radius;
 
     if (Platform.OS === "web") {
-      // 웹에서는 test.html과 동일한 방식으로 위치 계산
-      const angleRad = (rotation * Math.PI) / 180;
-      const x = Math.sin(angleRad) * radius;
-      const y = -Math.cos(angleRad) * radius;
-
       return {
         position: "absolute" as const,
-        left: centerX + x, // 동적 계산된 중앙 좌표 + 각도별 x 오프셋
-        top: centerY + y, // 동적 계산된 중앙 좌표 + 각도별 y 오프셋
-        transform: [{ rotate: `${rotation}deg` }] as any,
+        left: "50%", // 중앙 기준
+        top: centerY + y + archBounds.topOffset,
+        transform: [
+          { translateX: x },
+          { translateY: 0 },
+          { rotate: `${rotation}deg` }
+        ] as any,
+        marginLeft: x, // 웹에서 transform 대체
       };
     } else {
-      // 모바일에서는 position 기반 계산
-      const angleRad = (rotation * Math.PI) / 180;
-      const x = Math.sin(angleRad) * radius;
-      const y = -Math.cos(angleRad) * radius;
-
       return {
         position: "absolute" as const,
-        left: centerX + x, // 동적 계산된 중앙 좌표 + 각도별 x 오프셋
-        top: centerY + y, // 동적 계산된 중앙 좌표 + 각도별 y 오프셋
+        left: "50%", // 중앙 기준
+        top: centerY + y + archBounds.topOffset,
+        marginLeft: x, // 중앙에서 x만큼 이동
       };
     }
   };
@@ -121,7 +140,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
       style={[
         styles.container,
         containerStyle,
-        { width: containerWidth, height: containerHeight }
+        { height: optimizedHeight }
       ]}
     >
       {text.split("").map((char, index) => (
@@ -146,8 +165,9 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   );
 };
 
-// 기본 스타일
+// 기본 스타일 (flex 기반 유동적 레이아웃)
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: "100%", // 부모 너비 전체 사용
   position: "relative",
   justifyContent: "center",
   alignItems: "center",
@@ -155,6 +175,7 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
 
 const styles = StyleSheet.create({
   container: {
+    width: "100%", // 유동적 너비
     justifyContent: "center",
     alignItems: "center",
     position: "relative",

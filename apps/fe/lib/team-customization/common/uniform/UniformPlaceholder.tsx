@@ -50,8 +50,6 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
         <ArchedText
           text={text}
           color={textColor}
-          containerWidth={containerWidth}
-          containerHeight={Math.floor(containerHeight * 0.6)} // 전체 높이의 60% 할당
         />
       </View>
 
@@ -81,7 +79,7 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
 });
 
 const $archedTextContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
+  height: 80, // 실제 아치형 텍스트에 필요한 높이로 제한
   width: "100%",
   justifyContent: "center",
   alignItems: "center",

@@ -215,18 +215,20 @@ const PostCard = React.memo(function PostCard({
   const router = useRouter();
   const { height: screenHeight } = useWindowDimensions();
   const [postCardWidth, setPostCardWidth] = useState(0);
+  const [postCardHeight, setPostCardHeight] = useState(0);
   const postCardRef = useRef<View>(null);
 
   useEffect(() => {
-    const measurePostCardWidth = () => {
+    const measurePostCardDimensions = () => {
       if (postCardRef.current) {
-        postCardRef.current.measure((_x, _y, width) => {
+        postCardRef.current.measure((_x, _y, width, height) => {
           setPostCardWidth(width);
+          setPostCardHeight(height);
         });
       }
     };
 
-    measurePostCardWidth();
+    measurePostCardDimensions();
   }, []);
 
   // 컨텍스트 메뉴 상태 관리
@@ -535,7 +537,7 @@ const PostCard = React.memo(function PostCard({
   });
 
   return (
-    <View style={themed($outerContainer)}>
+    <View style={themed($outerContainer)} ref={postCardRef}>
       {/* 외부 글로우 효과 - 팀 색상 반영 */}
       <View
         style={[
@@ -758,6 +760,8 @@ const PostCard = React.memo(function PostCard({
                   outlineColor={teamColors.uniformDecoration}
                   style={$uniformPlaceholder}
                   teamColors={teamColors} // 팀별 커스텀 색상 전달
+                  containerWidth={postCardWidth - 32} // PostCard 너비에서 좌우 패딩 제외
+                  containerHeight={postCardHeight || 350} // PostCard 실제 측정된 높이 또는 기본값
                 />
               )}
 

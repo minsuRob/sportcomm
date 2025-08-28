@@ -60,6 +60,8 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
           mainColor={numberColor}
           outlineColor={numberOutline}
           teamColors={teamColors}
+          containerWidth={containerWidth}
+          containerHeight={containerHeight}
         />
       </View>
     </View>

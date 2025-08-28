@@ -135,9 +135,13 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     }
   };
 
-  // 고정 텍스트 스타일 (medium 사이즈)
+  // 고정 텍스트 스타일 (강한 Bold 적용)
   const getTextStyle = () => {
-    return { fontSize: 24, fontWeight: "bold" as const };
+    return {
+      fontSize: 24,
+      fontWeight: Platform.OS === "ios" ? "900" : "bold" as const,
+      fontFamily: Platform.OS === "android" ? "sans-serif-black" : undefined,
+    };
   };
 
   const containerStyle = style ? themed(style) : themed($container);

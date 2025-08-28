@@ -22,7 +22,6 @@ interface UniformPlaceholderProps {
  *
  * 아치형 텍스트와 번호를 결합하여 유니폼 스타일의
  * 빈 미디어 플레이스홀더를 제공합니다.
- * 각 컴포넌트는 독립적으로 위치를 계산합니다.
  */
 export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
   text = "김택연",
@@ -36,6 +35,7 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
   teamColors,
 }) => {
   const { themed, theme } = useAppTheme();
+  const [numberTopPosition, setNumberTopPosition] = React.useState<number | undefined>(undefined);
 
   // 색상 결정
   const textColor = mainColor || theme.colors.text;
@@ -44,27 +44,32 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
 
   const containerStyle = style ? themed(style) : themed($container);
 
+  // ArchedText의 경계 정보를 받아 UniformNumber 위치 조정
+  const handleArchBoundsCalculated = React.useCallback((bounds: { bottomY: number; centerX: number }) => {
+    setNumberTopPosition(bounds.bottomY);
+  }, []);
+
   return (
     <View style={[styles.container, containerStyle]}>
-      {/* 각 컴포넌트가 독립적으로 위치를 계산하는 컨테이너 */}
+      {/* 통합 컨테이너 - 아치형 텍스트와 번호가 같은 영역에 위치 */}
       <View style={[themed($unifiedContainer), { width: containerWidth, height: containerHeight }]}>
-        {/* 아치형 텍스트 - 독립적으로 위치 계산 */}
+        {/* 아치형 텍스트 */}
         <ArchedText
           text={text}
           color={textColor}
-          containerWidth={containerWidth}
-          containerHeight={containerHeight}
-          teamColors={teamColors}
+          containerWidth={containerWidth} // containerWidth prop 전달
+          containerHeight={containerHeight} // containerHeight prop 전달
+          onArchBoundsCalculated={handleArchBoundsCalculated} // 위치 정보 콜백 전달
+          topPosition={numberTopPosition} // 동적 위치 전달
+
         />
 
-        {/* 유니폼 번호 - 독립적으로 위치 계산 */}
+        {/* 유니폼 번호 - 같은 컨테이너 내에서 절대 위치 */}
         <UniformNumber
           number={number}
           mainColor={numberColor}
           outlineColor={numberOutline}
-          teamColors={teamColors}
-          containerWidth={containerWidth}
-          containerHeight={containerHeight}
+          teamColors={teamColors} // 팀별 커스텀 색상 전달
         />
       </View>
     </View>

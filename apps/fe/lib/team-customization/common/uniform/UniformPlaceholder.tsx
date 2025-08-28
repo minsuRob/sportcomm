@@ -70,8 +70,6 @@ export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
           mainColor={numberColor}
           outlineColor={numberOutline}
           teamColors={teamColors} // 팀별 커스텀 색상 전달
-          // topPosition={numberTopPosition} // 동적 위치 전달
-          // containerWidth={containerWidth} // 중앙 정렬을 위한 너비 전달
         />
       </View>
     </View>

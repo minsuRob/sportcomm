@@ -37,7 +37,7 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   teamId,
   teamData,
   width = 24,
-  height = 120,
+  height = 160,
   color,
   opacity = 0.6,
   position,
@@ -66,7 +66,7 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
             alignItems: 'stretch',
             opacity,
             // PostActions 영역과 겹치지 않도록 최대 높이 제한
-            maxHeight: height > 80 ? 80 : height,
+            // maxHeight: height > 150 ? 150 : height,
           },
           positionStyle,
           resolvedStyle,
@@ -99,24 +99,24 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
 
   // 모바일 환경에서는 react-native-svg 사용
   if (!Svg || !Path) {
-    return <View style={[{ width, height: Math.min(height, 80), opacity }, resolvedStyle]} />; // fallback
+    return <View style={[{ width, height: Math.min(height, 150), opacity }, resolvedStyle]} />; // fallback
   }
 
   return (
     <View style={[{ opacity }, positionStyle, resolvedStyle]}>
-      <Svg width={width} height={Math.min(height, 80)} viewBox={`0 0 ${width} ${Math.min(height, 80)}`} fill="none">
+      <Svg width={width} height={Math.min(height, 150)} viewBox={`0 0 ${width} ${Math.min(height, 150)}`} fill="none">
         <Path
-          d={`M4 ${Math.min(height, 80)}L4 0`}
+          d={`M4 ${Math.min(height, 150)}L4 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />
         <Path
-          d={`M${Math.floor(width/2)} ${Math.min(height, 80)}L${Math.floor(width/2)} 0`}
+          d={`M${Math.floor(width/2)} ${Math.min(height, 150)}L${Math.floor(width/2)} 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />
         <Path
-          d={`M${width-4} ${Math.min(height, 80)}L${width-4} 0`}
+          d={`M${width-4} ${Math.min(height, 150)}L${width-4} 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />

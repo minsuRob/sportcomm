@@ -105,28 +105,8 @@ export default function FeedHeader({
                 color={theme.colors.tint}
               />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($lotteryButton)}
-              onPress={onLotteryPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={t("ticket-outline")}
-                size={20}
-                color={theme.colors.tint}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($shopButton)}
-              onPress={onShopPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={t("storefront-outline")}
-                size={20}
-                color={theme.colors.tint}
-              />
-            </TouchableOpacity>
+            {/* 로또(이벤트) 버튼: ProfileContextPopover 메뉴로 이동됨 */}
+            {/* 샵 버튼: ProfileContextPopover 메뉴로 이동됨 */}
           </>
         )}
         {currentUser && (
@@ -177,6 +157,14 @@ export default function FeedHeader({
           onOpenProfile={() => {
             setProfileMenuVisible(false);
             onProfilePress();
+          }}
+          onShopPress={() => {
+            setProfileMenuVisible(false);
+            onShopPress();
+          }}
+          onLotteryPress={() => {
+            setProfileMenuVisible(false);
+            onLotteryPress();
           }}
           anchorStyle={popoverPosition}
         />

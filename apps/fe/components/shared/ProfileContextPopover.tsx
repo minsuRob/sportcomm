@@ -17,6 +17,8 @@ export interface ProfileContextPopoverProps {
   visible: boolean;
   onClose: () => void;
   onOpenProfile: () => void;
+  onShopPress: () => void; // 상점(포인트 샵) 화면 열기 콜백
+  onLotteryPress: () => void; // 로또/이벤트 화면 열기 콜백
   anchorStyle?: ViewStyle; // 부모에서 위치 제어
 }
 
@@ -28,6 +30,8 @@ export default function ProfileContextPopover({
   visible,
   onClose,
   onOpenProfile,
+  onShopPress,
+  onLotteryPress,
   anchorStyle,
 }: ProfileContextPopoverProps) {
   const { theme, toggleTheme, setAppColor, appColor, themed } = useAppTheme();
@@ -63,7 +67,37 @@ export default function ProfileContextPopover({
         ),
         onPress: () => {
           onClose();
-          onOpenProfile();
+            onOpenProfile();
+        },
+      },
+      {
+        key: "lottery",
+        label: "이벤트 / 추첨",
+        icon: (
+          <Ionicons
+            name="ticket-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          onClose();
+          onLotteryPress();
+        },
+      },
+      {
+        key: "shop",
+        label: "포인트 상점",
+        icon: (
+          <Ionicons
+            name="storefront-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          onClose();
+          onShopPress();
         },
       },
       {
@@ -126,6 +160,8 @@ export default function ProfileContextPopover({
       onOpenProfile,
       onClose,
       router,
+      onShopPress,
+      onLotteryPress,
     ],
   );
 

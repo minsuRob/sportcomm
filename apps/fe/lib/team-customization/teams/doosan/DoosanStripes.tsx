@@ -31,6 +31,7 @@ try {
  *
  * 두산 팀의 시그니처 디자인인 세로 스트라이프를 렌더링합니다.
  * 팀 색상과 테마에 따라 동적으로 색상이 변경됩니다.
+ * PostActions 영역과 겹치지 않도록 위치가 조정되었습니다.
  */
 export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   teamId,
@@ -64,6 +65,8 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
             justifyContent: 'space-between',
             alignItems: 'stretch',
             opacity,
+            // PostActions 영역과 겹치지 않도록 최대 높이 제한
+            maxHeight: height > 80 ? 80 : height,
           },
           positionStyle,
           resolvedStyle,
@@ -96,24 +99,24 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
 
   // 모바일 환경에서는 react-native-svg 사용
   if (!Svg || !Path) {
-    return <View style={[{ width, height, opacity }, resolvedStyle]} />; // fallback
+    return <View style={[{ width, height: Math.min(height, 80), opacity }, resolvedStyle]} />; // fallback
   }
 
   return (
     <View style={[{ opacity }, positionStyle, resolvedStyle]}>
-      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} fill="none">
+      <Svg width={width} height={Math.min(height, 80)} viewBox={`0 0 ${width} ${Math.min(height, 80)}`} fill="none">
         <Path
-          d={`M4 ${height}L4 0`}
+          d={`M4 ${Math.min(height, 80)}L4 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />
         <Path
-          d={`M${Math.floor(width/2)} ${height}L${Math.floor(width/2)} 0`}
+          d={`M${Math.floor(width/2)} ${Math.min(height, 80)}L${Math.floor(width/2)} 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />
         <Path
-          d={`M${width-4} ${height}L${width-4} 0`}
+          d={`M${width-4} ${Math.min(height, 80)}L${width-4} 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />

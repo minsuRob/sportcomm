@@ -975,7 +975,7 @@ const PostCard = React.memo(function PostCard({
         </View>
       </View>
 
-      {/* 팀별 커스터마이징 장식 요소 */}
+      {/* 팀별 커스터마이징 장식 요소 - PostActions 영역과 겹치지 않도록 위치 조정 */}
       {teamCustomization.hasDecoration && (
         <TeamDecorationRenderer
           teamId={post.teamId}

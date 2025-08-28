@@ -116,6 +116,7 @@ const $feedActionBar: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.sm,
+  zIndex: 10, // TeamDecorationRenderer(zIndex: 5)보다 높게 설정하여 겹침 방지
 });
 
 const $detailActionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -123,6 +124,7 @@ const $detailActionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   justifyContent: "space-around",
   paddingVertical: spacing.lg,
   paddingHorizontal: spacing.md,
+  zIndex: 10, // TeamDecorationRenderer(zIndex: 5)보다 높게 설정하여 겹침 방지
 });
 
 const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({

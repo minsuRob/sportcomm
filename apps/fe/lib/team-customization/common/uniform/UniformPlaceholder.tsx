@@ -89,7 +89,7 @@ const $numberContainer: ThemedStyle<ViewStyle> = () => ({
   width: "100%",
   justifyContent: "center",
   alignItems: "center",
-  paddingVertical: 20,
+    // paddingVertical: 20,
 });
 
 const styles = StyleSheet.create({

@@ -203,6 +203,7 @@ const renderContentText = ({
         numberOfLines={numberOfLines}
         borderThickness={1.3}
         teamColors={teamColors}
+        mainColor={"white"}
       />
     </View>
   );
@@ -935,6 +936,7 @@ const PostCard = React.memo(function PostCard({
                   numberOfLines={2}
                   borderThickness={1.5}
                   teamColors={teamColors}
+                  mainColor={"white"}
                 />
                 </View>
               )}

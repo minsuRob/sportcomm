@@ -163,8 +163,6 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
               getTextStyle(),
               getCharStyle(index),
               { color: textColor },
-              // 웹에서 transform이 작동하지 않을 경우를 위한 CSS 스타일
-              Platform.OS === "web" &&
                 ({
                   transform: `rotate(${getCharRotation(index)}deg)`,
                 } as any),

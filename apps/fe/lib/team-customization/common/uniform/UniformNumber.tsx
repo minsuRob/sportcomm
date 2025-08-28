@@ -72,6 +72,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
 // 기본 컨테이너 스타일 (350px 컨테이너 기준 완벽한 가로세로 중앙 정렬)
 const $outerContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1, // 350px 부모 영역 전체 활용
+  left: 8, // TODO: 하드코딩 된 왼쪽 너비, 개선할수있으면 해야함.
   width: "100%", // 가로 전체 너비 사용
   justifyContent: "center", // 세로 중앙 정렬
   alignItems: "center", // 가로 중앙 정렬

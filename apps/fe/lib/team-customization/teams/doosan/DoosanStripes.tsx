@@ -48,10 +48,13 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   const strokeWidth = Math.max(4, Math.floor(width / 8)); // 너비에 비례한 선 굵기
   const resolvedStyle = resolveStyle(style);
 
-  // position에 따른 추가 스타일 적용
+  // position에 따른 추가 스타일 적용 및 여백 설정
   const positionStyle = position === 'bottom-right' ? {
     // 오른쪽 배치 시 스트라이프 방향이나 색상을 다르게 할 수 있음
-  } : {};
+    marginRight: 5,
+  } : {
+    marginLeft: 5,
+  };
 
   // 웹 환경에서는 CSS로 스트라이프 구현
   if (isWeb()) {

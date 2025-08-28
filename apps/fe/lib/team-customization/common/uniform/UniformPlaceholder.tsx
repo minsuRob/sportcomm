@@ -77,14 +77,13 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   alignItems: "center",
   backgroundColor: colors.background,
   borderRadius: 8,
-  padding: 16,
 });
 
 const $archedTextContainer: ThemedStyle<ViewStyle> = () => ({
-  height: 80, // 실제 아치형 텍스트에 필요한 높이로 제한
   width: "100%",
   justifyContent: "center",
   alignItems: "center",
+  paddingBottom: 35,
 });
 
 const $numberContainer: ThemedStyle<ViewStyle> = () => ({

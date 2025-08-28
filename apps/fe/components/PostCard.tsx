@@ -1289,6 +1289,7 @@ const $uniformPlaceholder: ThemedStyle<ViewStyle> = () => ({
   justifyContent: "center",
   alignItems: "center",
   borderRadius: 8,
+  paddingBottom: 120,
 });
 
 // 더보기 버튼

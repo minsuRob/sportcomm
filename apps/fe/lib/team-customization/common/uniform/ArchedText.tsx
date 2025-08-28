@@ -37,26 +37,44 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
 
   // 텍스트 길이에 따른 동적 아치 계산 (글씨 겹침 방지)
   const archConfig = useMemo(() => {
-    const BASE_CHARS = 3; // 김택연 3글자를 기준
-    const BASE_RADIUS = 100; // medium 사이즈 고정값
-    const RADIUS_PER_CHAR = 35; // medium 사이즈 고정값
+    /**
+     * 글자 수(2~6)에 따라 반지름과 아치 각도를 동적으로 조절하여
+     * - 2글자: 좁고 살짝만 휜 형태
+     * - 6글자: 넓고 완만한 곡선으로 글자 겹침 최소화
+     *
+     * radius 증가: 글자 수 많을수록 더 큰 원의 일부를 사용 → 각 글자간 간격 확보
+     * arcAngle 증가: 글자 수 많을수록 전체 펼침 폭을 조금 늘려 밸런스 유지
+     */
+    const len = text.length;
 
-    const extraChars = text.length - BASE_CHARS;
-    const dynamicRadius = BASE_RADIUS + extraChars * RADIUS_PER_CHAR;
+    // 1글자 예외 처리(안전장치)
+    if (len <= 1) {
+      return { radius: 100, arcAngle: 0, totalChars: len };
+    }
 
-    // 아치 각도 계산 (더 넓은 아치로 글씨 분산)
-    const arcAngle = 60; // 45도에서 60도로 증가하여 더 넓은 아치
+    // 글자 수 클램프 (요구사항 범위 2~6)
+    const clamped = Math.min(6, Math.max(2, len));
+
+    // 반지름: 2글자 100 → 6글자 100 + 4*30 = 220
+    const BASE_RADIUS = 100;
+    const RADIUS_STEP = 30;
+    const radius = BASE_RADIUS + (clamped - 2) * RADIUS_STEP;
+
+    // 아치 각도: 2글자 40° → 6글자 40 + 4*9 = 76°
+    const BASE_ARC = 40;
+    const ARC_STEP = 9;
+    const arcAngle = BASE_ARC + (clamped - 2) * ARC_STEP;
 
     if (__DEV__) {
       console.log(
-        `Arch config: radius=${dynamicRadius}, arcAngle=${arcAngle}, chars=${text.length}`
+        `Arch config: len=${len} (clamped=${clamped}) radius=${radius} arcAngle=${arcAngle}`
       );
     }
 
     return {
-      radius: dynamicRadius,
+      radius,
       arcAngle,
-      totalChars: text.length,
+      totalChars: len,
     };
   }, [text]);
 
@@ -88,8 +106,11 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   const getCharRotation = (index: number) => {
     const { arcAngle, totalChars } = archConfig;
 
-    // CSS의 calc() 로직과 동일:
+    // totalChars가 1이면 회전 불필요 (방어 코드)
+    if (totalChars <= 1) return 0;
+
     // (index * (arcAngle / (totalChars - 1))) - (arcAngle / 2)
+    // 글자 수에 따라 arcAngle 이 동적이므로 anglePerChar 자동 보정
     const anglePerChar = arcAngle / (totalChars - 1);
     const rotation = index * anglePerChar - arcAngle / 2;
 

@@ -73,11 +73,11 @@ export const teamColors = {
     },
     dark: {
       // 유니폼 배경색
-      uniformBackground: "#1F2937", // 어두운 회색
+      uniformBackground: "#000036", // 어두운 회색
       // 유니폼 글씨색
-      uniformText: "#60A5FA", // 밝은 파란색
+      uniformText: "#FFFFFF", // 밝은 파란색
       // 유니폼 숫자색
-      uniformNumber: "#60A5FA", // 밝은 파란색
+      uniformNumber: "#FFFFFF", // 밝은 파란색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#93C5FD", // 연한 파란색
       // 액션 버튼 색상 (좋아요, 댓글, 즐겨찾기 통일)
@@ -86,7 +86,7 @@ export const teamColors = {
       // 좋아요 배경색
       likeBackground: "#1E3A8A", // 어두운 파란색
       // PostActions 배경색 (액션 바 배경)
-      postActionsBackground: "#1F2937", // 어두운 회색
+      postActionsBackground: "#000000", // 어두운 회색
       // 팀 메인 컬러
       mainColor: "#60A5FA", // 밝은 파란색
       // 팀 서브 컬러
@@ -94,7 +94,7 @@ export const teamColors = {
       // 팀 액센트 컬러
       accent: "#F87171", // 밝은 빨간색
       // 장식용 보더 (DoosanStripes 등)
-      decorationBorder: "#374151", // 어두운 회색
+      decorationBorder: "#FFFFFF", // 어두운 회색
       // 카드 테두리 (PostCard 등)
       cardBorder: "#4B5563", // 중간 회색
       // 프로필 텍스트 색상
@@ -102,8 +102,8 @@ export const teamColors = {
       profileTime: "#9CA3AF", // 밝은 회색
       profileStroke: "#1F2937", // 어두운 회색 테두리
       // 유니폼 번호 색상
-      uniformNumberText: "#60A5FA", // 밝은 파란색
-      uniformNumberStroke: "#374151", // 어두운 회색 테두리
+      uniformNumberText: "#FFFFFF", // 밝은 파란색
+      uniformNumberStroke: "#FF1620", 
     },
   },
   // 삼성 라이온즈
@@ -142,7 +142,7 @@ export const teamColors = {
     },
     dark: {
       // 유니폼 배경색
-      uniformBackground: "#1F2937", // 어두운 회색
+      uniformBackground: "#09233F", // 어두운 회색
       // 유니폼 글씨색
       uniformText: "#F87171", // 밝은 빨간색
       // 유니폼 데코레이션 색상

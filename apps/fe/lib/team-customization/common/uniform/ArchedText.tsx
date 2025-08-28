@@ -37,12 +37,12 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     // 글자 수 클램프 (요구사항 범위 2~6)
     const clamped = Math.min(6, Math.max(2, len));
 
-    // 반지름: 2글자 100 → 6글자 100 + 4*30 = 220
-    const BASE_RADIUS = 100;
-    const RADIUS_STEP = 30;
+    // 반지름: 2글자 140 → 6글자 140 + 4*40 = 300 (글자 간격 확보용)
+    const BASE_RADIUS = 140;
+    const RADIUS_STEP = 40;
     const radius = BASE_RADIUS + (clamped - 2) * RADIUS_STEP;
 
-    // 아치 각도: 2글자 40° → 6글자 40 + 4*9 = 76°
+    // 아치 각도: 2글자 40° → 6글자 40 + 4*9 = 76° (자연스러운 아치 유지)
     const BASE_ARC = 40;
     const ARC_STEP = 9;
     const arcAngle = BASE_ARC + (clamped - 2) * ARC_STEP;
@@ -71,7 +71,6 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     return {
       height: actualHeight + padding * 2,
       centerY: (actualHeight + padding * 2) / 2,
-      topOffset: padding - topY, // 중앙 기준점에서 실제 렌더링 시작점까지의 오프셋
     };
   }, [archConfig]);
 
@@ -96,7 +95,7 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     return rotation;
   };
 
-  // 각 문자별 스타일 계산 (유동적 중앙 기준)
+  // 각 문자별 스타일 계산 (absolute position 기반 아치형)
   const getCharStyle = (index: number) => {
     const rotation = getCharRotation(index);
     const { radius } = archConfig;
@@ -105,24 +104,34 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     const x = Math.sin(angleRad) * radius;
     const y = -Math.cos(angleRad) * radius;
 
+    // 글자 간격 추가 확보를 위한 x좌표 오프셋 계산
+    const { totalChars } = archConfig;
+    const centerIndex = (totalChars - 1) / 2; // 중앙 글자 index
+    const offsetFromCenter = index - centerIndex; // 중앙에서의 거리
+    const additionalSpacing = offsetFromCenter * 50; // 10px씩 추가 간격
+
+    // 컨테이너 중앙 기준 계산 (영역 내 배치)
+    const centerX = optimizedHeight / 2;
+    const centerY = optimizedHeight / 2;
+
+    // 아치를 컨테이너 크기에 맞게 스케일링 (글자 간격 보장)
+    const scale = Math.max(0.3, optimizedHeight / (radius * 3)); // 최소 스케일 0.3 보장
+    const scaledX = (x + additionalSpacing) * scale; // 추가 간격 포함한 x좌표
+    const scaledY = y * scale;
+
     if (Platform.OS === "web") {
       return {
         position: "absolute" as const,
-        left: "50%", // 중앙 기준
-        top: centerY + y + archBounds.topOffset,
-        transform: [
-          { translateX: x },
-          { translateY: 0 },
-          { rotate: `${rotation}deg` }
-        ] as any,
-        marginLeft: x, // 웹에서 transform 대체
+        left: centerX + scaledX ,
+        top: centerY + scaledY,
+        transform: [{ rotate: `${rotation}deg` }] as any,
       };
     } else {
       return {
         position: "absolute" as const,
-        left: "50%", // 중앙 기준
-        top: centerY + y + archBounds.topOffset,
-        marginLeft: x, // 중앙에서 x만큼 이동
+        left: centerX + scaledX,
+        top: centerY + scaledY,
+        transform: [{ rotate: `${rotation}deg` }] as any,
       };
     }
   };
@@ -140,7 +149,10 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
       style={[
         styles.container,
         containerStyle,
-        { height: optimizedHeight }
+        {
+          height: optimizedHeight,
+          width: optimizedHeight, // 정사각형 컨테이너로 설정
+        }
       ]}
     >
       {text.split("").map((char, index) => (
@@ -165,24 +177,23 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
   );
 };
 
-// 기본 스타일 (flex 기반 유동적 레이아웃)
+// 기본 스타일 (정상적인 아치형 배치)
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  width: "100%", // 부모 너비 전체 사용
   position: "relative",
   justifyContent: "center",
   alignItems: "center",
+  alignSelf: "center", // 자체 중앙 정렬
 });
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%", // 유동적 너비
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
   },
   char: {
     textAlign: "center",
-    includeFontPadding: false,
+    includeFontPadding: false, // Android 내림/올림 공백 제거
     textAlignVertical: "center",
     position: "absolute",
   },

@@ -16,10 +16,10 @@ interface UniformNumberProps {
 
 /**
  * UniformNumber
- * 350px 고정 높이 영역 중앙에 등번호를 크게 렌더링하는 컴포넌트
- * - iOS 에서 보이지 않는 문제를 해결하기 위해 절대 위치/동적 계산 제거
- * - flex 중앙 정렬만 사용
- * - topPosition, containerWidth 등 불필요한 prop 제거
+ * 등번호를 350px 컨테이너 기준 완벽한 가로세로 중앙 정렬로 렌더링하는 컴포넌트
+ * - 350px 고정 높이 컨테이너의 정확한 중앙에 배치
+ * - 숫자 크기에 관계없이 일관된 중앙 정렬
+ * - flex를 활용한 완벽한 가운데 정렬
  */
 export const UniformNumber: React.FC<UniformNumberProps> = ({
   number,
@@ -69,12 +69,12 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   );
 };
 
-// 기본 컨테이너 스타일 (350px 고정 높이, 중앙 정렬)
+// 기본 컨테이너 스타일 (350px 컨테이너 기준 완벽한 가로세로 중앙 정렬)
 const $outerContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  height: 350,
-  width: "100%",
-  justifyContent: "center",
-  alignItems: "center",
+  flex: 1, // 350px 부모 영역 전체 활용
+  width: "100%", // 가로 전체 너비 사용
+  justifyContent: "center", // 세로 중앙 정렬
+  alignItems: "center", // 가로 중앙 정렬
   // 필요 시 배경 색상 적용 가능: backgroundColor: colors.background
 });
 

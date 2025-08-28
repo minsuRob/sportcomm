@@ -482,11 +482,11 @@ const PostCard = React.memo(function PostCard({
 
   // 디버깅을 위한 로그 (개발 환경에서만)
   if (__DEV__) {
-    console.log('PostCard 팀 정보:', { 
-      teamId: post.teamId, 
-      teamName, 
+    console.log('PostCard 팀 정보:', {
+      teamId: post.teamId,
+      teamName,
       postTeamName: (post as any)?.team?.name,
-      postTeamNameField: (post as any)?.teamName 
+      postTeamNameField: (post as any)?.teamName
     });
   }
 
@@ -510,7 +510,7 @@ const PostCard = React.memo(function PostCard({
 
   // 팀별 색상 가져오기 (다크모드/라이트모드 구분)
   const teamColors = getTeamColors(post.teamId, theme.isDark, teamName);
-  
+
   // 기존 teamPalette 구조에 맞춘 매핑 (팀별 색상 적용)
   const teamPalette = {
     cardBg: teamColors.uniformBackground,
@@ -1273,7 +1273,7 @@ const $contentContainer: ThemedStyle<ViewStyle> = () => ({
 
 
 
-// 유니폼 플레이스홀더 스타일
+// 유니폼 플레이스홀더 스타일 (350px 고정 높이)
 const $uniformPlaceholder: ThemedStyle<ViewStyle> = () => ({
   height: 350,
   justifyContent: "center",

@@ -1267,7 +1267,7 @@ const $categoryText: ThemedStyle<TextStyle> = () => ({
 const $textContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   bottom: "25%",
-  left: spacing.sm,
+  left: spacing.xl,
   right: spacing.sm,
   zIndex: 2,
   gap: spacing.xxs,

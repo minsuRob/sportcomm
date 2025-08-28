@@ -1,5 +1,5 @@
 // Utils exports
 export * from "./userMeta";
-export * from "./strokedText";
+export * from "./StrokedText";
 export * from "./file-utils";
 export * from "./dateUtils";

@@ -1,36 +1,48 @@
 import React from "react";
 import { View, Text, ViewStyle, TextStyle } from "react-native";
+import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 
-/**
- * 테두리 효과가 있는 텍스트 렌더링 함수
- * 여러 레이어를 사용하여 텍스트에 테두리 효과를 적용합니다.
- */
-export const renderStrokedText = ({
-  content,
-  themed,
-  containerStyle,
-  fontSize = 24,
-  lineHeight = 32,
-  numberOfLines = 4,
-  borderThickness = 2, // 테두리 두께 (기본값: 2)
-  mainColor = "white", // 메인 텍스트 색상 (기본값: 흰색)
-  strokeColor = "black", // 테두리 색상 (기본값: 검은색)
-}: {
+export interface StrokedTextProps {
   content: string;
-  themed: any;
-  containerStyle?: ViewStyle;
   fontSize?: number;
   lineHeight?: number;
   numberOfLines?: number;
-  borderThickness?: number; // 테두리 두께 파라미터
-  mainColor?: string; // 메인 텍스트 색상
-  strokeColor?: string; // 테두리 색상
-}) => {
+  borderThickness?: number;
+  mainColor?: string;
+  strokeColor?: string;
+  teamColors?: {
+    uniformText?: string;
+    uniformStroke?: string;
+  };
+  containerStyle?: ViewStyle;
+}
+
+/**
+ * 테두리 효과가 있는 텍스트 컴포넌트
+ * 여러 레이어를 사용하여 텍스트에 테두리 효과를 적용합니다.
+ */
+export function StrokedText({
+  content,
+  fontSize = 24,
+  lineHeight = 32,
+  numberOfLines = 4,
+  borderThickness = 2,
+  mainColor,
+  strokeColor,
+  teamColors,
+  containerStyle,
+}: StrokedTextProps) {
+  const { themed } = useAppTheme();
+
+  // 우선순위: 직접 전달된 색상 > 팀 색상 > 기본 색상
+  const finalMainColor = mainColor || teamColors?.uniformText || "white";
+  const finalStrokeColor = strokeColor || teamColors?.uniformStroke || "black";
+
   // 테두리 레이어를 동적으로 생성
   const generateBorderLayers = () => {
     const layers = [];
-    
+
     // 테두리 두께에 따라 레이어 생성
     for (let i = 0.1; i <= borderThickness; i += 0.1) {
       // 8방향 테두리 레이어 생성
@@ -44,14 +56,20 @@ export const renderStrokedText = ({
         { left: 0, top: -i },    // 위
         { left: 0, top: i },     // 아래
       ];
-      
+
       directions.forEach((direction, index) => {
         layers.push(
           <Text
             key={`border-${i}-${index}`}
             style={[
               themed($contentTextStroke),
-              { fontSize, lineHeight, color: strokeColor, ...direction },
+              {
+                fontSize,
+                lineHeight,
+                color: finalStrokeColor,
+                left: direction.left,
+                top: direction.top,
+              },
             ]}
             numberOfLines={numberOfLines}
           >
@@ -60,7 +78,7 @@ export const renderStrokedText = ({
         );
       });
     }
-    
+
     return layers;
   };
 
@@ -68,17 +86,23 @@ export const renderStrokedText = ({
     <View style={[themed($titleContainer), containerStyle]}>
       {/* 동적으로 생성된 테두리 레이어들 */}
       {generateBorderLayers()}
-      
+
       {/* 메인 텍스트 */}
       <Text
-        style={[themed($contentText), { fontSize, lineHeight, color: mainColor }]}
+        style={[
+          themed($contentText),
+          { fontSize, lineHeight, color: finalMainColor }
+        ]}
         numberOfLines={numberOfLines}
       >
         {content}
       </Text>
     </View>
   );
-};
+}
+
+// 기본 export도 제공
+export default StrokedText;
 
 // --- 스타일 정의 ---
 const $titleContainer: ThemedStyle<ViewStyle> = () => ({
@@ -90,8 +114,6 @@ const $contentTextStroke: ThemedStyle<TextStyle> = () => ({
   fontWeight: "bold",
   textAlign: "left",
 });
-
-
 
 const $contentText: ThemedStyle<TextStyle> = () => ({
   position: "relative",

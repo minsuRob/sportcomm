@@ -40,7 +40,7 @@ import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
 import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
-import { renderStrokedText } from "@/lib/utils/strokedText";
+import { StrokedText } from "@/lib/utils/StrokedText";
 import { UniformPlaceholder } from "@/lib/team-customization/common/uniform/UniformPlaceholder";
 import { useTeamCustomization } from "@/lib/team-customization";
 
@@ -184,6 +184,7 @@ const renderContentText = ({
   fontSize = 24,
   lineHeight = 32,
   numberOfLines = 4,
+  teamColors,
 }: {
   content: string;
   themed: any;
@@ -191,17 +192,18 @@ const renderContentText = ({
   fontSize?: number;
   lineHeight?: number;
   numberOfLines?: number;
+  teamColors: any;
 }) => {
   return (
     <View style={[themed($contentContainer), containerStyle]}>
-      {renderStrokedText({
-        content,
-        themed,
-        fontSize,
-        lineHeight,
-        numberOfLines,
-        borderThickness:1.3,
-      })}
+      <StrokedText
+        content={content}
+        fontSize={fontSize}
+        lineHeight={lineHeight}
+        numberOfLines={numberOfLines}
+        borderThickness={1.3}
+        teamColors={teamColors}
+      />
     </View>
   );
 };
@@ -799,26 +801,26 @@ const PostCard = React.memo(function PostCard({
                 }
                 activeOpacity={0.7}
               >
-                {renderStrokedText({
-                  content: post.author.nickname,
-                  themed: themed,
-                  fontSize: 14,
-                  lineHeight: 18,
-                  numberOfLines: 1,
-                  borderThickness: 0.5, // 프로필 이름 테두리 두께
-                  mainColor: teamColors?.profileText || theme.colors.text,
-                  strokeColor: teamColors?.profileStroke || theme.colors.background,
-                })}
-                {renderStrokedText({
-                  content: formatTimeAgo(post.createdAt),
-                  themed: themed,
-                  fontSize: 12,
-                  lineHeight: 16,
-                  numberOfLines: 1,
-                  borderThickness: 0.3, // 시간 테두리 두께
-                  mainColor: teamColors?.profileTime || theme.colors.textDim,
-                  strokeColor: teamColors?.profileStroke || theme.colors.background,
-                })}
+                <StrokedText
+                  content={post.author.nickname}
+                  fontSize={14}
+                  lineHeight={18}
+                  numberOfLines={1}
+                  borderThickness={0.5}
+                  mainColor={teamColors?.profileText || theme.colors.text}
+                  strokeColor={teamColors?.profileStroke || theme.colors.background}
+                  teamColors={teamColors}
+                />
+                <StrokedText
+                  content={formatTimeAgo(post.createdAt)}
+                  fontSize={12}
+                  lineHeight={16}
+                  numberOfLines={1}
+                  borderThickness={0.3}
+                  mainColor={teamColors?.profileTime || theme.colors.textDim}
+                  strokeColor={teamColors?.profileStroke || theme.colors.background}
+                  teamColors={teamColors}
+                />
               </TouchableOpacity>
 
               {/* 팔로우 버튼 - 자신의 게시물이 아닌 경우에만 표시 */}
@@ -926,14 +928,14 @@ const PostCard = React.memo(function PostCard({
               {/* 제목 표시 */}
               {post.title && post.title.trim() && (
                 <View>
-                  {renderStrokedText({
-                    content: post.title,
-                    themed: themed,
-                    fontSize: 24,
-                    lineHeight: 42,
-                    numberOfLines: 2,
-                    borderThickness: 1.5, // 테두리 두께 설정
-                  })}
+                                  <StrokedText
+                  content={post.title}
+                  fontSize={24}
+                  lineHeight={42}
+                  numberOfLines={2}
+                  borderThickness={1.5}
+                  teamColors={teamColors}
+                />
                 </View>
               )}
 
@@ -945,6 +947,7 @@ const PostCard = React.memo(function PostCard({
                 fontSize: 14,
                 lineHeight: 32,
                 numberOfLines: 2,
+                teamColors: teamColors,
               })}
             </View>
           </TouchableOpacity>

@@ -114,24 +114,23 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     const centerX = optimizedHeight / 2;
     const centerY = optimizedHeight / 2;
 
-    // 아치를 컨테이너 크기에 맞게 스케일링 (글자 간격 보장)
-    const scale = Math.max(0.3, optimizedHeight / (radius * 3)); // 최소 스케일 0.3 보장
+    // 아치를 자연스러운 크기로 스케일링 (내부 컨테이너 기준)
+    const scale = 0.4; // 고정 스케일로 일관된 크기 유지
     const scaledX = (x + additionalSpacing) * scale; // 추가 간격 포함한 x좌표
-    const scaledY = y * scale;
+    const scaledY = (y + radius) * scale; // y 좌표를 양수로 조정
 
     if (Platform.OS === "web") {
       return {
         position: "absolute" as const,
-        left: centerX + scaledX ,
-        top: centerY + scaledY,
+        left: scaledX,
+        top: scaledY,
         transform: [{ rotate: `${rotation}deg` }] as any,
       };
     } else {
       return {
         position: "absolute" as const,
-        left: centerX + scaledX,
-        top: centerY + scaledY,
-        transform: [{ rotate: `${rotation}deg` }] as any,
+        left: scaledX,
+        top: scaledY,
       };
     }
   };
@@ -151,38 +150,40 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
         containerStyle,
         {
           height: optimizedHeight,
-          width: optimizedHeight, // 정사각형 컨테이너로 설정
         }
       ]}
     >
-      {text.split("").map((char, index) => (
-        <Text
-          key={`${char}-${index}`}
-          style={[
-            styles.char,
-            getTextStyle(),
-            getCharStyle(index),
-            { color: textColor },
-            // 웹에서 transform이 작동하지 않을 경우를 위한 CSS 스타일
-            Platform.OS === "web" &&
-              ({
-                transform: `rotate(${getCharRotation(index)}deg)`,
-              } as any),
-          ]}
-        >
-          {char}
-        </Text>
-      ))}
+      {/* 아치형 텍스트를 감싸는 내부 컨테이너 */}
+      <View style={styles.archTextContainer}>
+        {text.split("").map((char, index) => (
+          <Text
+            key={`${char}-${index}`}
+            style={[
+              styles.char,
+              getTextStyle(),
+              getCharStyle(index),
+              { color: textColor },
+              // 웹에서 transform이 작동하지 않을 경우를 위한 CSS 스타일
+              Platform.OS === "web" &&
+                ({
+                  transform: `rotate(${getCharRotation(index)}deg)`,
+                } as any),
+            ]}
+          >
+            {char}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 };
 
-// 기본 스타일 (정상적인 아치형 배치)
+// 기본 스타일 (이중 컨테이너 구조)
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  position: "relative",
+  width: "100%",
   justifyContent: "center",
   alignItems: "center",
-  alignSelf: "center", // 자체 중앙 정렬
+  position: "relative",
 });
 
 const styles = StyleSheet.create({
@@ -190,6 +191,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+  },
+  archTextContainer: {
+    position: "relative",
+    width: 120,
+    height: 60,
+    justifyContent: "center",
+    alignItems: "center",
   },
   char: {
     textAlign: "center",

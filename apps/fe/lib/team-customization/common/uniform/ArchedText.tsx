@@ -37,14 +37,6 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
 
   // 텍스트 길이에 따른 동적 아치 계산 (글씨 겹침 방지)
   const archConfig = useMemo(() => {
-    /**
-     * 글자 수(2~6)에 따라 반지름과 아치 각도를 동적으로 조절하여
-     * - 2글자: 좁고 살짝만 휜 형태
-     * - 6글자: 넓고 완만한 곡선으로 글자 겹침 최소화
-     *
-     * radius 증가: 글자 수 많을수록 더 큰 원의 일부를 사용 → 각 글자간 간격 확보
-     * arcAngle 증가: 글자 수 많을수록 전체 펼침 폭을 조금 늘려 밸런스 유지
-     */
     const len = text.length;
 
     // 1글자 예외 처리(안전장치)
@@ -64,12 +56,6 @@ export const ArchedText: React.FC<ArchedTextProps> = ({
     const BASE_ARC = 40;
     const ARC_STEP = 9;
     const arcAngle = BASE_ARC + (clamped - 2) * ARC_STEP;
-
-    if (__DEV__) {
-      console.log(
-        `Arch config: len=${len} (clamped=${clamped}) radius=${radius} arcAngle=${arcAngle}`
-      );
-    }
 
     return {
       radius,

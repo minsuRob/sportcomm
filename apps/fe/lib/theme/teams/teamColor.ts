@@ -91,10 +91,10 @@ export const teamColors = {
   samsung: {
     light: {
       uniformBackground: "#FFFFFF",
-      uniformText: "#074CA1",
-      uniformNumberText: "#074CA1",
+      uniformText: "#0D42A3",
+      uniformNumberText: "#0D42A3",
       uniformNumberStroke: "#074CA1",
-      postActionsBackground: "#074CA1",
+      postActionsBackground: "#0D42A3",
       actionButtonActive: "#848484",
       actionButtonInactive: "#848484",
 
@@ -263,9 +263,9 @@ export const teamColors = {
   lg: {
     light: {
       uniformBackground: "#FFFFFF",
-      uniformText: "#C4003C",
-      uniformNumberText: "#C4003C",
-      uniformNumberStroke: "#000000",
+      uniformText: "#000000",
+      uniformNumberText: "#000000",
+      uniformNumberStroke: "#D60325",
       postActionsBackground: "#000000",
       actionButtonActive: "#D60325",
       actionButtonInactive: "#D60325",
@@ -305,14 +305,14 @@ export const teamColors = {
   // 롯데 자이언츠
   lotte: {
     light: {
-      uniformBackground: "#FFFFFF",
-      uniformText: "#002E5F",
-      uniformNumberText: "#002E5F",
-      uniformNumberStroke: "#CE0E2D",
-      postActionsBackground: "#002E5F",
-      actionButtonActive: "#CE0E2D",
-      actionButtonInactive: "#002E5F",
-
+      uniformBackground: "#E5E3DC",
+      uniformText: "#1F152A",
+      uniformNumberText: "#F2F2F2",
+      uniformNumberStroke: "#E2222C",
+      postActionsBackground: "#1F152A",
+      actionButtonActive: "#E2222C",
+      actionButtonInactive: "#E2222C",
+ 
       uniformDecoration: "#CE0E2D",
       likeBackground: "#FEF2F2",
       mainColor: "#002E5F",

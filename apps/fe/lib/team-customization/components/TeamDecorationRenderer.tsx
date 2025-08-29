@@ -54,7 +54,7 @@ const getPositionStyle = (position?: string): ViewStyle => {
  */
 const $decorationContainer: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
-  zIndex: 5, // PostActions(zIndex: 10)보다 낮게 설정하여 겹침 방지
+  zIndex: 1, // 다른 UI 요소들(zIndex: 2, 3)보다 뒤에, uniformBackground(zIndex: 1)보다는 앞에 위치
 });
 
 export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({

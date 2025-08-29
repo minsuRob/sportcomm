@@ -924,6 +924,33 @@ const PostCard = React.memo(function PostCard({
               </View>
             </View>
 
+            {/* 팀별 커스터마이징 장식 요소 - 미디어가 없을 때(uniformPlaceholder 사용 시)만 표시 */}
+            {teamCustomization.hasDecoration &&
+             videoMedia.length === 0 &&
+             imageMedia.length === 0 && (
+              <TeamDecorationRenderer
+                teamId={post.teamId}
+                teamData={{
+                  id: post.teamId,
+                  name: teamName,
+                  mainColor: (post.team as any)?.mainColor,
+                  subColor: (post.team as any)?.subColor,
+                  darkMainColor: (post.team as any)?.darkMainColor,
+                  darkSubColor: (post.team as any)?.darkSubColor,
+                  sport: (post.team as any)?.sport,
+                  // 팀별 커스텀 색상 추가
+                  decorationBorder: teamColors.decorationBorder,
+                  cardBorder: teamColors.cardBorder,
+                  // 기존 색상들도 유지
+                  ...teamColors
+                }}
+                decorations={teamCustomization.decorations}
+                color={teamColors.decorationBorder || teamPalette.borderColor || categoryInfo.colors.border}
+                teamPalette={teamPalette}
+                categoryInfo={categoryInfo}
+              />
+            )}
+
             {/* 제목과 콘텐츠를 묶는 컨테이너 */}
             <View style={themed($textContainer)}>
               {/* 제목 표시 */}
@@ -976,33 +1003,6 @@ const PostCard = React.memo(function PostCard({
           />
         </View>
       </View>
-
-      {/* 팀별 커스터마이징 장식 요소 - 미디어가 없을 때(uniformPlaceholder 사용 시)만 표시 */}
-      {teamCustomization.hasDecoration && 
-       videoMedia.length === 0 && 
-       imageMedia.length === 0 && (
-        <TeamDecorationRenderer
-          teamId={post.teamId}
-          teamData={{
-            id: post.teamId,
-            name: teamName,
-            mainColor: (post.team as any)?.mainColor,
-            subColor: (post.team as any)?.subColor,
-            darkMainColor: (post.team as any)?.darkMainColor,
-            darkSubColor: (post.team as any)?.darkSubColor,
-            sport: (post.team as any)?.sport,
-            // 팀별 커스텀 색상 추가
-            decorationBorder: teamColors.decorationBorder,
-            cardBorder: teamColors.cardBorder,
-            // 기존 색상들도 유지
-            ...teamColors
-          }}
-          decorations={teamCustomization.decorations}
-          color={teamColors.decorationBorder || teamPalette.borderColor || categoryInfo.colors.border}
-          teamPalette={teamPalette}
-          categoryInfo={categoryInfo}
-        />
-      )}
 
       {/* 컨텍스트 메뉴 */}
       <PostContextMenu
@@ -1269,7 +1269,7 @@ const $textContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   bottom: "25%",
   left: spacing.xl,
   right: spacing.sm,
-  zIndex: 2,
+  zIndex: 4, // 스트라이프(zIndex: 1.5)와 다른 UI 요소들(zIndex: 2, 3)보다 앞에 위치하여 텍스트가 가려지지 않도록 설정
   gap: spacing.xxs,
 });
 

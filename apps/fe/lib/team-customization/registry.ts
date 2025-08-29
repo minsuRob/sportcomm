@@ -204,40 +204,58 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
     {
       component: CommonStripes,
       props: {
-        width: 8,         // LG 팀 전용 너비
-        height: 200,      // LG 팀 전용 높이
-        color: '#C41E3A', // LG 트윈스 레드 색상
-        opacity: 0.8,     // 적당한 투명도
+        width: 2,         // LG 팀 전용 너비
+        height: 350,      // LG 팀 전용 높이
+        color: '#000000', // LG 트윈스 레드 색상
+        opacity: 0.9,     // 적당한 투명도
         position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          // position: 'absolute',
+          left: 30,
+          //bottom: 60,
+          zIndex: 1,
+        }),
       },
       enabled: true,
     },
-    {
-      component: CommonStripes,
-      props: {
-        width: 8,         // LG 팀 전용 너비
-        height: 200,      // LG 팀 전용 높이
-        color: '#C41E3A', // LG 트윈스 레드 색상
-        opacity: 0.8,     // 적당한 투명도
-        position: 'bottom-right' as const,
-      },
-      enabled: true,
-    },
+    // {
+    //   component: CommonStripes,
+    //   props: {
+    //     width: 8,         // LG 팀 전용 너비
+    //     height: 200,      // LG 팀 전용 높이
+    //     color: '#C41E3A', // LG 트윈스 레드 색상
+    //     opacity: 0.8,     // 적당한 투명도
+    //     position: 'bottom-right' as const,
+    //     style: ({ colors }) => ({
+    //       // position: 'absolute',
+    //       right: 8,
+    //       // bottom: 60,
+    //       zIndex: 1,
+    //     }),
+    //   },
+    //   enabled: true,
+    // },
+     // 대각선 스트라이프
+    // {
+    //   component: CommonStripes,
+    //   props: {
+    //     width: 10,        // 대각선 스트라이프 너비
+    //     height: 200,      // LG 팀 전용 높이
+    //     color: '#C41E3A', // LG 트윈스 레드 색상
+    //     opacity: 0.8,     // 적당한 투명도
+    //     position: 'top-left' as const,
+    //     style: ({ colors }) => ({
+    //       // position: 'absolute',
+    //       left: 60,
+    //       // top: 20,
+    //       transform: [{ rotate: '45deg' }], // 대각선 회전
+    //       transformOrigin: 'center center',
+    //       zIndex: 1,
+    //     }),
+    //   },
+    //   enabled: true,
+    // },
   ],
-  styles: {
-    decoration: ({ colors }) => ({
-      position: 'absolute',
-      left: 8,
-      bottom: 60,
-      zIndex: 1,
-    }),
-    decorationRight: ({ colors }) => ({
-      position: 'absolute',
-      right: 8,
-      bottom: 60,
-      zIndex: 1,
-    }),
-  },
 });
 
 const createKIACustomization = (): TeamCustomizationConfig => ({

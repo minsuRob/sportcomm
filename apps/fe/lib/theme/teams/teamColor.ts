@@ -68,10 +68,10 @@ export const teamColors = {
       uniformBackground: "#000036", // 어두운 회색
       uniformText: "#FFFFFF", // 밝은 파란색
       uniformNumberText: "#FFFFFF", // 밝은 파란색
-      uniformNumberStroke: "#FF1620",
-      postActionsBackground: "#000000", // 어두운 회색
-      actionButtonActive: "#F87171", // 밝은 빨간색 (활성 상태)
-      actionButtonInactive: "#9CA3AF", // 밝은 회색 (비활성 상태)
+      uniformNumberStroke: "#FF1620", //빨강
+      postActionsBackground: "#FFFFFF", 
+      actionButtonActive: "#000036", // 밝은 빨간색 (활성 상태)
+      actionButtonInactive: "#000036", // 밝은 회색 (비활성 상태)
 
       // 기타
       uniformNumber: "#FFFFFF", // (원래 있던 보조 필드)
@@ -82,7 +82,7 @@ export const teamColors = {
       accent: "#F87171", // 밝은 빨간색
       decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
-      profileText: "#60A5FA",
+      profileText: "#FFFFFF",
       profileTime: "#9CA3AF",
       profileStroke: "#1F2937",
     },
@@ -110,13 +110,13 @@ export const teamColors = {
       profileStroke: "#FFFFFF",
     },
     dark: {
-      uniformBackground: "#09233F",
-      uniformText: "#F87171",
-      uniformNumberText: "#F87171",
-      uniformNumberStroke: "#374151",
-      postActionsBackground: "#1F2937",
-      actionButtonActive: "#F87171",
-      actionButtonInactive: "#9CA3AF",
+      uniformBackground: "#09233F", // 파란색
+      uniformText: "#FFFFFF",
+      uniformNumberText: "#FFFFFF",
+      uniformNumberStroke: "#FFFFFF",
+      postActionsBackground: "#FFFFFF",
+      actionButtonActive: "#09233F",
+      actionButtonInactive: "#09233F",
 
       uniformDecoration: "#FCA5A5",
       likeBackground: "#991B1B",
@@ -125,7 +125,7 @@ export const teamColors = {
       accent: "#60A5FA",
       decorationBorder: "#374151",
       cardBorder: "#4B5563",
-      profileText: "#F87171",
+      profileText: "#FFFFFF",
       profileTime: "#9CA3AF",
       profileStroke: "#1F2937",
     },
@@ -177,7 +177,7 @@ export const teamColors = {
   kia: {
     light: {
       uniformBackground: "#FFFFFF",
-      uniformText: "#EA0029",
+      uniformText: "#EA0029", // 
       uniformNumberText: "#EA0029",
       uniformNumberStroke: "#000000",
       postActionsBackground: "#000000",
@@ -196,13 +196,13 @@ export const teamColors = {
       profileStroke: "#FFFFFF",
     },
     dark: {
-      uniformBackground: "#1A1A1A",
-      uniformText: "#CC0022",
-      uniformNumberText: "#CC0022",
-      uniformNumberStroke: "#FFFFFF",
-      postActionsBackground: "#000000",
-      actionButtonActive: "#CC0022",
-      actionButtonInactive: "#9CA3AF",
+      uniformBackground: "#24242E", // 검정
+      uniformText: "#FFFFFF",
+      uniformNumberText: "#FFFFFF",
+      uniformNumberStroke: "#E40223",
+      postActionsBackground: "#E40223",
+      actionButtonActive: "#FFFFFF",
+      actionButtonInactive: "#FFFFFF",
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#991B1B",
@@ -211,7 +211,7 @@ export const teamColors = {
       accent: "#FFC107",
       decorationBorder: "#CC0022",
       cardBorder: "#4B5563",
-      profileText: "#CC0022",
+      profileText: "#FFFFFF",
       profileTime: "#9CA3AF",
       profileStroke: "#1F2937",
     },
@@ -282,13 +282,13 @@ export const teamColors = {
       profileStroke: "#FFFFFF",
     },
     dark: {
-      uniformBackground: "#1A1A1A",
-      uniformText: "#A8002F",
-      uniformNumberText: "#A8002F",
+      uniformBackground: "#000000",
+      uniformText: "#FFFFFF",
+      uniformNumberText: "#FFFFFF",
       uniformNumberStroke: "#FFFFFF",
-      postActionsBackground: "#000000",
-      actionButtonActive: "#A8002F",
-      actionButtonInactive: "#9CA3AF",
+      postActionsBackground: "#D60325",
+      actionButtonActive: "#FFFFFF",
+      actionButtonInactive: "#FFFFFF",
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#991B1B",
@@ -297,7 +297,7 @@ export const teamColors = {
       accent: "#87CEEB",
       decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
-      profileText: "#A8002F",
+      profileText: "#FFFFFF",
       profileTime: "#9CA3AF",
       profileStroke: "#1F2937",
     },

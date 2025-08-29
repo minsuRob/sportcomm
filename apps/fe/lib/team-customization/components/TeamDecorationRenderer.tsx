@@ -84,7 +84,7 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
 
         // position에 따른 스타일 계산
         const position = props?.position || 'bottom-left';
-        const positionStyle = getPositionStyle(position);
+        // const positionStyle = getPositionStyle(position);
 
         // decoration props 구성
         const decorationProps: TeamDecorationProps = {
@@ -99,7 +99,7 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
             key={`${teamId}-decoration-${index}-${position}`}
             style={[
               themed($decorationContainer),
-              positionStyle,
+              // positionStyle,
             ]}
           >
             <DecorationComponent {...decorationProps} />

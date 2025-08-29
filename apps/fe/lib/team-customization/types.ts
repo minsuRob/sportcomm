@@ -20,6 +20,8 @@ export interface TeamDecorationProps extends BaseCustomizationProps {
   color?: string;
   opacity?: number;
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  spacing?: number;      // 스트라이프 간격 (RepeatedStripes용)
+  stripeWidth?: number;  // 각 스트라이프 너비 (RepeatedStripes용)
 }
 
 // 유니폼 플레이스홀더 커스터마이징 Props

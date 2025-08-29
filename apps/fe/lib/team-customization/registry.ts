@@ -1,7 +1,7 @@
 import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types';
 import { DoosanStripes } from './teams/doosan/DoosanStripes';
 import { KIATigerStripes } from './teams/kia/KIATigerStripes';
-import { CommonStripes } from './teams/common/CommonStripes';
+import { CommonStripes, RepeatedStripes } from './teams/common';
 
 /**
  * 팀 커스터마이징 레지스트리
@@ -202,17 +202,17 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
   teamName: 'LG',
   decoration: [
     {
-      component: CommonStripes,
+      component: RepeatedStripes,
       props: {
-        width: 2,         // LG 팀 전용 너비
+        width: 100,       // 전체 컨테이너 너비 (10px 간격으로 10개 스트라이프 생성)
         height: 350,      // LG 팀 전용 높이
-        color: '#000000', // LG 트윈스 레드 색상
+        color: '#000000', // LG 트윈스 색상
         opacity: 0.9,     // 적당한 투명도
         position: 'bottom-left' as const,
+        spacing: 10,      // 스트라이프 간격 (10px)
+        stripeWidth: 2,   // 각 스트라이프 너비 (2px)
         style: ({ colors }) => ({
-          // position: 'absolute',
           left: 30,
-          //bottom: 60,
           zIndex: 1,
         }),
       },
@@ -350,10 +350,25 @@ initializeDefaultCustomizations();
  * 3. initializeDefaultCustomizations()에 함수 호출 추가
  * 4. 필요한 경우 import 추가
  *
+ * 컴포넌트 선택 가이드:
+ * - CommonStripes: 단일 스트라이프 (width x height 크기의 하나의 직사각형)
+ * - RepeatedStripes: 반복 스트라이프 (width만큼 spacing 간격으로 stripeWidth 크기 스트라이프 반복)
+ * - DoosanStripes: 두산 팀 전용 스트라이프 (3개 세로선)
+ * - KIATigerStripes: 기아 팀 전용 호랑이 스트라이프
+ *
  * 예시:
- * import { CommonStripes } from './teams/common/CommonStripes';
+ * import { CommonStripes, RepeatedStripes } from './teams/common';
  * const createNewTeamCustomization = (): TeamCustomizationConfig => ({
- *   decoration: { component: CommonStripes, props: { width: 5, height: 300, color: '#TEAM_COLOR' } }
+ *   decoration: { 
+ *     component: RepeatedStripes, 
+ *     props: { 
+ *       width: 100, 
+ *       height: 300, 
+ *       color: '#TEAM_COLOR',
+ *       spacing: 10,
+ *       stripeWidth: 3
+ *     } 
+ *   }
  * });
  * registerTeamCustomization(createNewTeamCustomization());
  */

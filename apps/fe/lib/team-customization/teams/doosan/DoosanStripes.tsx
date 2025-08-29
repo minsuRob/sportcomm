@@ -31,15 +31,22 @@ try {
  *
  * 두산 팀의 시그니처 디자인인 세로 스트라이프를 렌더링합니다.
  * 팀 색상과 테마에 따라 동적으로 색상이 변경됩니다.
- * PostActions 영역과 겹치지 않도록 위치가 조정되었습니다.
+ * 
+ * 설정값은 registry.ts에서 중앙 관리되며, 다음과 같은 기본값을 사용합니다:
+ * - width: 24 (registry에서 설정)
+ * - height: 200 (registry에서 설정)
+ * - opacity: 0.1 (registry에서 설정)
+ * - position: 'bottom-left' 또는 'bottom-right' (registry에서 설정)
+ * 
+ * 중복 코드 제거: index.ts 파일은 삭제되고 registry.ts에서 통합 관리
  */
 export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   teamId,
   teamData,
   width = 24,
-  height = 160,
+  height = 200, // registry.ts와 동기화 (양쪽 배치 지원)
   color,
-  opacity = 0.6,
+  opacity = 0.1, // registry.ts와 동기화
   position,
   style,
 }) => {
@@ -48,12 +55,17 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   const strokeWidth = Math.max(4, Math.floor(width / 8)); // 너비에 비례한 선 굵기
   const resolvedStyle = resolveStyle(style);
 
+  // 여백 설정 (registry.ts에서 관리할 수 있도록 상수로 정의)
+  // 향후 registry.ts에서 marginLeft, marginRight props로 전달 가능
+  const MARGIN_LEFT = 5;
+  const MARGIN_RIGHT = 5;
+  
   // position에 따른 추가 스타일 적용 및 여백 설정
   const positionStyle = position === 'bottom-right' ? {
     // 오른쪽 배치 시 스트라이프 방향이나 색상을 다르게 할 수 있음
-    marginRight: 5,
+    marginRight: MARGIN_RIGHT,
   } : {
-    marginLeft: 5,
+    marginLeft: MARGIN_LEFT,
   };
 
   // 웹 환경에서는 CSS로 스트라이프 구현
@@ -68,8 +80,6 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
             justifyContent: 'space-between',
             alignItems: 'stretch',
             opacity,
-            // PostActions 영역과 겹치지 않도록 최대 높이 제한
-            // maxHeight: height > 150 ? 150 : height,
           },
           positionStyle,
           resolvedStyle,
@@ -102,24 +112,24 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
 
   // 모바일 환경에서는 react-native-svg 사용
   if (!Svg || !Path) {
-    return <View style={[{ width, height: Math.min(height, 150), opacity }, resolvedStyle]} />; // fallback
+    return <View style={[{ width, height, opacity }, resolvedStyle]} />; // fallback
   }
 
   return (
     <View style={[{ opacity }, positionStyle, resolvedStyle]}>
-      <Svg width={width} height={Math.min(height, 150)} viewBox={`0 0 ${width} ${Math.min(height, 150)}`} fill="none">
+      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} fill="none">
         <Path
-          d={`M4 ${Math.min(height, 150)}L4 0`}
+          d={`M4 ${height}L4 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />
         <Path
-          d={`M${Math.floor(width/2)} ${Math.min(height, 150)}L${Math.floor(width/2)} 0`}
+          d={`M${Math.floor(width/2)} ${height}L${Math.floor(width/2)} 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />
         <Path
-          d={`M${width-4} ${Math.min(height, 150)}L${width-4} 0`}
+          d={`M${width-4} ${height}L${width-4} 0`}
           stroke={stripeColor}
           strokeWidth={strokeWidth}
         />

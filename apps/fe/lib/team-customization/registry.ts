@@ -72,7 +72,15 @@ class TeamCustomizationRegistryClass {
    */
   hasActiveDecoration(teamId: string): boolean {
     const config = this.get(teamId);
-    return config?.decoration?.enabled === true;
+    if (!config?.decoration) return false;
+    
+    // decoration이 배열인 경우
+    if (Array.isArray(config.decoration)) {
+      return config.decoration.some(d => d.enabled === true);
+    }
+    
+    // decoration이 단일 객체인 경우
+    return config.decoration.enabled === true;
   }
 
   hasActiveUniform(teamId: string): boolean {
@@ -146,80 +154,120 @@ export const hasTeamCustomization = (teamId: string) => {
   return TeamCustomizationRegistry.hasCustomization(teamId);
 };
 
-// 팀별 기본 커스터마이징 설정 등록
-const initializeDefaultCustomizations = () => {
-  // 두산 베어스 스트라이프
-  registerTeamCustomization({
-    teamId: 'doosan',
-    teamName: '두산',
-    decoration: {
+// 팀별 커스터마이징 설정 함수들 (확장 가능한 구조)
+// 새로운 팀 추가 시: create[TeamName]Customization 함수를 만들고 initializeDefaultCustomizations에 추가
+const createDoosanCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'doosan',
+  teamName: '두산',
+  decoration: [
+    {
       component: DoosanStripes,
       props: {
         width: 24,
-        height: 160,
-        opacity: 0.6,
-        position: 'bottom-left',
+        height: 200,
+        opacity: 0.1,
+        position: 'bottom-left' as const,
       },
       enabled: true,
     },
-    styles: {
-      decoration: ({ colors }) => ({
-        position: 'absolute',
-        left: 8,
-        bottom: 60,
-        zIndex: 1,
-      }),
+    {
+      component: DoosanStripes,
+      props: {
+        width: 24,
+        height: 200,
+        opacity: 0.1,
+        position: 'bottom-right' as const,
+      },
+      enabled: true,
     },
-  });
+  ],
+  styles: {
+    decoration: ({ colors }) => ({
+      position: 'absolute',
+      left: 8,
+      bottom: 60,
+      zIndex: 1,
+    }),
+    decorationRight: ({ colors }) => ({
+      position: 'absolute',
+      right: 8,
+      bottom: 60,
+      zIndex: 1,
+    }),
+  },
+});
+
+const createLGCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'lg',
+  teamName: 'LG',
+  decoration: {
+    component: LGStripes,
+    props: {
+      width: 32,
+      height: 160,
+      opacity: 0.4,
+      position: 'bottom-left' as const,
+    },
+    enabled: true,
+  },
+  styles: {
+    decoration: ({ colors }) => ({
+      position: 'absolute',
+      left: 8,
+      bottom: 60,
+      zIndex: 1,
+    }),
+  },
+});
+
+const createKIACustomization = (): TeamCustomizationConfig => ({
+  teamId: 'kia',
+  teamName: '기아',
+  decoration: {
+    component: KIATigerStripes,
+    props: {
+      width: 32,
+      height: 160,
+      opacity: 0.5,
+      position: 'bottom-right' as const,
+    },
+    enabled: true,
+  },
+  styles: {
+    decoration: ({ colors }) => ({
+      position: 'absolute',
+      right: 8,
+      bottom: 60,
+      zIndex: 1,
+    }),
+  },
+});
+
+// 팀별 기본 커스터마이징 설정 등록
+const initializeDefaultCustomizations = () => {
+  // 두산 베어스 스트라이프 (양쪽 배치)
+  registerTeamCustomization(createDoosanCustomization());
 
   // LG 트윈스 세로 스트라이프
-  registerTeamCustomization({
-    teamId: 'lg',
-    teamName: 'LG',
-    decoration: {
-      component: LGStripes,
-      props: {
-        width: 32,
-        height: 160,
-        opacity: 0.4,
-        position: 'bottom-left',
-      },
-      enabled: true,
-    },
-    styles: {
-      decoration: ({ colors }) => ({
-        position: 'absolute',
-        left: 8,
-        bottom: 60,
-        zIndex: 1,
-      }),
-    },
-  });
+  registerTeamCustomization(createLGCustomization());
 
   // 기아 타이거즈 호랑이 스트라이프
-  registerTeamCustomization({
-    teamId: 'kia',
-    teamName: '기아',
-    decoration: {
-      component: KIATigerStripes,
-      props: {
-        width: 32,
-        height: 160,
-        opacity: 0.5,
-        position: 'bottom-right',
-      },
-      enabled: true,
-    },
-    styles: {
-      decoration: ({ colors }) => ({
-        position: 'absolute',
-        right: 8,
-        bottom: 60,
-        zIndex: 1,
-      }),
-    },
-  });
+  registerTeamCustomization(createKIACustomization());
 };
 
 // 앱 시작 시 기본 커스터마이징 초기화
 initializeDefaultCustomizations();
+
+/**
+ * 새로운 팀 커스터마이징 추가 방법:
+ * 
+ * 1. 팀별 컴포넌트 파일 생성 (예: teams/samsung/SamsungCircles.tsx)
+ * 2. create[TeamName]Customization 함수 생성 (위 참고)
+ * 3. initializeDefaultCustomizations()에 함수 호출 추가
+ * 4. 필요한 경우 import 추가
+ * 
+ * 예시:
+ * import { SamsungCircles } from './teams/samsung/SamsungCircles';
+ * const createSamsungCustomization = (): TeamCustomizationConfig => ({ ... });
+ * registerTeamCustomization(createSamsungCustomization());
+ */

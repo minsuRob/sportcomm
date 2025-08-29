@@ -41,6 +41,7 @@ try {
 export const CommonStripes: React.FC<TeamDecorationProps> = ({
   teamId,
   teamData,
+  teamColors,
   width = 3,
   height = 350,
   color = '#D9D9D9',
@@ -48,8 +49,8 @@ export const CommonStripes: React.FC<TeamDecorationProps> = ({
   position,
   style,
 }) => {
-  // 색상 우선순위: color prop > teamData.mainColor > 기본값
-  const stripeColor = color || teamData?.mainColor || '#D9D9D9';
+  // 색상 우선순위: color prop > teamColors > teamData.mainColor > 기본값
+  const stripeColor = color || teamColors?.repeatedStripesColor || teamData?.mainColor || '#D9D9D9';
   const resolvedStyle = resolveStyle(style);
 
   // 여백 설정 (position에 따라 자동 적용)

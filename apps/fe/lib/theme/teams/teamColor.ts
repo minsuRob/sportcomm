@@ -272,6 +272,7 @@ export const teamColors = {
       postActionsBackground: "#000000",
       actionButtonActive: "#D60325",
       actionButtonInactive: "#D60325",
+      repeatedStripesColor: "#000000", // LG 트윈스 줄무늬 색상
 
       uniformDecoration: "#000000",
       likeBackground: "#FEF2F2",
@@ -530,6 +531,7 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
     profileStroke: isDarkMode ? defaultColors.backgroundDim : defaultColors.background,
     uniformNumberText: defaultColors.text,
     uniformNumberStroke: isDarkMode ? defaultColors.backgroundDim : defaultColors.background,
+    repeatedStripesColor: isDarkMode ? defaultColors.backgroundDim : defaultColors.background, // 기본 줄무늬 색상
     // uniformNumberThickness: 1,
   };
 };

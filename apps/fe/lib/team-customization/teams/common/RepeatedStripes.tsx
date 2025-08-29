@@ -3,6 +3,7 @@ import { View, ViewStyle } from 'react-native';
 import { isWeb } from '@/lib/platform';
 import type { TeamDecorationProps } from '../../types';
 import { CommonStripes } from './CommonStripes';
+import { getTeamColors } from '@/lib/theme/teams/teamColor';
 
 // ThemedStyle을 ViewStyle로 변환하는 헬퍼 함수
 const resolveStyle = (style: any): ViewStyle => {
@@ -34,6 +35,7 @@ export const RepeatedStripes: React.FC<TeamDecorationProps & {
 }> = ({
   teamId,
   teamData,
+  teamColors: propTeamColors,
   width = 100,
   height = 350,
   color = '#D9D9D9',
@@ -44,6 +46,17 @@ export const RepeatedStripes: React.FC<TeamDecorationProps & {
   stripeWidth = 2,   // 기본 스트라이프 너비 2px
 }) => {
   const resolvedStyle = resolveStyle(style);
+
+  // getTeamColors를 사용하여 팀 색상 가져오기
+  const teamColors = propTeamColors || getTeamColors(teamId, false, teamData?.name);
+  
+  // repeatedStripesColor가 있으면 해당 색상 사용, 없으면 기본 색상 사용
+  const finalColor = teamColors?.repeatedStripesColor;
+ 
+  // repeatedStripesColor가 없으면 렌더링하지 않음
+  if (!teamColors?.repeatedStripesColor) {
+    return null;
+  }
 
   // 스트라이프 반복 설정
   const stripeCount = Math.max(1, Math.floor(width / spacing)); // 최소 1개 보장
@@ -87,9 +100,10 @@ export const RepeatedStripes: React.FC<TeamDecorationProps & {
             <CommonStripes
               teamId={teamId}
               teamData={teamData}
+              teamColors={teamColors}
               width={stripeWidth}
               height={height}
-              color={color}
+              color={finalColor}
               opacity={opacity}
               position={position}
               style={style}
@@ -116,9 +130,10 @@ export const RepeatedStripes: React.FC<TeamDecorationProps & {
           <CommonStripes
             teamId={teamId}
             teamData={teamData}
+            teamColors={teamColors}
             width={stripeWidth}
             height={height}
-            color={color}
+            color={finalColor}
             opacity={opacity}
             position={position}
             style={style}

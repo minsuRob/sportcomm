@@ -47,6 +47,7 @@ export const teamColors = {
       uniformText: "#000036", // 진한 파란색
       uniformNumberText: "#000036",
       uniformNumberStroke: "#FF1620",
+      uniformNumberThickness: 1.5,
       postActionsBackground: "#000036", // 연한 회색
       actionButtonActive: "#FF1620", // 빨간색 (활성 상태)
       actionButtonInactive: "#FF1620", // 회색 (비활성 상태)
@@ -69,7 +70,8 @@ export const teamColors = {
       uniformText: "#FFFFFF", // 밝은 파란색
       uniformNumberText: "#FFFFFF", // 밝은 파란색
       uniformNumberStroke: "#FF1620", //빨강
-      postActionsBackground: "#FFFFFF", 
+      uniformNumberThickness: 1.5,
+      postActionsBackground: "#FFFFFF",
       actionButtonActive: "#000036", // 밝은 빨간색 (활성 상태)
       actionButtonInactive: "#000036", // 밝은 회색 (비활성 상태)
 
@@ -177,7 +179,7 @@ export const teamColors = {
   kia: {
     light: {
       uniformBackground: "#FFFFFF",
-      uniformText: "#EA0029", // 
+      uniformText: "#EA0029", //
       uniformNumberText: "#EA0029",
       uniformNumberStroke: "#000000",
       postActionsBackground: "#000000",
@@ -312,7 +314,7 @@ export const teamColors = {
       postActionsBackground: "#1F152A",
       actionButtonActive: "#E2222C",
       actionButtonInactive: "#E2222C",
- 
+
       uniformDecoration: "#CE0E2D",
       likeBackground: "#FEF2F2",
       mainColor: "#002E5F",
@@ -525,5 +527,6 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
     profileStroke: isDarkMode ? defaultColors.backgroundDim : defaultColors.background,
     uniformNumberText: defaultColors.text,
     uniformNumberStroke: isDarkMode ? defaultColors.backgroundDim : defaultColors.background,
+    // uniformNumberThickness: 1,
   };
 };

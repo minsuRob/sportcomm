@@ -21,7 +21,7 @@ interface UniformNumberProps {
   outlineColor?: string; // 외곽선 색상
   style?: ThemedStyle<ViewStyle>; // 추가 컨테이너 스타일 (테마 적용 함수)
   fontSize?: number; // 필요 시 커스텀 폰트 크기
-  borderThickness?: number; // 테두리 두께 (기본값: 1.0)
+  borderThickness?: number; // 테두리 두께 (우선순위: prop > teamColors.uniformNumberThickness > 1.0)
   teamColors?: any; // 팀별 커스텀 색상
   containerWidth?: number; // 컨테이너 너비 (PostCard에서 측정된 값)
   containerHeight?: number; // 컨테이너 높이 (PostCard에서 측정된 값)
@@ -41,12 +41,18 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   outlineColor,
   style,
   fontSize = 40,
-  borderThickness = 1,
+  borderThickness,
   teamColors,
   containerWidth,
   containerHeight,
 }) => {
   const { themed, theme } = useAppTheme();
+
+  // 테두리 두께 결정 (prop > teamColors.uniformNumberThickness > 1)
+  const effectiveThickness =
+    borderThickness !== undefined
+      ? borderThickness
+      : (teamColors?.uniformNumberThickness ?? 1);
 
   // 색상 결정 (테마 fallback)
   const numberMainColor = teamColors?.uniformNumberText || theme.colors.text || mainColor ;
@@ -72,7 +78,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
             color: numberMainColor,
             textAlign: 'center',
             textShadowColor: numberOutlineColor,
-            textShadowOffset: { width: borderThickness, height: borderThickness },
+            textShadowOffset: { width: effectiveThickness, height: effectiveThickness },
             textShadowRadius: 0,
           }}
         >
@@ -89,7 +95,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
         <SvgText
           fill={numberMainColor}
           stroke={numberOutlineColor}
-          strokeWidth={borderThickness}
+          strokeWidth={effectiveThickness}
           fontSize={fontSize}
           fontWeight="bold"
           x={textX}
@@ -115,7 +121,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
           fontSize: `${fontSize}px`,
           fontWeight: 'bold',
           color: numberMainColor,
-          textShadow: `${borderThickness}px 0 0 ${numberOutlineColor}, ${-borderThickness}px 0 0 ${numberOutlineColor}, 0 ${borderThickness}px 0 ${numberOutlineColor}, 0 ${-borderThickness}px 0 ${numberOutlineColor}`,
+          textShadow: `${effectiveThickness}px 0 0 ${numberOutlineColor}, ${-effectiveThickness}px 0 0 ${numberOutlineColor}, 0 ${effectiveThickness}px 0 ${numberOutlineColor}, 0 ${-effectiveThickness}px 0 ${numberOutlineColor}`,
           textAlign: 'center',
           userSelect: 'none',
           pointerEvents: 'none',
@@ -123,7 +129,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
         children: String(number),
       });
     }
-    
+
     // 웹이 아닌 경우 fallback
     return (
       <Text
@@ -133,7 +139,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
           color: numberMainColor,
           textAlign: 'center',
           textShadowColor: numberOutlineColor,
-          textShadowOffset: { width: borderThickness, height: borderThickness },
+          textShadowOffset: { width: effectiveThickness, height: effectiveThickness },
           textShadowRadius: 0,
         }}
       >
@@ -158,4 +164,3 @@ const $outerContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   alignItems: "center", // 가로 중앙 정렬
   // 필요 시 배경 색상 적용 가능: backgroundColor: colors.background
 });
-

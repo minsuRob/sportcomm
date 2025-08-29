@@ -1,4 +1,7 @@
 import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types';
+import { DoosanStripes } from './teams/doosan/DoosanStripes';
+import { LGStripes } from './teams/lg/LGStripes';
+import { KIATigerStripes } from './teams/kia/KIATigerStripes';
 
 /**
  * 팀 커스터마이징 레지스트리
@@ -142,3 +145,81 @@ export const getTeamCustomization = (teamId: string) => {
 export const hasTeamCustomization = (teamId: string) => {
   return TeamCustomizationRegistry.hasCustomization(teamId);
 };
+
+// 팀별 기본 커스터마이징 설정 등록
+const initializeDefaultCustomizations = () => {
+  // 두산 베어스 스트라이프
+  registerTeamCustomization({
+    teamId: 'doosan',
+    teamName: '두산',
+    decoration: {
+      component: DoosanStripes,
+      props: {
+        width: 24,
+        height: 160,
+        opacity: 0.6,
+        position: 'bottom-left',
+      },
+      enabled: true,
+    },
+    styles: {
+      decoration: ({ colors }) => ({
+        position: 'absolute',
+        left: 8,
+        bottom: 60,
+        zIndex: 1,
+      }),
+    },
+  });
+
+  // LG 트윈스 세로 스트라이프
+  registerTeamCustomization({
+    teamId: 'lg',
+    teamName: 'LG',
+    decoration: {
+      component: LGStripes,
+      props: {
+        width: 32,
+        height: 160,
+        opacity: 0.4,
+        position: 'bottom-left',
+      },
+      enabled: true,
+    },
+    styles: {
+      decoration: ({ colors }) => ({
+        position: 'absolute',
+        left: 8,
+        bottom: 60,
+        zIndex: 1,
+      }),
+    },
+  });
+
+  // 기아 타이거즈 호랑이 스트라이프
+  registerTeamCustomization({
+    teamId: 'kia',
+    teamName: '기아',
+    decoration: {
+      component: KIATigerStripes,
+      props: {
+        width: 32,
+        height: 160,
+        opacity: 0.5,
+        position: 'bottom-right',
+      },
+      enabled: true,
+    },
+    styles: {
+      decoration: ({ colors }) => ({
+        position: 'absolute',
+        right: 8,
+        bottom: 60,
+        zIndex: 1,
+      }),
+    },
+  });
+};
+
+// 앱 시작 시 기본 커스터마이징 초기화
+initializeDefaultCustomizations();

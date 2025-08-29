@@ -325,13 +325,13 @@ export const teamColors = {
       profileStroke: "#FFFFFF",
     },
     dark: {
-      uniformBackground: "#001A3D",
-      uniformText: "#B50C28",
-      uniformNumberText: "#B50C28",
-      uniformNumberStroke: "#FFFFFF",
-      postActionsBackground: "#000000",
-      actionButtonActive: "#B50C28",
-      actionButtonInactive: "#9CA3AF",
+      uniformBackground: "#1F152A", //남색
+      uniformText: "#FFFFFF",
+      uniformNumberText: "#E2222C",
+      uniformNumberStroke: "#E2222C", // 빨강
+      postActionsBackground: "#E2222C",
+      actionButtonActive: "#1F152A",
+      actionButtonInactive: "#1F152A",
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#991B1B",
@@ -349,11 +349,11 @@ export const teamColors = {
   nc: {
     light: {
       uniformBackground: "#FFFFFF",
-      uniformText: "#29557D",
+      uniformText: "#29557D",//네이비
       uniformNumberText: "#29557D",
       uniformNumberStroke: "#BD9578",
       postActionsBackground: "#29557D",
-      actionButtonActive: "#BD9578",
+      actionButtonActive: "#BD9578", // 금색
       actionButtonInactive: "#BD9578",
 
       uniformDecoration: "#C4A484",
@@ -368,13 +368,13 @@ export const teamColors = {
       profileStroke: "#FFFFFF",
     },
     dark: {
-      uniformBackground: "#253F6C",
-      uniformText: "#8B7355",
-      uniformNumberText: "#8B7355",
-      uniformNumberStroke: "#FFFFFF",
-      postActionsBackground: "#000000",
-      actionButtonActive: "#8B7355",
-      actionButtonInactive: "#9CA3AF",
+      uniformBackground: "#1D3353", // 네이비
+      uniformText: "#FFFFFF",
+      uniformNumberText: "#FFFFFF",
+      uniformNumberStroke: "#BD9578",
+      postActionsBackground: "#BD9578",
+      actionButtonActive: "#FFFFFF",
+      actionButtonInactive: "#FFFFFF",
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#1E3A8A",
@@ -411,13 +411,13 @@ export const teamColors = {
       profileStroke: "#FFFFFF",
     },
     dark: {
-      uniformBackground: "#1A1A1A",
-      uniformText: "#E55A00",
-      uniformNumberText: "#E55A00",
+      uniformBackground: "#000000",
+      uniformText: "#FFFFFF",
+      uniformNumberText: "#FFFFFF",
       uniformNumberStroke: "#FFFFFF",
-      postActionsBackground: "#000000",
-      actionButtonActive: "#E55A00",
-      actionButtonInactive: "#9CA3AF",
+      postActionsBackground: "#FFFFFF",
+      actionButtonActive: "#000000",
+      actionButtonInactive: "#000000",
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#EA580C",
@@ -426,7 +426,7 @@ export const teamColors = {
       accent: "#9C27B0",
       decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
-      profileText: "#E55A00",
+      profileText: "#FFFFFF",
       profileTime: "#9CA3AF",
       profileStroke: "#1F2937",
     },
@@ -435,9 +435,9 @@ export const teamColors = {
   kiwoom: {
     light: {
       uniformBackground: "#FFFFFF",
-      uniformText: "#570514",
+      uniformText: "#570514", // 키움색
       uniformNumberText: "#570514",
-      uniformNumberStroke: "#F66893",
+      uniformNumberStroke: "#F66893", // 핑크
       postActionsBackground: "#570514",
       actionButtonActive: "#F66893" ,
       actionButtonInactive: "#F66893",
@@ -455,12 +455,12 @@ export const teamColors = {
     },
     dark: {
       uniformBackground: "#3D030E",
-      uniformText: "#8B7355",
-      uniformNumberText: "#8B7355",
-      uniformNumberStroke: "#FFFFFF",
-      postActionsBackground: "#000000",
-      actionButtonActive: "#8B7355",
-      actionButtonInactive: "#9CA3AF",
+      uniformText: "#FFFFFF",
+      uniformNumberText: "#FFFFFF",
+      uniformNumberStroke: "#F66893",
+      postActionsBackground: "#FFFFFF",
+      actionButtonActive: "#F66893",
+      actionButtonInactive: "#F66893",
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#881337",

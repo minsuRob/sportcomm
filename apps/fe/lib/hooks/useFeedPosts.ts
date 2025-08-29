@@ -485,8 +485,18 @@ export function useFeedPosts() {
 
     } catch (error) {
       console.error("새로고침 실패:", error);
+      // refetch 실패 시 수동으로 리프레시 종료
+      if (mountedRef.current) {
+        setIsRefreshing(false);
+      }
+    } finally {
+      // 성공 시에는 data effect에서 isRefreshing을 false로 돌리지만
+      // (토큰 만료 / 조기 return / refetch 실패) 경로 방어
+      if (mountedRef.current && isRefreshing) {
+        setIsRefreshing(false);
+      }
     }
-  }, [refetch, selectedTeamIds, filterInitialized, shouldLoadBlockedUsers]);
+  }, [refetch, selectedTeamIds, filterInitialized, shouldLoadBlockedUsers, isRefreshing]);
 
   const handleLoadMore = useCallback(() => {
     if (fetching || !data?.posts?.hasNext || !filterInitialized || !mountedRef.current) return;
@@ -540,6 +550,10 @@ export function useFeedPosts() {
         });
       } catch (error) {
         console.error("팀 필터 변경 실패:", error);
+        // refetch 실패 시 로딩 상태 복원
+        if (mountedRef.current) {
+          setIsRefreshing(false);
+        }
       }
     },
     [refetch, selectedTeamIds, shouldLoadBlockedUsers],

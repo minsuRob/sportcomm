@@ -179,9 +179,10 @@ export const teamColors = {
   kia: {
     light: {
       uniformBackground: "#FFFFFF",
-      uniformText: "#EA0029", //
-      uniformNumberText: "#EA0029",
-      uniformNumberStroke: "#000000",
+      uniformText: "#EA0029", 
+      uniformNumberText: "#000000",
+      uniformNumberStroke: "#EA0029",
+      uniformNumberThickness: 1.3,
       postActionsBackground: "#000000",
       actionButtonActive: "#EA0029",
       actionButtonInactive: "#EA0029",
@@ -309,7 +310,7 @@ export const teamColors = {
     light: {
       uniformBackground: "#E5E3DC",
       uniformText: "#1F152A",
-      uniformNumberText: "#F2F2F2",
+      uniformNumberText: "#E2222C",
       uniformNumberStroke: "#E2222C",
       postActionsBackground: "#1F152A",
       actionButtonActive: "#E2222C",
@@ -354,6 +355,7 @@ export const teamColors = {
       uniformText: "#29557D",//네이비
       uniformNumberText: "#29557D",
       uniformNumberStroke: "#BD9578",
+      uniformNumberThickness: 1.5,
       postActionsBackground: "#29557D",
       actionButtonActive: "#BD9578", // 금색
       actionButtonInactive: "#BD9578",
@@ -440,6 +442,7 @@ export const teamColors = {
       uniformText: "#570514", // 키움색
       uniformNumberText: "#570514",
       uniformNumberStroke: "#F66893", // 핑크
+      uniformNumberThickness: 1.3,
       postActionsBackground: "#570514",
       actionButtonActive: "#F66893" ,
       actionButtonInactive: "#F66893",

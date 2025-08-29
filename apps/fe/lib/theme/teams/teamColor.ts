@@ -182,7 +182,7 @@ export const teamColors = {
       uniformNumberStroke: "#000000",
       postActionsBackground: "#000000",
       actionButtonActive: "#EA0029",
-      actionButtonInactive: "#000000",
+      actionButtonInactive: "#EA0029",
 
       uniformDecoration: "#000000",
       likeBackground: "#FEF2F2",

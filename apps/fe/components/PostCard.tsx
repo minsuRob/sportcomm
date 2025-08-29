@@ -520,9 +520,9 @@ const PostCard = React.memo(function PostCard({
   const teamPalette = {
     cardBg: teamColors.uniformBackground,
     overlayGradient: teamColors.uniformBackground + "88", // 반투명 오버레이
-    badgeBg: teamColors.uniformDecoration + "CC",
-    iconBadgeBg: teamColors.uniformDecoration + "99",
-    moreButtonBg: teamColors.actionButtonActive + "CC",
+    badgeBg: teamColors.postActionsBackground + "CC",
+    iconBadgeBg: teamColors.postActionsBackground + "99",
+    moreButtonBg: teamColors.postActionsBackground + "CC",
     glowColor: teamColors.uniformDecoration,
             borderColor: teamColors.cardBorder,
   };

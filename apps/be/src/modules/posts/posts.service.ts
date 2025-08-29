@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
@@ -15,7 +15,7 @@ import { User } from '../../entities/user.entity';
 import { UserTeam } from '../../entities/user-team.entity';
 import { Media } from '../../entities/media.entity';
 import { MediaService } from '../media/media.service';
-import { Bookmark } from '../../entities/bookmark.entity';
+import { BookmarkService } from '../bookmarks/bookmark.service';
 
 /**
  * 게시물 생성 입력 인터페이스
@@ -77,8 +77,6 @@ export interface FindPostsOptions {
   search?: string;
   /** 팀 ID 목록 필터 */
   teamIds?: string[];
-  /** 현재 사용자 ID (좋아요, 북마크 상태 확인용) */
-  userId?: string;
 }
 
 /**
@@ -124,8 +122,7 @@ export class PostsService {
     private readonly mediaRepository: Repository<Media>,
     @InjectRepository(UserTeam)
     private readonly userTeamRepository: Repository<UserTeam>,
-    @InjectRepository(Bookmark)
-    private readonly bookmarkRepository: Repository<Bookmark>,
+    private readonly bookmarkService: BookmarkService, // BookmarkRepository 대신 BookmarkService 사용
     private dataSource: DataSource,
     private readonly mediaService: MediaService,
     private readonly eventEmitter: EventEmitter2,
@@ -202,7 +199,7 @@ export class PostsService {
   }
 
   /**
-   * 게시물 목록 조회 (최적화된 버전)
+   * 게시물 목록 조회
    *
    * @param options - 조회 옵션
    * @returns 게시물 목록과 페이지네이션 정보
@@ -212,34 +209,44 @@ export class PostsService {
       page = 1,
       limit = 10,
       authorId,
-      teamIds,
-      publicOnly = true,
+      publicOnly = false,
       sortBy = 'createdAt',
       sortOrder = 'DESC',
       search,
-      userId, // 현재 사용자 ID 추가
+      teamIds,
     } = options;
 
-    const offset = (page - 1) * limit;
+    // 페이지네이션 계산
+    const skip = (page - 1) * limit;
 
-    // 기본 쿼리 빌더 생성
+    // 쿼리 빌더 생성
+    // 성능 최적화: team 전체 컬럼 로딩 대신 필요한 팔레트 컬럼만 선택
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
       .leftJoinAndSelect('post.media', 'media')
-      .leftJoinAndSelect('post.team', 'team')
-      .leftJoinAndSelect('team.sport', 'sport')
+      // team 은 선택 컬럼만 addSelect
+      .leftJoin('post.team', 'team')
+      .addSelect([
+        'team.id',
+        'team.name',
+        'team.code',
+        'team.color',
+        'team.mainColor',
+        'team.subColor',
+        'team.darkMainColor',
+        'team.darkSubColor',
+        'team.icon',
+        'team.logoUrl',
+      ])
       .leftJoinAndSelect('post.postTags', 'postTags')
       .leftJoinAndSelect('postTags.tag', 'tag')
       .where('post.deletedAt IS NULL');
 
-    // 조건별 필터링
+    // 필터 적용
+
     if (authorId) {
       queryBuilder.andWhere('post.authorId = :authorId', { authorId });
-    }
-
-    if (teamIds && teamIds.length > 0) {
-      queryBuilder.andWhere('post.teamId IN (:...teamIds)', { teamIds });
     }
 
     if (publicOnly) {
@@ -253,62 +260,58 @@ export class PostsService {
       );
     }
 
-    // 정렬
-    const orderBy = `post.${sortBy}`;
-    queryBuilder.orderBy(orderBy, sortOrder as 'ASC' | 'DESC');
-
-    // 전체 개수 조회
-    const totalPosts = await queryBuilder.getCount();
-
-    // 페이지네이션 적용
-    queryBuilder.offset(offset).limit(limit);
-
-    // 게시물 조회
-    const posts = await queryBuilder.getMany();
-
-    // 배치로 좋아요와 북마크 상태 조회 (성능 최적화)
-    if (userId && posts.length > 0) {
-      const postIds = posts.map(post => post.id);
-      
-      // 배치로 좋아요 상태 조회
-      const userLikes = await this.postLikeRepository.find({
-        where: {
-          userId,
-          postId: In(postIds),
-        },
-      });
-      
-      // 배치로 북마크 상태 조회
-      const userBookmarks = await this.bookmarkRepository.find({
-        where: {
-          userId,
-          postId: In(postIds),
-        },
-      });
-
-      // 좋아요와 북마크 상태를 게시물에 설정
-      const likedPostIds = new Set(userLikes.map(like => like.postId));
-      const bookmarkedPostIds = new Set(userBookmarks.map(bookmark => bookmark.postId));
-
-      posts.forEach(post => {
-        post.isLiked = likedPostIds.has(post.id);
-        post.isBookmarked = bookmarkedPostIds.has(post.id);
-      });
+    // 팀 필터 적용
+    if (teamIds && teamIds.length > 0) {
+      queryBuilder.andWhere('post.teamId IN (:...teamIds)', { teamIds });
     }
 
+    // 정렬 적용
+    queryBuilder.orderBy(`post.${sortBy}`, sortOrder);
+
+    // 고정 게시물 우선 정렬
+    queryBuilder.addOrderBy('post.isPinned', 'DESC');
+
+    // 총 개수 조회
+    const total = await queryBuilder.getCount();
+
+    // 페이지네이션 적용 및 데이터 조회
+    const posts = await queryBuilder.skip(skip).take(limit).getMany();
+
+    // tags 필드 계산 (postTags에서 추출)
+    posts.forEach((post) => {
+      if (post.postTags && post.postTags.length > 0) {
+        post.tags = post.postTags
+          .map((postTag) => postTag.tag)
+          .filter((tag) => tag && tag.id && tag.name);
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[DEBUG] PostService - postId: ${post.id}, postTags 길이: ${post.postTags.length}, tags 길이: ${post.tags.length}`,
+          );
+        }
+      } else {
+        post.tags = [];
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[DEBUG] PostService - postId: ${post.id}, postTags 없음`,
+          );
+        }
+      }
+    });
+
     // 페이지네이션 정보 계산
-    const totalPages = Math.ceil(totalPosts / limit);
-    const hasNext = page < totalPages;
+    const totalPages = Math.ceil(total / limit);
     const hasPrevious = page > 1;
+    const hasNext = page < totalPages;
 
     return {
       posts,
-      total: totalPosts,
+      total,
       page,
       limit,
       totalPages,
-      hasNext,
       hasPrevious,
+      hasNext,
     };
   }
 

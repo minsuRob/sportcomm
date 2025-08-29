@@ -90,12 +90,77 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
     const textX = finalContainerWidth / 2;
     const textY = finalContainerHeight / 2 + fontSize / 3;
 
+    // borderThickness에 따른 stroke 방향 개수 결정
+    const getStrokeDirections = (thickness: number) => {
+      if (thickness <= 1) {
+        // 얇은 테두리: 8방향
+        return [
+          { x: -thickness, y: 0 },      // 왼쪽
+          { x: thickness, y: 0 },       // 오른쪽
+          { x: 0, y: -thickness },      // 위
+          { x: 0, y: thickness },       // 아래
+          { x: -thickness, y: -thickness }, // 왼쪽 위
+          { x: thickness, y: -thickness },  // 오른쪽 위
+          { x: -thickness, y: thickness },  // 왼쪽 아래
+          { x: thickness, y: thickness },   // 오른쪽 아래
+        ];
+      } else if (thickness <= 2) {
+        // 중간 테두리: 10방향 (대각선 추가)
+        return [
+          { x: -thickness, y: 0 },      // 왼쪽
+          { x: thickness, y: 0 },       // 오른쪽
+          { x: 0, y: -thickness },      // 위
+          { x: 0, y: thickness },       // 아래
+          { x: -thickness, y: -thickness }, // 왼쪽 위
+          { x: thickness, y: -thickness },  // 오른쪽 위
+          { x: -thickness, y: thickness },  // 왼쪽 아래
+          { x: thickness, y: thickness },   // 오른쪽 아래
+          { x: -thickness * 0.7, y: -thickness * 0.7 }, // 왼쪽 위 대각선
+          { x: thickness * 0.7, y: -thickness * 0.7 },  // 오른쪽 위 대각선
+        ];
+      } else {
+        // 두꺼운 테두리: 12방향 (더 촘촘한 배치)
+        return [
+          { x: -thickness, y: 0 },      // 왼쪽
+          { x: thickness, y: 0 },       // 오른쪽
+          { x: 0, y: -thickness },      // 위
+          { x: 0, y: thickness },       // 아래
+          { x: -thickness, y: -thickness }, // 왼쪽 위
+          { x: thickness, y: -thickness },  // 오른쪽 위
+          { x: -thickness, y: thickness },  // 왼쪽 아래
+          { x: thickness, y: thickness },   // 오른쪽 아래
+          { x: -thickness * 0.7, y: -thickness * 0.7 }, // 왼쪽 위 대각선
+          { x: thickness * 0.7, y: -thickness * 0.7 },  // 오른쪽 위 대각선
+          { x: -thickness * 0.7, y: thickness * 0.7 },  // 왼쪽 아래 대각선
+          { x: thickness * 0.7, y: thickness * 0.7 },   // 오른쪽 아래 대각선
+        ];
+      }
+    };
+
+    const strokeDirections = getStrokeDirections(effectiveThickness);
+
     return (
       <Svg height={finalContainerHeight} width={finalContainerWidth}>
+        {/* 8방향 stroke 텍스트 (먼저 렌더링) */}
+        {strokeDirections.map((direction, index) => (
+          <SvgText
+            key={`stroke-${index}`}
+            fill={numberOutlineColor}
+            stroke="none"
+            fontSize={fontSize}
+            fontWeight="bold"
+            x={textX + direction.x}
+            y={textY + direction.y}
+            textAnchor="middle"
+          >
+            {String(number)}
+          </SvgText>
+        ))}
+        
+        {/* 메인 텍스트 (마지막에 렌더링하여 위에 표시) */}
         <SvgText
           fill={numberMainColor}
-          stroke={numberOutlineColor}
-          strokeWidth={effectiveThickness}
+          stroke="none"
           fontSize={fontSize}
           fontWeight="bold"
           x={textX}

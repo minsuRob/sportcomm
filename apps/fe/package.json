@@ -7,7 +7,7 @@
     "android": "expo start -c --android",
     "clean": "rm -rf .expo node_modules",
     "start": "expo start",
-    "dev": "expo start -c",
+    "start:dev": "expo start -c",
     "dev:android": "expo start -c --android",
     "dev:web": "expo start -c --web",
     "ios": "expo start -c --ios",

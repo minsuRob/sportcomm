@@ -49,13 +49,10 @@ export {
   useRegisteredTeams
 } from './useTeamCustomization';
 
-// 팀별 커스터마이징 설정
-// export { default as doosanCustomization } from './teams/doosan';
-export { default as samsungCustomization } from './teams/samsung';
-
-// 팀별 컴포넌트들
-// export { DoosanStripes, DoosanUniform } from './teams/doosan';
-export { SamsungCircles, SamsungUniform } from './teams/samsung';
+// 팀별 컴포넌트들 (개별 사용을 위한 export)
+export { DoosanStripes } from './teams/doosan/DoosanStripes';
+export { DoosanUniform } from './teams/doosan/DoosanUniform';
+export { SamsungStripes } from './teams/samsung/SamsungStripes';
 
 // 커스터마이징 시스템 컴포넌트들
 export { TeamDecorationRenderer } from './components';
@@ -73,18 +70,8 @@ export {
 
 // 편의 함수: 모든 팀 커스터마이징 설정을 자동으로 등록
 export function initializeTeamCustomizations(): void {
-  // 레지스트리를 import
-  import('./registry').then(({ TeamCustomizationRegistry }) => {
-    // 동적 import를 통해 필요한 팀 설정들만 로드
-    // import('./teams/doosan').then(({ default: doosanConfig }) => {
-    //   // 기본 두산 설정 등록 (팀 이름 기반 매칭용)
-    //   TeamCustomizationRegistry.register(doosanConfig);
-    // });
-
-    import('./teams/samsung').then(({ default: samsungConfig }) => {
-      TeamCustomizationRegistry.register(samsungConfig);
-    });
-  });
+  // registry.ts에서 자동으로 초기화되므로 별도 작업 불필요
+  // 모든 팀 설정은 registry.ts의 initializeDefaultCustomizations()에서 관리됨
 
 
 }

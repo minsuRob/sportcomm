@@ -2,6 +2,7 @@ import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types'
 import { DoosanStripes } from './teams/doosan/DoosanStripes';
 import { LGStripes } from './teams/lg/LGStripes';
 import { KIATigerStripes } from './teams/kia/KIATigerStripes';
+import { SamsungStripes } from './teams/samsung/SamsungStripes';
 
 /**
  * 팀 커스터마이징 레지스트리
@@ -263,6 +264,49 @@ const createKIACustomization = (): TeamCustomizationConfig => ({
   },
 });
 
+const createSamsungCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'samsung',
+  teamName: '삼성',
+  decoration: [
+    {
+      component: SamsungStripes,
+      props: {
+        width: 3,
+        height: 350,
+        color: '#003DA5', // 삼성 라이온즈 블루
+        opacity: 0.8,
+        position: 'bottom-left' as const,
+      },
+      enabled: true,
+    },
+    {
+      component: SamsungStripes,
+      props: {
+        width: 3,
+        height: 350,
+        color: '#003DA5', // 삼성 라이온즈 블루
+        opacity: 0.8,
+        position: 'bottom-right' as const,
+      },
+      enabled: true,
+    },
+  ],
+  styles: {
+    decoration: ({ colors }) => ({
+      position: 'absolute',
+      left: 8,
+      bottom: 60,
+      zIndex: 1,
+    }),
+    decorationRight: ({ colors }) => ({
+      position: 'absolute',
+      right: 8,
+      bottom: 60,
+      zIndex: 1,
+    }),
+  },
+});
+
 // 팀별 기본 커스터마이징 설정 등록
 const initializeDefaultCustomizations = () => {
   // 두산 베어스 스트라이프 (양쪽 배치)
@@ -273,6 +317,9 @@ const initializeDefaultCustomizations = () => {
 
   // 기아 타이거즈 호랑이 스트라이프
   registerTeamCustomization(createKIACustomization());
+
+  // 삼성 라이온즈 스트라이프 (양쪽 배치)
+  registerTeamCustomization(createSamsungCustomization());
 };
 
 // 앱 시작 시 기본 커스터마이징 초기화
@@ -287,7 +334,7 @@ initializeDefaultCustomizations();
  * 4. 필요한 경우 import 추가
  *
  * 예시:
- * import { SamsungCircles } from './teams/samsung/SamsungCircles';
+ * import { SamsungStripes } from './teams/samsung/SamsungStripes';
  * const createSamsungCustomization = (): TeamCustomizationConfig => ({ ... });
  * registerTeamCustomization(createSamsungCustomization());
  */

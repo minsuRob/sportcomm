@@ -50,11 +50,11 @@ export {
 } from './useTeamCustomization';
 
 // 팀별 커스터마이징 설정
-export { default as doosanCustomization } from './teams/doosan';
+// export { default as doosanCustomization } from './teams/doosan';
 export { default as samsungCustomization } from './teams/samsung';
 
 // 팀별 컴포넌트들
-export { DoosanStripes, DoosanUniform } from './teams/doosan';
+// export { DoosanStripes, DoosanUniform } from './teams/doosan';
 export { SamsungCircles, SamsungUniform } from './teams/samsung';
 
 // 커스터마이징 시스템 컴포넌트들
@@ -76,10 +76,10 @@ export function initializeTeamCustomizations(): void {
   // 레지스트리를 import
   import('./registry').then(({ TeamCustomizationRegistry }) => {
     // 동적 import를 통해 필요한 팀 설정들만 로드
-    import('./teams/doosan').then(({ default: doosanConfig }) => {
-      // 기본 두산 설정 등록 (팀 이름 기반 매칭용)
-      TeamCustomizationRegistry.register(doosanConfig);
-    });
+    // import('./teams/doosan').then(({ default: doosanConfig }) => {
+    //   // 기본 두산 설정 등록 (팀 이름 기반 매칭용)
+    //   TeamCustomizationRegistry.register(doosanConfig);
+    // });
 
     import('./teams/samsung').then(({ default: samsungConfig }) => {
       TeamCustomizationRegistry.register(samsungConfig);

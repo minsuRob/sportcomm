@@ -73,12 +73,12 @@ class TeamCustomizationRegistryClass {
   hasActiveDecoration(teamId: string): boolean {
     const config = this.get(teamId);
     if (!config?.decoration) return false;
-    
+
     // decoration이 배열인 경우
     if (Array.isArray(config.decoration)) {
       return config.decoration.some(d => d.enabled === true);
     }
-    
+
     // decoration이 단일 객체인 경우
     return config.decoration.enabled === true;
   }
@@ -164,8 +164,8 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
       component: DoosanStripes,
       props: {
         width: 24,
-        height: 200,
-        opacity: 0.1,
+        height: 150,
+        opacity: 0.9,
         position: 'bottom-left' as const,
       },
       enabled: true,
@@ -174,8 +174,8 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
       component: DoosanStripes,
       props: {
         width: 24,
-        height: 200,
-        opacity: 0.1,
+        height: 150,
+        opacity: 0.9,
         position: 'bottom-right' as const,
       },
       enabled: true,
@@ -200,20 +200,40 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
 const createLGCustomization = (): TeamCustomizationConfig => ({
   teamId: 'lg',
   teamName: 'LG',
-  decoration: {
-    component: LGStripes,
-    props: {
-      width: 32,
-      height: 160,
-      opacity: 0.4,
-      position: 'bottom-left' as const,
+  decoration: [
+    {
+      component: LGStripes,
+      props: {
+        width: 8,         // 단일 stripe 너비 (더 넓게)
+        height: 200,      // 단일 stripe 높이 (적당한 높이)
+        color: '#C41E3A', // LG 트윈스 레드 색상
+        opacity: 0.8,     // 적당한 투명도
+        position: 'bottom-left' as const,
+      },
+      enabled: true,
     },
-    enabled: true,
-  },
+    {
+      component: LGStripes,
+      props: {
+        width: 8,         // 단일 stripe 너비 (더 넓게)
+        height: 200,      // 단일 stripe 높이 (적당한 높이)
+        color: '#C41E3A', // LG 트윈스 레드 색상
+        opacity: 0.8,     // 적당한 투명도
+        position: 'bottom-right' as const,
+      },
+      enabled: true,
+    },
+  ],
   styles: {
     decoration: ({ colors }) => ({
       position: 'absolute',
       left: 8,
+      bottom: 60,
+      zIndex: 1,
+    }),
+    decorationRight: ({ colors }) => ({
+      position: 'absolute',
+      right: 8,
       bottom: 60,
       zIndex: 1,
     }),
@@ -260,12 +280,12 @@ initializeDefaultCustomizations();
 
 /**
  * 새로운 팀 커스터마이징 추가 방법:
- * 
+ *
  * 1. 팀별 컴포넌트 파일 생성 (예: teams/samsung/SamsungCircles.tsx)
  * 2. create[TeamName]Customization 함수 생성 (위 참고)
  * 3. initializeDefaultCustomizations()에 함수 호출 추가
  * 4. 필요한 경우 import 추가
- * 
+ *
  * 예시:
  * import { SamsungCircles } from './teams/samsung/SamsungCircles';
  * const createSamsungCustomization = (): TeamCustomizationConfig => ({ ... });

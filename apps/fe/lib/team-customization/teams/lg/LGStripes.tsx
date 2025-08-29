@@ -14,51 +14,56 @@ const resolveStyle = (style: any): ViewStyle => {
 
 // react-native-svg는 조건부로 import (웹에서 문제 발생 방지)
 let Svg: any = null;
-let Path: any = null;
+let Rect: any = null;
 try {
   if (!isWeb()) {
     const svgModule = require('react-native-svg');
     Svg = svgModule.Svg;
-    Path = svgModule.Path;
+    Rect = svgModule.Rect;
   }
 } catch (error) {
   console.warn('react-native-svg를 로드할 수 없습니다:', error);
 }
 
 /**
- * LG 트윈스 전용 세로 스트라이프 컴포넌트
+ * LG 트윈스 전용 단일 스트라이프 컴포넌트
  *
- * LG 트윈스의 시그니처 디자인인 세로 스트라이프를 렌더링합니다.
- * 유니폼의 핀스트라이프 패턴을 모방하여 여러 개의 얇은 세로선을 그립니다.
- * 팀 색상과 테마에 따라 동적으로 색상이 변경됩니다.
+ * 단순하고 깔끔한 단일 SVG 스트라이프를 렌더링합니다.
+ * registry.ts에서 width, height, color를 완전히 제어할 수 있습니다.
+ *
+ * registry.ts에서 설정 가능한 속성:
+ * - width: 스트라이프 너비 (기본값: 3)
+ * - height: 스트라이프 높이 (기본값: 350)
+ * - color: 스트라이프 색상 (기본값: #D9D9D9)
+ * - opacity: 투명도 (기본값: 1.0)
+ * - position: 위치 ('bottom-left' | 'bottom-right')
  */
 export const LGStripes: React.FC<TeamDecorationProps> = ({
   teamId,
   teamData,
-  width = 32,
-  height = 160,
-  color,
-  opacity = 0.4,
+  width = 8,          // registry.ts와 동일한 기본값
+  height = 200,       // registry.ts와 동일한 기본값
+  color = '#C41E3A',  // LG 트윈스 레드 (registry.ts와 동일)
+  opacity = 0.8,      // registry.ts와 동일한 기본값
   position,
   style,
 }) => {
-  // LG 팀 색상 사용 (우선순위: color prop > teamData.decorationBorder > teamData.subColor > 기본값)
-  const stripeColor = color || teamData?.decorationBorder || teamData?.subColor || '#000000';
-  const stripeWidth = 1; // 얇은 스트라이프
-  const stripeSpacing = 4; // 스트라이프 간격
+  // 색상 우선순위: teamData.decorationBorder > teamData.subColor > color prop > 기본값
+  const stripeColor = teamData?.decorationBorder || teamData?.subColor || color || '#D9D9D9';
   const resolvedStyle = resolveStyle(style);
+
+  // 여백 설정 (DoosanStripes와 동일한 패턴)
+  const MARGIN_LEFT = 5;
+  const MARGIN_RIGHT = 5;
 
   // position에 따른 추가 스타일 적용
   const positionStyle = position === 'bottom-right' ? {
-    marginRight: 5,
+    marginRight: MARGIN_RIGHT,
   } : {
-    marginLeft: 5,
+    marginLeft: MARGIN_LEFT,
   };
 
-  // 스트라이프 개수 계산 (너비에 따라 동적으로)
-  const stripeCount = Math.floor(width / stripeSpacing);
-
-  // 웹 환경에서는 CSS로 스트라이프 구현
+  // 웹 환경에서는 CSS div로 스트라이프 구현
   if (isWeb()) {
     return (
       <View
@@ -66,51 +71,48 @@ export const LGStripes: React.FC<TeamDecorationProps> = ({
           {
             width,
             height,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'stretch',
+            backgroundColor: stripeColor,
             opacity,
           },
           positionStyle,
           resolvedStyle,
         ]}
-      >
-        {Array.from({ length: stripeCount }, (_, index) => (
-          <View
-            key={index}
-            style={{
-              width: stripeWidth,
-              backgroundColor: stripeColor,
-              height: '100%',
-            }}
-          />
-        ))}
-      </View>
+      />
     );
   }
 
   // 모바일 환경에서는 react-native-svg 사용
-  if (!Svg || !Path) {
-    return <View style={[{ width, height: Math.min(height, 150), opacity }, resolvedStyle]} />; // fallback
+  if (!Svg || !Rect) {
+    // SVG 로드 실패 시 CSS fallback
+    return (
+      <View
+        style={[
+          {
+            width,
+            height,
+            backgroundColor: stripeColor,
+            opacity,
+          },
+          positionStyle,
+          resolvedStyle,
+        ]}
+      />
+    );
   }
-
-  const actualHeight = Math.min(height, 150);
 
   return (
     <View style={[{ opacity }, positionStyle, resolvedStyle]}>
-      <Svg width={width} height={actualHeight} viewBox={`0 0 ${width} ${actualHeight}`} fill="none">
-        {Array.from({ length: stripeCount }, (_, index) => {
-          const x = index * stripeSpacing + (stripeSpacing - stripeWidth) / 2;
-          return (
-            <Path
-              key={index}
-              d={`M${x} 0L${x} ${actualHeight}`}
-              stroke={stripeColor}
-              strokeWidth={stripeWidth}
-              opacity={0.8}
-            />
-          );
-        })}
+      <Svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        fill="none"
+      >
+        <Rect
+          width={width}
+          height={height}
+          fill={stripeColor}
+        />
       </Svg>
     </View>
   );

@@ -44,14 +44,14 @@ export const DoosanStripes: React.FC<TeamDecorationProps> = ({
   teamId,
   teamData,
   width = 24,
-  height = 200, // registry.ts와 동기화 (양쪽 배치 지원)
+  height, // registry.ts와 동기화 (양쪽 배치 지원)
   color,
   opacity = 0.1, // registry.ts와 동기화
   position,
   style,
 }) => {
   // 두산 팀 색상 사용 (우선순위: color prop > teamData.decorationBorder > teamData.mainColor > 기본값)
-  const stripeColor = color || teamData?.decorationBorder || teamData?.mainColor || '#1E3A8A';
+  const stripeColor = teamData?.decorationBorder || teamData?.mainColor || color || '#1E3A8A';
   const strokeWidth = Math.max(4, Math.floor(width / 8)); // 너비에 비례한 선 굵기
   const resolvedStyle = resolveStyle(style);
 

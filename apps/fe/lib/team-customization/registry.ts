@@ -1,8 +1,7 @@
 import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types';
 import { DoosanStripes } from './teams/doosan/DoosanStripes';
-import { LGStripes } from './teams/lg/LGStripes';
 import { KIATigerStripes } from './teams/kia/KIATigerStripes';
-import { SamsungStripes } from './teams/samsung/SamsungStripes';
+import { CommonStripes } from './teams/common/CommonStripes';
 
 /**
  * 팀 커스터마이징 레지스트리
@@ -203,10 +202,10 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
   teamName: 'LG',
   decoration: [
     {
-      component: LGStripes,
+      component: CommonStripes,
       props: {
-        width: 8,         // 단일 stripe 너비 (더 넓게)
-        height: 200,      // 단일 stripe 높이 (적당한 높이)
+        width: 8,         // LG 팀 전용 너비
+        height: 200,      // LG 팀 전용 높이
         color: '#C41E3A', // LG 트윈스 레드 색상
         opacity: 0.8,     // 적당한 투명도
         position: 'bottom-left' as const,
@@ -214,10 +213,10 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
       enabled: true,
     },
     {
-      component: LGStripes,
+      component: CommonStripes,
       props: {
-        width: 8,         // 단일 stripe 너비 (더 넓게)
-        height: 200,      // 단일 stripe 높이 (적당한 높이)
+        width: 8,         // LG 팀 전용 너비
+        height: 200,      // LG 팀 전용 높이
         color: '#C41E3A', // LG 트윈스 레드 색상
         opacity: 0.8,     // 적당한 투명도
         position: 'bottom-right' as const,
@@ -269,7 +268,7 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
   teamName: '삼성',
   decoration: [
     {
-      component: SamsungStripes,
+      component: CommonStripes,
       props: {
         width: 3,
         height: 350,
@@ -280,7 +279,7 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
       enabled: true,
     },
     {
-      component: SamsungStripes,
+      component: CommonStripes,
       props: {
         width: 3,
         height: 350,
@@ -334,7 +333,9 @@ initializeDefaultCustomizations();
  * 4. 필요한 경우 import 추가
  *
  * 예시:
- * import { SamsungStripes } from './teams/samsung/SamsungStripes';
- * const createSamsungCustomization = (): TeamCustomizationConfig => ({ ... });
- * registerTeamCustomization(createSamsungCustomization());
+ * import { CommonStripes } from './teams/common/CommonStripes';
+ * const createNewTeamCustomization = (): TeamCustomizationConfig => ({
+ *   decoration: { component: CommonStripes, props: { width: 5, height: 300, color: '#TEAM_COLOR' } }
+ * });
+ * registerTeamCustomization(createNewTeamCustomization());
  */

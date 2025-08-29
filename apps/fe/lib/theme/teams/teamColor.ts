@@ -313,16 +313,16 @@ export const teamColors = {
       // 유니폼 배경색
       uniformBackground: "#FFFFFF", // 흰색 유니폼
       // 유니폼 글씨색
-      uniformText: "#CE0E2D", // 빨간색
+      uniformText: "#000000", // 빨간색
       // 유니폼 데코레이션 색상
       uniformDecoration: "#041E42", // 네이비
       // 액션 버튼 색상
-      actionButtonActive: "#CE0E2D", // 빨간색
-      actionButtonInactive: "#041E42", // 네이비
+      actionButtonActive: "#F5CB6A", 
+      actionButtonInactive: "#F5CB6A", 
       // 좋아요 배경색
       likeBackground: "#FEF2F2", // 연한 빨간색
       // PostActions 배경색
-      postActionsBackground: "#041E42", // 네이비
+      postActionsBackground: "#BE001C", 
       // 팀 메인 컬러
       mainColor: "#CE0E2D", // 빨간색
       // 팀 서브 컬러
@@ -338,8 +338,8 @@ export const teamColors = {
       profileTime: "#6B7280",
       profileStroke: "#FFFFFF",
       // 유니폼 번호 색상
-      uniformNumberText: "#CE0E2D",
-      uniformNumberStroke: "#041E42",
+      uniformNumberText: "#BE001C",
+      uniformNumberStroke: "#BE001C",
     },
     dark: {
       // 유니폼 배경색

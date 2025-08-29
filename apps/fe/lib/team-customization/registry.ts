@@ -1,5 +1,4 @@
 import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types';
-import { DoosanStripes } from './teams/doosan/DoosanStripes';
 import { KIATigerStripes } from './teams/kia/KIATigerStripes';
 import { CommonStripes, RepeatedStripes } from './teams/common';
 
@@ -161,40 +160,116 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
   teamName: '두산',
   decoration: [
     {
-      component: DoosanStripes,
+      component: CommonStripes,
       props: {
-        width: 24,
+        width: 3,
         height: 150,
-        opacity: 0.9,
+        color: '#000000', // 삼성 라이온즈 블루
+        opacity: 0.8,
         position: 'bottom-left' as const,
       },
       enabled: true,
     },
+    // 왼쪽 3개 세로선 (DoosanStripes 대신 CommonStripes 사용)
     {
-      component: DoosanStripes,
+      component: CommonStripes,
       props: {
-        width: 24,
+        width: 2,
         height: 150,
+        color: '#000000', // 두산 팀 색상
+        opacity: 0.9,
+        position: 'bottom-left' as const,
+
+      },
+      enabled: true,
+    },
+    {
+      component: CommonStripes,
+      props: {
+        width: 2,
+        height: 150,
+        color: '#000000', // 두산 팀 색상
+        opacity: 0.9,
+        position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          // position: 'absolute',
+          left: 16, // 8 + 8 (간격)
+          // bottom: 60,
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+    {
+      component: CommonStripes,
+      props: {
+        width: 2,
+        height: 150,
+        color: '#000000', // 두산 팀 색상
+        opacity: 0.9,
+        position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          // position: 'absolute',
+          left: 24, // 8 + 16 (간격)
+          // bottom: 60,
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+    // 오른쪽 3개 세로선 (DoosanStripes 대신 CommonStripes 사용)
+    {
+      component: CommonStripes,
+      props: {
+        width: 2,
+        height: 150,
+        color: '#000000', // 두산 팀 색상
         opacity: 0.9,
         position: 'bottom-right' as const,
+        style: ({ colors }) => ({
+          position: 'absolute',
+          right: 24, // 8 + 16 (간격)
+          bottom: 60,
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+    {
+      component: CommonStripes,
+      props: {
+        width: 2,
+        height: 150,
+        color: '#000000', // 두산 팀 색상
+        opacity: 0.9,
+        position: 'bottom-right' as const,
+        style: ({ colors }) => ({
+          position: 'absolute',
+          right: 16, // 8 + 8 (간격)
+          bottom: 60,
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+    {
+      component: CommonStripes,
+      props: {
+        width: 2,
+        height: 150,
+        color: '#000000', // 두산 팀 색상
+        opacity: 0.9,
+        position: 'bottom-right' as const,
+        style: ({ colors }) => ({
+          position: 'absolute',
+          right: 8,
+          bottom: 60,
+          zIndex: 1,
+        }),
       },
       enabled: true,
     },
   ],
-  styles: {
-    decoration: ({ colors }) => ({
-      position: 'absolute',
-      left: 8,
-      bottom: 60,
-      zIndex: 1,
-    }),
-    decorationRight: ({ colors }) => ({
-      position: 'absolute',
-      right: 8,
-      bottom: 60,
-      zIndex: 1,
-    }),
-  },
 });
 
 const createLGCustomization = (): TeamCustomizationConfig => ({
@@ -204,37 +279,20 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
     {
       component: RepeatedStripes,
       props: {
-        width: 100,       // 전체 컨테이너 너비 (10px 간격으로 10개 스트라이프 생성)
+        width: 550,       // 최대너비가 500 전후인데, svg 몇개 더 렌더링하는건 괜찮을거같음.
         height: 350,      // LG 팀 전용 높이
         color: '#000000', // LG 트윈스 색상
         opacity: 0.9,     // 적당한 투명도
         position: 'bottom-left' as const,
-        spacing: 10,      // 스트라이프 간격 (10px)
-        stripeWidth: 2,   // 각 스트라이프 너비 (2px)
+        spacing: 35,      // 스트라이프  간격 (10px)
+        stripeWidth: 1,   
         style: ({ colors }) => ({
-          left: 30,
           zIndex: 1,
         }),
       },
       enabled: true,
     },
-    // {
-    //   component: CommonStripes,
-    //   props: {
-    //     width: 8,         // LG 팀 전용 너비
-    //     height: 200,      // LG 팀 전용 높이
-    //     color: '#C41E3A', // LG 트윈스 레드 색상
-    //     opacity: 0.8,     // 적당한 투명도
-    //     position: 'bottom-right' as const,
-    //     style: ({ colors }) => ({
-    //       // position: 'absolute',
-    //       right: 8,
-    //       // bottom: 60,
-    //       zIndex: 1,
-    //     }),
-    //   },
-    //   enabled: true,
-    // },
+
      // 대각선 스트라이프
     // {
     //   component: CommonStripes,
@@ -353,8 +411,9 @@ initializeDefaultCustomizations();
  * 컴포넌트 선택 가이드:
  * - CommonStripes: 단일 스트라이프 (width x height 크기의 하나의 직사각형)
  * - RepeatedStripes: 반복 스트라이프 (width만큼 spacing 간격으로 stripeWidth 크기 스트라이프 반복)
- * - DoosanStripes: 두산 팀 전용 스트라이프 (3개 세로선)
  * - KIATigerStripes: 기아 팀 전용 호랑이 스트라이프
+ * 
+ * 두산 팀: CommonStripes 6개로 3개씩 양쪽 배치 (DoosanStripes 대체)
  *
  * 예시:
  * import { CommonStripes, RepeatedStripes } from './teams/common';

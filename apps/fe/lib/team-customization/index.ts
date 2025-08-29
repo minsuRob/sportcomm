@@ -52,6 +52,7 @@ export {
 // 팀별 컴포넌트들 (개별 사용을 위한 export)
 export { DoosanStripes } from './teams/doosan/DoosanStripes';
 export { DoosanUniform } from './teams/doosan/DoosanUniform';
+export { LGStripes } from './teams/lg/LGStripes';
 export { SamsungStripes } from './teams/samsung/SamsungStripes';
 
 // 커스터마이징 시스템 컴포넌트들

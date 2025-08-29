@@ -133,13 +133,13 @@ export const teamColors = {
   // 한화 이글스
   hanwha: {
     light: {
-      uniformBackground: "#FFFFFF",
-      uniformText: "#00204B",
-      uniformNumberText: "#00204B",
-      uniformNumberStroke: "#ED1C24",
-      postActionsBackground: "#00204B",
-      actionButtonActive: "#ED1C24",
-      actionButtonInactive: "#00204B",
+      uniformBackground: "#E94E15",
+      uniformText: "#08101D",
+      uniformNumberText: "#08101D",
+      uniformNumberStroke: "#08101D",
+      postActionsBackground: "#08101D",
+      actionButtonActive: "#E94E15",
+      actionButtonInactive: "#E94E15",
 
       uniformDecoration: "#ED1C24",
       likeBackground: "#FEF2F2",
@@ -349,12 +349,12 @@ export const teamColors = {
   nc: {
     light: {
       uniformBackground: "#FFFFFF",
-      uniformText: "#315288",
-      uniformNumberText: "#315288",
-      uniformNumberStroke: "#C4A484",
-      postActionsBackground: "#315288",
-      actionButtonActive: "#315288",
-      actionButtonInactive: "#C4A484",
+      uniformText: "#29557D",
+      uniformNumberText: "#29557D",
+      uniformNumberStroke: "#BD9578",
+      postActionsBackground: "#29557D",
+      actionButtonActive: "#BD9578",
+      actionButtonInactive: "#BD9578",
 
       uniformDecoration: "#C4A484",
       likeBackground: "#EBF5FF",
@@ -394,10 +394,10 @@ export const teamColors = {
       uniformBackground: "#FFFFFF",
       uniformText: "#000000",
       uniformNumberText: "#000000",
-      uniformNumberStroke: "#FF6600",
+      uniformNumberStroke: "#000000",
       postActionsBackground: "#000000",
-      actionButtonActive: "#FF6600",
-      actionButtonInactive: "#000000",
+      actionButtonActive: "#FFFFFF",
+      actionButtonInactive: "#FFFFFF",
 
       uniformDecoration: "#FF6600",
       likeBackground: "#FFF3E0",
@@ -437,10 +437,10 @@ export const teamColors = {
       uniformBackground: "#FFFFFF",
       uniformText: "#570514",
       uniformNumberText: "#570514",
-      uniformNumberStroke: "#C4A484",
+      uniformNumberStroke: "#F66893",
       postActionsBackground: "#570514",
-      actionButtonActive: "#570514",
-      actionButtonInactive: "#C4A484",
+      actionButtonActive: "#F66893" ,
+      actionButtonInactive: "#F66893",
 
       uniformDecoration: "#C4A484",
       likeBackground: "#FDF2F8",

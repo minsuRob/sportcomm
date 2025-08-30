@@ -266,42 +266,61 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
       enabled: true,
     },
 
-     // 대각선 스트라이프
+    //  // 대각선 스트라이프
     // {
     //   component: CommonStripes,
     //   props: {
     //     width: 10,        // 대각선 스트라이프 너비
-    //     height: 200,      // LG 팀 전용 높이
-    //     color: '#C41E3A', // LG 트윈스 레드 색상
+    //     height: 300,      // LG 팀 전용 높이
+    //     // color: '#C41E3A', // LG 트윈스 레드 색상
     //     opacity: 0.8,     // 적당한 투명도
     //     position: 'top-left' as const,
     //     style: ({ colors }) => ({
     //       // position: 'absolute',
-    //       left: 60,
-    //       // top: 20,
-    //       transform: [{ rotate: '45deg' }], // 대각선 회전
+    //       top: -110,
+    //       left: 80,
+    //       transform: [{ rotate: '50deg' }], // 대각선 회전
     //       transformOrigin: 'center center',
     //       zIndex: 1,
     //     }),
     //   },
     //   enabled: true,
     // },
+   
   ],
 });
 
 const createKIACustomization = (): TeamCustomizationConfig => ({
   teamId: 'kia',
   teamName: '기아',
-  decoration: {
-    component: KIATigerStripes,
-    props: {
-      width: 32,
-      height: 160,
-      opacity: 0.5,
-      position: 'bottom-right' as const,
+  decoration: [
+    {
+      component: KIATigerStripes,
+      props: {
+        width: 32,
+        height: 160,
+        opacity: 0.5,
+        position: 'bottom-right' as const,
+      },
+      enabled: true,
     },
-    enabled: true,
-  },
+    {
+      component: CommonStripes,
+      props: {
+        width: 2,
+        height: 150,
+        opacity: 0.9,
+        position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          position: 'absolute',
+          left: 8,
+          bottom: 60,
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+  ],
   styles: {
     decoration: ({ colors }) => ({
       position: 'absolute',
@@ -335,6 +354,10 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
   
 });
 
+const createKiwoomCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'kiwoom',
+  teamName: '키움',
+});
 // 팀별 기본 커스터마이징 설정 등록
 const initializeDefaultCustomizations = () => {
   // 두산 베어스 스트라이프 (양쪽 배치)
@@ -348,6 +371,9 @@ const initializeDefaultCustomizations = () => {
 
   // 삼성 라이온즈 스트라이프 (양쪽 배치)
   registerTeamCustomization(createSamsungCustomization());
+
+  // 키움 히어로즈 세로 스트라이프
+  registerTeamCustomization(createKiwoomCustomization());
 };
 
 // 앱 시작 시 기본 커스터마이징 초기화

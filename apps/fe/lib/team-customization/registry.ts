@@ -281,7 +281,6 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
       props: {
         width: 550,       // 최대너비가 500 전후인데, svg 몇개 더 렌더링하는건 괜찮을거같음.
         height: 350,      // LG 팀 전용 높이
-        color: '#000000', // LG 트윈스 색상
         opacity: 0.9,     // 적당한 투명도
         position: 'top-left' as const,
         spacing: 35,      // 스트라이프  간격 (10px)
@@ -348,7 +347,6 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
       props: {
         width: 550,       // 최대너비가 500 전후인데, svg 몇개 더 렌더링하는건 괜찮을거같음.
         height: 350,      // LG 팀 전용 높이
-        color: '#000000', // LG 트윈스 색상
         opacity: 0.9,     // 적당한 투명도
         position: 'top-left' as const,
         spacing: 35,      // 스트라이프  간격 (10px)

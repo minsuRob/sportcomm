@@ -16,7 +16,7 @@
     "format": "prettier --write .",
     "deploy": "gh-pages -t -d dist",
     "predeploy": "expo export -p web",
-    "start:tunnel": "cloudflared tunnel --url http://localhost:3000 > cloudflared_$(date +_%H%M).log 2>&1 & sleep 4 && TUNNEL_URL=$(grep -o 'https://[^ ]*\\.trycloudflare\\.com' cloudflared_$(date +_%H%M).log | head -n 1) && echo \"SERVER_URL set to $TUNNEL_URL\" && SERVER_URL=$TUNNEL_URL GRAPHQL_URL=${TUNNEL_URL}/graphql npx expo start -c"
+    "start:tunnel": "cloudflared tunnel --url http://localhost:3000 > cloudflared.log 2>&1 & sleep 4 && TUNNEL_URL=$(grep -o 'https://[^ ]*\\.trycloudflare\\.com' cloudflared.log | head -n 1) && echo \"SERVER_URL set to $TUNNEL_URL\" && SERVER_URL=$TUNNEL_URL GRAPHQL_URL=${TUNNEL_URL}/graphql npx expo start -c"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",

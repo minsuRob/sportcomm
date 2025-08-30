@@ -1,5 +1,5 @@
 import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types';
-import { KIADecoration } from './teams/kia/KIADecoration';
+import { KIATigerStripes } from './teams/kia/KIATigerStripes';
 import { CommonStripes, RepeatedStripes } from './teams/common';
 
 /**
@@ -258,7 +258,7 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
         opacity: 0.9,     // 적당한 투명도
         position: 'top-left' as const,
         spacing: 35,      // 스트라이프  간격 (10px)
-        stripeWidth: 1,
+        stripeWidth: 1,   
         style: ({ colors }) => ({
           zIndex: 1,
         }),
@@ -286,7 +286,7 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
     //   },
     //   enabled: true,
     // },
-
+   
   ],
 });
 
@@ -294,50 +294,32 @@ const createKIACustomization = (): TeamCustomizationConfig => ({
   teamId: 'kia',
   teamName: '기아',
   decoration: [
-    // {
-    //   component: KIADecoration,
-    //   props: {
-    //     // width: 200,
-    //     // height: 281,
-    //     opacity: 0.9,
-    //     position: 'bottom-left' as const,
-    //     style: ({ colors }) => ({
-    //       left: -18,
-    //       zIndex: 1,
-    //   }),
-    //   },
-    //   enabled: true,
-    // }
-    ,{
-      component: KIADecoration,
+    {
+      component: KIATigerStripes,
       props: {
-        // width: 200,
-        // height: 281,
-        opacity: 0.9,
+        width: 32,
+        height: 160,
+        opacity: 0.5,
         position: 'bottom-right' as const,
-        style: ({ colors }) => ({
-          // left: 18,
-          zIndex: 1,
-      }),
       },
       enabled: true,
     },
-    // {
-    //   component: CommonStripes,
-    //   props: {
-    //     width: 2,
-    //     height: 150,
-    //     opacity: 0.9,
-    //     position: 'bottom-left' as const,
-    //     style: ({ colors }) => ({
-    //       position: 'absolute',
-    //       left: 8,
-    //       bottom: 60,
-    //       zIndex: 1,
-    //     }),
-    //   },
-    //   enabled: true,
-    // },
+    {
+      component: CommonStripes,
+      props: {
+        width: 2,
+        height: 150,
+        opacity: 0.9,
+        position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          position: 'absolute',
+          left: 8,
+          bottom: 60,
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
   ],
   styles: {
     decoration: ({ colors }) => ({
@@ -361,7 +343,7 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
         opacity: 0.9,     // 적당한 투명도
         position: 'top-left' as const,
         spacing: 35,      // 스트라이프  간격 (10px)
-        stripeWidth: 1,
+        stripeWidth: 1,   
         style: ({ colors }) => ({
           zIndex: 1,
         }),
@@ -369,15 +351,12 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
       enabled: true,
     },
   ],
-
+  
 });
 
 const createKiwoomCustomization = (): TeamCustomizationConfig => ({
   teamId: 'kiwoom',
   teamName: '키움',
-  decoration: [
-
-  ],
 });
 // 팀별 기본 커스터마이징 설정 등록
 const initializeDefaultCustomizations = () => {
@@ -411,22 +390,22 @@ initializeDefaultCustomizations();
  * 컴포넌트 선택 가이드:
  * - CommonStripes: 단일 스트라이프 (width x height 크기의 하나의 직사각형)
  * - RepeatedStripes: 반복 스트라이프 (width만큼 spacing 간격으로 stripeWidth 크기 스트라이프 반복)
- * - KIADecoration: 기아 팀 전용 장식 (SVG 파라미터 지원)
- *
+ * - KIATigerStripes: 기아 팀 전용 호랑이 스트라이프
+ * 
  * 두산 팀: CommonStripes 6개로 3개씩 양쪽 배치 (DoosanStripes 대체)
  *
  * 예시:
  * import { CommonStripes, RepeatedStripes } from './teams/common';
  * const createNewTeamCustomization = (): TeamCustomizationConfig => ({
- *   decoration: {
- *     component: RepeatedStripes,
- *     props: {
- *       width: 100,
- *       height: 300,
+ *   decoration: { 
+ *     component: RepeatedStripes, 
+ *     props: { 
+ *       width: 100, 
+ *       height: 300, 
  *       color: '#TEAM_COLOR',
  *       spacing: 10,
  *       stripeWidth: 3
- *     }
+ *     } 
  *   }
  * });
  * registerTeamCustomization(createNewTeamCustomization());

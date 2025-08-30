@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
 import { isWeb } from '@/lib/platform';
+import { useAppTheme } from '@/lib/theme/context';
 import type { TeamDecorationProps } from '../../types';
 import { CommonStripes } from './CommonStripes';
 import { getTeamColors } from '@/lib/theme/teams/teamColor';
@@ -38,17 +39,21 @@ export const RepeatedStripes: React.FC<TeamDecorationProps & {
   teamColors: propTeamColors,
   width = 100,
   height = 350,
-  color = '#D9D9D9',
+  color,
   opacity = 0.8,
   position,
   style,
   spacing = 10,      // 기본 간격 10px
   stripeWidth = 2,   // 기본 스트라이프 너비 2px
 }) => {
+  const { themeContext } = useAppTheme();
   const resolvedStyle = resolveStyle(style);
 
-  // getTeamColors를 사용하여 팀 색상 가져오기
-  const teamColors = propTeamColors || getTeamColors(teamId, false, teamData?.name);
+  // 현재 테마 상태에 따라 다크모드 감지
+  const isDarkMode = themeContext === 'dark';
+
+  // getTeamColors를 사용하여 팀 색상 가져오기 (현재 테마 상태 반영)
+  const teamColors = propTeamColors || getTeamColors(teamId, isDarkMode, teamData?.name);
   
   // repeatedStripesColor가 있으면 해당 색상 사용, 없으면 기본 색상 사용
   const finalColor = teamColors?.repeatedStripesColor;

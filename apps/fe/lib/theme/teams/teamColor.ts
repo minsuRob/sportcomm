@@ -119,6 +119,7 @@ export const teamColors = {
       postActionsBackground: "#FFFFFF",
       actionButtonActive: "#09233F",
       actionButtonInactive: "#09233F",
+      repeatedStripesColor: "#FFFFFF", // 삼성 줄무늬 색상
 
       uniformDecoration: "#FCA5A5",
       likeBackground: "#991B1B",

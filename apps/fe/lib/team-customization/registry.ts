@@ -344,42 +344,23 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
   teamName: '삼성',
   decoration: [
     {
-      component: CommonStripes,
+      component: RepeatedStripes,
       props: {
-        width: 3,
-        height: 350,
-        color: '#003DA5', // 삼성 라이온즈 블루
-        opacity: 0.8,
+        width: 550,       // 최대너비가 500 전후인데, svg 몇개 더 렌더링하는건 괜찮을거같음.
+        height: 350,      // LG 팀 전용 높이
+        color: '#000000', // LG 트윈스 색상
+        opacity: 0.9,     // 적당한 투명도
         position: 'bottom-left' as const,
-      },
-      enabled: true,
-    },
-    {
-      component: CommonStripes,
-      props: {
-        width: 3,
-        height: 350,
-        color: '#003DA5', // 삼성 라이온즈 블루
-        opacity: 0.8,
-        position: 'bottom-right' as const,
+        spacing: 35,      // 스트라이프  간격 (10px)
+        stripeWidth: 1,   
+        style: ({ colors }) => ({
+          zIndex: 1,
+        }),
       },
       enabled: true,
     },
   ],
-  styles: {
-    decoration: ({ colors }) => ({
-      position: 'absolute',
-      left: 8,
-      bottom: 60,
-      zIndex: 1,
-    }),
-    decorationRight: ({ colors }) => ({
-      position: 'absolute',
-      right: 8,
-      bottom: 60,
-      zIndex: 1,
-    }),
-  },
+  
 });
 
 // 팀별 기본 커스터마이징 설정 등록

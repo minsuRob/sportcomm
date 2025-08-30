@@ -153,48 +153,35 @@ export const hasTeamCustomization = (teamId: string) => {
   return TeamCustomizationRegistry.hasCustomization(teamId);
 };
 
+const doosanWidth = 4;
+const doosanHeight = 150;
 // 팀별 커스터마이징 설정 함수들 (확장 가능한 구조)
 // 새로운 팀 추가 시: create[TeamName]Customization 함수를 만들고 initializeDefaultCustomizations에 추가
 const createDoosanCustomization = (): TeamCustomizationConfig => ({
   teamId: 'doosan',
   teamName: '두산',
   decoration: [
-    {
-      component: CommonStripes,
-      props: {
-        width: 3,
-        height: 150,
-        color: '#000000', // 삼성 라이온즈 블루
-        opacity: 0.8,
-        position: 'bottom-left' as const,
-      },
-      enabled: true,
-    },
+
     // 왼쪽 3개 세로선 (DoosanStripes 대신 CommonStripes 사용)
     {
       component: CommonStripes,
       props: {
-        width: 2,
-        height: 150,
-        color: '#000000', // 두산 팀 색상
+        width: doosanWidth,
+        height: doosanHeight,
         opacity: 0.9,
         position: 'bottom-left' as const,
-
       },
       enabled: true,
     },
     {
       component: CommonStripes,
       props: {
-        width: 2,
-        height: 150,
-        color: '#000000', // 두산 팀 색상
+        width: doosanWidth,
+        height: doosanHeight,
         opacity: 0.9,
         position: 'bottom-left' as const,
         style: ({ colors }) => ({
-          // position: 'absolute',
-          left: 16, // 8 + 8 (간격)
-          // bottom: 60,
+          left: 8, // 8 + 8 (간격)
           zIndex: 1,
         }),
       },
@@ -203,15 +190,12 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
     {
       component: CommonStripes,
       props: {
-        width: 2,
-        height: 150,
-        color: '#000000', // 두산 팀 색상
+        width: doosanWidth,
+        height: doosanHeight,
         opacity: 0.9,
         position: 'bottom-left' as const,
         style: ({ colors }) => ({
-          // position: 'absolute',
-          left: 24, // 8 + 16 (간격)
-          // bottom: 60,
+          left: 16, // 8 + 16 (간격)
           zIndex: 1,
         }),
       },
@@ -221,15 +205,12 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
     {
       component: CommonStripes,
       props: {
-        width: 2,
-        height: 150,
-        color: '#000000', // 두산 팀 색상
+        width: doosanWidth,
+        height: doosanHeight,
         opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
-          position: 'absolute',
-          right: 24, // 8 + 16 (간격)
-          bottom: 60,
+          right: 16, // 8 + 16 (간격)
           zIndex: 1,
         }),
       },
@@ -238,15 +219,12 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
     {
       component: CommonStripes,
       props: {
-        width: 2,
-        height: 150,
-        color: '#000000', // 두산 팀 색상
+        width: doosanWidth,
+        height: doosanHeight,
         opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
-          position: 'absolute',
-          right: 16, // 8 + 8 (간격)
-          bottom: 60,
+          right: 8, // 8 + 8 (간격)
           zIndex: 1,
         }),
       },
@@ -255,15 +233,11 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
     {
       component: CommonStripes,
       props: {
-        width: 2,
-        height: 150,
-        color: '#000000', // 두산 팀 색상
+        width: doosanWidth,
+        height: doosanHeight,
         opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
-          position: 'absolute',
-          right: 8,
-          bottom: 60,
           zIndex: 1,
         }),
       },

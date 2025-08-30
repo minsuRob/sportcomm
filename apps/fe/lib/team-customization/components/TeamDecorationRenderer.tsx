@@ -38,13 +38,13 @@ const getPositionStyle = (position?: string): ViewStyle => {
     case 'top-left':
       return { top: 0, left: 0 };
     case 'top-right':
-      return { top: 16, right: 16 };
+      return { top: 0, right: 0 };
     case 'bottom-left':
-      return { bottom: 60, left: 16 }; // PostActions 바로 위로 조정
+      return { bottom: 0, left: 0 }; // PostActions 바로 위로 조정
     case 'bottom-right':
-      return { bottom: 60, right: 16 }; // PostActions 바로 위로 조정
+      return { bottom: 0, right: 0 }; // PostActions 바로 위로 조정
     default:
-      return { bottom: 60, left: 16 }; // 기본값도 PostActions 바로 위로 조정
+      return { bottom: 0, left: 0 }; // 기본값도 PostActions 바로 위로 조정
   }
 };
 

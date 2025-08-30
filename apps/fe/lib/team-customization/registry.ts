@@ -300,7 +300,7 @@ const createKIACustomization = (): TeamCustomizationConfig => ({
         responsive: true,
         baseWidth: 515,
         baseHeight: 242,
-        opacity: 0.5,
+        opacity: 0.9,
         position: 'bottom-left' as const,
         maxWidthPercent: '100%',
         maintainAspectRatio: true,

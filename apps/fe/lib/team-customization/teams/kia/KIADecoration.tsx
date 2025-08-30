@@ -82,10 +82,10 @@ export const KIADecoration: React.FC<KIADecorationProps> = ({
   teamId,
   teamData,
   // width / height: 비반응형일 때 사용할 크기 (기존 호환)
-  width = 535,
+  width = 515,
   height = 242,
   color,
-  opacity = 0.5,
+  opacity = 0.9,
   position,
   style,
   svgPaths = defaultKIASvgPaths,

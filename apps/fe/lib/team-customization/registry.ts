@@ -283,7 +283,7 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
         height: 350,      // LG 팀 전용 높이
         color: '#000000', // LG 트윈스 색상
         opacity: 0.9,     // 적당한 투명도
-        position: 'bottom-left' as const,
+        position: 'top-left' as const,
         spacing: 35,      // 스트라이프  간격 (10px)
         stripeWidth: 1,   
         style: ({ colors }) => ({
@@ -350,7 +350,7 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
         height: 350,      // LG 팀 전용 높이
         color: '#000000', // LG 트윈스 색상
         opacity: 0.9,     // 적당한 투명도
-        position: 'bottom-left' as const,
+        position: 'top-left' as const,
         spacing: 35,      // 스트라이프  간격 (10px)
         stripeWidth: 1,   
         style: ({ colors }) => ({

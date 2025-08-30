@@ -36,7 +36,7 @@ export interface TeamDecorationRendererProps {
 const getPositionStyle = (position?: string): ViewStyle => {
   switch (position) {
     case 'top-left':
-      return { top: 16, left: 16 };
+      return { top: 0, left: 0 };
     case 'top-right':
       return { top: 16, right: 16 };
     case 'bottom-left':
@@ -84,7 +84,7 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
 
         // position에 따른 스타일 계산
         const position = props?.position || 'bottom-left';
-        // const positionStyle = getPositionStyle(position);
+        const positionStyle = getPositionStyle(position);
 
         // decoration props 구성
         const decorationProps: TeamDecorationProps = {
@@ -99,7 +99,7 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
             key={`${teamId}-decoration-${index}-${position}`}
             style={[
               themed($decorationContainer),
-              // positionStyle,
+              positionStyle,
             ]}
           >
             <DecorationComponent {...decorationProps} />

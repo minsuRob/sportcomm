@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
 import { useAppTheme } from '@/lib/theme/context';
+import { isWeb } from '@/lib/platform';
 import type { ThemedStyle } from '@/lib/theme/types';
 import type { TeamDecorationProps, DecorationItem, TeamData } from '../types';
 
@@ -51,10 +52,21 @@ const getPositionStyle = (position?: string): ViewStyle => {
 /**
  * 기본 decoration 컨테이너 스타일
  * PostActions 영역과 겹치지 않도록 z-index를 조정했습니다.
+ * 웹에서 SVG 크기 제한 방지를 위해 width/height 명시적 설정
  */
 const $decorationContainer: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
   zIndex: 1, // 다른 UI 요소들(zIndex: 2, 3)보다 뒤에, uniformBackground(zIndex: 1)보다는 앞에 위치
+  ...(isWeb() ? {
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: '100%',
+    minWidth: 0,
+    minHeight: 0,
+    maxWidth: '100%',
+    overflow: 'visible',
+  } : {}),
 });
 
 export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({

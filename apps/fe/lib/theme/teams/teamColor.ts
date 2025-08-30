@@ -269,7 +269,7 @@ export const teamColors = {
       uniformBackground: "#FFFFFF",
       uniformText: "#000000",
       uniformNumberText: "#000000",
-      uniformNumberStroke: "#D60325",
+      uniformNumberStroke: "#000000",
       postActionsBackground: "#000000",
       actionButtonActive: "#D60325",
       actionButtonInactive: "#D60325",

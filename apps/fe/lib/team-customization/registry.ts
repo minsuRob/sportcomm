@@ -298,7 +298,7 @@ const createKIACustomization = (): TeamCustomizationConfig => ({
       component: KIADecoration,
       props: {
         responsive: true,
-        baseWidth: 535,
+        baseWidth: 515,
         baseHeight: 242,
         opacity: 0.5,
         position: 'bottom-left' as const,

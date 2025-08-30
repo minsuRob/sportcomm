@@ -141,8 +141,19 @@ export const KIADecoration: React.FC<KIADecorationProps> = ({
     return (
       <View
         style={[
-          webContainerStyle,
-          positionStyle,
+          {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            height: 'auto',
+            opacity,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            alignItems: 'flex-start',
+          },
           resolvedStyle,
         ]}
       >

@@ -236,7 +236,7 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         width: doosanWidth,
         height: doosanHeight,
         opacity: 0.9,
-        position: 'bottom-right' as const,
+        position: 'bottom-left' as const,
         style: ({ colors }) => ({
           zIndex: 1,
         }),
@@ -301,7 +301,7 @@ const createKIACustomization = (): TeamCustomizationConfig => ({
         baseWidth: 535,
         baseHeight: 242,
         opacity: 0.5,
-        position: 'bottom-right' as const,
+        position: 'bottom-left' as const,
         maxWidthPercent: '100%',
         maintainAspectRatio: true,
       } as any, // KIADecoration 전용 props 타입 캐스팅

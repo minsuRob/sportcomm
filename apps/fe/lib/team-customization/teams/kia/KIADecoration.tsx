@@ -109,9 +109,9 @@ export const KIADecoration: React.FC<KIADecorationProps> = ({
 
   // position에 따른 추가 스타일 적용
   const positionStyle = position === 'bottom-right' ? {
-    marginRight: 5,
+    marginRight: 0,
   } : {
-    marginLeft: 5,
+    marginLeft: 0,
   };
 
   // SVG 경로 색상 처리 (필요 시 팀 색상으로 커스터마이징)

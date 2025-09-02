@@ -349,7 +349,11 @@ const createKTCustomization = (): TeamCustomizationConfig => ({
         position: 'center' as const,
         maxWidthPercent: '55%',
         maintainAspectRatio: true,
-        opacity: 0.9,
+        // opacity: 0.9,
+        style: ({ colors }) => ({
+          top: 50, // 8 (간격)
+          zIndex: 1,
+        }),
       } as any,
       enabled: true,
     },

@@ -336,9 +336,9 @@ export const teamColors = {
       uniformText: "#FFFFFF",
       uniformNumberText: "#E2222C",
       uniformNumberStroke: "#E2222C", // 빨강
-      postActionsBackground: "#FFFFFF",
-      actionButtonActive: "#E2222C",
-      actionButtonInactive: "#E2222C",
+      postActionsBackground: "#55647F",
+      actionButtonActive: "#FFFFFF",
+      actionButtonInactive: "#FFFFFF",
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#991B1B",

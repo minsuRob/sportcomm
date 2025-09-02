@@ -25,17 +25,19 @@ const formatFanDuration = (
 ): { years: number; months: number; totalDays: number } => {
   const startDate = new Date(favoriteDate);
   const endDate = new Date();
-  
+
   let years = endDate.getFullYear() - startDate.getFullYear();
   let months = endDate.getMonth() - startDate.getMonth();
-  
+
   if (months < 0) {
     years--;
     months += 12;
   }
-  
-  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  
+
+  const totalDays = Math.floor(
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
   return { years, months, totalDays };
 };
 import { Ionicons } from "@expo/vector-icons";
@@ -57,7 +59,7 @@ import { useFeedPosts } from "@/lib/hooks/useFeedPosts";
 // --- Type Definitions ---
 
 export default function FeedScreen() {
-  const { themed, theme } = useAppTheme();
+  const { themed, theme, teamColorTeamId } = useAppTheme();
   const { t } = useTranslation();
   // 목록/로딩 상태는 전담 훅에서 관리
   const [authModalVisible, setAuthModalVisible] = useState(false);
@@ -75,7 +77,6 @@ export default function FeedScreen() {
     selectedTeamIds,
     handleTeamFilterChange,
     performanceMetrics,
-
   } = useFeedPosts();
 
   const {
@@ -158,8 +159,6 @@ export default function FeedScreen() {
       duration: 3000,
     });
   };
-
-
 
   /**
    * 알림 토스트 클릭 핸들러
@@ -267,28 +266,47 @@ export default function FeedScreen() {
         onBoardPress={handleBoardPress}
       />
 
-      {/* 내 팀 정보 표시 */}
+      {/* 선택된 테마 팀(favoriteDate) 정보 표시
+         - team-colors-select 에서 선택한 teamColorTeamId 우선
+         - 없거나 myTeams 에서 찾지 못하면 기존 priority 1 팀 fallback */}
       {currentUser?.myTeams && currentUser.myTeams.length > 0 && (
         <View style={themed($myTeamContainer)}>
           {(() => {
-            const firstTeam = currentUser.myTeams
+            // teamColorTeamId 로 현재 선택된 팀 찾기
+            const selectedTeam = teamColorTeamId
+              ? currentUser.myTeams.find((ut) => ut.team.id === teamColorTeamId)
+              : undefined;
+
+            // fallback: priority 가장 높은 팀
+            const fallbackTeam = currentUser.myTeams
+              .slice()
               .sort((a, b) => a.priority - b.priority)[0];
-            
+
+            const displayTeam = selectedTeam || fallbackTeam;
+
+            if (!displayTeam) return null;
+
+            const favDate = displayTeam.favoriteDate;
+            const duration = favDate ? formatFanDuration(favDate) : null;
+
             return (
               <View style={themed($myTeamItem)}>
-                <Ionicons name="football-outline" size={20} color={theme.colors.tint} />
+                <Ionicons
+                  name="football-outline"
+                  size={20}
+                  color={theme.colors.tint}
+                />
                 <Text style={themed($myTeamText)}>
-                  {/* 팀명과 함께 한지 멘트를 안전하게 Text 컴포넌트로 분리 */}
                   <Text style={themed($myTeamText)}>
-                    {firstTeam.team.name}
+                    {displayTeam.team.name}
                     {"과 함께 한지"}
                   </Text>
-                  {firstTeam.favoriteDate && (
+                  {duration && (
                     <Text style={themed($myTeamDate)}>
                       {" "}
-                      {formatFanDuration(firstTeam.favoriteDate).years > 0
-                        ? `${formatFanDuration(firstTeam.favoriteDate).years}년째`
-                        : `${formatFanDuration(firstTeam.favoriteDate).months}개월째`}
+                      {duration.years > 0
+                        ? `${duration.years}년째`
+                        : `${duration.months}개월째`}
                     </Text>
                   )}
                 </Text>

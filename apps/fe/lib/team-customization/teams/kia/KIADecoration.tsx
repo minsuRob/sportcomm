@@ -69,10 +69,10 @@ interface KIADecorationProps extends TeamDecorationProps {
 
 // 기본 KIA V자형 SVG 경로 데이터
 const defaultKIASvgPaths: SVGPathData[] = [
-  { d: 'M1.0896 0.499512L258.809 106.5V241.5H1.0896V0.499512Z', fill: '#F00316' },
-  { d: 'M0.206759 0.999781L258.833 72.4019L258.793 108.092L0.206759 0.999781Z', fill: '#211F24' },
-  { d: 'M513.91 0.499512L256.191 106.5V241.5H513.91V0.499512Z', fill: '#F00316' },
-  { d: 'M514.793 -0.000218729L256.167 71.4019L256.207 107.092L514.793 -0.000218729Z', fill: '#211F24' },
+  { d: 'M1 0L251 103.361V235H1V0Z', fill: '#F00316' },
+  { d: 'M0.705518 0.999784L251.333 72.4019L251.294 108.092L0.705518 0.999784Z', fill: '#211F24' },
+  { d: 'M500 0L250 103.361V235H500V0Z', fill: '#F00316' },
+  { d: 'M500.294 -0.000215532L249.667 71.4019L249.706 107.092L500.294 -0.000215532Z', fill: '#211F24' },
 ];
 
 /**
@@ -82,18 +82,18 @@ export const KIADecoration: React.FC<KIADecorationProps> = ({
   teamId,
   teamData,
   // width / height: 비반응형일 때 사용할 크기 (기존 호환)
-  width = 515,
-  height = 242,
+  width = 501,
+  height = 235,
   color,
   opacity = 0.9,
   position,
   style,
   svgPaths = defaultKIASvgPaths,
-  svgViewBox = '0 0 515 242',
+  svgViewBox = '0 0 501 235',
   svgWidth,
   svgHeight,
-  baseWidth = 515,       // 디자인 기준 해상도
-  baseHeight = 242,      // 디자인 기준 해상도
+  baseWidth = 501,       // 디자인 기준 해상도
+  baseHeight = 235,      // 디자인 기준 해상도
   responsive = true,     // 기본적으로 반응형 활성화
   maintainAspectRatio = true,
   maxWidthPercent = '100%',

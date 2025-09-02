@@ -12,6 +12,15 @@ import type { Post } from "@/components/PostCard";
 import type { PostType } from "@/lib/supabase/types";
 import { getCurrentSession, isTokenValid } from "@/lib/auth/token-manager";
 
+/**
+ * 변경 요약 (게스트 지원):
+ * 1) 비로그인(게스트) 상태에서도 전체 공개 피드 로딩 지원
+ * 2) 기존 GET_FEED_DATA (myTeams, blockedUsers 포함)는 인증 사용자에게만 실행
+ * 3) 게스트는 간소화된 GET_POSTS 쿼리 사용 (teamIds 필터 없이)
+ * 4) handleRefresh / handleLoadMore 에서 토큰 유효성에 따른 분기 처리
+ * 5) 토큰 만료 시 기존 '중단' 경고 대신 공개 피드 재로딩 허용 (경고 제거)
+ */
+
 interface PerformanceMetrics {
   networkRequests: {
     initial: number;
@@ -45,15 +54,10 @@ interface GqlPost {
   team: {
     id: string;
     name: string;
-    /** 라이트 메인 팔레트 컬러 */
     mainColor?: string;
-    /** 라이트 서브 팔레트 컬러 */
     subColor?: string;
-    /** 다크 메인 팔레트 컬러 */
     darkMainColor?: string;
-    /** 다크 서브 팔레트 컬러 */
     darkSubColor?: string;
-    /** (Deprecated) 단일 컬러 */
     color?: string;
     sport: {
       id: string;
@@ -100,6 +104,9 @@ interface FeedDataResponse {
 const PAGE_SIZE = 10;
 const STORAGE_KEY = "selected_team_filter";
 
+/**
+ * 공개 피드(게스트 포함)용 쿼리
+ */
 const GET_POSTS = gql`
   query GetPosts($input: FindPostsInput) {
     posts(input: $input) {
@@ -119,17 +126,6 @@ const GET_POSTS = gql`
           id
           nickname
           profileImageUrl
-          myTeams {
-            team {
-              id
-              name
-              logoUrl
-              icon
-            }
-            favoriteDate
-            favoritePlayerName
-            favoritePlayerNumber
-          }
         }
         media {
           id
@@ -139,7 +135,6 @@ const GET_POSTS = gql`
         team {
           id
           name
-          color
           mainColor
           subColor
           darkMainColor
@@ -164,8 +159,9 @@ const GET_POSTS = gql`
 /**
  * 피드 게시물/필터/페이지네이션 전담 훅
  * - 팀 필터를 AsyncStorage로 영속화
- * - 내 팀 목록을 기본 필터로 1회 초기화
- * - 차단 사용자 게시물 필터링
+ * - 내 팀 목록을 기본 필터로 1회 초기화 (로그인 사용자)
+ * - 차단 사용자 게시물 필터링 (로그인 사용자)
+ * - 게스트: 팀 필터/차단 목록 없이 전체 공개 게시물
  */
 export function useFeedPosts() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -174,61 +170,81 @@ export function useFeedPosts() {
   const [filterInitialized, setFilterInitialized] = useState(false);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [shouldLoadBlockedUsers, setShouldLoadBlockedUsers] = useState(false);
-  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics>({
-    networkRequests: {
-      initial: 0,
-      duplicatesPrevented: 0,
-      cacheMisses: 0,
-      cacheHits: 0,
-      jwtBasedOptimizations: 0,
-    },
-    timing: {
-      filterInitTime: 0,
-      initialLoadTime: 0,
-      userSyncTime: 0,
-      totalOptimizationTime: 0,
-      tokenValidationTime: 0,
-    },
-    optimization: {
-      redundantCallsPrevented: 0,
-      memoryUsageReduction: 0,
-      backgroundTasksDeferred: 1, // 차단 사용자 지연 로딩
-      jwtAwareCaching: 0,
-    },
-  });
+  const [performanceMetrics, setPerformanceMetrics] =
+    useState<PerformanceMetrics>({
+      networkRequests: {
+        initial: 0,
+        duplicatesPrevented: 0,
+        cacheMisses: 0,
+        cacheHits: 0,
+        jwtBasedOptimizations: 0,
+      },
+      timing: {
+        filterInitTime: 0,
+        initialLoadTime: 0,
+        userSyncTime: 0,
+        totalOptimizationTime: 0,
+        tokenValidationTime: 0,
+      },
+      optimization: {
+        redundantCallsPrevented: 0,
+        memoryUsageReduction: 0,
+        backgroundTasksDeferred: 1,
+        jwtAwareCaching: 0,
+      },
+    });
 
   const mountedRef = useRef(true);
   const myTeamsCache = useRef<UserTeam[] | null>(null);
   const startTimeRef = useRef<number>(Date.now());
   const networkRequestCount = useRef<number>(0);
 
-  // 통합 피드 데이터 쿼리 - 게시물과 내 팀 정보를 한 번에 가져옴
+  // 인증 여부 판단 (렌더마다 최신)
+  const isAuthenticated = isTokenValid();
+
+  // (로그인 사용자) 통합 피드 쿼리
   const {
-    data,
-    loading: fetching,
-    error,
-    refetch,
-    fetchMore,
+    data: authData,
+    loading: authFetching,
+    error: authError,
+    refetch: authRefetch,
+    fetchMore: authFetchMore,
   } = useQuery<FeedDataResponse>(GET_FEED_DATA, {
     variables: {
       input: { page: 1, limit: PAGE_SIZE, teamIds: selectedTeamIds },
       includeBlockedUsers: shouldLoadBlockedUsers,
     },
-    skip: !filterInitialized,
+    skip: !filterInitialized || !isAuthenticated,
     notifyOnNetworkStatusChange: true,
     fetchPolicy: "cache-first",
   });
 
-  // 지연 로딩: 차단 사용자 목록 (필요 시에만 로드)
+  // (게스트) 공개 피드 쿼리
+  const {
+    data: publicData,
+    loading: publicFetching,
+    error: publicError,
+    refetch: publicRefetch,
+    fetchMore: publicFetchMore,
+  } = useQuery<PostsQueryResponse>(GET_POSTS, {
+    variables: {
+      input: { page: 1, limit: PAGE_SIZE, teamIds: null },
+    },
+    skip: !filterInitialized || isAuthenticated,
+    notifyOnNetworkStatusChange: true,
+    fetchPolicy: "cache-first",
+  });
+
+  // 차단 사용자 지연 로딩 (로그인 사용자에게만 의미)
   const [loadBlockedUsers] = useLazyQuery<{ getBlockedUsers: string[] }>(
     GET_BLOCKED_USERS_LAZY,
     {
       fetchPolicy: "cache-first",
       onCompleted: (data) => {
+        if (!isAuthenticated) return; // 게스트 무시
         if (data?.getBlockedUsers && mountedRef.current) {
           setBlockedUserIds(data.getBlockedUsers);
-          // 차단 사용자 지연 로딩 메트릭 업데이트
-          setPerformanceMetrics(prev => ({
+          setPerformanceMetrics((prev) => ({
             ...prev,
             networkRequests: {
               ...prev.networkRequests,
@@ -237,10 +253,14 @@ export function useFeedPosts() {
           }));
         }
       },
-    }
+    },
   );
 
-  // 필터 초기화: 단순화된 로직
+  /**
+   * 필터 초기화
+   * - 게스트: 즉시 초기화 (teamIds = null)
+   * - 로그인: AsyncStorage / myTeams 기반 로직 수행
+   */
   useEffect(() => {
     if (filterInitialized || !mountedRef.current) return;
 
@@ -249,17 +269,21 @@ export function useFeedPosts() {
 
     const initializeFilter = async () => {
       try {
-        networkRequestCount.current = 1; // 통합 쿼리로 1회만 요청
+        // 게스트: 단순 초기화
+        if (!isAuthenticated) {
+          setSelectedTeamIds(null);
+          networkRequestCount.current = 1;
+          return;
+        }
 
-        // 1. AsyncStorage에서 저장된 필터 먼저 확인
+        networkRequestCount.current = 1;
+
+        // 1. 저장된 팀 필터
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
         if (saved && isMounted) {
           const savedIds = JSON.parse(saved);
           setSelectedTeamIds(savedIds.length > 0 ? savedIds : null);
-          setFilterInitialized(true);
-
-          // 캐시 히트 메트릭 업데이트
-          setPerformanceMetrics(prev => ({
+          setPerformanceMetrics((prev) => ({
             ...prev,
             networkRequests: {
               ...prev.networkRequests,
@@ -273,20 +297,17 @@ export function useFeedPosts() {
           return;
         }
 
-        // 2. 저장된 필터가 없으면 My Teams를 기본값으로 사용
-        // 통합 쿼리에서 myTeams 데이터를 가져오거나 캐시된 데이터 사용
-        let teamsToUse = data?.myTeams || myTeamsCache.current;
-
+        // 2. myTeams 사용
+        let teamsToUse = authData?.myTeams || myTeamsCache.current;
         if (!teamsToUse) {
-          // 마지막 수단으로 별도 쿼리 사용
           try {
-            const { data: myTeamsData } = await refetch();
-            teamsToUse = myTeamsData?.myTeams || [];
+            const { data: re } = await authRefetch();
+            teamsToUse = re?.myTeams || [];
             networkRequestCount.current++;
           } catch (e) {
             console.warn("My Teams 로드 실패:", e);
             teamsToUse = [];
-            setPerformanceMetrics(prev => ({
+            setPerformanceMetrics((prev) => ({
               ...prev,
               networkRequests: {
                 ...prev.networkRequests,
@@ -295,40 +316,33 @@ export function useFeedPosts() {
             }));
           }
         } else {
-          // 캐시된 데이터 사용으로 중복 요청 방지
-          setPerformanceMetrics(prev => ({
+          setPerformanceMetrics((prev) => ({
             ...prev,
             optimization: {
               ...prev.optimization,
-              redundantCallsPrevented: prev.optimization.redundantCallsPrevented + 1,
+              redundantCallsPrevented:
+                prev.optimization.redundantCallsPrevented + 1,
             },
           }));
         }
 
         if (teamsToUse && isMounted) {
           myTeamsCache.current = teamsToUse;
-          const allMyTeamIds = teamsToUse.map((ut: UserTeam) => ut.team.id);
-          const teamIds = allMyTeamIds.length > 0 ? allMyTeamIds : null;
-
+          const ids = teamsToUse.map((ut) => ut.team.id);
+          const teamIds = ids.length > 0 ? ids : null;
           setSelectedTeamIds(teamIds);
-
-          // AsyncStorage에 기본값 저장
           await AsyncStorage.setItem(
             STORAGE_KEY,
             JSON.stringify(teamIds || []),
           );
         }
-      } catch (error) {
-        console.error("필터 초기화 실패:", error);
-        if (isMounted) {
-          setSelectedTeamIds(null);
-        }
+      } catch (e) {
+        console.error("필터 초기화 실패:", e);
+        if (isMounted) setSelectedTeamIds(null);
       } finally {
         if (isMounted) {
           setFilterInitialized(true);
-
-          // 필터 초기화 완료 메트릭 업데이트
-          setPerformanceMetrics(prev => ({
+          setPerformanceMetrics((prev) => ({
             ...prev,
             timing: {
               ...prev.timing,
@@ -344,53 +358,65 @@ export function useFeedPosts() {
       }
     };
 
-    initializeFilter();
-
+    void initializeFilter();
     return () => {
       isMounted = false;
     };
-  }, [filterInitialized, data?.myTeams]); // data.myTeams만 의존성에 포함
+  }, [filterInitialized, authData?.myTeams, isAuthenticated, authRefetch]);
 
-  // 통합 쿼리에서 차단 사용자 목록 반영
+  // 인증 사용자: 통합 쿼리 차단 사용자 목록 반영
   useEffect(() => {
-    if (data?.blockedUsers && mountedRef.current) {
-      setBlockedUserIds(data.blockedUsers);
+    if (!isAuthenticated) return;
+    if (authData?.blockedUsers && mountedRef.current) {
+      setBlockedUserIds(authData.blockedUsers);
     }
-  }, [data?.blockedUsers]);
+  }, [authData?.blockedUsers, isAuthenticated]);
 
-  // 3초 후 차단 사용자 목록 백그라운드 로드
+  // 3초 후 차단 사용자 목록 로드 (인증 사용자 전용)
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (filterInitialized && !shouldLoadBlockedUsers) {
       const timer = setTimeout(() => {
         if (mountedRef.current) {
           setShouldLoadBlockedUsers(true);
           loadBlockedUsers();
-
-          // 백그라운드 작업 지연 메트릭 업데이트
-          setPerformanceMetrics(prev => ({
+          setPerformanceMetrics((prev) => ({
             ...prev,
             optimization: {
               ...prev.optimization,
-              backgroundTasksDeferred: prev.optimization.backgroundTasksDeferred + 1,
+              backgroundTasksDeferred:
+                prev.optimization.backgroundTasksDeferred + 1,
             },
           }));
         }
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [filterInitialized, shouldLoadBlockedUsers, loadBlockedUsers]);
+  }, [
+    filterInitialized,
+    shouldLoadBlockedUsers,
+    loadBlockedUsers,
+    isAuthenticated,
+  ]);
 
-  // 게시물 결과 반영 (차단 사용자 제외 + 정렬 유지)
+  /**
+   * 게시물 결과 반영
+   * - 인증: authData
+   * - 게스트: publicData
+   */
   useEffect(() => {
-    if (!data?.posts?.posts || !mountedRef.current) return;
+    const source = isAuthenticated ? authData?.posts : publicData?.posts;
 
-    // myTeams 캐시 업데이트
-    if (data.myTeams) {
-      myTeamsCache.current = data.myTeams;
+    if (!source?.posts || !mountedRef.current) return;
+
+    if (isAuthenticated && authData?.myTeams) {
+      myTeamsCache.current = authData.myTeams;
     }
 
-    const newPosts: Post[] = data.posts.posts
-      .filter((p) => !blockedUserIds.includes(p.author.id))
+    const newPosts: Post[] = source.posts
+      .filter((p) =>
+        isAuthenticated ? !blockedUserIds.includes(p.author.id) : true,
+      )
       .map(
         (p) =>
           ({
@@ -400,7 +426,7 @@ export function useFeedPosts() {
           }) as Post,
       );
 
-    if (data.posts.page === 1) {
+    if (source.page === 1) {
       setPosts(newPosts);
     } else {
       setPosts((current) => {
@@ -415,62 +441,80 @@ export function useFeedPosts() {
     }
 
     if (isRefreshing) setIsRefreshing(false);
-  }, [data, isRefreshing, blockedUserIds]);
+  }, [authData, publicData, isRefreshing, blockedUserIds, isAuthenticated]);
 
+  /**
+   * 새로고침
+   * - 게스트: 공개 피드 재로딩
+   * - 인증: 기존 JWT 기반 최적화
+   */
   const handleRefresh = useCallback(async () => {
     if (!filterInitialized || !mountedRef.current) return;
-
     setIsRefreshing(true);
-    const tokenValidationStartTime = Date.now();
 
+    if (!isAuthenticated) {
+      try {
+        await publicRefetch({
+          input: { page: 1, limit: PAGE_SIZE, teamIds: null },
+        });
+      } catch (e) {
+        console.error("게스트 새로고침 실패:", e);
+      } finally {
+        if (mountedRef.current) setIsRefreshing(false);
+      }
+      return;
+    }
+
+    // 이하 인증 사용자 로직 (기존)
+    const tokenValidationStartTime = Date.now();
     try {
-      // JWT 토큰 기반 스마트 새로고침
       const currentSession = getCurrentSession();
       const now = Math.floor(Date.now() / 1000);
-
-      // 토큰 유효성 확인
       const tokenValid = isTokenValid();
       const tokenValidationTime = Date.now() - tokenValidationStartTime;
 
+      // 토큰 유효하지 않아도 공개 피드로 폴백하지 않고 여기서는 단순 재시도 가능
       if (!tokenValid) {
-        console.warn("JWT 토큰 만료됨, 새로고침 중단");
+        // 공개 피드 시나리오로 전환
         setIsRefreshing(false);
         return;
       }
 
-      // JWT 만료 시간 기반 차단 사용자 갱신 주기 결정
       let shouldRefreshBlockedUsers = false;
       if (currentSession?.expires_at) {
         const timeUntilExpiry = currentSession.expires_at - now;
-        const lastFetch = await AsyncStorage.getItem('blocked_users_last_fetch') || '0';
+        const lastFetch =
+          (await AsyncStorage.getItem("blocked_users_last_fetch")) || "0";
         const timeSinceLastFetch = Date.now() - parseInt(lastFetch);
-
-        // 토큰 만료까지의 시간의 50% 또는 최소 5분 중 짧은 시간마다 갱신
         const refreshInterval = Math.min(timeUntilExpiry * 500, 5 * 60 * 1000);
-        shouldRefreshBlockedUsers = shouldLoadBlockedUsers &&
-          timeSinceLastFetch > refreshInterval;
+        shouldRefreshBlockedUsers =
+          shouldLoadBlockedUsers && timeSinceLastFetch > refreshInterval;
       } else {
-        // 토큰 정보가 없으면 기본 5분 간격
-        const lastFetch = await AsyncStorage.getItem('blocked_users_last_fetch') || '0';
-        shouldRefreshBlockedUsers = shouldLoadBlockedUsers &&
-          (Date.now() - parseInt(lastFetch)) > 5 * 60 * 1000;
+        const lastFetch =
+          (await AsyncStorage.getItem("blocked_users_last_fetch")) || "0";
+        shouldRefreshBlockedUsers =
+          shouldLoadBlockedUsers &&
+          Date.now() - parseInt(lastFetch) > 5 * 60 * 1000;
       }
 
-      await refetch({
+      await authRefetch({
         input: { page: 1, limit: PAGE_SIZE, teamIds: selectedTeamIds },
         includeBlockedUsers: shouldRefreshBlockedUsers,
       });
 
       if (shouldRefreshBlockedUsers) {
-        await AsyncStorage.setItem('blocked_users_last_fetch', Date.now().toString());
+        await AsyncStorage.setItem(
+          "blocked_users_last_fetch",
+          Date.now().toString(),
+        );
       }
 
-      // JWT 기반 최적화 메트릭 업데이트
-      setPerformanceMetrics(prev => ({
+      setPerformanceMetrics((prev) => ({
         ...prev,
         timing: {
           ...prev.timing,
-          tokenValidationTime: prev.timing.tokenValidationTime + tokenValidationTime,
+          tokenValidationTime:
+            prev.timing.tokenValidationTime + tokenValidationTime,
         },
         optimization: {
           ...prev.optimization,
@@ -478,114 +522,139 @@ export function useFeedPosts() {
         },
         networkRequests: {
           ...prev.networkRequests,
-          jwtBasedOptimizations: prev.networkRequests.jwtBasedOptimizations +
-            (shouldRefreshBlockedUsers ? 0 : 1), // 차단 사용자 요청 건너뛴 경우
+          jwtBasedOptimizations:
+            prev.networkRequests.jwtBasedOptimizations +
+            (shouldRefreshBlockedUsers ? 0 : 1),
         },
       }));
-
     } catch (error) {
       console.error("새로고침 실패:", error);
-      // refetch 실패 시 수동으로 리프레시 종료
-      if (mountedRef.current) {
-        setIsRefreshing(false);
-      }
+      if (mountedRef.current) setIsRefreshing(false);
     } finally {
-      // 성공 시에는 data effect에서 isRefreshing을 false로 돌리지만
-      // (토큰 만료 / 조기 return / refetch 실패) 경로 방어
       if (mountedRef.current && isRefreshing) {
         setIsRefreshing(false);
       }
     }
-  }, [refetch, selectedTeamIds, filterInitialized, shouldLoadBlockedUsers, isRefreshing]);
-
-  const handleLoadMore = useCallback(() => {
-    if (fetching || !data?.posts?.hasNext || !filterInitialized || !mountedRef.current) return;
-    const nextPage = (data?.posts?.page ?? 0) + 1;
-    void fetchMore({
-      variables: {
-        input: { page: nextPage, limit: PAGE_SIZE, teamIds: selectedTeamIds },
-        includeBlockedUsers: shouldLoadBlockedUsers,
-      },
-      updateQuery: (prev, { fetchMoreResult }) => fetchMoreResult ?? prev,
-    });
-  }, [fetching, fetchMore, data, selectedTeamIds, filterInitialized, shouldLoadBlockedUsers]);
+  }, [
+    authRefetch,
+    publicRefetch,
+    selectedTeamIds,
+    filterInitialized,
+    shouldLoadBlockedUsers,
+    isRefreshing,
+    isAuthenticated,
+  ]);
 
   /**
-   * 팀 필터 변경 핸들러 (AsyncStorage에만 저장, My Teams에는 영향 없음)
+   * 추가 로드 (페이지네이션)
+   */
+  const handleLoadMore = useCallback(() => {
+    if (!filterInitialized || !mountedRef.current) return;
+
+    if (isAuthenticated) {
+      if (authFetching || !authData?.posts?.hasNext) return;
+      const nextPage = (authData?.posts?.page ?? 0) + 1;
+      void authFetchMore({
+        variables: {
+          input: {
+            page: nextPage,
+            limit: PAGE_SIZE,
+            teamIds: selectedTeamIds,
+          },
+          includeBlockedUsers: shouldLoadBlockedUsers,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => fetchMoreResult ?? prev,
+      });
+    } else {
+      if (publicFetching || !publicData?.posts?.hasNext) return;
+      const nextPage = (publicData?.posts?.page ?? 0) + 1;
+      void publicFetchMore({
+        variables: {
+          input: { page: nextPage, limit: PAGE_SIZE, teamIds: null },
+        },
+        updateQuery: (prev, { fetchMoreResult }) => fetchMoreResult ?? prev,
+      });
+    }
+  }, [
+    authData,
+    publicData,
+    authFetching,
+    publicFetching,
+    authFetchMore,
+    publicFetchMore,
+    selectedTeamIds,
+    filterInitialized,
+    shouldLoadBlockedUsers,
+    isAuthenticated,
+  ]);
+
+  /**
+   * 팀 필터 변경 (게스트는 무시)
    */
   const handleTeamFilterChange = useCallback(
     async (teamIds: string[] | null) => {
       if (!mountedRef.current) return;
+      if (!isAuthenticated) return; // 게스트는 필터 기능 없음
 
       try {
-        // 현재 선택과 동일한 경우 중복 처리 방지
         const currentIds = selectedTeamIds || [];
         const nextIds = teamIds || [];
 
-        const isSameSelection =
+        const isSame =
           currentIds.length === nextIds.length &&
           currentIds.every((id) => nextIds.includes(id)) &&
           nextIds.every((id) => currentIds.includes(id));
 
-        if (isSameSelection) {
-          return; // 동일한 선택이면 아무것도 하지 않음
-        }
+        if (isSame) return;
 
-        // AsyncStorage에 저장
         if (teamIds && teamIds.length > 0) {
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(teamIds));
         } else {
           await AsyncStorage.removeItem(STORAGE_KEY);
         }
 
-        // 상태 업데이트 및 피드 새로고침
         setSelectedTeamIds(teamIds);
-        setPosts([]); // 기존 게시물 클리어
+        setPosts([]);
         setIsRefreshing(true);
 
-        // 새로운 필터로 데이터 다시 로드
-        await refetch({
+        await authRefetch({
           input: { page: 1, limit: PAGE_SIZE, teamIds },
           includeBlockedUsers: shouldLoadBlockedUsers,
         });
       } catch (error) {
         console.error("팀 필터 변경 실패:", error);
-        // refetch 실패 시 로딩 상태 복원
-        if (mountedRef.current) {
-          setIsRefreshing(false);
-        }
+        if (mountedRef.current) setIsRefreshing(false);
       }
     },
-    [refetch, selectedTeamIds, shouldLoadBlockedUsers],
+    [authRefetch, selectedTeamIds, shouldLoadBlockedUsers, isAuthenticated],
   );
 
   /**
-   * My Teams 변경 시 필터 재초기화 (team-selection에서 호출)
+   * My Teams 기반 필터 재초기화 (로그인 사용자 전용)
    */
   const refreshFilterFromMyTeams = useCallback(async () => {
     if (!mountedRef.current) return;
-
+    if (!isAuthenticated) return;
     try {
-      // 캐시 무효화 후 재초기화
       myTeamsCache.current = null;
       setFilterInitialized(false);
-      // useEffect에서 자동으로 재초기화됨
     } catch (error) {
       console.error("My Teams 기반 필터 재초기화 실패:", error);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   /**
-   * 사용자를 차단하고 피드에서 해당 사용자의 게시물을 즉시 제거합니다.
+   * 사용자 차단 (로그인 사용자 전용)
    */
-  const handleBlockUser = useCallback((blockedUserId: string) => {
-    if (!mountedRef.current) return;
-
-    setPosts((currentPosts) =>
-      currentPosts.filter((p) => p.author.id !== blockedUserId),
-    );
-    setBlockedUserIds((currentIds) => [...currentIds, blockedUserId]);
-  }, []);
+  const handleBlockUser = useCallback(
+    (blockedUserId: string) => {
+      if (!mountedRef.current) return;
+      if (!isAuthenticated) return;
+      setPosts((cur) => cur.filter((p) => p.author.id !== blockedUserId));
+      setBlockedUserIds((ids) => [...ids, blockedUserId]);
+    },
+    [isAuthenticated],
+  );
 
   // cleanup
   useEffect(() => {
@@ -595,22 +664,27 @@ export function useFeedPosts() {
   }, []);
 
   /**
-   * 성능 최적화 리포트 생성
+   * 성능 리포트
    */
   const getOptimizationReport = useCallback(() => {
     const totalTime = Date.now() - startTimeRef.current;
-    const networkEfficiency = performanceMetrics.networkRequests.cacheHits /
-      (performanceMetrics.networkRequests.cacheHits + performanceMetrics.networkRequests.cacheMisses + 1) * 100;
+    const networkEfficiency =
+      (performanceMetrics.networkRequests.cacheHits /
+        (performanceMetrics.networkRequests.cacheHits +
+          performanceMetrics.networkRequests.cacheMisses +
+          1)) *
+      100;
 
     return {
       ...performanceMetrics,
       summary: {
         totalExecutionTime: totalTime,
-        networkEfficiency: networkEfficiency.toFixed(1) + '%',
-        optimizationScore: Math.min(100,
-          (performanceMetrics.optimization.redundantCallsPrevented * 10) +
-          (performanceMetrics.optimization.backgroundTasksDeferred * 5) +
-          (networkEfficiency)
+        networkEfficiency: networkEfficiency.toFixed(1) + "%",
+        optimizationScore: Math.min(
+          100,
+          performanceMetrics.optimization.redundantCallsPrevented * 10 +
+            performanceMetrics.optimization.backgroundTasksDeferred * 5 +
+            networkEfficiency,
         ),
         improvements: [
           `네트워크 요청 ${performanceMetrics.optimization.redundantCallsPrevented}회 방지`,
@@ -623,6 +697,10 @@ export function useFeedPosts() {
       },
     };
   }, [performanceMetrics]);
+
+  // 통합된 상태/에러/로딩
+  const fetching = isAuthenticated ? authFetching : publicFetching;
+  const error = isAuthenticated ? authError : publicError;
 
   return {
     posts,
@@ -638,7 +716,12 @@ export function useFeedPosts() {
     handleBlockUser,
     performanceMetrics,
     getOptimizationReport,
+    isAuthenticated,
   } as const;
 }
 
 export default useFeedPosts;
+
+/*
+커밋 메시지 (git): feat(feed): 비로그인(게스트) 공개 피드 쿼리 추가 및 토큰 만료 시 공개 피드 폴백
+*/

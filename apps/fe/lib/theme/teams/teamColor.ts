@@ -146,8 +146,8 @@ export const teamColors = {
 
       uniformDecoration: "#ED1C24",
       likeBackground: "#FEF2F2",
-      mainColor: "#00204B",
-      subColor: "#ED1C24",
+      mainColor: "#E94E15",
+      subColor: "#08101D",
       accent: "#FF6B35",
       decorationBorder: "#00204B",
       cardBorder: "#00204B",

@@ -181,7 +181,7 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         opacity: 0.9,
         position: 'bottom-left' as const,
         style: ({ colors }) => ({
-          left: 8, // 8 + 8 (간격)
+          left: 8, // 8 (간격)
           zIndex: 1,
         }),
       },
@@ -210,7 +210,7 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
-          right: 16, // 8 + 16 (간격)
+          right: 24, // 8 + 16 (간격)
           zIndex: 1,
         }),
       },
@@ -224,7 +224,7 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
-          right: 8, // 8 + 8 (간격)
+          right: 16, // 8 + 8 (간격)
           zIndex: 1,
         }),
       },
@@ -236,8 +236,9 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         width: doosanWidth,
         height: doosanHeight,
         opacity: 0.9,
-        position: 'bottom-left' as const,
+        position: 'bottom-right' as const,
         style: ({ colors }) => ({
+          right: 8, 
           zIndex: 1,
         }),
       },
@@ -260,6 +261,7 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
         spacing: 35,      // 스트라이프  간격 (10px)
         stripeWidth: 1,
         style: ({ colors }) => ({
+          left: 8, // 8 (간격)
           zIndex: 1,
         }),
       },
@@ -324,6 +326,7 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
         spacing: 35,      // 스트라이프  간격 (10px)
         stripeWidth: 1,
         style: ({ colors }) => ({
+          left: 8, // 8 (간격)
           zIndex: 1,
         }),
       },

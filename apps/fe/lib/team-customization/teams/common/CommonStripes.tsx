@@ -54,8 +54,8 @@ export const CommonStripes: React.FC<TeamDecorationProps> = ({
   const resolvedStyle = resolveStyle(style);
 
   // 여백 설정 (position에 따라 자동 적용)
-  const MARGIN_LEFT = 8;
-  const MARGIN_RIGHT = 8;
+  const MARGIN_LEFT = 0;
+  const MARGIN_RIGHT = 0;
 
   // position에 따른 추가 스타일 적용 및 여백 설정
   const positionStyle = position === 'bottom-right' ? {

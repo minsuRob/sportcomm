@@ -63,9 +63,12 @@ export default function PostActions({
     <View
       style={[
         themed(variant === "detail" ? $detailActionSection : $feedActionBar),
-        // 팀별 PostActions 배경색 적용
+        // 팀별 PostActions 배경색 적용 - 더 완전한 커버리지
         teamColors?.postActionsBackground && {
           backgroundColor: teamColors.postActionsBackground,
+          borderRadius: 8, // 자연스러운 모서리 처리
+          marginHorizontal: -4, // 좌우 여백 확장으로 빈틈 제거
+          // paddingHorizontal: 20, // 확장된 마진에 맞춰 패딩 조정
         },
       ]}
     >

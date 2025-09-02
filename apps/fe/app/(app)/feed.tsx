@@ -297,33 +297,30 @@ export default function FeedScreen() {
                   color={theme.colors.tint}
                 />
                 <Text style={themed($myTeamText)}>
-                  <Text style={themed($myTeamText)}>
-                    {displayTeam.team.name}
-                  </Text>
-                  {duration ? (
-                    <Text style={themed($myTeamDate)}>
-                      {"과 함께 한지 "}
-                      {duration.years > 0
-                        ? `${duration.years}년째..`
-                        : `${duration.months}개월째..`}
-                        <Ionicons
-                          name="heart"
-                          size={20}
-                          color={theme.colors.tint}
-                        />
-
-                    </Text>
-                    
-                  ) : (
-                    <Text
-                      style={themed($myTeamDate)}
-                      onPress={() => router.push("/(modals)/team-selection")}
-                    >
-                      {/* {displayTeam.team.name} */}
-                      {"를 클릭해 좋아한 날을 기록하세요"}
-                    </Text>
-                  )}
+                  {displayTeam.team.name}
                 </Text>
+                {duration ? (
+                  <Text style={themed($myTeamDate)}>
+                    {"과 함께 한지 "}
+                    {duration.years > 0
+                      ? `${duration.years}년째..`
+                      : `${duration.months}개월째..`}
+                  </Text>
+                ) : (
+                  <Text
+                    style={themed($myTeamDate)}
+                    onPress={() => router.push("/(modals)/team-selection")}
+                  >
+                    {"를 클릭해 좋아한 날을 기록하세요"}
+                  </Text>
+                )}
+                {duration && (
+                  <Ionicons
+                    name="heart"
+                    size={16}
+                    color={theme.colors.tint}
+                  />
+                )}
               </View>
             );
           })()}
@@ -505,19 +502,20 @@ const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "center",
-  gap: spacing.sm,
+  gap: spacing.xxs,
 });
 
 const $myTeamText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontSize: 14,
-  fontWeight: "600",
+  fontWeight: "900",
 });
 
 const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   fontSize: 12,
   fontWeight: "400",
+  lineHeight: 16,
 });
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

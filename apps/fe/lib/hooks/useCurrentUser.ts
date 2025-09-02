@@ -2,7 +2,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import type { User } from "@/lib/auth";
 import { getSession, saveSession } from "@/lib/auth";
 import { UserSyncService } from "@/lib/supabase/user-sync";
-import { getValidToken, getCurrentSession, isTokenValid } from "@/lib/auth/token-manager";
+import {
+  getValidToken,
+  getCurrentSession,
+  isTokenValid,
+} from "@/lib/auth/token-manager";
+import { onSessionChange } from "@/lib/auth/user-session-events";
 /**
  * 전역(모듈 레벨) 사용자 캐시
  * - 화면 이동 시 훅이 재마운트되어도 즉시 이전 사용자 정보를 제공하여 UI 깜빡임(flicker) 제거
@@ -77,7 +82,7 @@ export function useCurrentUser() {
 
         if (nextUser) {
           // 관리자 플래그 보정
-            if (
+          if (
             nextUser.role === "ADMIN" &&
             (nextUser as any).isAdmin === undefined
           ) {
@@ -89,16 +94,17 @@ export function useCurrentUser() {
           const now = Math.floor(Date.now() / 1000);
           let shouldSync = forceSync;
 
-            if (currentSession?.expires_at) {
+          if (currentSession?.expires_at) {
             const tokenExpiresAt = currentSession.expires_at;
             const timeUntilExpiry = tokenExpiresAt - now;
             const tokenChanged = lastTokenExpiryRef.current !== tokenExpiresAt;
 
             // 다음 조건 중 하나라도 만족하면 동기화
-            shouldSync = shouldSync ||
-              tokenChanged ||                    // 토큰이 갱신됨
-              timeUntilExpiry < 600 ||          // 토큰이 10분 이내 만료
-              !userCacheRef.current ||          // 캐시된 사용자 없음
+            shouldSync =
+              shouldSync ||
+              tokenChanged || // 토큰이 갱신됨
+              timeUntilExpiry < 600 || // 토큰이 10분 이내 만료
+              !userCacheRef.current || // 캐시된 사용자 없음
               userCacheRef.current.id !== nextUser.id; // 다른 사용자
 
             lastTokenExpiryRef.current = tokenExpiresAt;
@@ -109,10 +115,12 @@ export function useCurrentUser() {
           }
 
           // 캐시된 사용자와 동일하고 토큰이 유효하면 캐시 사용
-          if (userCacheRef.current &&
-              userCacheRef.current.id === nextUser.id &&
-              !shouldSync &&
-              isTokenValid()) {
+          if (
+            userCacheRef.current &&
+            userCacheRef.current.id === nextUser.id &&
+            !shouldSync &&
+            isTokenValid()
+          ) {
             setCurrentUser(userCacheRef.current);
             return;
           }
@@ -122,7 +130,8 @@ export function useCurrentUser() {
               // 서버에서 최신 사용자 정보(포인트 포함) 동기화
               const token = await getValidToken();
               if (token && mountedRef.current) {
-                const remoteUser = await UserSyncService.getCurrentUserInfo(token);
+                const remoteUser =
+                  await UserSyncService.getCurrentUserInfo(token);
 
                 if (!mountedRef.current) return;
 
@@ -136,7 +145,8 @@ export function useCurrentUser() {
                   bio: remoteUser.bio,
                   myTeams: (nextUser as any).myTeams,
                   userTeams: undefined,
-                  points: (remoteUser as any).points ?? (nextUser as any).points ?? 0,
+                  points:
+                    (remoteUser as any).points ?? (nextUser as any).points ?? 0,
                 } as any);
 
                 nextUser = (await getSession()).user;
@@ -150,8 +160,10 @@ export function useCurrentUser() {
               );
 
               // 토큰이 완전히 만료된 경우 로그아웃 처리
-              if ((e as any)?.message?.includes('refresh_token_not_found') ||
-                  (e as any)?.message?.includes('invalid_grant')) {
+              if (
+                (e as any)?.message?.includes("refresh_token_not_found") ||
+                (e as any)?.message?.includes("invalid_grant")
+              ) {
                 console.log("JWT 토큰 만료, 사용자 정보 초기화");
                 nextUser = null;
                 userCacheRef.current = null;
@@ -190,6 +202,24 @@ export function useCurrentUser() {
       mountedRef.current = false;
     };
   }, [load]);
+
+  /**
+   * 세션 변경 이벤트 구독
+   * - 로그인/로그아웃/프로필 업데이트 시 즉시 currentUser 반영
+   * - logout 시 토큰 만료정보 초기화
+   */
+  useEffect(() => {
+    const off = onSessionChange(({ user, reason }) => {
+      userCacheRef.current = user;
+      __globalUserCache = user;
+      setCurrentUser(user);
+      if (reason === "logout") {
+        lastTokenExpiryRef.current = 0;
+        __globalLastTokenExpiry = 0;
+      }
+    });
+    return off;
+  }, []);
 
   return {
     currentUser,

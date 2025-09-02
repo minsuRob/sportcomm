@@ -1,6 +1,7 @@
 import { setItem, getItem, removeItem } from "./storage/storage";
 import { UserTeam } from "./graphql/teams";
 import { getValidToken, getCurrentSession } from "./auth/token-manager";
+import { emitSessionChange } from "./auth/user-session-events";
 
 const TOKEN_KEY = "sportcomm-auth-token";
 const USER_KEY = "sportcomm-auth-user";
@@ -52,6 +53,12 @@ export const saveSession = async (
       }
       await setItem(USER_KEY, JSON.stringify(user));
       console.log("세션 저장 완료: 토큰과 사용자 정보가 모두 저장됨");
+      // --- 세션 이벤트 브로드캐스트 (로그인/토큰+유저 저장) ---
+      emitSessionChange({
+        user,
+        token: tokenOrUser,
+        reason: "login",
+      });
     }
     // 사용자 정보만 업데이트하는 경우
     else if (typeof tokenOrUser === "object") {
@@ -68,6 +75,12 @@ export const saveSession = async (
         (tokenOrUser as any).points = 0;
       }
       await setItem(USER_KEY, JSON.stringify(tokenOrUser));
+      // --- 세션 이벤트 브로드캐스트 (프로필/포인트 등 사용자 정보 업데이트) ---
+      emitSessionChange({
+        user: tokenOrUser,
+        token: null,
+        reason: "update",
+      });
     }
   } catch (error) {
     console.error("Failed to save session", error);
@@ -119,6 +132,12 @@ export const clearSession = async (): Promise<void> => {
     const { tokenManager } = await import("./auth/token-manager");
     await tokenManager.signOut();
     console.log("세션 정보가 모두 삭제되었습니다.");
+    // --- 세션 이벤트 브로드캐스트 (로그아웃) ---
+    emitSessionChange({
+      user: null,
+      token: null,
+      reason: "logout",
+    });
   } catch (error) {
     console.error("Failed to clear session", error);
   }

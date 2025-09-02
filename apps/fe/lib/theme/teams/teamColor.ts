@@ -42,27 +42,25 @@ export const teamColors = {
   // 두산 베어스
   doosan: {
     light: {
-      // === 고정 순서 7개 키 (상단) ===
-      uniformBackground: "#FFFFFF", // 흰색 유니폼
-      uniformText: "#000036", // 진한 파란색
+      uniformBackground: "#FFFFFF",
+      uniformText: "#000036",
       uniformNumberText: "#000036",
       uniformNumberStroke: "#FF1620",
       uniformNumberThickness: 1.5,
-      postActionsBackground: "#000036", // 연한 회색
-      actionButtonActive: "#FF1620", // 빨간색 (활성 상태)
-      actionButtonInactive: "#FF1620", // 회색 (비활성 상태)
+      postActionsBackground: "#000036", // 남색
+      actionButtonActive: "#FF1620", // 빨강
+      actionButtonInactive: "#FF1620",
 
-      // 이하 기존 기타 키
-      uniformDecoration: "#3B82F6", // 파란색
-      likeBackground: "#000036", // 연한 파란색
-      mainColor: "#1E3A8A", // 진한 파란색
-      subColor: "#3B82F6", // 파란색
-      accent: "#EF4444", // 빨간색
+      uniformDecoration: "#3B82F6",
+      likeBackground: "#000036",
+      mainColor: "#000036",
+      subColor: "#FF1620",
+      accent: "#EF4444",
       decorationBorder: "#000000",
       cardBorder: "#000036",
-      profileText: "#000036", // 진한 파란색
-      profileTime: "#6B7280", // 회색
-      profileStroke: "#FFFFFF", // 흰색 테두리
+      profileText: "#000036",
+      profileTime: "#6B7280",
+      profileStroke: "#FFFFFF",
     },
     dark: {
       // === 고정 순서 7개 키 ===
@@ -79,8 +77,8 @@ export const teamColors = {
       uniformNumber: "#FFFFFF", // (원래 있던 보조 필드)
       uniformDecoration: "#93C5FD", // 연한 파란색
       likeBackground: "#1E3A8A", // 어두운 파란색
-      mainColor: "#60A5FA", // 밝은 파란색
-      subColor: "#93C5FD", // 연한 파란색
+      mainColor: "#FF1620", // 밝은 파란색
+      subColor: "#000036", // 연한 파란색
       accent: "#F87171", // 밝은 빨간색
       decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
@@ -96,14 +94,14 @@ export const teamColors = {
       uniformText: "#0D42A3",
       uniformNumberText: "#0D42A3",
       uniformNumberStroke: "#074CA1",
-      postActionsBackground: "#0D42A3",
-      actionButtonActive: "#848484",
+      postActionsBackground: "#0D42A3", //파랑
+      actionButtonActive: "#848484", // 회색
       actionButtonInactive: "#848484",
 
       uniformDecoration: "#EF4444",
       likeBackground: "#FEF2F2",
-      mainColor: "#DC2626",
-      subColor: "#EF4444",
+      mainColor: "#0D42A3",
+      subColor: "#848484",
       accent: "#1E3A8A",
       decorationBorder: "#E5E7EB",
       cardBorder: "#D1D5DB",
@@ -123,8 +121,8 @@ export const teamColors = {
 
       uniformDecoration: "#FCA5A5",
       likeBackground: "#991B1B",
-      mainColor: "#F87171",
-      subColor: "#FCA5A5",
+      mainColor: "#0D42A3",
+      subColor: "#848484",
       accent: "#60A5FA",
       decorationBorder: "#374151",
       cardBorder: "#4B5563",
@@ -166,8 +164,8 @@ export const teamColors = {
 
       uniformDecoration: "#8C1218",
       likeBackground: "#991B1B",
-      mainColor: "#00204B",
-      subColor: "#8C1218",
+      mainColor: "#E94E15",
+      subColor: "#08101D",
       accent: "#FF6B35",
       decorationBorder: "#FFFFFF",
       cardBorder: "#E94E15",
@@ -212,8 +210,8 @@ export const teamColors = {
       uniformDecoration: "#FFFFFF",
       svgDecorationColor: "#FFFFFF", // SVG 데코레이션용 색상 (다크 모드)
       likeBackground: "#991B1B",
-      mainColor: "#CC0022",
-      subColor: "#1A1A1A",
+      mainColor: "#EA0029",
+      subColor: "#FFFFFF",
       accent: "#FFC107",
       decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
@@ -227,16 +225,16 @@ export const teamColors = {
     light: {
       uniformBackground: "#FFFFFF",
       uniformText: "#000000",
-      uniformNumberText: "#BE001C",
+      uniformNumberText: "#BE001C", //빨강
       uniformNumberStroke: "#BE001C",
       postActionsBackground: "#BE001C",
-      actionButtonActive: "#F5CB6A",
+      actionButtonActive: "#F5CB6A", // 노랑
       actionButtonInactive: "#F5CB6A",
 
       uniformDecoration: "#041E42",
       likeBackground: "#FEF2F2",
-      mainColor: "#CE0E2D",
-      subColor: "#041E42",
+      mainColor: "#BE001C",
+      subColor: "#F5CB6A",
       accent: "#FFD700",
       decorationBorder: "#CE142C",
       cardBorder: "#CE0E2D",
@@ -255,8 +253,8 @@ export const teamColors = {
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#991B1B",
-      mainColor: "#B50C28",
-      subColor: "#031A38",
+      mainColor: "#BE001C",
+      subColor: "#F5CB6A",
       accent: "#FFD700",
       decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
@@ -273,14 +271,14 @@ export const teamColors = {
       uniformNumberText: "#000000",
       uniformNumberStroke: "#000000",
       postActionsBackground: "#000000",
-      actionButtonActive: "#D60325",
+      actionButtonActive: "#D60325", //빨강
       actionButtonInactive: "#D60325",
       repeatedStripesColor: "#000000", // LG 트윈스 줄무늬 색상
 
       uniformDecoration: "#000000",
       likeBackground: "#FEF2F2",
-      mainColor: "#C4003C",
-      subColor: "#000000",
+      mainColor: "#000000",
+      subColor: "#D60325",
       accent: "#87CEEB",
       decorationBorder: "#000000",
       cardBorder: "#C4003C",
@@ -299,8 +297,8 @@ export const teamColors = {
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#991B1B",
-      mainColor: "#A8002F",
-      subColor: "#1A1A1A",
+      mainColor: "#FFFFFF",
+      subColor: "#D60325",
       accent: "#87CEEB",
       decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
@@ -315,15 +313,15 @@ export const teamColors = {
       uniformBackground: "#E5E3DC",
       uniformText: "#1F152A",
       uniformNumberText: "#E2222C",
-      uniformNumberStroke: "#E2222C",
-      postActionsBackground: "#1F152A",
+      uniformNumberStroke: "#E2222C", //빨강
+      postActionsBackground: "#1F152A", //남색
       actionButtonActive: "#E2222C",
       actionButtonInactive: "#E2222C",
 
       uniformDecoration: "#CE0E2D",
       likeBackground: "#FEF2F2",
-      mainColor: "#002E5F",
-      subColor: "#CE0E2D",
+      mainColor: "#1F152A",
+      subColor: "#E2222C",
       accent: "#FFD700",
       decorationBorder: "#1F152A",
       cardBorder: "#002E5F",
@@ -342,8 +340,8 @@ export const teamColors = {
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#991B1B",
-      mainColor: "#001A3D",
-      subColor: "#B50C28",
+      mainColor: "#E2222C",
+      subColor: "#1F152A",
       accent: "#FFD700",
       decorationBorder: "#55647F",
       cardBorder: "#4B5563",
@@ -366,8 +364,8 @@ export const teamColors = {
 
       uniformDecoration: "#C4A484",
       likeBackground: "#EBF5FF",
-      mainColor: "#315288",
-      subColor: "#C4A484",
+      mainColor: "#29557D",
+      subColor: "#BD9578",
       accent: "#FF6B35",
       decorationBorder: "#315288",
       cardBorder: "#315288",
@@ -386,8 +384,8 @@ export const teamColors = {
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#1E3A8A",
-      mainColor: "#253F6C",
-      subColor: "#8B7355",
+      mainColor: "#BD9578",
+      subColor: "#29557D",
       accent: "#FF6B35",
       decorationBorder: "#FFFFFF",
       cardBorder: "#BD9578",
@@ -410,7 +408,7 @@ export const teamColors = {
       uniformDecoration: "#FF6600",
       likeBackground: "#FFF3E0",
       mainColor: "#000000",
-      subColor: "#FF6600",
+      subColor: "#ED1B23",
       accent: "#9C27B0",
       decorationBorder: "#000000",
       cardBorder: "#000000",
@@ -429,8 +427,8 @@ export const teamColors = {
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#EA580C",
-      mainColor: "#1A1A1A",
-      subColor: "#E55A00",
+      mainColor: "#000000",
+      subColor: "#ED1B23",
       accent: "#9C27B0",
       decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
@@ -453,10 +451,10 @@ export const teamColors = {
 
       uniformDecoration: "#C4A484",
       likeBackground: "#FDF2F8",
-      mainColor: "#570514",
-      subColor: "#C4A484",
+      mainColor: "#570514", // 버건디
+      subColor: "#F66893",
       accent: "#10B981",
-      decorationBorder: "#570514",
+      decorationBorder: "#570514", 
       cardBorder: "#570514",
       profileText: "#570514",
       profileTime: "#6B7280",
@@ -473,8 +471,8 @@ export const teamColors = {
 
       uniformDecoration: "#FFFFFF",
       likeBackground: "#881337",
-      mainColor: "#3D030E",
-      subColor: "#8B7355",
+      mainColor: "#F66893",
+      subColor: "#570514",
       accent: "#10B981",
       decorationBorder: "#FFFFFF",
       cardBorder: "#FFFFFF",

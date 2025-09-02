@@ -304,9 +304,16 @@ export default function FeedScreen() {
                     <Text style={themed($myTeamDate)}>
                       {"과 함께 한지 "}
                       {duration.years > 0
-                        ? `${duration.years}년째`
-                        : `${duration.months}개월째`}
+                        ? `${duration.years}년째..`
+                        : `${duration.months}개월째..`}
+                        <Ionicons
+                          name="heart"
+                          size={20}
+                          color={theme.colors.tint}
+                        />
+
                     </Text>
+                    
                   ) : (
                     <Text
                       style={themed($myTeamDate)}

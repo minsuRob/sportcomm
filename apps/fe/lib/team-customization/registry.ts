@@ -354,7 +354,7 @@ const createSSGCustomization = (): TeamCustomizationConfig => ({
         baseHeight: 166,
         opacity: 0.9,
         position: 'center' as const,
-        maxWidthPercent: '80%',
+        maxWidthPercent: '50%',
         maintainAspectRatio: true,
 
       } as any,

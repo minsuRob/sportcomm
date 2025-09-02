@@ -236,8 +236,8 @@ export default function FeedScreen() {
 
   // 탭 데이터
   const tabs = [
-    { key: "feed", title: "Feed" },
-    { key: "chat", title: "Chat" },
+    { key: "feed", title: t(TRANSLATION_KEYS.FEED_TITLE) },
+    { key: "chat", title: t(TRANSLATION_KEYS.FEED_CHAT) },
   ];
 
   return (

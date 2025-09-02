@@ -90,7 +90,7 @@ const toPercentString = (value: number | string | undefined, fallback: string): 
  * SVG path 생성
  */
 const buildPaths = (overrideColors?: KTDecorationProps['overrideColors']) => {
-  const primary = overrideColors?.primary ?? '#B55555';
+  const primary = overrideColors?.primary ?? '#ED1B23';
   const secondary = overrideColors?.secondary ?? '#D9D9D9';
   return [
     { d: 'M0 59L21.5 51L35 30L36 52.5L49.5 60L27 68.5L11.5 88.5L12.5 66L0 59Z', fill: primary, opacity: 1 },
@@ -119,9 +119,11 @@ export const KTDecoration: React.FC<KTDecorationProps> = ({
   color,  // 필요 시 primary 강제 (overrideColors.primary 대체)
 }) => {
   // color prop이 들어오면 primary override 우선 적용
+  const svgDecorationColor = teamColors?.decorationBorder || color || '#24242E';
+  
   const mergedOverride: KTDecorationProps['overrideColors'] = {
-    primary: color ?? overrideColors?.primary,
-    secondary: overrideColors?.secondary,
+    primary:  overrideColors?.primary,
+    secondary: svgDecorationColor,
   };
 
   const paths = buildPaths(mergedOverride);

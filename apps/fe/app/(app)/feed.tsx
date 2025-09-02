@@ -299,14 +299,21 @@ export default function FeedScreen() {
                 <Text style={themed($myTeamText)}>
                   <Text style={themed($myTeamText)}>
                     {displayTeam.team.name}
-                    {"과 함께 한지"}
                   </Text>
-                  {duration && (
+                  {duration ? (
                     <Text style={themed($myTeamDate)}>
-                      {" "}
+                      {"과 함께 한지 "}
                       {duration.years > 0
                         ? `${duration.years}년째`
                         : `${duration.months}개월째`}
+                    </Text>
+                  ) : (
+                    <Text
+                      style={themed($myTeamDate)}
+                      onPress={() => router.push("/(modals)/team-selection")}
+                    >
+                      {/* {displayTeam.team.name} */}
+                      {"를 클릭해 좋아한 날을 기록하세요"}
                     </Text>
                   )}
                 </Text>

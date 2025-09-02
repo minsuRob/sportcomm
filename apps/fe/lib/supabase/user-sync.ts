@@ -61,6 +61,18 @@ const GET_CURRENT_USER_INFO_QUERY = gql`
       points
       createdAt
       updatedAt
+      myTeams {
+        team {
+          id
+          name
+          logoUrl
+          icon
+        }
+        favoriteDate
+        favoritePlayerName
+        favoritePlayerNumber
+        priority
+      }
     }
   }
 `;

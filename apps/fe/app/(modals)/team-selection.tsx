@@ -15,7 +15,8 @@ import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { User, getSession, saveSession } from "@/lib/auth";
+import { emitSessionChange } from "@/lib/auth/user-session-events";
 import { showToast } from "@/components/CustomToast";
 import TeamLogo from "@/components/TeamLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -364,8 +365,7 @@ export default function TeamSelectionScreen() {
             teamId,
             favoriteDate: teamFavoriteDates[teamId] || null,
             favoritePlayerName: teamFavoritePlayers[teamId]?.name || null,
-            favoritePlayerNumber:
-              teamFavoritePlayers[teamId]?.number ?? null,
+            favoritePlayerNumber: teamFavoritePlayers[teamId]?.number ?? null,
           })),
         },
         context: {
@@ -384,8 +384,36 @@ export default function TeamSelectionScreen() {
 
       console.log("팀 선택 저장 성공:", data);
 
-      // 사용자 팀 목록 다시 조회
-      refetchMyTeams({ fetchPolicy: "network-only" });
+      // 사용자 팀 목록 다시 조회 (신규: refetch 결과를 세션 및 전역 이벤트에 반영)
+      const refetched = await refetchMyTeams({ fetchPolicy: "network-only" });
+      try {
+        const newMyTeams = refetched?.data?.myTeams || [];
+        // 현재 세션 사용자 불러오기
+        const sessionInfoAfter = await getSession();
+        const sessionUser = sessionInfoAfter.user;
+
+        if (sessionUser) {
+          // 세션 사용자 객체에 최신 myTeams 병합
+          await saveSession({
+            ...sessionUser,
+            myTeams: newMyTeams,
+          } as any);
+
+          // 세션 변경 이벤트 브로드캐스트 (feed 등에서 즉시 반영)
+          emitSessionChange({
+            user: { ...sessionUser, myTeams: newMyTeams } as any,
+            token: sessionInfoAfter.token,
+            reason: "update",
+          });
+          
+        } else {
+          console.warn(
+            "세션 사용자 정보를 찾지 못해 myTeams 세션 반영을 건너뜀",
+          );
+        }
+      } catch (sessionSyncError) {
+        console.warn("MyTeams 세션 반영 중 오류:", sessionSyncError);
+      }
 
       // My Teams 변경 시 필터를 새로운 My Teams로 재설정
       try {
@@ -393,7 +421,7 @@ export default function TeamSelectionScreen() {
           "selected_team_filter",
           JSON.stringify(selectedTeams),
         );
-        console.log("My Teams 변경에 따른 필터 재설정 완료");
+        
       } catch (error) {
         console.error("필터 재설정 실패:", error);
       }
@@ -437,11 +465,7 @@ export default function TeamSelectionScreen() {
         setTimeout(() => router.back(), 1000);
 
         getSession().then(({ token, user }) => {
-          console.log("현재 세션 상태:", {
-            hasToken: !!token,
-            hasUser: !!user,
-            userId: user?.id,
-          });
+          
         });
       } else {
         showToast({
@@ -641,7 +665,7 @@ export default function TeamSelectionScreen() {
         <TouchableOpacity
           style={themed($retryButton)}
           onPress={() => {
-            console.log("로그인 화면으로 이동 시도");
+            
             router.back();
           }}
         >

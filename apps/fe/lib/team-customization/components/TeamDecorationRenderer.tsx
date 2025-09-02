@@ -97,6 +97,11 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
         // position에 따른 스타일 계산
         const position = props?.position || 'bottom-left';
         const positionStyle = getPositionStyle(position);
+        // 웹 환경에서 bottom-* 위치일 때 height: 'auto'로 설정하여 컨테이너가 전체 높이를 차지하지 않도록 조정
+        // 기존에는 웹에서 컨테이너가 height: 100%라 stripe가 항상 상단에 렌더링되어 bottom-left 지정이 무시되는 문제가 있었음
+        const webBottomAdjustment = isWeb() && position.startsWith('bottom')
+          ? { height: 'auto' as const }
+          : {};
 
         // decoration props 구성
         const decorationProps: TeamDecorationProps = {
@@ -112,6 +117,7 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
             style={[
               themed($decorationContainer),
               positionStyle,
+              webBottomAdjustment, // bottom-* 위치 웹 보정 스타일
             ]}
           >
             <DecorationComponent {...decorationProps} />

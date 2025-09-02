@@ -97,10 +97,17 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
         // position에 따른 스타일 계산
         const position = props?.position || 'bottom-left';
         const positionStyle = getPositionStyle(position);
-        // 웹 환경에서 bottom-* 위치일 때 height: 'auto'로 설정하여 컨테이너가 전체 높이를 차지하지 않도록 조정
-        // 기존에는 웹에서 컨테이너가 height: 100%라 stripe가 항상 상단에 렌더링되어 bottom-left 지정이 무시되는 문제가 있었음
-        const webBottomAdjustment = isWeb() && position.startsWith('bottom')
-          ? { height: 'auto' as const }
+
+        // 웹 레이아웃 보정:
+        // 1) bottom-* : height를 auto로 해서 세로 공간 축소 -> bottom anchoring 적용
+        // 2) *-right  : width를 auto로 해서 가로 공간 축소 + left 해제 -> right 오프셋 정확한 상대 위치
+        // 3) bottom-right 조합 시 둘 다 적용
+        // (기존 문제: 컨테이너가 height:100%, width:100%를 차지하여 내부 stripe가 항상 상단/좌측에 붙어 bottom/right 포지션이 시각적으로 무시됨)
+        const webPositionAdjustment = isWeb()
+          ? {
+              ...(position.startsWith('bottom') ? { height: 'auto' as const, top: 'auto' as const } : {}),
+              ...(position.endsWith('right') ? { width: 'auto' as const, left: 'auto' as const } : {}),
+            }
           : {};
 
         // decoration props 구성
@@ -117,7 +124,7 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
             style={[
               themed($decorationContainer),
               positionStyle,
-              webBottomAdjustment, // bottom-* 위치 웹 보정 스타일
+              webPositionAdjustment, // 웹 position 보정 스타일 (bottom/right)
             ]}
           >
             <DecorationComponent {...decorationProps} />

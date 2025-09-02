@@ -64,6 +64,17 @@ export const CommonStripes: React.FC<TeamDecorationProps> = ({
     marginLeft: MARGIN_LEFT,
   };
 
+  // absolute 포지셔닝 필요 여부 판단 (웹에서 style에 left/right/top/bottom 지정된 경우)
+  const needsAbsolute = isWeb() && (
+    resolvedStyle.left !== undefined ||
+    resolvedStyle.right !== undefined ||
+    resolvedStyle.top !== undefined ||
+    resolvedStyle.bottom !== undefined
+  );
+
+  // absolute 적용 시 margin 기반 positionStyle은 제거 (겹치는 여백 방지)
+  const effectivePositionStyle = needsAbsolute ? {} : positionStyle;
+
   // 웹 환경에서는 CSS로 스트라이프 구현
   if (isWeb()) {
     return (
@@ -76,7 +87,13 @@ export const CommonStripes: React.FC<TeamDecorationProps> = ({
             opacity,
             borderRadius: 1, // 약간의 모서리 둥글기
           },
-          positionStyle,
+          effectivePositionStyle,
+          needsAbsolute ? {
+            position: 'absolute',
+            // bottom-* 지정 시 bottom 고정, top-* 지정 시 top 고정
+            bottom: position?.startsWith('bottom') ? 0 : undefined,
+            top: position?.startsWith('top') ? 0 : undefined,
+          } : null,
           resolvedStyle,
         ]}
       />

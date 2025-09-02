@@ -205,9 +205,9 @@ export const teamColors = {
       uniformText: "#FFFFFF",
       uniformNumberText: "#FFFFFF",
       uniformNumberStroke: "#E40223",
-      postActionsBackground: "#E40223",
-      actionButtonActive: "#FFFFFF",
-      actionButtonInactive: "#FFFFFF",
+      postActionsBackground: "#000000",
+      actionButtonActive: "#EA0029",
+      actionButtonInactive: "#EA0029",
 
       uniformDecoration: "#FFFFFF",
       svgDecorationColor: "#FFFFFF", // SVG 데코레이션용 색상 (다크 모드)

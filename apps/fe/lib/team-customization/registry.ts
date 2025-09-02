@@ -308,14 +308,6 @@ const createKIACustomization = (): TeamCustomizationConfig => ({
       enabled: true,
     }
   ],
-  styles: {
-    decoration: ({ colors }) => ({
-      position: 'absolute',
-      right: 8,
-      bottom: 60,
-      zIndex: 1,
-    }),
-  },
 });
 
 const createSamsungCustomization = (): TeamCustomizationConfig => ({

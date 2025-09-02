@@ -1,12 +1,19 @@
 /**
  * Supabase Auth 이벤트 리스너 서비스
+ * ------------------------------------
+ * 목적:
+ *  - Supabase Auth 상태 변화를 전역에서 감지하고
+ *    로그인/로그아웃/토큰 갱신/사용자 정보 변경에 따른 후속 동작을 수행
  *
- * SIGNED_IN, SIGNED_OUT 이벤트를 감지하여
- * 자동으로 사용자 동기화 및 전역 상태 관리를 수행합니다.
+ * 수정 내역 (Fix):
+ *  - 기존 코드에서 supabase.auth.onAuthStateChange 반환값을 바로 subscription 으로 간주
+ *    => supabase-js v2 는 { data: { subscription }, error } 객체를 반환
+ *    => stop() 시 this.subscription.unsubscribe 가 undefined 여서 TypeError 발생
+ *  - 안전한 구조 분해 & 타입 가드 & 방어 로직 추가
  */
 
 import { supabase } from "../supabase/client";
-import { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { EnhancedUserSyncService } from "./enhanced-user-sync";
 import { AuthStore } from "../store/auth-store";
 
@@ -14,31 +21,59 @@ import { AuthStore } from "../store/auth-store";
  * Auth 이벤트 리스너 설정 옵션
  */
 export interface AuthListenerOptions {
-  /** 자동 동기화 활성화 여부 (기본값: true) */
-  enableAutoSync?: boolean;
-  /** 디버그 로그 활성화 여부 (기본값: false) */
-  enableDebugLog?: boolean;
-  /** 에러 콜백 함수 */
+  enableAutoSync?: boolean; // 자동 사용자 동기화 여부 (기본 true)
+  enableDebugLog?: boolean; // 디버그 로그 활성화
   onError?: (error: Error) => void;
-  /** 동기화 성공 콜백 함수 */
   onSyncSuccess?: (user: any) => void;
 }
 
 /**
- * Supabase Auth 이벤트 리스너 클래스
+ * Supabase-js v2 Subscription 최소 형태 타입
+ * (필요한 부분만 명시, 라이브러리 내부 구조에 의존 최소화)
+ */
+interface SupabaseAuthSubscription {
+  unsubscribe: () => void;
+}
+
+/**
+ * 내부 헬퍼: subscription 형태 확인 (런타임 방어)
+ */
+function isValidSubscription(
+  value: unknown,
+): value is SupabaseAuthSubscription {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    typeof (value as any).unsubscribe === "function"
+  );
+}
+
+/**
+ * Supabase Auth 이벤트 리스너 클래스 (Singleton-like static)
  */
 export class AuthEventListener {
-  private static subscription: { unsubscribe: () => void } | null = null;
+  private static subscription: SupabaseAuthSubscription | null = null;
   private static options: AuthListenerOptions = {};
+  private static starting = false; // 동시 start 방지 플래그
 
   /**
-   * Auth 이벤트 리스너 시작
-   *
-   * @param options 리스너 설정 옵션
+   * 리스너 시작
    */
   static start(options: AuthListenerOptions = {}): void {
-    // 기존 리스너가 있으면 정리
-    this.stop();
+    // 중복 호출 방지
+    if (this.starting) {
+      if (options.enableDebugLog) {
+        console.log("⏳ AuthEventListener: 이미 시작 처리중 (start 호출 무시)");
+      }
+      return;
+    }
+
+    // 이미 활성화 상태면 기존 것 정리
+    if (this.isActive()) {
+      this.stop();
+    }
+
+    this.starting = true;
 
     this.options = {
       enableAutoSync: true,
@@ -48,30 +83,79 @@ export class AuthEventListener {
 
     console.log("🎧 Supabase Auth 이벤트 리스너 시작");
 
-    // Auth 상태 변화 구독
-    this.subscription = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        await this.handleAuthStateChange(event, session);
-      },
-    );
+    try {
+      // supabase-js v2 형태: { data: { subscription }, error }
+      const {
+        data,
+        error,
+      }: {
+        data: { subscription: SupabaseAuthSubscription } | null;
+        error: unknown;
+      } = supabase.auth.onAuthStateChange(
+        async (event: AuthChangeEvent, session: Session | null) => {
+          await this.handleAuthStateChange(event, session);
+        },
+      ) as any;
+
+      if (error) {
+        console.error("❌ Auth 상태 변화 리스너 등록 실패:", error);
+      }
+
+      const potential = data?.subscription;
+      if (isValidSubscription(potential)) {
+        this.subscription = potential;
+        if (this.options.enableDebugLog) {
+          console.log("✅ Auth 상태 변화 구독(subscription) 확보");
+        }
+      } else {
+        // subscription 확보 실패 (구조 변경 / 에러)
+        this.subscription = null;
+        console.warn(
+          "⚠️ Supabase Auth 구독 객체를 확보하지 못했습니다. (unsubscribe 미제공)",
+        );
+      }
+    } catch (err) {
+      console.error("❌ AuthEventListener.start 중 예외 발생:", err);
+      this.subscription = null;
+      if (this.options.onError) {
+        this.options.onError(
+          err instanceof Error ? err : new Error("알 수 없는 오류"),
+        );
+      }
+    } finally {
+      this.starting = false;
+    }
   }
 
   /**
-   * Auth 이벤트 리스너 중지
+   * 리스너 중지
    */
   static stop(): void {
-    if (this.subscription) {
-      this.subscription.unsubscribe();
+    if (!this.subscription) {
+      // 이미 정리된 상태
+      return;
+    }
+
+    try {
+      if (isValidSubscription(this.subscription)) {
+        this.subscription.unsubscribe();
+        if (this.options.enableDebugLog) {
+          console.log("🛑 Supabase Auth 이벤트 리스너 구독 해제 완료");
+        }
+      } else {
+        console.warn(
+          "⚠️ stop() 호출 시 subscription 이 유효하지 않아 unsubscribe 생략",
+        );
+      }
+    } catch (err) {
+      console.error("❌ AuthEventListener.stop 중 예외 발생:", err);
+    } finally {
       this.subscription = null;
-      console.log("🛑 Supabase Auth 이벤트 리스너 중지");
     }
   }
 
   /**
    * Auth 상태 변화 처리
-   *
-   * @param event Auth 이벤트 타입
-   * @param session 현재 세션 정보
    */
   private static async handleAuthStateChange(
     event: AuthChangeEvent,
@@ -86,38 +170,28 @@ export class AuthEventListener {
         case "SIGNED_IN":
           await this.handleSignedIn(session);
           break;
-
         case "SIGNED_OUT":
           await this.handleSignedOut();
           break;
-
         case "TOKEN_REFRESHED":
           await this.handleTokenRefreshed(session);
           break;
-
         case "USER_UPDATED":
           await this.handleUserUpdated(session);
           break;
-
         default:
           if (this.options.enableDebugLog) {
             console.log(`📝 처리되지 않은 Auth 이벤트: ${event}`);
           }
-          break;
       }
     } catch (error) {
       console.error(`❌ Auth 이벤트 처리 실패 (${event}):`, error);
-
-      if (this.options.onError) {
-        this.options.onError(error as Error);
-      }
+      if (this.options.onError) this.options.onError(error as Error);
     }
   }
 
   /**
-   * SIGNED_IN 이벤트 처리
-   *
-   * @param session 세션 정보
+   * SIGNED_IN 처리
    */
   private static async handleSignedIn(session: Session | null): Promise<void> {
     if (!session?.access_token) {
@@ -127,45 +201,36 @@ export class AuthEventListener {
 
     console.log("✅ 사용자 로그인 감지");
 
-    // 자동 동기화가 비활성화된 경우 토큰만 업데이트
     if (!this.options.enableAutoSync) {
       AuthStore.updateAccessToken(session.access_token);
       return;
     }
 
-    // 사용자 정보 확인 및 동기화
     const syncResult = await EnhancedUserSyncService.checkAndSyncAfterSignIn(
       session.access_token,
     );
 
     if (syncResult.success && syncResult.user) {
       console.log("✅ 로그인 후 사용자 동기화 완료:", syncResult.user.nickname);
-
       if (this.options.onSyncSuccess) {
         this.options.onSyncSuccess(syncResult.user);
       }
     } else {
       console.warn("⚠️ 로그인 후 사용자 동기화 실패:", syncResult.error);
-
-      // 동기화 실패 시에도 토큰은 저장 (수동 동기화 가능하도록)
       AuthStore.updateAccessToken(session.access_token);
     }
   }
 
   /**
-   * SIGNED_OUT 이벤트 처리
+   * SIGNED_OUT 처리
    */
   private static async handleSignedOut(): Promise<void> {
     console.log("👋 사용자 로그아웃 감지");
-
-    // 동기화 상태 및 전역 상태 리셋
     EnhancedUserSyncService.resetSyncState();
   }
 
   /**
-   * TOKEN_REFRESHED 이벤트 처리
-   *
-   * @param session 새로운 세션 정보
+   * TOKEN_REFRESHED 처리
    */
   private static async handleTokenRefreshed(
     session: Session | null,
@@ -174,22 +239,14 @@ export class AuthEventListener {
       console.warn("⚠️ TOKEN_REFRESHED 이벤트이지만 유효한 세션이 없음");
       return;
     }
-
     if (this.options.enableDebugLog) {
       console.log("🔄 토큰 갱신 감지");
     }
-
-    // 전역 상태의 토큰 업데이트
     AuthStore.updateAccessToken(session.access_token);
-
-    // 토큰 갱신 시에는 중복 동기화를 수행하지 않음
-    // (이미 동기화된 사용자이므로)
   }
 
   /**
-   * USER_UPDATED 이벤트 처리
-   *
-   * @param session 세션 정보
+   * USER_UPDATED 처리
    */
   private static async handleUserUpdated(
     session: Session | null,
@@ -203,14 +260,12 @@ export class AuthEventListener {
       console.log("👤 사용자 정보 업데이트 감지");
     }
 
-    // 자동 동기화가 활성화된 경우에만 사용자 정보 재동기화
     if (this.options.enableAutoSync && AuthStore.getState().isAuthenticated) {
       try {
         const syncResult =
           await EnhancedUserSyncService.checkAndSyncAfterSignIn(
             session.access_token,
           );
-
         if (syncResult.success && syncResult.user) {
           console.log("✅ 사용자 정보 업데이트 후 재동기화 완료");
         }
@@ -221,39 +276,45 @@ export class AuthEventListener {
   }
 
   /**
-   * 현재 리스너 상태 확인
-   *
-   * @returns 리스너 활성화 여부
+   * 리스너 활성 여부
    */
   static isActive(): boolean {
-    return this.subscription !== null;
+    return isValidSubscription(this.subscription);
   }
 
   /**
-   * 현재 설정 옵션 조회
-   *
-   * @returns 현재 설정된 옵션
+   * 현재 설정 옵션 조회 (불변 사본)
    */
   static getOptions(): AuthListenerOptions {
     return { ...this.options };
   }
+
+  /**
+   * 디버그용 subscription 상태 정보
+   */
+  static getDebugSubscriptionInfo() {
+    return {
+      isActive: this.isActive(),
+      hasSubscriptionObject: !!this.subscription,
+      hasUnsubscribe:
+        !!this.subscription &&
+        typeof (this.subscription as any).unsubscribe === "function",
+    };
+  }
 }
 
 /**
- * Auth 리스너 초기화 헬퍼 함수
- *
- * @param options 리스너 설정 옵션
+ * 외부 간편 초기화 함수
  */
 export function initializeAuthListener(options?: AuthListenerOptions): void {
   AuthEventListener.start(options);
 }
 
 /**
- * Auth 리스너 정리 헬퍼 함수
+ * 외부 간편 정리 함수
  */
 export function cleanupAuthListener(): void {
   AuthEventListener.stop();
 }
 
-// 편의를 위한 기본 익스포트
 export default AuthEventListener;

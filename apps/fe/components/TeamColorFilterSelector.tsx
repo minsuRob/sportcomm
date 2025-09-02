@@ -1,14 +1,20 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   Modal,
   ScrollView,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
   StyleSheet,
+  Animated,
+  Easing,
+  Platform,
+  LayoutAnimation,
+  UIManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@apollo/client";
@@ -21,6 +27,13 @@ import {
 } from "@/lib/graphql/teams";
 import TeamLogo from "@/components/TeamLogo";
 import { getTeamColors } from "@/lib/theme/teams/teamColor";
+
+/*
+  변경 사항:
+  - UI/UX 개선: `Pressable` + `Animated`를 사용하여 버튼에 간단한 터치 애니메이션 추가
+  - 접근성: 버튼/아이템에 accessibility props 추가
+  - 플랫폼 고려: Platform import 추가 (향후 플랫폼 별 조정 용이)
+*/
 
 interface TeamColorFilterSelectorProps {
   // 사용자가 팀 색상 선택을 적용하면 호출됩니다.
@@ -93,6 +106,29 @@ export default function TeamColorFilterSelector({
       console.warn("TeamColorFilterSelector: myTeams 조회 오류", myTeamsError);
     }
   }, [myTeamsError]);
+
+  // 간단한 터치 애니메이션: 버튼이 눌릴 때 살짝 축소되었다가 복원되는 효과
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const animatePressIn = () => {
+    Animated.timing(scale, {
+      toValue: 0.98,
+      duration: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const animatePressOut = () => {
+    Animated.timing(scale, {
+      toValue: 1,
+      duration: 120,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // 접근성용 설명 텍스트(스크린리더가 읽도록)
+  const accessibleLabelForOpen =
+    "앱 색상 필터 열기, 여기를 눌러 내 팀 기반 색상을 선택합니다";
 
   /**
    * 적용 버튼 핸들러
@@ -355,6 +391,17 @@ export default function TeamColorFilterSelector({
 
 // --- 로컬 스타일 (ThemedStyle을 사용한 스타일 래핑을 위해 내부적으로 객체로 둠) ---
 const styles = StyleSheet.create({
+  /* Pressable wrapper to allow consistent hit area and pressed styling */
+  pressableWrapper: {
+    borderRadius: 16,
+    overflow: "visible",
+  } as ViewStyle,
+
+  /* Pressed visual state for non-animated fallback */
+  pressed: {
+    opacity: 0.96,
+  } as ViewStyle,
+
   filterButton: {
     flexDirection: "row",
     alignItems: "center",

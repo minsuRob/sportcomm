@@ -3,6 +3,7 @@ import { KIADecoration } from './teams/kia/KIADecoration';
 import { SSGDecoration } from './teams/ssg/SSGDecoration';
 import { CommonStripes, RepeatedStripes } from './teams/common';
 import { KTDecoration } from './teams/kt/KTDecoration'; // KT 위즈 데코레이션 추가
+import { LotteDecoration } from './teams/lotte/LotteDecoration'; // Lotte 데코레이션 추가
 
 /**
  * 팀 커스터마이징 레지스트리
@@ -352,11 +353,35 @@ const createKTCustomization = (): TeamCustomizationConfig => ({
         baseWidth: 347,
         baseHeight: 89,
         position: 'center' as const,
-        maxWidthPercent: '45%',
+        maxWidthPercent: '55%',
         maintainAspectRatio: true,
         opacity: 0.9,
+      } as any,
+      enabled: true,
+    },
+  ],
+});
+/**
+ * 롯데 자이언츠 커스터마이징
+ * - bottom-left 위치 고정
+ * - LotteDecoration 반응형 SVG 사용
+ */
+const createLotteCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'lotte',
+  teamName: '롯데',
+  decoration: [
+    {
+      component: LotteDecoration,
+      props: {
+        responsive: true,
+        baseWidth: 253,
+        baseHeight: 142,
+        position: 'top-left' as const,
+        maxWidthPercent: '80%',
+        maintainAspectRatio: true,
+        opacity: 1.0,
         style: ({ colors }) => ({
-          top: 40,
+          left: -30, // 8 (간격)
           zIndex: 1,
         }),
       } as any,
@@ -391,6 +416,9 @@ const initializeDefaultCustomizations = () => {
 
   // KT 위즈 배너형 중앙 데코레이션
   registerTeamCustomization(createKTCustomization());
+
+  // 롯데 자이언츠 상단 좌측 데코레이션
+  registerTeamCustomization(createLotteCustomization());
 
   // 키움 히어로즈 세로 스트라이프
   registerTeamCustomization(createKiwoomCustomization());

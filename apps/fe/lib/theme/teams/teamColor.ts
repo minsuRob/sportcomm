@@ -189,11 +189,12 @@ export const teamColors = {
       actionButtonInactive: "#EA0029",
 
       uniformDecoration: "#000000",
+      svgDecorationColor: "#24242E", // SVG 데코레이션용 색상 (라이트 모드)
       likeBackground: "#FEF2F2",
       mainColor: "#EA0029",
       subColor: "#000000",
       accent: "#FFC107",
-      decorationBorder: "#EA0029",
+      decorationBorder: "#24242E",
       cardBorder: "#EA0029",
       profileText: "#EA0029",
       profileTime: "#6B7280",
@@ -209,11 +210,12 @@ export const teamColors = {
       actionButtonInactive: "#FFFFFF",
 
       uniformDecoration: "#FFFFFF",
+      svgDecorationColor: "#FFFFFF", // SVG 데코레이션용 색상 (다크 모드)
       likeBackground: "#991B1B",
       mainColor: "#CC0022",
       subColor: "#1A1A1A",
       accent: "#FFC107",
-      decorationBorder: "#CC0022",
+      decorationBorder: "#FFFFFF",
       cardBorder: "#4B5563",
       profileText: "#FFFFFF",
       profileTime: "#9CA3AF",
@@ -533,6 +535,7 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
     uniformNumberText: defaultColors.text,
     uniformNumberStroke: isDarkMode ? defaultColors.backgroundDim : defaultColors.background,
     repeatedStripesColor: isDarkMode ? defaultColors.backgroundDim : defaultColors.background, // 기본 줄무늬 색상
+    svgDecorationColor: isDarkMode ? '#FFFFFF' : '#24242E', // 기본 SVG 데코레이션 색상
     // uniformNumberThickness: 1,
   };
 };

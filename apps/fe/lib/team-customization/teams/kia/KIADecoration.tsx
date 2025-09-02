@@ -67,12 +67,12 @@ interface KIADecorationProps extends TeamDecorationProps {
   maxWidthPercent?: number | string; // 반응형일 때 최대 폭 (기본 '100%')
 }
 
-// 기본 KIA V자형 SVG 경로 데이터
-const defaultKIASvgPaths: SVGPathData[] = [
+// 기본 KIA V자형 SVG 경로 데이터 (동적 색상 적용을 위해 fill을 함수로 변경)
+const createKIASvgPaths = (svgDecorationColor: string): SVGPathData[] => [
   { d: 'M1 0L251 103.361V235H1V0Z', fill: '#F00316' },
-  { d: 'M0.705518 0.999784L251.333 72.4019L251.294 108.092L0.705518 0.999784Z', fill: '#211F24' },
+  { d: 'M0.705518 0.999784L251.333 72.4019L251.294 108.092L0.705518 0.999784Z', fill: svgDecorationColor },
   { d: 'M500 0L250 103.361V235H500V0Z', fill: '#F00316' },
-  { d: 'M500.294 -0.000215532L249.667 71.4019L249.706 107.092L500.294 -0.000215532Z', fill: '#211F24' },
+  { d: 'M500.294 -0.000215532L249.667 71.4019L249.706 107.092L500.294 -0.000215532Z', fill: svgDecorationColor },
 ];
 
 /**
@@ -81,6 +81,7 @@ const defaultKIASvgPaths: SVGPathData[] = [
 export const KIADecoration: React.FC<KIADecorationProps> = ({
   teamId,
   teamData,
+  teamColors,
   // width / height: 비반응형일 때 사용할 크기 (기존 호환)
   width = 501,
   height = 235,
@@ -88,7 +89,7 @@ export const KIADecoration: React.FC<KIADecorationProps> = ({
   opacity = 0.9,
   position,
   style,
-  svgPaths = defaultKIASvgPaths,
+  svgPaths,
   svgViewBox = '0 0 501 235',
   svgWidth,
   svgHeight,
@@ -98,13 +99,12 @@ export const KIADecoration: React.FC<KIADecorationProps> = ({
   maintainAspectRatio = true,
   maxWidthPercent = '100%',
 }) => {
-  // 팀 색상 (덮어쓰기 로직 확장 가능)
-  const decorationColor =
-    color ||
-    teamData?.decorationBorder ||
-    teamData?.mainColor ||
-    '#EA0029'; // KIA 기본 빨간색
-
+  // SVG 데코레이션 색상 (CommonStripes와 동일한 방식)
+  const svgDecorationColor = teamColors?.decorationBorder|| color  || teamData?.mainColor || '#24242E';
+  
+  // SVG 경로 데이터 생성 (동적 색상 적용)
+  const dynamicSvgPaths = svgPaths || createKIASvgPaths(svgDecorationColor);
+  
   const resolvedStyle = resolveStyle(style);
 
   // position에 따른 추가 스타일 적용
@@ -114,12 +114,8 @@ export const KIADecoration: React.FC<KIADecorationProps> = ({
     marginLeft: 0,
   };
 
-  // SVG 경로 색상 처리 (필요 시 팀 색상으로 커스터마이징)
-  const processedSvgPaths = svgPaths.map((p) => ({
-    ...p,
-    // 필요 시 색상 커스터마이징:
-    // fill: p.fill === '#F00316' ? decorationColor : p.fill,
-  }));
+  // SVG 경로 색상 처리 (동적 색상이 이미 적용된 경로 사용)
+  const processedSvgPaths = dynamicSvgPaths;
 
   // 웹 환경에서 SVG 렌더링 (뷰포트 기준 크기 계산)
   if (isWeb()) {

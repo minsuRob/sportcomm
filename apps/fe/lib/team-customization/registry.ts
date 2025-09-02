@@ -171,7 +171,6 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
       props: {
         width: doosanWidth,
         height: doosanHeight,
-        opacity: 0.9,
         position: 'bottom-left' as const,
         style: ({ colors }) => ({
           left: 8, // 8 (간격)
@@ -186,7 +185,6 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
       props: {
         width: doosanWidth,
         height: doosanHeight,
-        opacity: 0.9,
         position: 'bottom-left' as const,
         style: ({ colors }) => ({
           left: 16, // 8 (간격)
@@ -200,7 +198,6 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
       props: {
         width: doosanWidth,
         height: doosanHeight,
-        opacity: 0.9,
         position: 'bottom-left' as const,
         style: ({ colors }) => ({
           left: 24, // 8 + 16 (간격)
@@ -215,7 +212,6 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
       props: {
         width: doosanWidth,
         height: doosanHeight,
-        opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
           right: 24, // 8 + 16 (간격)
@@ -229,7 +225,6 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
       props: {
         width: doosanWidth,
         height: doosanHeight,
-        opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
           right: 16, // 8 + 8 (간격)
@@ -243,7 +238,6 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
       props: {
         width: doosanWidth,
         height: doosanHeight,
-        opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
           right: 8,

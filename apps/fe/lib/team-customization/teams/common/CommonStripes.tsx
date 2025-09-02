@@ -45,7 +45,7 @@ export const CommonStripes: React.FC<TeamDecorationProps> = ({
   width = 3,
   height = 350,
   color = '#D9D9D9',
-  opacity = 0.8,
+  opacity = 1.0,
   position,
   style,
 }) => {

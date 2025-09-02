@@ -1057,7 +1057,7 @@ const $glowBackground: ThemedStyle<ViewStyle> = () => ({
 
 const $borderLayer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderRadius: 20,
-  borderWidth: 1,
+  borderWidth: 1.5,
   overflow: "hidden",
   backgroundColor: colors.background,
 });

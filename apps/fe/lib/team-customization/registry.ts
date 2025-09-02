@@ -1,5 +1,6 @@
 import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types';
 import { KIADecoration } from './teams/kia/KIADecoration';
+import { SSGDecoration } from './teams/ssg/SSGDecoration';
 import { CommonStripes, RepeatedStripes } from './teams/common';
 
 /**
@@ -175,7 +176,7 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
           zIndex: 1,
         }),
       },
-      
+
       enabled: true,
     },
     {
@@ -243,7 +244,7 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         opacity: 0.9,
         position: 'bottom-right' as const,
         style: ({ colors }) => ({
-          right: 8, 
+          right: 8,
           zIndex: 1,
         }),
       },
@@ -341,11 +342,35 @@ const createSamsungCustomization = (): TeamCustomizationConfig => ({
 
 });
 
+const createSSGCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'ssg',
+  teamName: 'SSG',
+  decoration: [
+    {
+      component: SSGDecoration,
+      props: {
+        responsive: true,
+        baseWidth: 369,
+        baseHeight: 166,
+        opacity: 0.9,
+        position: 'bottom-left' as const,
+        maxWidthPercent: '80%',
+        maintainAspectRatio: true,
+
+      } as any,
+      enabled: true,
+    },
+  ],
+});
+
 const createKiwoomCustomization = (): TeamCustomizationConfig => ({
   teamId: 'kiwoom',
   teamName: '키움',
 });
-// 팀별 기본 커스터마이징 설정 등록
+
+/**
+ * 팀별 기본 커스터마이징 설정 등록
+ */
 const initializeDefaultCustomizations = () => {
   // 두산 베어스 스트라이프 (양쪽 배치)
   registerTeamCustomization(createDoosanCustomization());
@@ -358,6 +383,9 @@ const initializeDefaultCustomizations = () => {
 
   // 삼성 라이온즈 스트라이프 (양쪽 배치)
   registerTeamCustomization(createSamsungCustomization());
+
+  // SSG 랜더스 커스텀 데코레이션
+  registerTeamCustomization(createSSGCustomization());
 
   // 키움 히어로즈 세로 스트라이프
   registerTeamCustomization(createKiwoomCustomization());

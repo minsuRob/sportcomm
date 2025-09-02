@@ -663,41 +663,6 @@ export function useFeedPosts() {
     };
   }, []);
 
-  /**
-   * 성능 리포트
-   */
-  const getOptimizationReport = useCallback(() => {
-    const totalTime = Date.now() - startTimeRef.current;
-    const networkEfficiency =
-      (performanceMetrics.networkRequests.cacheHits /
-        (performanceMetrics.networkRequests.cacheHits +
-          performanceMetrics.networkRequests.cacheMisses +
-          1)) *
-      100;
-
-    return {
-      ...performanceMetrics,
-      summary: {
-        totalExecutionTime: totalTime,
-        networkEfficiency: networkEfficiency.toFixed(1) + "%",
-        optimizationScore: Math.min(
-          100,
-          performanceMetrics.optimization.redundantCallsPrevented * 10 +
-            performanceMetrics.optimization.backgroundTasksDeferred * 5 +
-            networkEfficiency,
-        ),
-        improvements: [
-          `네트워크 요청 ${performanceMetrics.optimization.redundantCallsPrevented}회 방지`,
-          `JWT 기반 최적화 ${performanceMetrics.networkRequests.jwtBasedOptimizations}회 적용`,
-          `백그라운드 작업 ${performanceMetrics.optimization.backgroundTasksDeferred}회 지연`,
-          `캐시 효율성 ${networkEfficiency.toFixed(1)}%`,
-          `토큰 검증 시간: ${performanceMetrics.timing.tokenValidationTime}ms`,
-          `JWT 인식 캐싱: ${performanceMetrics.optimization.jwtAwareCaching}회`,
-        ],
-      },
-    };
-  }, [performanceMetrics]);
-
   // 통합된 상태/에러/로딩
   const fetching = isAuthenticated ? authFetching : publicFetching;
   const error = isAuthenticated ? authError : publicError;
@@ -715,13 +680,8 @@ export function useFeedPosts() {
     filterInitialized,
     handleBlockUser,
     performanceMetrics,
-    getOptimizationReport,
     isAuthenticated,
   } as const;
 }
 
 export default useFeedPosts;
-
-/*
-커밋 메시지 (git): feat(feed): 비로그인(게스트) 공개 피드 쿼리 추가 및 토큰 만료 시 공개 피드 폴백
-*/

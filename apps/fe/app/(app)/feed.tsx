@@ -14,6 +14,30 @@ import FeedList from "@/components/FeedList";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+
+/**
+ * 팬이 된 날짜부터 오늘까지의 기간을 년, 월, 일로 계산합니다.
+ * @param favoriteDate 팬이 된 날짜 (ISO string)
+ * @returns 년, 월, 총 일수 객체
+ */
+const formatFanDuration = (
+  favoriteDate: string,
+): { years: number; months: number; totalDays: number } => {
+  const startDate = new Date(favoriteDate);
+  const endDate = new Date();
+  
+  let years = endDate.getFullYear() - startDate.getFullYear();
+  let months = endDate.getMonth() - startDate.getMonth();
+  
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  
+  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  return { years, months, totalDays };
+};
 import { Ionicons } from "@expo/vector-icons";
 import StorySection from "@/components/StorySection";
 import TabSlider from "@/components/TabSlider";
@@ -51,7 +75,7 @@ export default function FeedScreen() {
     selectedTeamIds,
     handleTeamFilterChange,
     performanceMetrics,
-    getOptimizationReport,
+
   } = useFeedPosts();
 
   const {
@@ -135,32 +159,7 @@ export default function FeedScreen() {
     });
   };
 
-  /**
-   * 성능 최적화 결과 표시 (JWT 토큰 정보 포함)
-   */
-  const showOptimizationReport = () => {
-    const report = getOptimizationReport();
 
-    console.log
-    (
-      "🚀 피드 최적화 성과 리포트",
-      `📊 최적화 점수: ${report.summary.optimizationScore}/100\n\n` +
-      `🔐 JWT 토큰 상태:\n` +
-      `• 토큰 유효: ${currentUser ? '✅ 유효' : '❌ 만료'}\n` +
-      `• JWT 기반 최적화: ${report.networkRequests.jwtBasedOptimizations}회\n\n` +
-      `⚡ 성능 개선사항:\n${report.summary.improvements.map(imp => `• ${imp}`).join('\n')}\n\n` +
-      `🌐 네트워크 효율성: ${report.summary.networkEfficiency}\n` +
-      `⏱️ 총 실행 시간: ${report.summary.totalExecutionTime}ms\n\n` +
-      `📈 세부 메트릭:\n` +
-      `• 초기 네트워크 요청: ${report.networkRequests.initial}회\n` +
-      `• 중복 요청 방지: ${report.optimization.redundantCallsPrevented}회\n` +
-      `• 백그라운드 작업 지연: ${report.optimization.backgroundTasksDeferred}회\n` +
-      `• 캐시 히트: ${report.networkRequests.cacheHits}회\n` +
-      `• 토큰 검증 시간: ${report.timing.tokenValidationTime}ms\n` +
-      `• JWT 인식 캐싱: ${report.optimization.jwtAwareCaching}회`,
-      [{ text: "확인" }]
-    );
-  };
 
   /**
    * 알림 토스트 클릭 핸들러
@@ -208,6 +207,7 @@ export default function FeedScreen() {
           }
           onShopPress={handleShopPress}
           onLotteryPress={handleLotteryPress}
+          onBoardPress={handleBoardPress}
         />
         <View>
           {Array.from({ length: 5 }).map((_, index) => (
@@ -267,16 +267,32 @@ export default function FeedScreen() {
         onBoardPress={handleBoardPress}
       />
 
-      {/* 성능 최적화 리포트 버튼 */}
-      <TouchableOpacity
-        style={themed($optimizationButton)}
-        onPress={showOptimizationReport}
-      >
-        <Ionicons name="speedometer-outline" size={16} color={theme.colors.text} />
-        <Text style={themed($optimizationButtonText)}>
-          JWT 기반 최적화 결과 보기 (점수: {getOptimizationReport().summary.optimizationScore}/100)
-        </Text>
-      </TouchableOpacity>
+      {/* 내 팀 정보 표시 */}
+      {currentUser?.myTeams && currentUser.myTeams.length > 0 && (
+        <View style={themed($myTeamContainer)}>
+          {(() => {
+            const firstTeam = currentUser.myTeams
+              .sort((a, b) => a.priority - b.priority)[0];
+            
+            return (
+              <View style={themed($myTeamItem)}>
+                <Ionicons name="football-outline" size={20} color={theme.colors.tint} />
+                <Text style={themed($myTeamText)}>
+                  {firstTeam.team.name}
+                  {firstTeam.favoriteDate && (
+                    <Text style={themed($myTeamDate)}>
+                      {" "}
+                      {formatFanDuration(firstTeam.favoriteDate).years > 0
+                        ? `${formatFanDuration(firstTeam.favoriteDate).years}년째`
+                        : `${formatFanDuration(firstTeam.favoriteDate).months}개월째`}
+                    </Text>
+                  )}
+                </Text>
+              </View>
+            );
+          })()}
+        </View>
+      )}
 
       {/* 상점 모달 */}
       <ShopModal
@@ -441,22 +457,30 @@ const $loadingFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.sm,
 });
 
-const $optimizationButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
+const $myTeamContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
-  gap: spacing.xs,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
 });
 
-const $optimizationButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $myTeamText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: "600",
+});
+
+const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 12,
+  fontWeight: "400",
 });
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

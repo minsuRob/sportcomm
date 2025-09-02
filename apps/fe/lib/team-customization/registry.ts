@@ -170,7 +170,12 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         height: doosanHeight,
         opacity: 0.9,
         position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          left: 8, // 8 (간격)
+          zIndex: 1,
+        }),
       },
+      
       enabled: true,
     },
     {
@@ -181,7 +186,7 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         opacity: 0.9,
         position: 'bottom-left' as const,
         style: ({ colors }) => ({
-          left: 8, // 8 (간격)
+          left: 16, // 8 (간격)
           zIndex: 1,
         }),
       },
@@ -195,7 +200,7 @@ const createDoosanCustomization = (): TeamCustomizationConfig => ({
         opacity: 0.9,
         position: 'bottom-left' as const,
         style: ({ colors }) => ({
-          left: 16, // 8 + 16 (간격)
+          left: 24, // 8 + 16 (간격)
           zIndex: 1,
         }),
       },

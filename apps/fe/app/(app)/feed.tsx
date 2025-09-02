@@ -278,7 +278,11 @@ export default function FeedScreen() {
               <View style={themed($myTeamItem)}>
                 <Ionicons name="football-outline" size={20} color={theme.colors.tint} />
                 <Text style={themed($myTeamText)}>
-                  {firstTeam.team.name}
+                  {/* 팀명과 함께 한지 멘트를 안전하게 Text 컴포넌트로 분리 */}
+                  <Text style={themed($myTeamText)}>
+                    {firstTeam.team.name}
+                    {"과 함께 한지"}
+                  </Text>
                   {firstTeam.favoriteDate && (
                     <Text style={themed($myTeamDate)}>
                       {" "}
@@ -468,6 +472,7 @@ const $myTeamContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
+  justifyContent: "center",
   gap: spacing.sm,
 });
 

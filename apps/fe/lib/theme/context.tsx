@@ -35,6 +35,8 @@ import type {
  * 변경/목적 요약:
  * - 팀 컬러 오버라이드(`teamColorTeamId`)가 설정되면 `getTeamColors` 의 `mainColor`/`subColor`
  *   값을 `theme.colors.tint` 및 `theme.colors.accent` 로 반영합니다.
+ * - (신규) teamMain / teamSub / isTeamColorOverridden 동적 컬러 필드를 colors 객체에 추가하여
+ *   tint/accent 와 UI 레이어 분리 → 점진적 마이그레이션 용이
  * - 단일 useMemo에서 테마를 계산하여 예측 가능성과 성능을 개선합니다.
  * - setTeamColorTeamId (영구 저장 포함)을 컨텍스트에 노출합니다.
  *
@@ -50,9 +52,14 @@ export type ThemeContextType = {
   toggleTheme: () => void;
   appColor: AppColorT;
   setAppColor: (color: AppColorT) => void;
-  // 팀 색상 오버라이드 관련
+  // 팀 색상 오버라이드 관련 (기존: teamColorTeamId / 신규: teamColorKey + 통합 setter)
   teamColorTeamId: string | null;
+  teamColorKey: string | null;
   setTeamColorTeamId: (teamId: string | null) => void;
+  setTeamColorOverride: (
+    teamId: string | null,
+    teamKey?: string | null,
+  ) => void;
 };
 
 export const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -74,6 +81,8 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
   const [teamColorTeamId, setTeamColorTeamIdState] = useState<string | null>(
     null,
   );
+  // 팀 컬러 매칭용 key (slug 또는 영어/한글 팀명 일부)
+  const [teamColorKey, setTeamColorKeyState] = useState<string | null>(null);
 
   useEffect(() => {
     // 초기 설정을 비동기로 불러옴
@@ -87,6 +96,9 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
 
         const storedTeam = await storage.loadString("app.teamColorTeamId");
         if (storedTeam) setTeamColorTeamIdState(storedTeam);
+
+        const storedTeamKey = await storage.loadString("app.teamColorKey");
+        if (storedTeamKey) setTeamColorKeyState(storedTeamKey);
       } catch (e) {
         if (__DEV__) console.warn("ThemeProvider: loadTheme 실패", e);
       }
@@ -115,6 +127,7 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
    * - appColor 기반 기본 tint
    * - 팀 오버라이드(mainColor/subColor)
    * - palette 주요 색상(primary/red/orange 500 계열) 동기화
+   * - (신규) teamMain/teamSub/isTeamColorOverridden 추가
    */
   const computedTheme: Theme = useMemo(() => {
     const baseTheme = themeContext === "dark" ? darkTheme : lightTheme;
@@ -130,17 +143,29 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
     // 기본 accent
     let computedAccent: string = baseTheme.colors.accent || "#10B981";
 
+    // team main/sub 별도 보관 (추가 요구사항: teamMain, teamSub 동적 필드 제공)
+    let teamMain: string | null = null;
+    let teamSub: string | null = null;
+
     // 팀 오버라이드가 있으면 mainColor/subColor 적용
-    if (teamColorTeamId) {
+    // teamColorKey (slug/이름) 우선 사용, 없으면 legacy teamColorTeamId 사용
+    const colorIdentifier = teamColorKey || teamColorTeamId;
+
+    if (colorIdentifier) {
       try {
         const teamColors = getTeamColors(
-          teamColorTeamId,
+          colorIdentifier,
           themeContext === "dark",
+          colorIdentifier,
         );
-        if ((teamColors as any)?.mainColor)
+        if ((teamColors as any)?.mainColor) {
           computedTint = (teamColors as any).mainColor as string;
-        if ((teamColors as any)?.subColor)
+          teamMain = (teamColors as any).mainColor as string;
+        }
+        if ((teamColors as any)?.subColor) {
           computedAccent = (teamColors as any).subColor as string;
+          teamSub = (teamColors as any).subColor as string;
+        }
       } catch (e) {
         if (__DEV__) console.warn("getTeamColors 실패:", e);
       }
@@ -163,6 +188,10 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
         palette,
         tint: computedTint,
         accent: computedAccent,
+        // 신규 동적 팀 색상 필드: UI 컴포넌트에서 teamMain/teamSub 로 분기 가능
+        teamMain: teamMain ?? computedTint,
+        teamSub: teamSub ?? computedAccent,
+        isTeamColorOverridden: !!(teamColorKey || teamColorTeamId),
       },
     };
 
@@ -197,6 +226,7 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
   }, []);
 
   const setTeamColorTeamId = useCallback(async (teamId: string | null) => {
+    // legacy 지원: teamColorTeamId 단독 저장
     setTeamColorTeamIdState(teamId);
     if (teamId) {
       await storage.saveString("app.teamColorTeamId", teamId);
@@ -204,6 +234,32 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
       await storage.remove("app.teamColorTeamId");
     }
   }, []);
+
+  /**
+   * 신규 통합 세터
+   * - teamId: 실제 UUID 등 원본 식별자 (선택적)
+   * - teamKey: getTeamColors 매칭용 slug/이름 키 (영문 소문자 권장)
+   * 사용 예) setTeamColorOverride(team.id, "hanwha")
+   */
+  const setTeamColorOverride = useCallback(
+    async (teamId: string | null, teamKey?: string | null) => {
+      setTeamColorTeamIdState(teamId);
+      setTeamColorKeyState(teamKey ?? null);
+
+      if (teamId) {
+        await storage.saveString("app.teamColorTeamId", teamId);
+      } else {
+        await storage.remove("app.teamColorTeamId");
+      }
+
+      if (teamKey) {
+        await storage.saveString("app.teamColorKey", teamKey);
+      } else {
+        await storage.remove("app.teamColorKey");
+      }
+    },
+    [],
+  );
 
   // themed 함수: 기존 사용방식 유지
   const themed = useCallback(
@@ -236,7 +292,9 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
     appColor,
     setAppColor,
     teamColorTeamId,
+    teamColorKey,
     setTeamColorTeamId,
+    setTeamColorOverride,
   };
 
   return (
@@ -253,5 +311,5 @@ export const useAppTheme = () => {
 };
 
 /*
-커밋 메시지 (git): refactor(theme): Colors 타입 확장 반영, any 제거 및 안전한 동적 팀 컬러 병합
+커밋 메시지 (git): feat(theme): teamColorKey 및 setTeamColorOverride 추가 (UUID 대신 slug 기반 팀 컬러 매칭 지원)
 */

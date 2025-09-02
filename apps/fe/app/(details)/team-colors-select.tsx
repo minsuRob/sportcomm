@@ -42,7 +42,8 @@ import { getTeamColors } from "@/lib/theme/teams/teamColor";
  */
 export default function TeamColorsDetailsScreen() {
   const router = useRouter();
-  const { themed, theme, teamColorTeamId, setTeamColorTeamId } = useAppTheme();
+  const { themed, theme, teamColorTeamId, setTeamColorOverride } =
+    useAppTheme();
 
   // myTeams 조회: 기존 프로세스를 그대로 사용
   const {
@@ -79,18 +80,46 @@ export default function TeamColorsDetailsScreen() {
   }, [myTeamsError]);
 
   /**
+   * 팀명으로 slug를 유추하여 getTeamColors 매칭에 사용하는 헬퍼
+   * - 한글/영문 일부 포함 여부 기반 간단 매핑
+   */
+  const deriveTeamSlug = (teamName?: string | null): string | null => {
+    if (!teamName) return null;
+    const n = teamName.toLowerCase();
+    if (n.includes("한화") || n.includes("hanwha")) return "hanwha";
+    if (n.includes("두산") || n.includes("doosan")) return "doosan";
+    if (n.includes("삼성") || n.includes("samsung")) return "samsung";
+    if (n.includes("기아") || n.includes("kia")) return "kia";
+    if (n.includes("ssg") || n.includes("landers") || n.includes("랜더스"))
+      return "ssg";
+    if (n.includes("lg") && (n.includes("트윈스") || n.includes("twins")))
+      return "lg";
+    if (n.includes("롯데") || n.includes("lotte") || n.includes("giants"))
+      return "lotte";
+    if (n.includes("다이노스") || n.includes("dinos") || n.includes("nc"))
+      return "nc";
+    if (n.includes("위즈") || n.includes("wiz") || n === "kt") return "kt";
+    if (n.includes("키움") || n.includes("kiwoom") || n.includes("heroes"))
+      return "kiwoom";
+    return null;
+  };
+
+  /**
    * 팀 선택 핸들러
-   * - ThemeProvider에 teamId 저장 -> 영구 저장 및 테마 즉시 반영
+   * - teamId 는 선택 체크 표시에 사용
+   * - teamSlug(deriveTeamSlug) 를 ThemeProvider 에 전달하여 색상 매칭
    */
   const handleSelectTeam = async (teamId: string | null): Promise<void> => {
     try {
-      // 토글 동작: 이미 선택된 팀을 다시 누르면 해제
       const nextId = selectedTeamId === teamId ? null : teamId;
+      let slug: string | null = null;
+      if (nextId) {
+        const team = teamMap.get(nextId);
+        slug = deriveTeamSlug(team?.name);
+      }
+      // 새로운 통합 세터 (teamId + slug) 사용
+      await setTeamColorOverride(nextId, slug);
 
-      // 컨텍스트 저장 (영구 저장 포함)
-      await setTeamColorTeamId(nextId);
-
-      // 로컬 표시 업데이트
       setSelectedTeamId(nextId);
     } catch (error) {
       console.error("팀 색상 적용 실패:", error);

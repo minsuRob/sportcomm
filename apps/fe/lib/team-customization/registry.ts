@@ -2,6 +2,7 @@ import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types'
 import { KIADecoration } from './teams/kia/KIADecoration';
 import { SSGDecoration } from './teams/ssg/SSGDecoration';
 import { CommonStripes, RepeatedStripes } from './teams/common';
+import { KTDecoration } from './teams/kt/KTDecoration'; // KT 위즈 데코레이션 추가
 
 /**
  * 팀 커스터마이징 레지스트리
@@ -273,28 +274,6 @@ const createLGCustomization = (): TeamCustomizationConfig => ({
       },
       enabled: true,
     },
-
-    //  // 대각선 스트라이프
-    // {
-    //   component: CommonStripes,
-    //   props: {
-    //     width: 10,        // 대각선 스트라이프 너비
-    //     height: 300,      // LG 팀 전용 높이
-    //     // color: '#C41E3A', // LG 트윈스 레드 색상
-    //     opacity: 0.8,     // 적당한 투명도
-    //     position: 'top-left' as const,
-    //     style: ({ colors }) => ({
-    //       // position: 'absolute',
-    //       top: -110,
-    //       left: 80,
-    //       transform: [{ rotate: '50deg' }], // 대각선 회전
-    //       transformOrigin: 'center center',
-    //       zIndex: 1,
-    //     }),
-    //   },
-    //   enabled: true,
-    // },
-
   ],
 });
 
@@ -356,7 +335,30 @@ const createSSGCustomization = (): TeamCustomizationConfig => ({
         position: 'center' as const,
         maxWidthPercent: '50%',
         maintainAspectRatio: true,
+      } as any,
+      enabled: true,
+    },
+  ],
+});
 
+const createKTCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'kt',
+  teamName: 'KT',
+  decoration: [
+    {
+      component: KTDecoration,
+      props: {
+        responsive: true,
+        baseWidth: 347,
+        baseHeight: 89,
+        position: 'center' as const,
+        maxWidthPercent: '45%',
+        maintainAspectRatio: true,
+        opacity: 0.9,
+        style: ({ colors }) => ({
+          top: 40,
+          zIndex: 1,
+        }),
       } as any,
       enabled: true,
     },
@@ -386,6 +388,9 @@ const initializeDefaultCustomizations = () => {
 
   // SSG 랜더스 커스텀 데코레이션
   registerTeamCustomization(createSSGCustomization());
+
+  // KT 위즈 배너형 중앙 데코레이션
+  registerTeamCustomization(createKTCustomization());
 
   // 키움 히어로즈 세로 스트라이프
   registerTeamCustomization(createKiwoomCustomization());
@@ -425,3 +430,5 @@ initializeDefaultCustomizations();
  * });
  * registerTeamCustomization(createNewTeamCustomization());
  */
+
+// commit: feat(fe): KTDecoration 중앙 배치 데코레이션 레지스트리 등록

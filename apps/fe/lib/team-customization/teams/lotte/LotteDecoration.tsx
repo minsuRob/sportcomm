@@ -74,17 +74,14 @@ const buildPaths = (overrideColors?: LotteDecorationProps['overrideColors']) => 
     {
       d: 'M0.0917311 83.0001L71.5916 42.4998L76.5917 28.4998L90.0916 32.9998L147.092 1.49979L178.092 1.49979L114.592 36.4998C114.592 36.4998 106.994 39.1368 102.092 38.4998C97.1892 37.8628 90.0916 32.9998 90.0916 32.9998C90.0916 32.9998 88.5453 42.8946 86.5916 46.4998C84.638 50.105 79.9999 54.6728 79.9999 54.6728L0.0917966 101L0.0917311 83.0001Z',
       fill: p1,
-      opacity: 0.7,
     },
     {
       d: 'M0.091918 124.5L146.284 42.1268L151.284 28.1268L164.784 32.6268L221.784 1.1268L252.784 1.1268L189.284 36.1268C189.284 36.1268 181.686 38.7638 176.784 38.1268C171.881 37.4898 164.784 32.6268 164.784 32.6268C164.784 32.6268 163.237 42.5216 161.284 46.1268C159.33 49.732 154.692 54.2998 154.692 54.2998L0.0917965 142L0.091918 124.5Z',
       fill: p2,
-      opacity: 0.7,
     },
     {
       d: 'M0.111572 36.542C0.111572 36.542 63.9006 0.828183 73.4938 0.91312C83.0869 0.998056 90.0854 8.43183 90.0854 8.43183L0.111547 58.0001L0.111572 36.542Z',
       fill: p3,
-      opacity: 0.7,
     },
   ];
 };
@@ -118,12 +115,15 @@ export const LotteDecoration: React.FC<LotteDecorationProps> = ({
   color,       // 단일 primary 대체 (all 로 반영)
   style,
 }) => {
-  // color prop이 들어오면 overrideColors.all 로 간주
+  // 모든 path의 색상을 svgDecorationColor로 통일합니다.
+  const svgDecorationColor = teamColors?.decorationBorder || color || '#24242E';
+
+  // overrideColors의 모든 path 색상을 svgDecorationColor로 지정
   const mergedOverride: LotteDecorationProps['overrideColors'] = {
-    all: color ?? overrideColors?.all,
-    path1: overrideColors?.path1,
-    path2: overrideColors?.path2,
-    path3: overrideColors?.path3,
+    all: svgDecorationColor,
+    path1: svgDecorationColor,
+    path2: svgDecorationColor,
+    path3: svgDecorationColor,
   };
 
   const paths = buildPaths(mergedOverride);

@@ -140,7 +140,7 @@ const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $actionCount: ThemedStyle<TextStyle> = () => ({
-  fontSize: 13,
+  fontSize: 15,
   fontWeight: "bold",
 });
 

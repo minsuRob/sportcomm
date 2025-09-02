@@ -327,8 +327,8 @@ export const teamColors = {
       accent: "#FFD700",
       decorationBorder: "#1F152A",
       cardBorder: "#002E5F",
-      profileText: "#002E5F",
-      profileTime: "#6B7280",
+      profileText: "#E2222C",
+      profileTime: "#E2222C",
       profileStroke: "#FFFFFF",
     },
     dark: {

@@ -14,9 +14,36 @@ export type AppColorT = "blue" | "red" | "orange";
 export type ImmutableThemeContextModeT = "light" | "dark";
 export type ThemeContextModeT = ImmutableThemeContextModeT | undefined;
 
-// Because we have two themes, we need to define the types for each of them.
-// colorsLight and colorsDark should have the same keys, but different values.
-export type Colors = typeof colorsLight | typeof colorsDark;
+// Colors 타입 리팩터
+// - 팀 컬러 오버라이드(mainColor/subColor -> tint/accent) 적용 시 기존 literal string 좁은 타입 때문에
+//   동적 hex 값 대입이 불가능하여 any 캐스트가 필요했음
+// - 이를 해결하기 위해 colorsLight/colorsDark 객체의 구조를 포괄하는, 값이 string 으로 넓은 인터페이스 정의
+// - palette 내부 key 확장 및 팀별 커스텀 색상 추가를 위해 인덱스 시그니처 허용
+export interface Colors {
+  palette: { [k: string]: string };
+  transparent: string;
+  text: string;
+  textDim: string;
+  background: string;
+  card: string;
+  border: string;
+  tint: string;
+  tintInactive: string;
+  separator: string;
+  error: string;
+  errorBackground: string;
+  success: string;
+  warning: string;
+  energy: string;
+  accent: string;
+  neon: string;
+  backgroundAlt: string;
+  backgroundDim: string;
+  shadowLight: string;
+  shadowMedium: string;
+  // 팀별 커스터마이징이나 추가 색상 키 확장을 위한 여유 슬롯
+  [extra: string]: any;
+}
 // The spacing type needs to take into account the different spacing values for light and dark themes.
 export type Spacing = typeof spacingLight | typeof spacingDark;
 

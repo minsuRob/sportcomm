@@ -44,6 +44,15 @@ const getPositionStyle = (position?: string): ViewStyle => {
       return { bottom: 0, left: 0 }; // PostActions 바로 위로 조정
     case 'bottom-right':
       return { bottom: 0, right: 0 }; // PostActions 바로 위로 조정
+    case 'top-center':
+      // 상단 중앙 정렬: 좌우를 0으로 확장 후 중앙 정렬
+      return { top: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' };
+    case 'bottom-center':
+      // 하단 중앙 정렬
+      return { bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' };
+    case 'center':
+      // 완전 중앙 정렬 (수직 + 수평 모두 중앙)
+      return { top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' };
     default:
       return { bottom: 0, left: 0 }; // 기본값도 PostActions 바로 위로 조정
   }
@@ -105,8 +114,15 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
         // (기존 문제: 컨테이너가 height:100%, width:100%를 차지하여 내부 stripe가 항상 상단/좌측에 붙어 bottom/right 포지션이 시각적으로 무시됨)
         const webPositionAdjustment = isWeb()
           ? {
-              ...(position.startsWith('bottom') ? { height: 'auto' as const, top: 'auto' as const } : {}),
+              // bottom-* / *-center / center 모두 높이 축소(top 제거), top-center 는 bottom 아님이라 height auto만 적용
+              // bottom-* 및 *-center (단, center 자체는 전체 높이 필요하므로 제외) → 높이 축소
+              ...((position.startsWith('bottom') || (position !== 'center' && position.endsWith('-center')))
+                ? { height: 'auto' as const, top: 'auto' as const }
+                : {}),
+              // 오른쪽 정렬 보정
               ...(position.endsWith('right') ? { width: 'auto' as const, left: 'auto' as const } : {}),
+              // 중앙 정렬 계열은 가로 전체 폭 확보 필요
+              ...((position === 'center' || position.endsWith('-center')) ? { width: '100%' as const } : {}),
             }
           : {};
 

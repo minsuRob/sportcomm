@@ -19,7 +19,8 @@ export interface TeamDecorationProps extends BaseCustomizationProps {
   height?: number;
   color?: string;
   opacity?: number;
-  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  // center variants(top/normal/bottom) 확장: 'center' 는 하단 중앙(backward compat)을 유지
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center' | 'top-center' | 'bottom-center';
   spacing?: number;      // 스트라이프 간격 (RepeatedStripes용)
   stripeWidth?: number;  // 각 스트라이프 너비 (RepeatedStripes용)
   teamColors?: any;      // 팀별 커스텀 색상

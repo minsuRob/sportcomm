@@ -137,7 +137,7 @@ export default function ProfileContextPopover({
           // 모달을 닫고 상세 페이지 스택의 team-colors 페이지로 이동하세요.
           onClose();
           // router.push에 문자열을 직접 전달하면 타입 불일치가 발생할 수 있어 객체 형식으로 호출합니다.
-          router.push({ pathname: "/(details)/team-colors" });
+          router.push({ pathname: "/(details)/team-colors-select" });
         },
       },
     ],

@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, ViewStyle, DimensionValue } from 'react-native';
-import { isWeb } from '@/lib/platform';
-import type { TeamDecorationProps } from '../../types';
+import React from "react";
+import { View, ViewStyle, DimensionValue } from "react-native";
+import { isWeb } from "@/lib/platform";
+import type { TeamDecorationProps } from "../../types";
 
 /**
  * LotteDecoration
@@ -29,59 +29,66 @@ import type { TeamDecorationProps } from '../../types';
  */
 
 export interface LotteDecorationProps extends TeamDecorationProps {
-  responsive?: boolean;               // 반응형 여부
-  baseWidth?: number;                 // 디자인 기준 width
-  baseHeight?: number;                // 디자인 기준 height
-  maintainAspectRatio?: boolean;      // 종횡비 유지 여부
-  maxWidthPercent?: number | string;  // 반응형일 때 최대 폭 (기본 '55%')
+  responsive?: boolean; // 반응형 여부
+  baseWidth?: number; // 디자인 기준 width
+  baseHeight?: number; // 디자인 기준 height
+  maintainAspectRatio?: boolean; // 종횡비 유지 여부
+  maxWidthPercent?: number | string; // 반응형일 때 최대 폭 (기본 '55%')
   overrideColors?: {
     path1?: string;
     path2?: string;
     path3?: string;
-    all?: string;                     // all 제공 시 세 path 동일 색상 (개별 path* 우선 순위 높음)
+    all?: string; // all 제공 시 세 path 동일 색상 (개별 path* 우선 순위 높음)
   };
 }
 
 const DEFAULT_BASE_WIDTH = 253;
 const DEFAULT_BASE_HEIGHT = 142;
-const DEFAULT_VIEW_BOX = '0 0 253 142';
+const DEFAULT_VIEW_BOX = "0 0 253 142";
 
 // react-native-svg 조건부 로드 (웹 번들 안정성)
 let Svg: any = null;
 let Path: any = null;
 try {
   if (!isWeb()) {
-    const svgModule = require('react-native-svg');
+    const svgModule = require("react-native-svg");
     Svg = svgModule.Svg;
     Path = svgModule.Path;
   }
 } catch (e) {
   // eslint-disable-next-line no-console
-  console.warn('react-native-svg 로드 실패 (LotteDecoration):', e);
+  console.warn("react-native-svg 로드 실패 (LotteDecoration):", e);
 }
 
 /**
  * path 데이터 구성
  * 단일 all 색상 -> path1/2/3 개별 overrideColors 우선
  */
-const buildPaths = (overrideColors?: LotteDecorationProps['overrideColors']) => {
-  const baseFill = '#349234';
+const buildPaths = (
+  overrideColors?: LotteDecorationProps["overrideColors"],
+) => {
+  const baseFill = "#349234";
   const p1 = overrideColors?.path1 || overrideColors?.all || baseFill;
   const p2 = overrideColors?.path2 || overrideColors?.all || baseFill;
   const p3 = overrideColors?.path3 || overrideColors?.all || baseFill;
 
+  // 각 path에 opacity 필드를 명시하여 렌더 시 안전하게 접근할 수 있도록 합니다.
+  // 요청에 맞게 두번째 path는 반투명하게 표시되도록 opacity 0.7을 기본값으로 둡니다.
   return [
     {
-      d: 'M0.0917311 83.0001L71.5916 42.4998L76.5917 28.4998L90.0916 32.9998L147.092 1.49979L178.092 1.49979L114.592 36.4998C114.592 36.4998 106.994 39.1368 102.092 38.4998C97.1892 37.8628 90.0916 32.9998 90.0916 32.9998C90.0916 32.9998 88.5453 42.8946 86.5916 46.4998C84.638 50.105 79.9999 54.6728 79.9999 54.6728L0.0917966 101L0.0917311 83.0001Z',
+      d: "M0.0917311 83.0001L71.5916 42.4998L76.5917 28.4998L90.0916 32.9998L147.092 1.49979L178.092 1.49979L114.592 36.4998C114.592 36.4998 106.994 39.1368 102.092 38.4998C97.1892 37.8628 90.0916 32.9998 90.0916 32.9998C90.0916 32.9998 88.5453 42.8946 86.5916 46.4998C84.638 50.105 79.9999 54.6728 79.9999 54.6728L0.0917966 101L0.0917311 83.0001Z",
       fill: p1,
+      opacity: 1,
     },
     {
-      d: 'M0.091918 124.5L146.284 42.1268L151.284 28.1268L164.784 32.6268L221.784 1.1268L252.784 1.1268L189.284 36.1268C189.284 36.1268 181.686 38.7638 176.784 38.1268C171.881 37.4898 164.784 32.6268 164.784 32.6268C164.784 32.6268 163.237 42.5216 161.284 46.1268C159.33 49.732 154.692 54.2998 154.692 54.2998L0.0917965 142L0.091918 124.5Z',
+      d: "M0.091918 124.5L146.284 42.1268L151.284 28.1268L164.784 32.6268L221.784 1.1268L252.784 1.1268L189.284 36.1268C189.284 36.1268 181.686 38.7638 176.784 38.1268C171.881 37.4898 164.784 32.6268 164.784 32.6268C164.784 32.6268 163.237 42.5216 161.284 46.1268C159.33 49.732 154.692 54.2998 154.692 54.2998L0.0917965 142L0.091918 124.5Z",
       fill: p2,
+      opacity: 0.7, // 두번째 레이어는 기본적으로 0.7 opacity로 표시
     },
     {
-      d: 'M0.111572 36.542C0.111572 36.542 63.9006 0.828183 73.4938 0.91312C83.0869 0.998056 90.0854 8.43183 90.0854 8.43183L0.111547 58.0001L0.111572 36.542Z',
+      d: "M0.111572 36.542C0.111572 36.542 63.9006 0.828183 73.4938 0.91312C83.0869 0.998056 90.0854 8.43183 90.0854 8.43183L0.111547 58.0001L0.111572 36.542Z",
       fill: p3,
+      opacity: 1,
     },
   ];
 };
@@ -89,9 +96,12 @@ const buildPaths = (overrideColors?: LotteDecorationProps['overrideColors']) => 
 /**
  * 퍼센트 문자열 헬퍼
  */
-const toPercentString = (val: number | string | undefined, fallback: string): string => {
+const toPercentString = (
+  val: number | string | undefined,
+  fallback: string,
+): string => {
   if (val === undefined) return fallback;
-  return typeof val === 'number' ? `${val}%` : val;
+  return typeof val === "number" ? `${val}%` : val;
 };
 
 /**
@@ -101,25 +111,25 @@ export const LotteDecoration: React.FC<LotteDecorationProps> = ({
   teamId,
   teamData,
   teamColors,
-  position = 'bottom-left',
+  position = "bottom-left",
   responsive = true,
   baseWidth = DEFAULT_BASE_WIDTH,
   baseHeight = DEFAULT_BASE_HEIGHT,
   maintainAspectRatio = true,
-  maxWidthPercent = '55%',
+  maxWidthPercent = "55%",
   overrideColors,
   // 비반응형 모드 width/height (필요 시)
   width,
   height,
   opacity = 0.9,
-  color,       // 단일 primary 대체 (all 로 반영)
+  color, // 단일 primary 대체 (all 로 반영)
   style,
 }) => {
   // 모든 path의 색상을 svgDecorationColor로 통일합니다.
-  const svgDecorationColor = teamColors?.decorationBorder || color || '#24242E';
+  const svgDecorationColor = teamColors?.decorationBorder || color || "#24242E";
 
   // overrideColors의 모든 path 색상을 svgDecorationColor로 지정
-  const mergedOverride: LotteDecorationProps['overrideColors'] = {
+  const mergedOverride: LotteDecorationProps["overrideColors"] = {
     all: svgDecorationColor,
     path1: svgDecorationColor,
     path2: svgDecorationColor,
@@ -130,7 +140,9 @@ export const LotteDecoration: React.FC<LotteDecorationProps> = ({
 
   // style (ThemedStyle 지원)
   const resolvedStyle: ViewStyle =
-    typeof style === 'function' ? (style({} as any) as ViewStyle) : ((style as ViewStyle) || {});
+    typeof style === "function"
+      ? (style({} as any) as ViewStyle)
+      : (style as ViewStyle) || {};
 
   /**
    * 웹 컨테이너:
@@ -138,28 +150,30 @@ export const LotteDecoration: React.FC<LotteDecorationProps> = ({
    * - responsive 시 내부 wrapper 에서 aspectRatio 유지
    */
   const buildWebContainerStyle = (): ViewStyle => ({
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     opacity,
-    pointerEvents: 'none',
+    pointerEvents: "none",
   });
 
   const buildWebInnerWrapperStyle = (): React.CSSProperties => {
     if (responsive) {
       return {
-        width: toPercentString(maxWidthPercent, '55%'),
-        maxWidth: toPercentString(maxWidthPercent, '55%'),
-        display: 'block',
-        position: 'relative',
-        aspectRatio: maintainAspectRatio ? `${baseWidth} / ${baseHeight}` : undefined,
+        width: toPercentString(maxWidthPercent, "55%"),
+        maxWidth: toPercentString(maxWidthPercent, "55%"),
+        display: "block",
+        position: "relative",
+        aspectRatio: maintainAspectRatio
+          ? `${baseWidth} / ${baseHeight}`
+          : undefined,
       };
     }
     return {
       width: `${width ?? baseWidth}px`,
       height: `${height ?? baseHeight}px`,
-      display: 'block',
-      position: 'relative',
+      display: "block",
+      position: "relative",
     };
   };
 
@@ -174,17 +188,24 @@ export const LotteDecoration: React.FC<LotteDecorationProps> = ({
             viewBox={DEFAULT_VIEW_BOX}
             fill="none"
             style={{
-              display: 'block',
-              width: '100%',
-              height: '100%',
-              maxWidth: '100%',
-              objectFit: maintainAspectRatio ? 'contain' : 'fill',
-              pointerEvents: 'none',
+              display: "block",
+              width: "100%",
+              height: "100%",
+              maxWidth: "100%",
+              objectFit: maintainAspectRatio ? "contain" : "fill",
+              pointerEvents: "none",
             }}
-            preserveAspectRatio={maintainAspectRatio ? 'xMidYMid meet' : 'none'}
+            preserveAspectRatio={maintainAspectRatio ? "xMidYMid meet" : "none"}
           >
             {paths.map((p, i) => (
-              <path key={`lotte-path-${i}`} d={p.d} fill={p.fill} opacity={p.opacity} />
+              // p.opacity는 buildPaths에서 항상 제공되므로 안전하게 사용합니다.
+              // 혹시 타입 체크에서 경고가 나는 환경을 위해 null 병합도 병행합니다.
+              <path
+                key={`lotte-path-${i}`}
+                d={p.d}
+                fill={p.fill}
+                opacity={p.opacity ?? 1}
+              />
             ))}
           </svg>
         </div>
@@ -200,17 +221,17 @@ export const LotteDecoration: React.FC<LotteDecorationProps> = ({
   const buildMobileContainerStyle = (): ViewStyle => {
     if (responsive) {
       return {
-        position: 'relative',
+        position: "relative",
         opacity,
-        pointerEvents: 'none',
-        width: toPercentString(maxWidthPercent, '55%') as DimensionValue,
+        pointerEvents: "none",
+        width: toPercentString(maxWidthPercent, "55%") as DimensionValue,
         aspectRatio: baseWidth / baseHeight,
       };
     }
     return {
-      position: 'relative',
+      position: "relative",
       opacity,
-      pointerEvents: 'none',
+      pointerEvents: "none",
       width: (width ?? baseWidth) as DimensionValue,
       height: (height ?? baseHeight) as DimensionValue,
     };
@@ -228,13 +249,19 @@ export const LotteDecoration: React.FC<LotteDecorationProps> = ({
       <View style={[containerStyle, resolvedStyle]}>
         <Svg
           width="100%"
-            height="100%"
-            viewBox={DEFAULT_VIEW_BOX}
-            fill="none"
-            preserveAspectRatio={maintainAspectRatio ? 'xMidYMid meet' : 'none'}
+          height="100%"
+          viewBox={DEFAULT_VIEW_BOX}
+          fill="none"
+          preserveAspectRatio={maintainAspectRatio ? "xMidYMid meet" : "none"}
         >
           {paths.map((p, i) => (
-            <Path key={`lotte-mobile-path-${i}`} d={p.d} fill={p.fill} opacity={p.opacity} />
+            // 모바일에서도 opacity를 안전하게 적용합니다.
+            <Path
+              key={`lotte-mobile-path-${i}`}
+              d={p.d}
+              fill={p.fill}
+              opacity={(p as any).opacity ?? 1}
+            />
           ))}
         </Svg>
       </View>

@@ -19,6 +19,7 @@ import * as storage from "@/lib/storage";
 
 import { setImperativeTheming } from "./context.utils";
 import { darkTheme, lightTheme } from "./theme";
+import { getTeamColors } from "./teams/teamColor";
 import type {
   AllowedStylesT,
   AppColorT,
@@ -38,6 +39,10 @@ export type ThemeContextType = {
   toggleTheme: () => void;
   appColor: AppColorT;
   setAppColor: (color: AppColorT) => void;
+  // 선택된 팀 ID (앱 색상 필터용) - null이면 팀 기반 오버라이드 없음
+  teamColorTeamId: string | null;
+  // 선택된 팀 ID를 설정하는 함수 (영구 저장 포함)
+  setTeamColorTeamId: (teamId: string | null) => void;
 };
 
 export const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -64,6 +69,10 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
   // Our saved theme context: can be "light", "dark", or undefined (system theme)
   const [themeScheme, setThemeSchemeState] = useState<ThemeContextModeT>();
   const [appColor, setAppColorState] = useState<AppColorT>("blue");
+  // 팀 기반 색상 오버라이드: 선택된 팀 ID
+  const [teamColorTeamId, setTeamColorTeamIdState] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     // Load auth state from storage
@@ -76,6 +85,12 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
       const storedColor = await storage.loadString("app.appColor");
       if (storedColor) {
         setAppColorState(storedColor as AppColorT);
+      }
+
+      // 팀 색상 오버라이드 저장 값 로드
+      const storedTeam = await storage.loadString("app.teamColorTeamId");
+      if (storedTeam) {
+        setTeamColorTeamIdState(storedTeam);
       }
     }
     loadTheme();
@@ -105,6 +120,20 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
   }, []);
 
   /**
+   * 팀 색상 오버라이드 ID를 설정합니다.
+   * - teamId === null 이면 팀 기반 오버라이드를 제거합니다.
+   * - 변경 시 영구 저장합니다.
+   */
+  const setTeamColorTeamId = useCallback(async (teamId: string | null) => {
+    setTeamColorTeamIdState(teamId);
+    if (teamId) {
+      await storage.saveString("app.teamColorTeamId", teamId);
+    } else {
+      await storage.remove("app.teamColorTeamId");
+    }
+  }, []);
+
+  /**
    * initialContext is the theme context passed in from the app.tsx file and always takes precedence.
    * themeScheme is the value from MMKV. If undefined, we fall back to the system theme
    * systemColorScheme is the value from the device. If undefined, we fall back to "light"
@@ -127,25 +156,53 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
   }, [themeContext]);
 
   const theme: Theme = useMemo(() => {
-    // 테마 기본 설정에 앱 색상 정보 추가
+    // 테마 기본 설정
     const baseTheme = themeContext === "dark" ? darkTheme : lightTheme;
 
-    // 앱 색상 정보 추가
+    // 1) 앱 색상 기반 기본 tint 결정 (기존 동작 유지)
+    let computedTint =
+      appColor === "blue"
+        ? baseTheme.colors.palette.primary500
+        : appColor === "red"
+          ? baseTheme.colors.palette.red500
+          : baseTheme.colors.palette.orange500;
+
+    // 2) accent 기본값 유지
+    let computedAccent = baseTheme.colors.accent;
+
+    // 3) 팀 기반 오버라이드가 설정된 경우, teamColor의 mainColor/subColor를 우선 적용
+    if (teamColorTeamId) {
+      try {
+        const teamColors = getTeamColors(
+          teamColorTeamId,
+          themeContext === "dark",
+        );
+        if (teamColors?.mainColor) {
+          computedTint = teamColors.mainColor;
+        }
+        if (teamColors?.subColor) {
+          computedAccent = teamColors.subColor;
+        }
+      } catch (e) {
+        if (__DEV__) {
+          console.warn("getTeamColors 실패:", e);
+        }
+      }
+    }
+
+    // 결과 테마 반환 (colors.tint, colors.accent 오버라이드)
+    // 타입 불일치로 인한 빌드 오류를 회피하기 위해 baseTheme을 any로 캐스트하여 안전하게 병합합니다.
+    // 이렇게 하면 baseTheme.colors의 구체적 리터럴 타입과 충돌하더라도 런타임에서 정상 동작하도록 합니다.
     return {
-      ...baseTheme,
+      ...(baseTheme as any),
       appColor,
-      // 앱 색상에 따라 tint, accent 등의 색상 업데이트
       colors: {
-        ...baseTheme.colors,
-        tint:
-          appColor === "blue"
-            ? baseTheme.colors.palette.primary500
-            : appColor === "red"
-              ? baseTheme.colors.palette.red500
-              : baseTheme.colors.palette.orange500,
+        ...((baseTheme as any).colors || {}),
+        tint: computedTint,
+        accent: computedAccent,
       },
-    };
-  }, [themeContext, appColor]);
+    } as any as Theme;
+  }, [themeContext, appColor, teamColorTeamId]);
 
   useEffect(() => {
     setImperativeTheming(theme);
@@ -184,6 +241,9 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
     toggleTheme,
     appColor,
     setAppColor,
+    // 팀 색상 오버라이드 상태 및 설정 함수 노출
+    teamColorTeamId,
+    setTeamColorTeamId,
   };
 
   return (

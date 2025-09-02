@@ -119,8 +119,9 @@ export const SSGDecoration: React.FC<SSGDecorationProps> = ({
   overrideColors,
 }) => {
   // primary color 강제 시 override 병합
+  const svgDecorationColor = teamColors?.decorationBorder|| color || '#24242E';
   const mergedOverride = color
-    ? { primary: color, secondary: overrideColors?.secondary, accent: overrideColors?.accent }
+    ? { primary: svgDecorationColor, secondary: overrideColors?.secondary, accent: overrideColors?.accent }
     : overrideColors;
 
   const paths = buildPaths(mergedOverride);

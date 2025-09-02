@@ -3,6 +3,14 @@ import type { User } from "@/lib/auth";
 import { getSession, saveSession } from "@/lib/auth";
 import { UserSyncService } from "@/lib/supabase/user-sync";
 import { getValidToken, getCurrentSession, isTokenValid } from "@/lib/auth/token-manager";
+/**
+ * 전역(모듈 레벨) 사용자 캐시
+ * - 화면 이동 시 훅이 재마운트되어도 즉시 이전 사용자 정보를 제공하여 UI 깜빡임(flicker) 제거
+ * - __globalInFlight 로 최초/동시 로드 합류
+ */
+let __globalUserCache: User | null = null;
+let __globalLastTokenExpiry: number = 0;
+let __globalInFlight: Promise<void> | null = null;
 
 /**
  * 현재 사용자 정보를 로드/보관하는 훅 (JWT 만료 시간 고려 최적화)
@@ -12,23 +20,31 @@ import { getValidToken, getCurrentSession, isTokenValid } from "@/lib/auth/token
  * - 메모리 캐싱으로 동일한 사용자 정보 중복 로드를 방지합니다.
  */
 export function useCurrentUser() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 초기값을 전역 캐시로 설정 (이미 로드된 경우 즉시 사용)
+  const [currentUser, setCurrentUser] = useState<User | null>(
+    __globalUserCache,
+  );
   const [lastSyncTime, setLastSyncTime] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const mountedRef = useRef(true);
 
   const userCacheRef = useRef<User | null>(null);
-  const lastTokenExpiryRef = useRef<number>(0);
+  const lastTokenExpiryRef = useRef<number>(__globalLastTokenExpiry);
 
   // --- 추가: 중복/폭풍 호출 방지용 Ref & 상수 ---
-  const lastFetchRef = useRef<number>(0);          // 마지막 네트워크 호출 시각 (ms)
+  const lastFetchRef = useRef<number>(0); // 마지막 네트워크 호출 시각 (ms)
   const inFlightRef = useRef<Promise<void> | null>(null); // 진행 중 호출 Promise (동일 호출 합류)
-  const isLoadingRef = useRef<boolean>(false);     // 최신 로딩 상태 (useCallback 폐쇄 변수 stale 방지)
-  const THROTTLE_INTERVAL_MS = 5000;               // 동일 사용자 정보 재조회 최소 간격(5초)
-
+  const isLoadingRef = useRef<boolean>(false); // 최신 로딩 상태 (useCallback 폐쇄 변수 stale 방지)
+  const THROTTLE_INTERVAL_MS = 5000; // 동일 사용자 정보 재조회 최소 간격(5초)
 
   const load = useCallback(async (forceSync = false) => {
-    // 1) 이미 진행 중인 호출이 있으면 합류 (강제 동기화 제외)
+    // 1-a) 전역 in-flight 있으면 합류 (강제 동기화 제외)
+    if (!forceSync && __globalInFlight) {
+      await __globalInFlight;
+      if (userCacheRef.current) setCurrentUser(userCacheRef.current);
+      return;
+    }
+    // 1-b) 훅 레벨 진행 중 호출 합류
     if (!forceSync && inFlightRef.current) {
       await inFlightRef.current;
       return;
@@ -86,6 +102,7 @@ export function useCurrentUser() {
               userCacheRef.current.id !== nextUser.id; // 다른 사용자
 
             lastTokenExpiryRef.current = tokenExpiresAt;
+            __globalLastTokenExpiry = tokenExpiresAt;
           } else {
             // 토큰 정보가 없으면 항상 동기화
             shouldSync = true;
@@ -145,6 +162,7 @@ export function useCurrentUser() {
 
         if (mountedRef.current) {
           userCacheRef.current = nextUser;
+          __globalUserCache = nextUser;
           setCurrentUser(nextUser);
         }
       } finally {
@@ -157,7 +175,9 @@ export function useCurrentUser() {
     })();
 
     inFlightRef.current = exec;
+    __globalInFlight = exec;
     await exec;
+    __globalInFlight = null;
   }, []); // 의존성 제거: 내부는 ref 기반 상태로 자체 관리 (불필요한 재생성/재호출 방지)
 
   // (중복되어 남아있던 이전 로직 블록 제거됨: 위에서 개선된 load 구현만 사용)

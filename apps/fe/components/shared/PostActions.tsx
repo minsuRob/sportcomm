@@ -69,6 +69,7 @@ export default function PostActions({
           borderRadius: 8, // 자연스러운 모서리 처리
           marginHorizontal: -4, // 좌우 여백 확장으로 빈틈 제거
           // paddingHorizontal: 20, // 확장된 마진에 맞춰 패딩 조정
+          marginBottom: -2, 
         },
       ]}
     >

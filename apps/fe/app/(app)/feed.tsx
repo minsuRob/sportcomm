@@ -292,7 +292,7 @@ export default function FeedScreen() {
             return (
               <View style={themed($myTeamItem)}>
                 <Ionicons
-                  name="football-outline"
+                  name="baseball-outline"
                   size={20}
                   color={theme.colors.tint}
                 />

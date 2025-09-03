@@ -804,7 +804,7 @@ const PostCard = React.memo(function PostCard({
               >
                 <StrokedText
                   content={post.author.nickname}
-                  fontSize={14}
+                  fontSize={15}
                   lineHeight={18}
                   numberOfLines={1}
                   borderThickness={0.5}
@@ -814,7 +814,7 @@ const PostCard = React.memo(function PostCard({
                 />
                 <StrokedText
                   content={formatTimeAgo(post.createdAt)}
-                  fontSize={12}
+                  fontSize={13}
                   lineHeight={16}
                   numberOfLines={1}
                   borderThickness={0.3}
@@ -1109,7 +1109,7 @@ const $profileContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   zIndex: 2,
-  gap: spacing.xxs,
+  gap: spacing.xs,
 });
 
 const $profileImage: ThemedStyle<ImageStyle> = () => ({

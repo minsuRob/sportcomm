@@ -325,9 +325,9 @@ export const teamColors = {
       accent: "#FFD700",
       decorationBorder: "#1F152A",
       cardBorder: "#002E5F",
-      profileText: "#E2222C",
-      profileTime: "#E2222C",
-      profileStroke: "#FFFFFF",
+      profileText: "#FFFFFF",
+      profileTime: "#B2B2B2",
+      profileStroke: "#000000",
     },
     dark: {
       uniformBackground: "#1F152A", //남색

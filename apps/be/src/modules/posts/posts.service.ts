@@ -15,6 +15,7 @@ import { User } from '../../entities/user.entity';
 import { UserTeam } from '../../entities/user-team.entity';
 import { Media } from '../../entities/media.entity';
 import { MediaService } from '../media/media.service';
+import { BookmarkService } from '../bookmarks/bookmark.service';
 
 /**
  * 게시물 생성 입력 인터페이스
@@ -121,6 +122,7 @@ export class PostsService {
     private readonly mediaRepository: Repository<Media>,
     @InjectRepository(UserTeam)
     private readonly userTeamRepository: Repository<UserTeam>,
+    private readonly bookmarkService: BookmarkService, // BookmarkRepository 대신 BookmarkService 사용
     private dataSource: DataSource,
     private readonly mediaService: MediaService,
     private readonly eventEmitter: EventEmitter2,

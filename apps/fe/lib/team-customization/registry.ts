@@ -1,4 +1,9 @@
 import { TeamCustomizationConfig, TeamCustomizationRegistryType } from './types';
+import { KIADecoration } from './teams/kia/KIADecoration';
+import { SSGDecoration } from './teams/ssg/SSGDecoration';
+import { CommonStripes, RepeatedStripes } from './teams/common';
+import { KTDecoration } from './teams/kt/KTDecoration'; // KT 위즈 데코레이션 추가
+import { LotteDecoration } from './teams/lotte/LotteDecoration'; // Lotte 데코레이션 추가
 
 /**
  * 팀 커스터마이징 레지스트리
@@ -69,7 +74,15 @@ class TeamCustomizationRegistryClass {
    */
   hasActiveDecoration(teamId: string): boolean {
     const config = this.get(teamId);
-    return config?.decoration?.enabled === true;
+    if (!config?.decoration) return false;
+
+    // decoration이 배열인 경우
+    if (Array.isArray(config.decoration)) {
+      return config.decoration.some(d => d.enabled === true);
+    }
+
+    // decoration이 단일 객체인 경우
+    return config.decoration.enabled === true;
   }
 
   hasActiveUniform(teamId: string): boolean {
@@ -142,3 +155,306 @@ export const getTeamCustomization = (teamId: string) => {
 export const hasTeamCustomization = (teamId: string) => {
   return TeamCustomizationRegistry.hasCustomization(teamId);
 };
+
+const doosanWidth = 4;
+const doosanHeight = 150;
+// 팀별 커스터마이징 설정 함수들 (확장 가능한 구조)
+// 새로운 팀 추가 시: create[TeamName]Customization 함수를 만들고 initializeDefaultCustomizations에 추가
+const createDoosanCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'doosan',
+  teamName: '두산',
+  decoration: [
+
+    // 왼쪽 3개 세로선 (DoosanStripes 대신 CommonStripes 사용)
+    {
+      component: CommonStripes,
+      props: {
+        width: doosanWidth,
+        height: doosanHeight,
+        position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          left: 8, // 8 (간격)
+          zIndex: 1,
+        }),
+      },
+
+      enabled: true,
+    },
+    {
+      component: CommonStripes,
+      props: {
+        width: doosanWidth,
+        height: doosanHeight,
+        position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          left: 16, // 8 (간격)
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+    {
+      component: CommonStripes,
+      props: {
+        width: doosanWidth,
+        height: doosanHeight,
+        position: 'bottom-left' as const,
+        style: ({ colors }) => ({
+          left: 24, // 8 + 16 (간격)
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+    // 오른쪽 3개 세로선 (DoosanStripes 대신 CommonStripes 사용)
+    {
+      component: CommonStripes,
+      props: {
+        width: doosanWidth,
+        height: doosanHeight,
+        position: 'bottom-right' as const,
+        style: ({ colors }) => ({
+          right: 24, // 8 + 16 (간격)
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+    {
+      component: CommonStripes,
+      props: {
+        width: doosanWidth,
+        height: doosanHeight,
+        position: 'bottom-right' as const,
+        style: ({ colors }) => ({
+          right: 16, // 8 + 8 (간격)
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+    {
+      component: CommonStripes,
+      props: {
+        width: doosanWidth,
+        height: doosanHeight,
+        position: 'bottom-right' as const,
+        style: ({ colors }) => ({
+          right: 8,
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+  ],
+});
+
+const createLGCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'lg',
+  teamName: 'LG',
+  decoration: [
+    {
+      component: RepeatedStripes,
+      props: {
+        width: 550,       // 최대너비가 500 전후인데, svg 몇개 더 렌더링하는건 괜찮을거같음.
+        height: 350,      // LG 팀 전용 높이
+        opacity: 0.9,     // 적당한 투명도
+        position: 'top-left' as const,
+        spacing: 35,      // 스트라이프  간격 (10px)
+        stripeWidth: 1,
+        style: ({ colors }) => ({
+          left: 8, // 8 (간격)
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+  ],
+});
+
+const createKIACustomization = (): TeamCustomizationConfig => ({
+  teamId: 'kia',
+  teamName: '기아',
+  decoration: [
+    {
+      component: KIADecoration,
+      props: {
+        responsive: true,
+        baseWidth: 515,
+        baseHeight: 242,
+        opacity: 0.9,
+        position: 'bottom-left' as const,
+        maxWidthPercent: '100%',
+        maintainAspectRatio: true,
+      } as any, // KIADecoration 전용 props 타입 캐스팅
+      enabled: true,
+    }
+  ],
+});
+
+const createSamsungCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'samsung',
+  teamName: '삼성',
+  decoration: [
+    {
+      component: RepeatedStripes,
+      props: {
+        width: 550,       // 최대너비가 500 전후인데, svg 몇개 더 렌더링하는건 괜찮을거같음.
+        height: 350,      // LG 팀 전용 높이
+        opacity: 0.9,     // 적당한 투명도
+        position: 'top-left' as const,
+        spacing: 35,      // 스트라이프  간격 (10px)
+        stripeWidth: 1,
+        style: ({ colors }) => ({
+          left: 8, // 8 (간격)
+          zIndex: 1,
+        }),
+      },
+      enabled: true,
+    },
+  ],
+
+});
+
+const createSSGCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'ssg',
+  teamName: 'SSG',
+  decoration: [
+    {
+      component: SSGDecoration,
+      props: {
+        responsive: true,
+        baseWidth: 369,
+        baseHeight: 166,
+        opacity: 0.9,
+        position: 'center' as const,
+        maxWidthPercent: '50%',
+        maintainAspectRatio: true,
+      } as any,
+      enabled: true,
+    },
+  ],
+});
+
+const createKTCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'kt',
+  teamName: 'KT',
+  decoration: [
+    {
+      component: KTDecoration,
+      props: {
+        responsive: true,
+        baseWidth: 347,
+        baseHeight: 89,
+        position: 'center' as const,
+        maxWidthPercent: '55%',
+        maintainAspectRatio: true,
+        // opacity: 0.9,
+        style: ({ colors }) => ({
+          top: 50, // 8 (간격)
+          zIndex: 1,
+        }),
+      } as any,
+      enabled: true,
+    },
+  ],
+});
+/**
+ * 롯데 자이언츠 커스터마이징
+ * - bottom-left 위치 고정
+ * - LotteDecoration 반응형 SVG 사용
+ */
+const createLotteCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'lotte',
+  teamName: '롯데',
+  decoration: [
+    {
+      component: LotteDecoration,
+      props: {
+        responsive: true,
+        baseWidth: 253,
+        baseHeight: 142,
+        position: 'top-left' as const,
+        maxWidthPercent: '80%',
+        maintainAspectRatio: true,
+        opacity: 1.0,
+        style: ({ colors }) => ({
+          left: -30, // 8 (간격)
+          zIndex: 1,
+        }),
+      } as any,
+      enabled: true,
+    },
+  ],
+});
+
+const createKiwoomCustomization = (): TeamCustomizationConfig => ({
+  teamId: 'kiwoom',
+  teamName: '키움',
+});
+
+/**
+ * 팀별 기본 커스터마이징 설정 등록
+ */
+const initializeDefaultCustomizations = () => {
+  // 두산 베어스 스트라이프 (양쪽 배치)
+  registerTeamCustomization(createDoosanCustomization());
+
+  // LG 트윈스 세로 스트라이프
+  registerTeamCustomization(createLGCustomization());
+
+  // 기아 타이거즈 호랑이 스트라이프
+  registerTeamCustomization(createKIACustomization());
+
+  // 삼성 라이온즈 스트라이프 (양쪽 배치)
+  registerTeamCustomization(createSamsungCustomization());
+
+  // SSG 랜더스 커스텀 데코레이션
+  registerTeamCustomization(createSSGCustomization());
+
+  // KT 위즈 배너형 중앙 데코레이션
+  registerTeamCustomization(createKTCustomization());
+
+  // 롯데 자이언츠 상단 좌측 데코레이션
+  registerTeamCustomization(createLotteCustomization());
+
+  // 키움 히어로즈 세로 스트라이프
+  registerTeamCustomization(createKiwoomCustomization());
+};
+
+// 앱 시작 시 기본 커스터마이징 초기화
+initializeDefaultCustomizations();
+
+/**
+ * 새로운 팀 커스터마이징 추가 방법:
+ *
+ * 1. 팀별 컴포넌트 파일 생성 (예: teams/samsung/SamsungCircles.tsx)
+ * 2. create[TeamName]Customization 함수 생성 (위 참고)
+ * 3. initializeDefaultCustomizations()에 함수 호출 추가
+ * 4. 필요한 경우 import 추가
+ *
+ * 컴포넌트 선택 가이드:
+ * - CommonStripes: 단일 스트라이프 (width x height 크기의 하나의 직사각형)
+ * - RepeatedStripes: 반복 스트라이프 (width만큼 spacing 간격으로 stripeWidth 크기 스트라이프 반복)
+ * - KIADecoration: 기아 팀 전용 V자형 반응형 데코레이션
+ *
+ * 두산 팀: CommonStripes 6개로 3개씩 양쪽 배치 (DoosanStripes 대체)
+ *
+ * 예시:
+ * import { CommonStripes, RepeatedStripes } from './teams/common';
+ * const createNewTeamCustomization = (): TeamCustomizationConfig => ({
+ *   decoration: {
+ *     component: RepeatedStripes,
+ *     props: {
+ *       width: 100,
+ *       height: 300,
+ *       color: '#TEAM_COLOR',
+ *       spacing: 10,
+ *       stripeWidth: 3
+ *     }
+ *   }
+ * });
+ * registerTeamCustomization(createNewTeamCustomization());
+ */
+
+// commit: feat(fe): KTDecoration 중앙 배치 데코레이션 레지스트리 등록

@@ -270,6 +270,7 @@ export class PostsResolver {
 
   /**
    * 현재 사용자가 게시물에 좋아요를 눌렀는지 여부를 계산하는 필드 리졸버
+   * 최적화: 이미 설정된 값이 있으면 사용, 없을 때만 개별 쿼리 실행
    */
   @ResolveField(() => Boolean)
   async isLiked(
@@ -279,12 +280,18 @@ export class PostsResolver {
     const user = context.req?.user;
     if (!user) return false;
 
+    // 이미 설정된 값이 있으면 사용 (배치 조회 결과)
+    if (post.isLiked !== undefined) {
+      return post.isLiked;
+    }
+
+    // 개별 쿼리 실행 (fallback)
     const result = await this.postsService.isPostLikedByUser(post.id, user.id);
 
     // 개발 환경에서만 디버깅 로그 출력
     if (process.env.NODE_ENV === 'development') {
       console.log(
-        `[DEBUG] ResolveField isLiked - postId: ${post.id}, userId: ${user.id}, result: ${result}`,
+        `[DEBUG] ResolveField isLiked - 개별 쿼리 실행, postId: ${post.id}, userId: ${user.id}, result: ${result}`,
       );
     }
 
@@ -293,6 +300,7 @@ export class PostsResolver {
 
   /**
    * 현재 사용자가 게시물을 북마크했는지 여부를 계산하는 필드 리졸버
+   * 최적화: 이미 설정된 값이 있으면 사용, 없을 때만 개별 쿼리 실행
    */
   @ResolveField(() => Boolean)
   async isBookmarked(
@@ -301,7 +309,23 @@ export class PostsResolver {
   ): Promise<boolean> {
     const user = context.req?.user;
     if (!user) return false;
-    return await this.bookmarkService.isBookmarkedByUser(user.id, post.id);
+
+    // 이미 설정된 값이 있으면 사용 (배치 조회 결과)
+    if (post.isBookmarked !== undefined) {
+      return post.isBookmarked;
+    }
+
+    // 개별 쿼리 실행 (fallback)
+    const result = await this.bookmarkService.isBookmarkedByUser(user.id, post.id);
+
+    // 개발 환경에서만 디버깅 로그 출력
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `[DEBUG] ResolveField isBookmarked - 개별 쿼리 실행, postId: ${post.id}, userId: ${user.id}, result: ${result}`,
+      );
+    }
+
+    return result;
   }
 
   /**

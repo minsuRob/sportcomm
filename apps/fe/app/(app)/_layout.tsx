@@ -14,10 +14,16 @@ import { isWeb } from "@/lib/platform";
  * 화면 하단에 탭 네비게이션을 표시합니다
  */
 function MobileTabLayout() {
+  const { theme } = useAppTheme();
+  
+  // 팀 메인 컬러 (fallback 처리)
+  const teamMain = theme.colors.teamMain ?? theme.colors.tint;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarActiveTintColor: teamMain, // 활성 탭 색상을 팀 메인 컬러로 설정
         tabBarStyle: {
           paddingBottom: 8,
           paddingTop: 8,

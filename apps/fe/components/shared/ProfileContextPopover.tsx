@@ -17,6 +17,8 @@ export interface ProfileContextPopoverProps {
   visible: boolean;
   onClose: () => void;
   onOpenProfile: () => void;
+  onShopPress: () => void; // 상점(포인트 샵) 화면 열기 콜백
+  onLotteryPress: () => void; // 로또/이벤트 화면 열기 콜백
   anchorStyle?: ViewStyle; // 부모에서 위치 제어
 }
 
@@ -28,9 +30,11 @@ export default function ProfileContextPopover({
   visible,
   onClose,
   onOpenProfile,
+  onShopPress,
+  onLotteryPress,
   anchorStyle,
 }: ProfileContextPopoverProps) {
-  const { theme, toggleTheme, setAppColor, appColor, themed } = useAppTheme();
+  const { theme, toggleTheme, themed } = useAppTheme();
   const { currentLanguage, switchLanguage } = useTranslation();
   const router = useRouter();
 
@@ -67,6 +71,32 @@ export default function ProfileContextPopover({
         },
       },
       {
+        key: "lottery",
+        label: "이벤트 / 추첨",
+        icon: (
+          <Ionicons name="ticket-outline" size={18} color={theme.colors.text} />
+        ),
+        onPress: () => {
+          onClose();
+          onLotteryPress();
+        },
+      },
+      {
+        key: "shop",
+        label: "포인트 상점",
+        icon: (
+          <Ionicons
+            name="storefront-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          onClose();
+          onShopPress();
+        },
+      },
+      {
         key: "toggleTheme",
         label: theme.isDark ? "라이트 테마로" : "다크 테마로",
         icon: (
@@ -92,40 +122,35 @@ export default function ProfileContextPopover({
           onClose();
         },
       },
-      (() => {
-        const nextColor =
-          appColor === "blue" ? "red" : appColor === "red" ? "orange" : "blue";
-        const appColorKorean =
-          appColor === "blue" ? "파랑" : appColor === "red" ? "빨강" : "주황";
-        const nextColorKorean =
-          nextColor === "blue" ? "파랑" : nextColor === "red" ? "빨강" : "주황";
-        return {
-          key: "toggleAppColor",
-          label: `앱 색상: ${appColorKorean} → ${nextColorKorean}`,
-          icon: (
-            <Ionicons
-              name="color-palette-outline"
-              size={18}
-              color={theme.colors.text}
-            />
-          ),
-          onPress: () => {
-            setAppColor(nextColor as any);
-            onClose();
-          },
-        };
-      })(),
+      {
+        key: "teamColorFilter",
+        label: "앱 색상 필터 (내 팀 기반)",
+        icon: (
+          <Ionicons
+            name="color-filter-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          // 내 팀 기반의 앱 색상 필터 페이지로 이동합니다.
+          // 모달을 닫고 상세 페이지 스택의 team-colors 페이지로 이동하세요.
+          onClose();
+          // router.push에 문자열을 직접 전달하면 타입 불일치가 발생할 수 있어 객체 형식으로 호출합니다.
+          router.push({ pathname: "/(details)/team-colors-select" });
+        },
+      },
     ],
     [
       theme,
       toggleTheme,
       currentLanguage,
       switchLanguage,
-      appColor,
-      setAppColor,
       onOpenProfile,
       onClose,
       router,
+      onShopPress,
+      onLotteryPress,
     ],
   );
 

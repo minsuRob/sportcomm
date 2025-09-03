@@ -48,6 +48,10 @@ export default function SidebarNavigation() {
   const router = useRouter();
   const pathname = usePathname();
 
+  // 팀 메인/서브 컬러 (오버라이드 없으면 tint/accent 사용)
+  const teamMain = theme.colors.teamMain ?? theme.colors.tint;
+  const teamSub = theme.colors.teamSub ?? theme.colors.accent;
+
   const handleNavigation = (route: string) => {
     router.push(route as any);
   };
@@ -56,7 +60,7 @@ export default function SidebarNavigation() {
     <View style={themed($container)}>
       {/* 로고 영역 */}
       <View style={themed($logoContainer)}>
-        <Text style={themed($logoText)}>SportComm</Text>
+        <Text style={themed($logoText)}>SportCommm</Text>
       </View>
 
       {/* 네비게이션 메뉴 */}
@@ -72,7 +76,7 @@ export default function SidebarNavigation() {
               onPress={() => handleNavigation(item.route)}
             >
               <IconComponent
-                color={isActive ? theme.colors.tint : theme.colors.textDim}
+                color={isActive ? teamMain : theme.colors.textDim}
                 size={24}
               />
               <Text
@@ -107,7 +111,7 @@ const $logoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $logoText: ThemedStyle<TextStyle> = ({ colors, typography }) => ({
   fontSize: 28,
   fontWeight: "bold",
-  color: colors.tint,
+  color: colors.teamMain ?? colors.tint,
   letterSpacing: -0.5,
   fontFamily: typography.logo.normal,
 });
@@ -126,7 +130,7 @@ const $menuItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $activeMenuItem: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: colors.tint + "15", // 15% 투명도로 더 부드럽게
+  backgroundColor: (colors.teamMain ?? colors.tint) + "15", // 팀 메인 색상 기반 15% 투명 배경
 });
 
 const $menuText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
@@ -136,7 +140,11 @@ const $menuText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.textDim,
 });
 
+/*
+커밋 메시지 (git): refactor(nav): SidebarNavigation 팀 컬러 teamMain/teamSub 적용
+*/
+
 const $activeMenuText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.tint,
+  color: colors.teamMain ?? colors.tint,
   fontWeight: "700", // 더 굵게
 });

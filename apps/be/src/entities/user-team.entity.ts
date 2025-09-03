@@ -76,6 +76,34 @@ export class UserTeam extends BaseEntity {
   })
   favoriteDate?: Date;
 
+  /**
+   * 최애 선수 이름
+   * 사용자가 이 팀과 연결하여 지정한 대표(최애) 선수 이름
+   * - nullable: 아직 선택하지 않은 경우 null
+   * - 길이 제한: 50자 (DB 컬럼 length 50)
+   */
+  @Field(() => String, { nullable: true, description: '최애 선수 이름' })
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    comment: '사용자가 지정한 최애 선수 이름',
+  })
+  favoritePlayerName?: string;
+
+  /**
+   * 최애 선수 등번호
+   * 사용자가 선택한 최애 선수의 등번호
+   * - nullable: 아직 선택하지 않은 경우
+   */
+  @Field(() => Number, { nullable: true, description: '최애 선수 등번호' })
+  @Column({
+    type: 'int',
+    nullable: true,
+    comment: '사용자가 지정한 최애 선수 등번호',
+  })
+  favoritePlayerNumber?: number;
+
   // === 관계 설정 ===
 
   /**

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
 import { useAppTheme } from '@/lib/theme/context';
+import { isWeb } from '@/lib/platform';
 import type { ThemedStyle } from '@/lib/theme/types';
 import type { TeamDecorationProps, DecorationItem, TeamData } from '../types';
 
@@ -9,6 +10,7 @@ import type { TeamDecorationProps, DecorationItem, TeamData } from '../types';
  *
  * 다중 decoration을 지원하며, position에 따라 자동으로 스타일을 적용합니다.
  * PostCard에서 팀별 커스터마이징 로직을 분리하여 코드 간소화에 기여합니다.
+ * PostActions 영역과 겹치지 않도록 z-index와 위치를 조정했습니다.
  */
 
 export interface TeamDecorationRendererProps {
@@ -30,28 +32,50 @@ export interface TeamDecorationRendererProps {
 
 /**
  * position에 따른 스타일 매핑
+ * PostActions 바로 위에 위치하도록 조정했습니다.
  */
 const getPositionStyle = (position?: string): ViewStyle => {
   switch (position) {
     case 'top-left':
-      return { top: 16, left: 16 };
+      return { top: 0, left: 0 };
     case 'top-right':
-      return { top: 16, right: 16 };
+      return { top: 0, right: 0 };
     case 'bottom-left':
-      return { bottom: 16, left: 16 };
+      return { bottom: 0, left: 0 }; // PostActions 바로 위로 조정
     case 'bottom-right':
-      return { bottom: 16, right: 16 };
+      return { bottom: 0, right: 0 }; // PostActions 바로 위로 조정
+    case 'top-center':
+      // 상단 중앙 정렬: 좌우를 0으로 확장 후 중앙 정렬
+      return { top: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' };
+    case 'bottom-center':
+      // 하단 중앙 정렬
+      return { bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' };
+    case 'center':
+      // 완전 중앙 정렬 (수직 + 수평 모두 중앙)
+      return { top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center' };
     default:
-      return { bottom: 16, left: 16 }; // 기본값
+      return { bottom: 0, left: 0 }; // 기본값도 PostActions 바로 위로 조정
   }
 };
 
 /**
  * 기본 decoration 컨테이너 스타일
+ * PostActions 영역과 겹치지 않도록 z-index를 조정했습니다.
+ * 웹에서 SVG 크기 제한 방지를 위해 width/height 명시적 설정
  */
 const $decorationContainer: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
-  zIndex: 10,
+  zIndex: 1, // 다른 UI 요소들(zIndex: 2, 3)보다 뒤에, uniformBackground(zIndex: 1)보다는 앞에 위치
+  ...(isWeb() ? {
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: '100%',
+    minWidth: 0,
+    minHeight: 0,
+    maxWidth: '100%',
+    overflow: 'visible',
+  } : {}),
 });
 
 export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
@@ -83,6 +107,25 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
         const position = props?.position || 'bottom-left';
         const positionStyle = getPositionStyle(position);
 
+        // 웹 레이아웃 보정:
+        // 1) bottom-* : height를 auto로 해서 세로 공간 축소 -> bottom anchoring 적용
+        // 2) *-right  : width를 auto로 해서 가로 공간 축소 + left 해제 -> right 오프셋 정확한 상대 위치
+        // 3) bottom-right 조합 시 둘 다 적용
+        // (기존 문제: 컨테이너가 height:100%, width:100%를 차지하여 내부 stripe가 항상 상단/좌측에 붙어 bottom/right 포지션이 시각적으로 무시됨)
+        const webPositionAdjustment = isWeb()
+          ? {
+              // bottom-* / *-center / center 모두 높이 축소(top 제거), top-center 는 bottom 아님이라 height auto만 적용
+              // bottom-* 및 *-center (단, center 자체는 전체 높이 필요하므로 제외) → 높이 축소
+              ...((position.startsWith('bottom') || (position !== 'center' && position.endsWith('-center')))
+                ? { height: 'auto' as const, top: 'auto' as const }
+                : {}),
+              // 오른쪽 정렬 보정
+              ...(position.endsWith('right') ? { width: 'auto' as const, left: 'auto' as const } : {}),
+              // 중앙 정렬 계열은 가로 전체 폭 확보 필요
+              ...((position === 'center' || position.endsWith('-center')) ? { width: '100%' as const } : {}),
+            }
+          : {};
+
         // decoration props 구성
         const decorationProps: TeamDecorationProps = {
           teamId,
@@ -97,6 +140,7 @@ export const TeamDecorationRenderer: React.FC<TeamDecorationRendererProps> = ({
             style={[
               themed($decorationContainer),
               positionStyle,
+              webPositionAdjustment, // 웹 position 보정 스타일 (bottom/right)
             ]}
           >
             <DecorationComponent {...decorationProps} />

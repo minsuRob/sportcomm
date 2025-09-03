@@ -1,5 +1,5 @@
 import React from "react";
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 import {
   View,
   Text,
@@ -35,6 +35,7 @@ interface FeedHeaderProps {
 /**
  * 피드 상단 헤더 컴포넌트
  * - 팀 필터, 알림, 글쓰기, 프로필 버튼을 포함합니다.
+ * - 팀 컬러 오버라이드 도입: theme.colors.teamMain / teamSub (fallback: tint/accent)
  */
 export default function FeedHeader({
   currentUser,
@@ -77,6 +78,10 @@ export default function FeedHeader({
     }
   };
 
+  // 팀 메인/서브 컬러 (fallback 처리)
+  const teamMain = theme.colors.teamMain ?? theme.colors.tint;
+  const teamSub = theme.colors.teamSub ?? theme.colors.accent;
+
   return (
     <View style={themed($header)}>
       <View style={themed($headerLeft)}>
@@ -91,7 +96,7 @@ export default function FeedHeader({
               activeOpacity={0.7}
             >
               <Text style={themed($pointsText)}>
-                {t('points', { points: currentUser.points ?? 0 })}
+                {t("points", { points: currentUser.points ?? 0 })}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -99,34 +104,10 @@ export default function FeedHeader({
               onPress={onBoardPress}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name={t("list-outline")}
-                size={20}
-                color={theme.colors.tint}
-              />
+              <Ionicons name="list-outline" size={20} color={teamMain} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($lotteryButton)}
-              onPress={onLotteryPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={t("ticket-outline")}
-                size={20}
-                color={theme.colors.tint}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($shopButton)}
-              onPress={onShopPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={t("storefront-outline")}
-                size={20}
-                color={theme.colors.tint}
-              />
-            </TouchableOpacity>
+            {/* 로또(이벤트) 버튼: ProfileContextPopover 메뉴로 이동됨 */}
+            {/* 샵 버튼: ProfileContextPopover 메뉴로 이동됨 */}
           </>
         )}
         {currentUser && (
@@ -162,7 +143,7 @@ export default function FeedHeader({
             />
           ) : (
             <Ionicons
-              name={t("person-outline")}
+              name="person-outline"
               size={22}
               color={theme.colors.text}
             />
@@ -177,6 +158,14 @@ export default function FeedHeader({
           onOpenProfile={() => {
             setProfileMenuVisible(false);
             onProfilePress();
+          }}
+          onShopPress={() => {
+            setProfileMenuVisible(false);
+            onShopPress();
+          }}
+          onLotteryPress={() => {
+            setProfileMenuVisible(false);
+            onLotteryPress();
           }}
           anchorStyle={popoverPosition}
         />
@@ -212,7 +201,8 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "900",
-  color: colors.tint,
+  // 팀 색상 오버라이드 시 teamMain 사용, 없으면 기본 tint
+  color: colors.teamMain ?? colors.tint,
   fontFamily: typography.logo.normal,
 });
 
@@ -249,38 +239,52 @@ const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "700",
 });
 
-const $lotteryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  width: 36,
-  height: 36,
-  borderRadius: 18,
-  backgroundColor: colors.tint + "15",
-  justifyContent: "center",
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: colors.tint + "30",
-  marginRight: spacing.xs,
-});
+// 아래 3개 버튼은 teamMain 기준 반투명 배경/테두리
+const $lotteryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
+  const main = colors.teamMain ?? colors.tint;
+  return {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: main + "15",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: main + "30",
+    marginRight: spacing.xs,
+  };
+};
 
-const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  width: 36,
-  height: 36,
-  borderRadius: 18,
-  backgroundColor: colors.tint + "15",
-  justifyContent: "center",
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: colors.tint + "30",
-  marginRight: spacing.xs,
-});
+const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
+  const main = colors.teamMain ?? colors.tint;
+  return {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: main + "15",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: main + "30",
+    marginRight: spacing.xs,
+  };
+};
 
-const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  width: 36,
-  height: 36,
-  borderRadius: 18,
-  backgroundColor: colors.tint + "15",
-  justifyContent: "center",
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: colors.tint + "30",
-  marginRight: spacing.xs,
-});
+const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
+  const main = colors.teamMain ?? colors.tint;
+  return {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: main + "15",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: main + "30",
+    marginRight: spacing.xs,
+  };
+};
+
+/*
+커밋 메세지: refactor(feed): FeedHeader 팀 컬러 teamMain/teamSub 적용 및 tint 직접 참조 제거
+*/

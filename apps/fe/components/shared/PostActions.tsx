@@ -26,6 +26,11 @@ interface PostActionsProps {
   likeCount?: number;
   commentCount?: number;
   shareCount?: number;
+  teamColors?: {
+    actionButtonActive: string;
+    actionButtonInactive: string;
+    postActionsBackground: string;
+  };
 }
 
 /**
@@ -47,6 +52,7 @@ export default function PostActions({
   likeCount = 0,
   commentCount = 0,
   shareCount = 0,
+  teamColors,
 }: PostActionsProps) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
@@ -55,9 +61,17 @@ export default function PostActions({
 
   return (
     <View
-      style={themed(
-        variant === "detail" ? $detailActionSection : $feedActionBar,
-      )}
+      style={[
+        themed(variant === "detail" ? $detailActionSection : $feedActionBar),
+        // 팀별 PostActions 배경색 적용 - 더 완전한 커버리지
+        teamColors?.postActionsBackground && {
+          backgroundColor: teamColors.postActionsBackground,
+          borderRadius: 8, // 자연스러운 모서리 처리
+          marginHorizontal: -4, // 좌우 여백 확장으로 빈틈 제거
+          // paddingHorizontal: 20, // 확장된 마진에 맞춰 패딩 조정
+          marginBottom: -2, 
+        },
+      ]}
     >
       {/* 좋아요 버튼 */}
       <TouchableOpacity
@@ -68,9 +82,9 @@ export default function PostActions({
         <Ionicons
           name={isLiked ? "heart" : "heart-outline"}
           size={iconSize}
-          color={isLiked ? theme.colors.error : theme.colors.textDim}
+          color={isLiked ? (teamColors?.actionButtonActive || theme.colors.error) : (teamColors?.actionButtonInactive || theme.colors.textDim)}
         />
-        <Text style={themed($actionCount)}>{likeCount}</Text>
+        <Text style={[themed($actionCount), { color: teamColors?.actionButtonInactive || theme.colors.textDim }]}>{likeCount}</Text>
       </TouchableOpacity>
 
       {/* 댓글 버튼 */}
@@ -78,9 +92,9 @@ export default function PostActions({
         <Ionicons
           name="chatbubble-outline"
           size={iconSize}
-          color={theme.colors.textDim}
+          color={teamColors?.actionButtonInactive || theme.colors.textDim}
         />
-        <Text style={themed($actionCount)}>{commentCount}</Text>
+        <Text style={[themed($actionCount), { color: teamColors?.actionButtonInactive || theme.colors.textDim }]}>{commentCount}</Text>
       </TouchableOpacity>
 
       {/* 북마크 버튼 */}
@@ -92,7 +106,7 @@ export default function PostActions({
         <Ionicons
           name={isBookmarked ? "bookmark" : "bookmark-outline"}
           size={iconSize}
-          color={isBookmarked ? theme.colors.tint : theme.colors.textDim}
+          color={isBookmarked ? (teamColors?.actionButtonActive || theme.colors.tint) : (teamColors?.actionButtonInactive || theme.colors.textDim)}
         />
       </TouchableOpacity>
     </View>
@@ -106,6 +120,7 @@ const $feedActionBar: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.sm,
+  zIndex: 10, // TeamDecorationRenderer(zIndex: 5)보다 높게 설정하여 겹침 방지
 });
 
 const $detailActionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -113,6 +128,7 @@ const $detailActionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   justifyContent: "space-around",
   paddingVertical: spacing.lg,
   paddingHorizontal: spacing.md,
+  zIndex: 10, // TeamDecorationRenderer(zIndex: 5)보다 높게 설정하여 겹침 방지
 });
 
 const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -124,10 +140,9 @@ const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.xs,
 });
 
-const $actionCount: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 13,
+const $actionCount: ThemedStyle<TextStyle> = () => ({
+  fontSize: 15,
   fontWeight: "bold",
-  color: colors.textDim,
 });
 
 const $actionText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({

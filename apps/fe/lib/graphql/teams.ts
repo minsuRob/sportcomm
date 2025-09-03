@@ -44,6 +44,8 @@ export const USER_TEAM_FRAGMENT = gql`
     priority
     notificationEnabled
     favoriteDate
+    favoritePlayerName
+    favoritePlayerNumber
     createdAt
     team {
       ...TeamInfo
@@ -167,6 +169,8 @@ export const UPDATE_MY_TEAMS = gql`
 export interface UpdateMyTeamInput {
   teamId: string;
   favoriteDate?: string;
+  favoritePlayerName?: string;
+  favoritePlayerNumber?: number;
 }
 
 export interface Sport {
@@ -212,6 +216,8 @@ export interface UserTeam {
   priority: number;
   notificationEnabled: boolean;
   favoriteDate?: string;
+  favoritePlayerName?: string;
+  favoritePlayerNumber?: number;
   createdAt: string;
   team: Team;
 }

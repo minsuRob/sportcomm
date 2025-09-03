@@ -1,6 +1,6 @@
 {
   "SportCom": "SportTalk",
-  "points": "💰 {{points}}P 포인트",
+  "points": "💰 {{points}}P .",
   "list-outline": "목록",
   "ticket-outline": "티켓",
   "storefront-outline": "상점",
@@ -24,13 +24,13 @@
     "signupLogin": "회원가입/로그인"
   },
   "feed": {
-    "title": "피드",
+    "title": "담벼락🧱",
     "loadingPosts": "게시물을 불러오는 중...",
     "noPostsAvailable": "게시물이 없습니다",
     "pullToRefresh": "당겨서 새로고침",
     "errorFetching": "게시물을 불러오는데 실패했습니다",
     "createPost": "게시물 작성",
-    "chat": "채팅"
+    "chat": "팀 채팅💬"
   },
   "createPost": {
     "title": "게시물 작성",

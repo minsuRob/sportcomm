@@ -15,7 +15,8 @@ import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { User, getSession, saveSession } from "@/lib/auth";
+import { emitSessionChange } from "@/lib/auth/user-session-events";
 import { showToast } from "@/components/CustomToast";
 import TeamLogo from "@/components/TeamLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -46,6 +47,10 @@ export default function TeamSelectionScreen() {
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [teamFavoriteDates, setTeamFavoriteDates] = useState<
     Record<string, string>
+  >({});
+  // 최애 선수 { name, number } 상태 (팀별)
+  const [teamFavoritePlayers, setTeamFavoritePlayers] = useState<
+    Record<string, { name?: string; number?: number }>
   >({});
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -140,6 +145,10 @@ export default function TeamSelectionScreen() {
 
         const teamIds: string[] = [];
         const favoriteDates: Record<string, string> = {};
+        const favoritePlayers: Record<
+          string,
+          { name?: string; number?: number }
+        > = {};
 
         myTeamsData.myTeams.forEach((userTeam) => {
           console.log("UserTeam 객체:", userTeam);
@@ -155,12 +164,23 @@ export default function TeamSelectionScreen() {
           if (userTeam.favoriteDate) {
             favoriteDates[userTeam.team.id] = userTeam.favoriteDate;
           }
+          if (
+            (userTeam as any).favoritePlayerName ||
+            (userTeam as any).favoritePlayerNumber !== undefined
+          ) {
+            favoritePlayers[userTeam.team.id] = {
+              name: (userTeam as any).favoritePlayerName,
+              number: (userTeam as any).favoritePlayerNumber,
+            };
+          }
         });
 
         setSelectedTeams(teamIds);
         setTeamFavoriteDates(favoriteDates);
+        setTeamFavoritePlayers(favoritePlayers);
         console.log("사용자가 선택한 팀 목록 로드 성공:", teamIds);
         console.log("팀별 favoriteDate 로드 성공:", favoriteDates);
+        console.log("팀별 favoritePlayer 로드 성공:", favoritePlayers);
       } catch (error) {
         console.error("팀 목록 처리 중 오류 발생:", error);
       }
@@ -344,6 +364,8 @@ export default function TeamSelectionScreen() {
           teams: selectedTeams.map((teamId) => ({
             teamId,
             favoriteDate: teamFavoriteDates[teamId] || null,
+            favoritePlayerName: teamFavoritePlayers[teamId]?.name || null,
+            favoritePlayerNumber: teamFavoritePlayers[teamId]?.number ?? null,
           })),
         },
         context: {
@@ -362,8 +384,36 @@ export default function TeamSelectionScreen() {
 
       console.log("팀 선택 저장 성공:", data);
 
-      // 사용자 팀 목록 다시 조회
-      refetchMyTeams({ fetchPolicy: "network-only" });
+      // 사용자 팀 목록 다시 조회 (신규: refetch 결과를 세션 및 전역 이벤트에 반영)
+      const refetched = await refetchMyTeams({ fetchPolicy: "network-only" });
+      try {
+        const newMyTeams = refetched?.data?.myTeams || [];
+        // 현재 세션 사용자 불러오기
+        const sessionInfoAfter = await getSession();
+        const sessionUser = sessionInfoAfter.user;
+
+        if (sessionUser) {
+          // 세션 사용자 객체에 최신 myTeams 병합
+          await saveSession({
+            ...sessionUser,
+            myTeams: newMyTeams,
+          } as any);
+
+          // 세션 변경 이벤트 브로드캐스트 (feed 등에서 즉시 반영)
+          emitSessionChange({
+            user: { ...sessionUser, myTeams: newMyTeams } as any,
+            token: sessionInfoAfter.token,
+            reason: "update",
+          });
+          
+        } else {
+          console.warn(
+            "세션 사용자 정보를 찾지 못해 myTeams 세션 반영을 건너뜀",
+          );
+        }
+      } catch (sessionSyncError) {
+        console.warn("MyTeams 세션 반영 중 오류:", sessionSyncError);
+      }
 
       // My Teams 변경 시 필터를 새로운 My Teams로 재설정
       try {
@@ -371,7 +421,7 @@ export default function TeamSelectionScreen() {
           "selected_team_filter",
           JSON.stringify(selectedTeams),
         );
-        console.log("My Teams 변경에 따른 필터 재설정 완료");
+        
       } catch (error) {
         console.error("필터 재설정 실패:", error);
       }
@@ -415,11 +465,7 @@ export default function TeamSelectionScreen() {
         setTimeout(() => router.back(), 1000);
 
         getSession().then(({ token, user }) => {
-          console.log("현재 세션 상태:", {
-            hasToken: !!token,
-            hasUser: !!user,
-            userId: user?.id,
-          });
+          
         });
       } else {
         showToast({
@@ -619,7 +665,7 @@ export default function TeamSelectionScreen() {
         <TouchableOpacity
           style={themed($retryButton)}
           onPress={() => {
-            console.log("로그인 화면으로 이동 시도");
+            
             router.back();
           }}
         >
@@ -779,6 +825,38 @@ export default function TeamSelectionScreen() {
         onSelectFavoriteDate={() => {
           setShowSettings(false);
           setShowCalendar(true);
+        }}
+        teamId={pendingTeamId || undefined}
+        onSelectFavoritePlayer={async (player) => {
+          // 최애 선수 로컬 상태 갱신 + 즉시 백엔드 반영
+          if (!pendingTeamId) return;
+          const updatedPlayers = {
+            ...teamFavoritePlayers,
+            [pendingTeamId]: {
+              name: player.name,
+              number: player.number,
+            },
+          };
+          // 1) 로컬 상태 먼저 업데이트 (UI 즉시 반영)
+          setTeamFavoritePlayers(updatedPlayers);
+          // 2) 기존 선택된 팀 전체를 그대로 다시 전송 (favoriteDate 로직과 동일한 패턴 유지)
+          try {
+            // NOTE: 즉시 저장 - 커스텀 헤더 제거 (CORS: 'x-refresh-session' 차단 이슈 해결)
+            await updateMyTeams({
+              variables: {
+                teams: selectedTeams.map((teamId) => ({
+                  teamId,
+                  favoriteDate: teamFavoriteDates[teamId] || null,
+                  favoritePlayerName: updatedPlayers[teamId]?.name || null,
+                  favoritePlayerNumber: updatedPlayers[teamId]?.number ?? null,
+                })),
+              },
+            });
+            // (선택) 추후 성공 토스트 추가 가능
+          } catch (error) {
+            console.error("최애 선수 즉시 저장 실패:", error);
+            // (선택) 실패 시 롤백 로직 또는 사용자 알림 추가 가능
+          }
         }}
       />
 

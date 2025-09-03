@@ -308,23 +308,6 @@ export default function StorySection({
 
   return (
     <View style={themed($container)}>
-      {/* 스토리 타입 표시 헤더 (선택사항) */}
-      <View style={themed($headerContainer)}>
-        <Text style={themed($headerTitle)}>{"스토리"}</Text>
-        {/* <Text style={themed($headerSubtitle)}>
-          {storyTypes
-            .map((type) => {
-              if (type === "popular") return "인기";
-              if (type === "myteams") return "내팀";
-              if (type === "news") return "뉴스";
-              return null;
-            })
-            .filter(Boolean)
-            .join(" ")}
-          {" 콘텐츠"}
-        </Text> */}
-      </View>
-
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -357,17 +340,9 @@ export default function StorySection({
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
-  paddingVertical: spacing.md,
+  // paddingVertical: spacing.md,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
-  marginBottom: spacing.sm,
-});
-
-const $headerContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingHorizontal: spacing.lg,
   marginBottom: spacing.sm,
 });
 

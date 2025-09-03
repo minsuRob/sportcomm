@@ -23,6 +23,7 @@ import { useRouter } from "expo-router";
 import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { getTeamColors } from "@/lib/theme/teams/teamColor";
 import { usePostInteractions } from "../hooks/usePostInteractions";
 import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
 import TeamLogo from "./TeamLogo";
@@ -39,6 +40,7 @@ import { getSession } from "@/lib/auth";
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
 import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
+import { StrokedText } from "@/lib/utils/StrokedText";
 import { UniformPlaceholder } from "@/lib/team-customization/common/uniform/UniformPlaceholder";
 import { useTeamCustomization } from "@/lib/team-customization";
 
@@ -65,6 +67,9 @@ export interface User {
       logoUrl?: string;
       icon: string;
     };
+    // 백엔드 UserTeam.favoritePlayerName / favoritePlayerNumber 매핑
+    favoritePlayerName?: string;
+    favoritePlayerNumber?: number;
   }[];
   // 호환성을 위한 추가 필드들
   authorTeams?: {
@@ -166,91 +171,8 @@ const formatTimeAgo = (createdAt: string): string => {
   });
 };
 
-/**
- * 테두리가 있는 텍스트 렌더링 함수
- */
-const renderStrokedText = ({
-  content,
-  themed,
-  containerStyle,
-  fontSize = 24,
-  lineHeight = 32,
-  numberOfLines = 4,
-}: {
-  content: string;
-  themed: any;
-  containerStyle?: ViewStyle;
-  fontSize?: number;
-  lineHeight?: number;
-  numberOfLines?: number;
-}) => {
-  return (
-    <View style={[themed($titleContainer), containerStyle]}>
-      {/* 테두리 효과를 위한 여러 레이어 */}
-      <Text
-        style={[
-          themed($contentTextStroke),
-          { fontSize, lineHeight, left: -1, top: -1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke2),
-          { fontSize, lineHeight, left: 1, top: -1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke3),
-          { fontSize, lineHeight, left: -1, top: 1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke4),
-          { fontSize, lineHeight, left: 1, top: 1 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke5),
-          { fontSize, lineHeight, left: -2, top: 0 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      <Text
-        style={[
-          themed($contentTextStroke6),
-          { fontSize, lineHeight, left: 2, top: 0 },
-        ]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-      {/* 메인 텍스트 */}
-      <Text
-        style={[themed($contentText), { fontSize, lineHeight }]}
-        numberOfLines={numberOfLines}
-      >
-        {content}
-      </Text>
-    </View>
-  );
-};
+
+
 
 /**
  * 콘텐츠 텍스트 렌더링 함수
@@ -262,6 +184,7 @@ const renderContentText = ({
   fontSize = 24,
   lineHeight = 32,
   numberOfLines = 4,
+  teamColors,
 }: {
   content: string;
   themed: any;
@@ -269,16 +192,19 @@ const renderContentText = ({
   fontSize?: number;
   lineHeight?: number;
   numberOfLines?: number;
+  teamColors: any;
 }) => {
   return (
     <View style={[themed($contentContainer), containerStyle]}>
-      {renderStrokedText({
-        content,
-        themed,
-        fontSize,
-        lineHeight,
-        numberOfLines,
-      })}
+      <StrokedText
+        content={content}
+        fontSize={fontSize}
+        lineHeight={lineHeight}
+        numberOfLines={numberOfLines}
+        borderThickness={1.3}
+        teamColors={teamColors}
+        mainColor={"white"}
+      />
     </View>
   );
 };
@@ -292,18 +218,20 @@ const PostCard = React.memo(function PostCard({
   const router = useRouter();
   const { height: screenHeight } = useWindowDimensions();
   const [postCardWidth, setPostCardWidth] = useState(0);
+  const [postCardHeight, setPostCardHeight] = useState(0);
   const postCardRef = useRef<View>(null);
 
   useEffect(() => {
-    const measurePostCardWidth = () => {
+    const measurePostCardDimensions = () => {
       if (postCardRef.current) {
-        postCardRef.current.measure((_x, _y, width) => {
+        postCardRef.current.measure((_x, _y, width, height) => {
           setPostCardWidth(width);
+          setPostCardHeight(height);
         });
       }
     };
 
-    measurePostCardWidth();
+    measurePostCardDimensions();
   }, []);
 
   // 컨텍스트 메뉴 상태 관리
@@ -557,6 +485,16 @@ const PostCard = React.memo(function PostCard({
   };
   const teamName = deriveTeamName();
 
+  // 디버깅을 위한 로그 (개발 환경에서만)
+  if (__DEV__) {
+    console.log('PostCard 팀 정보:', {
+      teamId: post.teamId,
+      teamName,
+      postTeamName: (post as any)?.team?.name,
+      postTeamNameField: (post as any)?.teamName
+    });
+  }
+
   // --- 팀 팔레트 유틸 사용: DB 확장 컬러(main/sub/dark) 기반 ---
   // 동적 import (정적 import 추가 수정 없이 교체, Metro/Web 번들 모두 호환)
   const { getTeamPalette } = require("@/lib/team/palette");
@@ -575,15 +513,18 @@ const PostCard = React.memo(function PostCard({
     }
   );
 
-  // 기존 teamPalette 구조에 맞춘 매핑 (기존 스타일 코드 최소 변경)
+  // 팀별 색상 가져오기 (다크모드/라이트모드 구분)
+  const teamColors = getTeamColors(post.teamId, theme.isDark, teamName);
+
+  // 기존 teamPalette 구조에 맞춘 매핑 (팀별 색상 적용)
   const teamPalette = {
-    cardBg: palette.primary,
-    overlayGradient: palette.primary + "88", // 반투명 오버레이
-    badgeBg: palette.secondary + "CC",
-    iconBadgeBg: palette.secondary + "99",
-    moreButtonBg: palette.accent + "CC",
-    glowColor: palette.accent,
-    borderColor: palette.border,
+    cardBg: teamColors.uniformBackground,
+    overlayGradient: teamColors.uniformBackground + "88", // 반투명 오버레이
+    badgeBg: teamColors.postActionsBackground + "CC",
+    iconBadgeBg: teamColors.postActionsBackground + "99",
+    moreButtonBg: teamColors.postActionsBackground + "CC",
+    glowColor: teamColors.uniformDecoration,
+            borderColor: teamColors.cardBorder,
   };
 
   // 팀 커스터마이징 시스템 적용
@@ -599,7 +540,7 @@ const PostCard = React.memo(function PostCard({
   });
 
   return (
-    <View style={themed($outerContainer)}>
+    <View style={themed($outerContainer)} ref={postCardRef}>
       {/* 외부 글로우 효과 - 팀 색상 반영 */}
       <View
         style={[
@@ -641,7 +582,7 @@ const PostCard = React.memo(function PostCard({
           ]}
         >
           <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
-            <View style={themed($mediaContainer)}>
+            <View style={[themed($mediaContainer), { backgroundColor: teamColors.uniformBackground }]}>
               {videoMedia.length > 0 ? (
                 // 동영상이 있는 경우
                 <Pressable
@@ -748,8 +689,8 @@ const PostCard = React.memo(function PostCard({
               ) : imageMedia.length > 0 ? (
                 imageLoading ? (
                   // 이미지 로딩 중
-                  <View style={themed($loadingContainer)}>
-                    <ActivityIndicator size="large" color={theme.colors.text} />
+                  <View style={[themed($loadingContainer), { backgroundColor: teamColors.uniformBackground }]}>
+                    <ActivityIndicator size="large" color={teamColors.uniformText} />
                   </View>
                 ) : (
                   // 이미지가 있고 로딩 완료된 상태
@@ -805,15 +746,25 @@ const PostCard = React.memo(function PostCard({
                   </Pressable>
                 )
               ) : (
-                // 미디어가 없는 경우 - 유니폼 스타일 플레이스홀더
+                // 미디어가 없는 경우 - 유니폼 스타일 플레이스홀더 (최애 선수 정보 동적 반영)
                 <UniformPlaceholder
-                  text="김택연"
-                  number="63"
-                  mainColor={palette.primary}
-                  subColor={palette.secondary}
-                  outlineColor={palette.accent}
+                  text={
+                    post.author.myTeams?.find(
+                      (t) => t.team.id === post.teamId
+                    )?.favoritePlayerName || "니퍼트"
+                  }
+                  number={String(
+                    post.author.myTeams?.find(
+                      (t) => t.team.id === post.teamId
+                    )?.favoritePlayerNumber ?? "40"
+                  )}
+                  mainColor={teamColors.uniformText}
+                  subColor={teamColors.uniformNumberText}
+                  outlineColor={teamColors.uniformDecoration}
                   style={$uniformPlaceholder}
-                  containerWidth={mediaContainerWidth} // 동적 계산된 컨테이너 너비 전달
+                  teamColors={teamColors} // 팀별 커스텀 색상 전달
+                  containerWidth={postCardWidth - 32} // PostCard 너비에서 좌우 패딩 제외
+                  containerHeight={postCardHeight || 350} // PostCard 실제 측정된 높이 또는 기본값
                 />
               )}
 
@@ -851,10 +802,26 @@ const PostCard = React.memo(function PostCard({
                 }
                 activeOpacity={0.7}
               >
-                <Text style={themed($profileName)}>{post.author.nickname}</Text>
-                <Text style={themed($profileTime)}>
-                  {formatTimeAgo(post.createdAt)}
-                </Text>
+                <StrokedText
+                  content={post.author.nickname}
+                  fontSize={14}
+                  lineHeight={18}
+                  numberOfLines={1}
+                  borderThickness={0.5}
+                  mainColor={teamColors?.profileText || theme.colors.text}
+                  strokeColor={teamColors?.profileStroke || theme.colors.background}
+                  teamColors={teamColors}
+                />
+                <StrokedText
+                  content={formatTimeAgo(post.createdAt)}
+                  fontSize={12}
+                  lineHeight={16}
+                  numberOfLines={1}
+                  borderThickness={0.3}
+                  mainColor={teamColors?.profileTime || theme.colors.textDim}
+                  strokeColor={teamColors?.profileStroke || theme.colors.background}
+                  teamColors={teamColors}
+                />
               </TouchableOpacity>
 
               {/* 팔로우 버튼 - 자신의 게시물이 아닌 경우에만 표시 */}
@@ -957,18 +924,47 @@ const PostCard = React.memo(function PostCard({
               </View>
             </View>
 
+            {/* 팀별 커스터마이징 장식 요소 - 미디어가 없을 때(uniformPlaceholder 사용 시)만 표시 */}
+            {teamCustomization.hasDecoration &&
+             videoMedia.length === 0 &&
+             imageMedia.length === 0 && (
+              <TeamDecorationRenderer
+                teamId={post.teamId}
+                teamData={{
+                  id: post.teamId,
+                  name: teamName,
+                  mainColor: (post.team as any)?.mainColor,
+                  subColor: (post.team as any)?.subColor,
+                  darkMainColor: (post.team as any)?.darkMainColor,
+                  darkSubColor: (post.team as any)?.darkSubColor,
+                  sport: (post.team as any)?.sport,
+                  // 팀별 커스텀 색상 추가
+                  decorationBorder: teamColors.decorationBorder,
+                  cardBorder: teamColors.cardBorder,
+                  // 기존 색상들도 유지
+                  ...teamColors
+                }}
+                decorations={teamCustomization.decorations}
+                color={teamColors.decorationBorder || teamPalette.borderColor || categoryInfo.colors.border}
+                teamPalette={teamPalette}
+                categoryInfo={categoryInfo}
+              />
+            )}
+
             {/* 제목과 콘텐츠를 묶는 컨테이너 */}
             <View style={themed($textContainer)}>
               {/* 제목 표시 */}
               {post.title && post.title.trim() && (
-                <View style={themed($titleContainer)}>
-                  {renderStrokedText({
-                    content: post.title,
-                    themed: themed,
-                    fontSize: 24,
-                    lineHeight: 42,
-                    numberOfLines: 2,
-                  })}
+                <View>
+                                  <StrokedText
+                  content={post.title}
+                  fontSize={24}
+                  lineHeight={42}
+                  numberOfLines={2}
+                  borderThickness={1.5}
+                  teamColors={teamColors}
+                  mainColor={"white"}
+                />
                 </View>
               )}
 
@@ -980,6 +976,7 @@ const PostCard = React.memo(function PostCard({
                 fontSize: 14,
                 lineHeight: 32,
                 numberOfLines: 2,
+                teamColors: teamColors,
               })}
             </View>
           </TouchableOpacity>
@@ -998,29 +995,14 @@ const PostCard = React.memo(function PostCard({
             isBookmarkProcessing={isBookmarkProcessing}
             isLikeError={isLikeError}
             variant="feed"
+            teamColors={{
+              actionButtonActive: teamColors.actionButtonActive,
+              actionButtonInactive: teamColors.actionButtonInactive,
+              postActionsBackground: teamColors.postActionsBackground,
+            }}
           />
         </View>
       </View>
-
-      {/* 팀별 커스터마이징 장식 요소 */}
-      {teamCustomization.hasDecoration && (
-        <TeamDecorationRenderer
-          teamId={post.teamId}
-          teamData={{
-            id: post.teamId,
-            name: teamName,
-            mainColor: (post.team as any)?.mainColor,
-            subColor: (post.team as any)?.subColor,
-            darkMainColor: (post.team as any)?.darkMainColor,
-            darkSubColor: (post.team as any)?.darkSubColor,
-            sport: (post.team as any)?.sport
-          }}
-          decorations={teamCustomization.decorations}
-          color={teamPalette.borderColor || categoryInfo.colors.border}
-          teamPalette={teamPalette}
-          categoryInfo={categoryInfo}
-        />
-      )}
 
       {/* 컨텍스트 메뉴 */}
       <PostContextMenu
@@ -1075,7 +1057,7 @@ const $glowBackground: ThemedStyle<ViewStyle> = () => ({
 
 const $borderLayer: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderRadius: 20,
-  borderWidth: 1,
+  borderWidth: 1.5,
   overflow: "hidden",
   backgroundColor: colors.background,
 });
@@ -1094,21 +1076,19 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   elevation: 6,
 });
 
-const $mediaContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $mediaContainer: ThemedStyle<ViewStyle> = () => ({
   position: "relative",
   width: "100%",
   borderRadius: 16,
   overflow: "hidden",
-  backgroundColor: colors.backgroundDim,
 });
 
-const $loadingContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
   height: isWeb()
     ? IMAGE_CONSTANTS.WEB.MIN_HEIGHT
     : IMAGE_CONSTANTS.MOBILE.MIN_HEIGHT,
   justifyContent: "center",
   alignItems: "center",
-  backgroundColor: colors.backgroundDim,
 });
 
 const $gradientOverlay: ThemedStyle<ViewStyle> = () => ({
@@ -1287,102 +1267,29 @@ const $categoryText: ThemedStyle<TextStyle> = () => ({
 const $textContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   bottom: "25%",
-  left: spacing.sm,
+  left: spacing.xl,
   right: spacing.sm,
-  zIndex: 2,
+  zIndex: 4, // 스트라이프(zIndex: 1.5)와 다른 UI 요소들(zIndex: 2, 3)보다 앞에 위치하여 텍스트가 가려지지 않도록 설정
   gap: spacing.xxs,
 });
 
-// 제목 컨테이너
-const $titleContainer: ThemedStyle<ViewStyle> = () => ({
-  // position, bottom 속성 제거
-});
+
 
 // 콘텐츠 컨테이너
 const $contentContainer: ThemedStyle<ViewStyle> = () => ({
   // position, bottom 속성 제거
 });
 
-// 텍스트 스트로크 스타일들
-const $contentTextStroke: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: -1,
-  top: -1,
-});
 
-const $contentTextStroke2: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: 1,
-  top: -1,
-});
 
-const $contentTextStroke3: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: -1,
-  top: 1,
-});
 
-const $contentTextStroke4: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: 1,
-  top: 1,
-});
-
-const $contentTextStroke5: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: -2,
-  top: 0,
-});
-
-const $contentTextStroke6: ThemedStyle<TextStyle> = () => ({
-  position: "absolute",
-  color: "black",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-  left: 2,
-  top: 0,
-});
-
-const $contentText: ThemedStyle<TextStyle> = () => ({
-  color: "white",
-  fontSize: 24,
-  fontWeight: "bold",
-  lineHeight: 32,
-});
-
-const $emptyMediaContainer: ThemedStyle<ViewStyle> = () => ({
-  height: 300,
-  justifyContent: "center",
-  alignItems: "center",
-});
-
-// 유니폼 플레이스홀더 스타일
+// 유니폼 플레이스홀더 스타일 (350px 고정 높이)
 const $uniformPlaceholder: ThemedStyle<ViewStyle> = () => ({
-  height: 300,
+  height: 350,
   justifyContent: "center",
   alignItems: "center",
   borderRadius: 8,
+  paddingBottom: 120,
 });
 
 // 더보기 버튼

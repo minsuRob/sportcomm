@@ -301,7 +301,7 @@ export default function FeedScreen() {
                 </Text>
                 {duration ? (
                   <Text style={themed($myTeamDate)}>
-                    {"(와)과 함께 한지"}
+                    {",  함께 한지"}
                     <Text style={themed($myTeamDays)}>
                       {" "}
                       ({duration.totalDays}일)
@@ -511,20 +511,20 @@ const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $myTeamText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 14,
-  fontWeight: "900",
+  color: colors.teamMain ?? colors.tint,
+  fontSize: 15,
+  fontWeight: "800",
 });
 
 const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
-  fontSize: 12,
-  fontWeight: "400",
-  lineHeight: 16,
+  fontSize: 15,
+  fontWeight: "800",
+  // lineHeight: 16,
 });
 
 const $myTeamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 11,
+  fontSize: 15,
   fontWeight: "400",
   color: colors.textDim,
 });

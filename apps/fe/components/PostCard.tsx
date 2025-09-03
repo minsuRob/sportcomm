@@ -792,7 +792,7 @@ const PostCard = React.memo(function PostCard({
                 <UserAvatar
                   imageUrl={post.author.profileImageUrl}
                   name={post.author.nickname}
-                  size={32}
+                  size={40}
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -1109,11 +1109,12 @@ const $profileContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   zIndex: 2,
+  gap: spacing.xxs,
 });
 
 const $profileImage: ThemedStyle<ImageStyle> = () => ({
-  width: 32,
-  height: 32,
+  width: 40,
+  height: 40,
   borderRadius: 16,
   marginRight: 8,
   borderWidth: 2,

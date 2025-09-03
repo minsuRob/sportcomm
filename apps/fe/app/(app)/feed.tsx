@@ -309,14 +309,14 @@ export default function FeedScreen() {
                     </Text>
                     {duration.years > 0
                       ? `${duration.years}년째..`
-                      : `${duration.months}개월째..`}
+                      : `${duration.months + 1}개월째..`}
                   </Text>
                 ) : (
                   <Text
                     style={themed($myTeamDate)}
                     onPress={() => router.push("/(modals)/team-selection")}
                   >
-                    {"를 클릭해 좋아한 날을 기록하세요"}
+                    {"를 클릭해 좋아한 날을 기록하세요."}
                   </Text>
                 )}
                 {duration && (

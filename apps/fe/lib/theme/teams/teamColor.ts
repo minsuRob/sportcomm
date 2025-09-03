@@ -149,9 +149,9 @@ export const teamColors = {
       accent: "#FF6B35",
       decorationBorder: "#00204B",
       cardBorder: "#00204B",
-      profileText: "#00204B",
-      profileTime: "#6B7280",
-      profileStroke: "#FFFFFF",
+      profileText: "#FFFFFF",
+      profileTime: "#FFFFFF",
+      profileStroke: "#000000",
     },
     dark: {
       uniformBackground: "#0F3578",

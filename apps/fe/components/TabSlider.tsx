@@ -141,7 +141,7 @@ export default function TabSlider({
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
   paddingHorizontal: spacing.lg,
-  paddingTop: spacing.sm,
+  paddingTop: spacing.xxs,
   position: "relative",
   borderBottomWidth: 1,
   borderBottomColor: colors.border,

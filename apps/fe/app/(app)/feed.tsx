@@ -301,7 +301,7 @@ export default function FeedScreen() {
                 </Text>
                 {duration ? (
                   <Text style={themed($myTeamDate)}>
-                    {",  함께 한지"}
+                    {", 함께 한지"}
                     <Text style={themed($myTeamDays)}>
                       {" "}
                       ({duration.totalDays}일)
@@ -497,10 +497,10 @@ const $loadingFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $myTeamContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
-  borderBottomWidth: 1,
+  // borderBottomWidth: 1,
   borderBottomColor: colors.border,
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
+  paddingVertical: spacing.xs,
 });
 
 const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -508,12 +508,14 @@ const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   justifyContent: "center",
   gap: spacing.xxs,
+  
 });
 
 const $myTeamText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.teamMain ?? colors.tint,
   fontSize: 15,
   fontWeight: "800",
+  marginRight: -4,
 });
 
 const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({

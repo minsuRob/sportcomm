@@ -89,15 +89,16 @@ export default function FeedHeader({
         </View>
 
         {tabs && tabs.length > 0 && (
-          /* 탭 영역: 25% 폭 (minWidth 보장) */
-          <View style={themed($tabWrapper)}>
-            <TabSlider
-              tabs={tabs}
-              activeTab={activeTab ?? tabs[0].key}
-              onTabChange={(k) => onTabChange?.(k)}
-              variant="header"
-              height={32}
-            />
+          <View style={themed($tabCenterOverlay)} pointerEvents="box-none">
+            <View style={themed($tabInlineCenter)} pointerEvents="auto">
+              <TabSlider
+                tabs={tabs}
+                activeTab={activeTab ?? tabs[0].key}
+                onTabChange={(k) => onTabChange?.(k)}
+                variant="header"
+                height={32}
+              />
+            </View>
           </View>
         )}
 
@@ -181,8 +182,6 @@ export default function FeedHeader({
         </View>
       </View>
 
-      {/* (기존 2행 TabSlider 제거됨) */}
-
       {currentUser && (
         <ProfileContextPopover
           visible={profileMenuVisible}
@@ -216,7 +215,7 @@ export default function FeedHeader({
 
 const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "column",
-  paddingHorizontal: spacing.md,
+  paddingHorizontal: spacing.sm,
   paddingTop: spacing.md,
   paddingBottom: spacing.xs,
   backgroundColor: colors.card,
@@ -292,11 +291,22 @@ const $headerRow: ThemedStyle<ViewStyle> = () => ({
   // space-between 제거 -> 중앙 탭 영역 배치 위해 직접 margin 제어
 });
 
-const $tabWrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  width: "25%", // 요구사항: 전체의 25%
-  minWidth: 140, // 최소 가독 폭
-  marginHorizontal: spacing.xs,
+const $tabCenterOverlay: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  top: 0,
+  bottom: 0,
+  alignItems: "center",
   justifyContent: "center",
+  pointerEvents: "box-none",
+});
+
+const $tabInlineCenter: ThemedStyle<ViewStyle> = () => ({
+  minWidth: 180,
+  maxWidth: 320,
+  alignSelf: "center",
+  pointerEvents: "auto",
 });
 
 const $teamFilterInline: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

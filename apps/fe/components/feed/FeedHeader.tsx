@@ -38,6 +38,7 @@ interface FeedHeaderProps {
  * 피드 상단 헤더 컴포넌트
  * - 팀 필터, 알림, 글쓰기, 프로필 버튼을 포함합니다.
  * - 팀 컬러 오버라이드 도입: theme.colors.teamMain / teamSub (fallback: tint/accent)
+ * - 상세 게시판 버튼을 ProfileContextPopover 로 이관 (onBoardPress)
  */
 export default function FeedHeader({
   currentUser,
@@ -102,13 +103,7 @@ export default function FeedHeader({
                   {t("points", { points: currentUser.points ?? 0 })}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={themed($boardButton)}
-                onPress={onBoardPress}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="list-outline" size={20} color={teamMain} />
-              </TouchableOpacity>
+              {/* 상세 게시판 버튼: ProfileContextPopover 메뉴로 이동됨 (onBoardPress) */}
               {/* 로또(이벤트) 버튼: ProfileContextPopover 메뉴로 이동됨 */}
               {/* 샵 버튼: ProfileContextPopover 메뉴로 이동됨 */}
             </>
@@ -175,6 +170,10 @@ export default function FeedHeader({
           onLotteryPress={() => {
             setProfileMenuVisible(false);
             onLotteryPress();
+          }}
+          onBoardPress={() => {
+            setProfileMenuVisible(false);
+            onBoardPress();
           }}
           onTeamFilterPress={() => {
             setProfileMenuVisible(false);
@@ -279,4 +278,5 @@ const $headerRow: ThemedStyle<ViewStyle> = ({}) => ({
 /*
 커밋 메세지: refactor(feed): 불필요한 prop(onCreatePress) 및 미사용 스타일($lotteryButton, $shopButton) 제거
 추가 커밋 메세지: feat(feed header): TabSlider 헤더 내 임베드 및 상태 리프트 (tabs/activeTab/onTabChange props)
+추가 커밋 메세지: refactor(feed header): 상세 게시판 버튼 Popover 이동(onBoardPress prop 전달)
 */

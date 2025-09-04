@@ -19,6 +19,7 @@ export interface ProfileContextPopoverProps {
   onOpenProfile: () => void;
   onShopPress: () => void; // 상점(포인트 샵) 화면 열기 콜백
   onLotteryPress: () => void; // 로또/이벤트 화면 열기 콜백
+  onBoardPress: () => void; // 상세 게시판 화면 열기 콜백 (FeedHeader onBoardPress 이관)
   onTeamFilterPress: () => void; // 팀 피드 필터(TeamFilterSelector) 열기 콜백
   anchorStyle?: ViewStyle; // 부모에서 위치 제어
 }
@@ -26,7 +27,7 @@ export interface ProfileContextPopoverProps {
 /**
  * 프로필 드롭다운(팝오버) 메뉴
  * - 헤더 우측 아바타 아래에 표시되는 컨텍스트 메뉴
- * - TeamFilterSelector 접근 항목 추가 (팀 필터)
+ * - TeamFilterSelector / 상세 게시판 진입 항목 포함
  */
 export default function ProfileContextPopover({
   visible,
@@ -34,6 +35,7 @@ export default function ProfileContextPopover({
   onOpenProfile,
   onShopPress,
   onLotteryPress,
+  onBoardPress,
   onTeamFilterPress,
   anchorStyle,
 }: ProfileContextPopoverProps) {
@@ -83,6 +85,17 @@ export default function ProfileContextPopover({
           // FeedHeader 등에 있는 TeamFilterSelector 모달 트리거
           onClose();
           onTeamFilterPress();
+        },
+      },
+      {
+        key: "board",
+        label: "상세 게시판",
+        icon: (
+          <Ionicons name="list-outline" size={18} color={theme.colors.text} />
+        ),
+        onPress: () => {
+          onClose();
+          onBoardPress();
         },
       },
       {
@@ -163,6 +176,7 @@ export default function ProfileContextPopover({
       router,
       onShopPress,
       onLotteryPress,
+      onBoardPress,
       onTeamFilterPress,
     ],
   );
@@ -267,4 +281,5 @@ const $itemText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 /*
 커밋 메세지: feat(popover): 프로필 컨텍스트 메뉴에 팀 필터(TeamFilterSelector) 진입 항목 추가
+커밋 메세지: feat(popover): 상세 게시판(onBoardPress) 항목 추가 및 FeedHeader 버튼 기능 이관
 */

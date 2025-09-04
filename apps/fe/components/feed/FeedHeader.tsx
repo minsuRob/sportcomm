@@ -133,7 +133,7 @@ export default function FeedHeader({
         <View style={themed($headerRight)}>
           {currentUser && (
             <>
-              {/* <TouchableOpacity
+              <TouchableOpacity
                 style={themed($pointsBadge)}
                 onPress={onShopPress}
                 activeOpacity={0.7}
@@ -141,7 +141,7 @@ export default function FeedHeader({
                 <Text style={themed($pointsText)}>
                   {t("points", { points: currentUser.points ?? 0 })}
                 </Text>
-              </TouchableOpacity> */}
+              </TouchableOpacity>
             </>
           )}
 

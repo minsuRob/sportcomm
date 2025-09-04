@@ -1,3 +1,37 @@
+/**
+ * NOTE: 피드 & 스토리 데이터 로딩 정책 개편 안내
+ *
+ * 현재 이 파일은 기존 useFeedPosts + (StorySection 내부 useStoryData) 조합으로
+ * 매 화면 진입 시 네트워크 로드를 조건부 수행합니다.
+ *
+ * 새 캐싱 전략:
+ *  - 중앙 메모리 캐시 유틸: feedStoryCache (TTL 1분)
+ *  - 통합 훅: useFeedStoryData (피드 + 스토리 동시 캐시/새로고침 제어)
+ *  - 화면 전환(프로필, 슬라이더, 기타 탭) 후 복귀 시:
+ *      -> 1분 이내면 네트워크 재호출 없이 즉시 캐시된 posts/stories 표시
+ *      -> 1분 이상 경과 & 앱/탭 비활성 → 활성 복귀 후 첫 접근 시에만 refresh
+ *  - 수동 새로고침(Pull-To-Refresh)은 refreshFeed / refreshStories / refreshAll 호출
+ *
+ * 단계적 전환 가이드 (차후 적용 시):
+ *  1) useFeedPosts 사용 구간을 useFeedStoryData로 교체
+ *      const {
+ *        posts, stories, loadingFeed, loadingStories,
+ *        refreshFeed, refreshStories, refreshAll,
+ *        needsFeedRefresh, needsStoryRefresh
+ *      } = useFeedStoryData({ teamIds: selectedTeamIds });
+ *
+ *  2) 기존 posts 상태/새로고침 로직은 유지하되
+ *     - 초기 마운트 시 needsFeedRefresh가 false면 setPosts(feedStoryCache.getFeed()!.posts) 형태로 즉시 반영
+ *     - StorySection props로 stories/refreshStories 전달(또는 내부 훅 제거)
+ *
+ *  3) AppState / visibility 기반 1분 경과 처리(백그라운드 → 복귀)는 feedStoryCache 내부 handleForeground 로직이 수행
+ *
+ *  4) 기존 useFeedPosts의 팀 필터/차단 사용자 로직 등 추가 기능이 필요하면
+ *     - useFeedStoryData에 확장 (페이지네이션, 필터별 캐시 Key 분리 등)
+ *
+ * 현재 커밋에서는 설명 주석만 추가하고 실제 전환 코드는 적용하지 않았습니다.
+ * 추후 점진적 마이그레이션 시 이 주석을 참고하세요.
+ */
 import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
@@ -54,7 +88,7 @@ import ShopModal from "@/components/shop/ShopModal";
 import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useChatRooms } from "@/lib/hooks/useChatRooms";
-import { useFeedPosts } from "@/lib/hooks/useFeedPosts";
+import { useAdvancedFeed } from "@/lib/hooks/useAdvancedFeed";
 
 // --- Type Definitions ---
 
@@ -68,18 +102,25 @@ export default function FeedScreen() {
   const router = useRouter();
   const { currentUser, reload: reloadCurrentUser } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<string>("feed");
+  // 고급 캐시 기반 피드 훅으로 교체 (팀 필터/차단/페이지네이션/TTL)
   const {
     posts,
-    fetching,
+    loadingInitial,
+    loadingMore,
+    refreshing,
+    hasNext,
+    loadMore,
+    refresh,
+    teamIds,
+    setTeamFilter,
     error,
-    isRefreshing,
-    handleRefresh,
-    handleLoadMore,
-    selectedTeamIds,
-    handleTeamFilterChange,
-    performanceMetrics,
-    filterInitialized,
-  } = useFeedPosts();
+  } = useAdvancedFeed({
+    teamIds: null,
+    pageSize: 10,
+    includeBlockedUsers: true,
+    autoLoad: true,
+  });
+  const fetching = loadingInitial || loadingMore;
 
   const {
     chatRooms,
@@ -180,16 +221,12 @@ export default function FeedScreen() {
   // 팀 필터 선택 핸들러는 useFeedPosts 훅에서 제공됨
   // 목록 재조회 효과는 훅 내부에서 처리됨
   // 팀 필터 변경 시 강제 새로고침 (popover 통해 변경 시 refetch 누락 방지)
-  useEffect(() => {
-    if (!filterInitialized) return;
-    handleRefresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTeamIds]);
+  // (구) 필터 초기화/변경 useEffect 제거: useAdvancedFeed 내부에서 teamIds 변경 시 자동 처리
 
   // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
   useEffect(() => {
     return () => {};
-  }, [handleRefresh]);
+  }, [refresh]);
 
   // 탭 데이터 (FeedHeader 로 전달하여 내부 TabSlider 렌더)
   const tabs = [
@@ -197,7 +234,7 @@ export default function FeedScreen() {
     { key: "chat", title: t(TRANSLATION_KEYS.FEED_CHAT) },
   ];
 
-  if (fetching && posts.length === 0 && !isRefreshing) {
+  if (fetching && posts.length === 0 && !refreshing) {
     return (
       <View style={themed($container)}>
         <FeedHeader
@@ -233,14 +270,14 @@ export default function FeedScreen() {
         </Text>
         <Button
           title={t(TRANSLATION_KEYS.COMMON_RETRY)}
-          onPress={handleRefresh}
+          onPress={refresh}
           color={theme.colors.tint}
         />
       </View>
     );
   }
 
-  const footerLoading = fetching && !isRefreshing;
+  const footerLoading = fetching && !refreshing;
 
   return (
     <View style={themed($container)}>
@@ -312,7 +349,9 @@ export default function FeedScreen() {
                     onPress={() => router.push("/(modals)/team-selection")}
                   >
                     {", 클릭하여 "}
-                    <Text style={themed($myTeamDateUnderline)}>처음 좋아한 날</Text>
+                    <Text style={themed($myTeamDateUnderline)}>
+                      처음 좋아한 날
+                    </Text>
                     {"을 기록하세요."}
                   </Text>
                 )}
@@ -334,8 +373,8 @@ export default function FeedScreen() {
       />
       {/* 팀 필터 선택 모달 */}
       <TeamFilterSelector
-        onTeamSelect={handleTeamFilterChange}
-        selectedTeamIds={selectedTeamIds}
+        onTeamSelect={setTeamFilter}
+        selectedTeamIds={teamIds}
         loading={fetching}
         open={teamFilterOpen}
         onOpenChange={setTeamFilterOpen}
@@ -362,15 +401,14 @@ export default function FeedScreen() {
         <FeedList
           posts={posts}
           fetching={fetching}
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          onEndReached={handleLoadMore}
+          refreshing={refreshing}
+          onRefresh={refresh}
+          onEndReached={() => {
+            if (hasNext && !loadingMore) loadMore();
+          }}
           ListHeaderComponent={
             currentUser ? (
-              <StorySection
-                teamIds={selectedTeamIds}
-                currentUser={currentUser}
-              />
+              <StorySection teamIds={teamIds} currentUser={currentUser} />
             ) : null
           }
           ListFooterComponent={

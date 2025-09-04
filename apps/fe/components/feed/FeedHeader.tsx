@@ -13,7 +13,6 @@ import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
 import ProfileContextPopover from "@/components/shared/ProfileContextPopover";
 
-import { NotificationBadge } from "@/components/notifications";
 import { useAppTheme } from "@/lib/theme/context";
 import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -77,8 +76,6 @@ export default function FeedHeader({
       onProfilePress();
     }
   };
-
-  const teamMain = theme.colors.teamMain ?? theme.colors.tint;
 
   return (
     <View style={themed($header)}>
@@ -147,19 +144,7 @@ export default function FeedHeader({
               </TouchableOpacity> */}
             </>
           )}
-          {currentUser && (
-            <TouchableOpacity
-              style={themed($boardButton)}
-              onPress={onNotificationPress}
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={teamMain}
-              />
-              <NotificationBadge size="small" />
-            </TouchableOpacity>
-          )}
+
           <TouchableOpacity
             ref={profileButtonRef}
             style={themed($iconButton)}
@@ -205,6 +190,10 @@ export default function FeedHeader({
           onTeamFilterPress={() => {
             setProfileMenuVisible(false);
             onTeamFilterPress();
+          }}
+          onNotificationPress={() => {
+            setProfileMenuVisible(false);
+            onNotificationPress();
           }}
           anchorStyle={popoverPosition}
         />
@@ -331,4 +320,5 @@ const $teamFilterInlineText: ThemedStyle<TextStyle> = ({ colors }) => ({
 /*
 커밋 메세지: feat(feed header): TabSlider 1행 내 25% 폭 중앙 배치 및 2행 제거
 추가 커밋 메세지: feat(feed header): 인라인 팀 필터 버튼 추가 (TeamFilterSelector 접근성 복구)
+추가 커밋 메세지: refactor(feed header): 알림 버튼 제거 및 ProfileContextPopover로 이관
 */

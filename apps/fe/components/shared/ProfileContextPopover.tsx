@@ -17,11 +17,12 @@ export interface ProfileContextPopoverProps {
   visible: boolean;
   onClose: () => void;
   onOpenProfile: () => void;
-  onShopPress: () => void; // 상점(포인트 샵) 화면 열기 콜백
-  onLotteryPress: () => void; // 로또/이벤트 화면 열기 콜백
-  onBoardPress: () => void; // 상세 게시판 화면 열기 콜백 (FeedHeader onBoardPress 이관)
-  onTeamFilterPress: () => void; // 팀 피드 필터(TeamFilterSelector) 열기 콜백
-  anchorStyle?: ViewStyle; // 부모에서 위치 제어
+  onShopPress: () => void; // 포인트 상점(Shop) 화면 열기
+  onLotteryPress: () => void; // 이벤트/포인트 추첨(lottery) 화면 열기
+  onBoardPress: () => void; // 상세 게시판 화면 열기 (기존 FeedHeader 버튼 이관)
+  onTeamFilterPress: () => void; // 팀 피드 필터(TeamFilterSelector) 모달 열기
+  onNotificationPress: () => void; // 알림 목록 화면 열기 (기존 FeedHeader 알림 버튼 이관)
+  anchorStyle?: ViewStyle; // 부모에서 위치/포지션 제어 (measure 결과 전달)
 }
 
 /**
@@ -37,6 +38,7 @@ export default function ProfileContextPopover({
   onLotteryPress,
   onBoardPress,
   onTeamFilterPress,
+  onNotificationPress,
   anchorStyle,
 }: ProfileContextPopoverProps) {
   const { theme, toggleTheme, themed } = useAppTheme();
@@ -73,6 +75,21 @@ export default function ProfileContextPopover({
         onPress: () => {
           onClose();
           onOpenProfile();
+        },
+      },
+      {
+        key: "notifications",
+        label: "알림",
+        icon: (
+          <Ionicons
+            name="notifications-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          onClose();
+          onNotificationPress();
         },
       },
       {
@@ -178,6 +195,7 @@ export default function ProfileContextPopover({
       onLotteryPress,
       onBoardPress,
       onTeamFilterPress,
+      onNotificationPress,
     ],
   );
 
@@ -282,4 +300,5 @@ const $itemText: ThemedStyle<TextStyle> = ({ colors }) => ({
 /*
 커밋 메세지: feat(popover): 프로필 컨텍스트 메뉴에 팀 필터(TeamFilterSelector) 진입 항목 추가
 커밋 메세지: feat(popover): 상세 게시판(onBoardPress) 항목 추가 및 FeedHeader 버튼 기능 이관
+커밋 메세지: feat(popover): 알림(onNotificationPress) 항목 추가 및 FeedHeader 알림 버튼 제거
 */

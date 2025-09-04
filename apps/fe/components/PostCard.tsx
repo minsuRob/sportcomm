@@ -1205,7 +1205,7 @@ const $profileInfoColumn: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   justifyContent: "center",
   flexShrink: 0,
   gap: 2,
-  marginRight: spacing.xs,
+  marginRight: spacing.xxxs,
 });
 
 const $profileName: ThemedStyle<TextStyle> = () => ({

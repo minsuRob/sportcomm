@@ -1301,7 +1301,6 @@ const $moreButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   backgroundColor: "rgba(0, 0, 0, 0.5)",
   justifyContent: "center",
   alignItems: "center",
-  marginLeft: spacing.xs,
 });
 
 // 동영상 관련 스타일들

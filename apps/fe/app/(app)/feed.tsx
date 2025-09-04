@@ -340,25 +340,31 @@ export default function FeedScreen() {
                     size={20}
                     color={theme.colors.tint}
                   />
-                  <Text style={themed($myTeamText)}>
-                    {displayTeam.team.name}
-                  </Text>
+
                   {duration ? (
-                    <Text style={themed($myTeamDate)}>
-                      {", 함께 한지"}
-                      <Text style={themed($myTeamDays)}>
-                        {" "}
-                        ({duration.totalDays}일){" "}
+                    <>
+                      <Text style={themed($myTeamText)}>
+                        {displayTeam.team.name}
                       </Text>
-                      {duration.years > 0
-                        ? `${duration.years}년째..`
-                        : `${duration.months + 1}개월째..`}
-                    </Text>
+                      <Text style={themed($myTeamDate)}>
+                        {", 함께 한지"}
+                        <Text style={themed($myTeamDays)}>
+                          {" "}
+                          ({duration.totalDays}일){" "}
+                        </Text>
+                        {duration.years > 0
+                          ? `${duration.years}년째..`
+                          : `${duration.months + 1}개월째..`}
+                      </Text>
+                    </>
                   ) : (
                     <Text
                       style={themed($myTeamDate)}
                       onPress={() => router.push("/(modals)/team-selection")}
                     >
+                      <Text style={themed($myTeamText)}>
+                        {displayTeam.team.name}
+                      </Text>
                       {", 클릭하여 "}
                       <Text style={themed($myTeamDateUnderline)}>
                         처음 좋아한 날

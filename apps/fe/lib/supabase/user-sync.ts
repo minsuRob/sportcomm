@@ -21,6 +21,10 @@ const SYNC_USER_MUTATION = gql`
       bio
       isActive
       points
+      experience
+      level
+      experienceToNextLevel
+      lastAttendanceAt
       createdAt
       updatedAt
     }
@@ -40,6 +44,10 @@ const UPDATE_USER_PROFILE_MUTATION = gql`
       bio
       isActive
       points
+      experience
+      level
+      experienceToNextLevel
+      lastAttendanceAt
       createdAt
       updatedAt
     }
@@ -59,6 +67,10 @@ const GET_CURRENT_USER_INFO_QUERY = gql`
       bio
       isActive
       points
+      experience
+      level
+      experienceToNextLevel
+      lastAttendanceAt
       createdAt
       updatedAt
       myTeams {
@@ -118,6 +130,10 @@ export interface User {
   isActive: boolean;
   isEmailVerified: boolean;
   points?: number;
+  experience?: number;
+  level?: number;
+  experienceToNextLevel?: number;
+  lastAttendanceAt?: string;
   createdAt: string;
   updatedAt: string;
 }

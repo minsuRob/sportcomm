@@ -139,7 +139,7 @@ export default function FeedHeader({
                 activeOpacity={0.7}
               >
                 <Text style={themed($pointsText)}>
-                  {t("points", { points: currentUser.points ?? 0 })}
+                  {(currentUser.points ?? 0).toLocaleString()}P
                 </Text>
               </TouchableOpacity>
             </>

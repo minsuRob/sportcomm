@@ -42,6 +42,12 @@ interface UserProfile {
   followingCount: number;
   postCount: number;
   myTeams?: UserTeam[];
+  // 확장된 필드 (경험치/레벨/포인트)
+  points?: number;
+  experience?: number;
+  level?: number;
+  experienceToNextLevel?: number;
+  lastAttendanceAt?: string | null;
 }
 
 /**
@@ -90,6 +96,77 @@ export default function ProfileScreen() {
     { key: "posts", title: "내 게시물" },
     { key: "bookmarks", title: "북마크" },
   ];
+
+  /**
+   * 경험치/레벨 진행도 계산
+   * - 백엔드에서 내려준 현재 경험치(currentUser.experience)
+   * - 다음 레벨까지 남은 경험치(currentUser.experienceToNextLevel)
+   * 을 이용해 전체 Progress 비율을 구합니다.
+   */
+  const currentExp =
+    (currentUser as any)?.experience && (currentUser as any).experience > 0
+      ? (currentUser as any).experience
+      : 0;
+  const level =
+    (currentUser as any)?.level && (currentUser as any).level > 0
+      ? (currentUser as any).level
+      : 1;
+  const expToNext =
+    (currentUser as any)?.experienceToNextLevel &&
+    (currentUser as any).experienceToNextLevel > 0
+      ? (currentUser as any).experienceToNextLevel
+      : 0;
+  const nextLevelTotal = currentExp + expToNext;
+  const progressRatio =
+    nextLevelTotal > 0 ? Math.min(1, currentExp / nextLevelTotal) : 0;
+  /**
+   * 레벨 Progress UI 렌더러
+   * - 프로필 상단(아바타/닉네임 영역 하단)에 배치하기 위해 호출 위치에서 그대로 JSX 삽입
+   * - currentUser 없으면 렌더링 생략
+   */
+  const renderLevelProgress = () => {
+    if (!currentUser) return null;
+    return (
+      <View
+        style={{
+          width: "100%",
+          marginTop: 12,
+          alignItems: "center",
+          paddingHorizontal: 8,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: "700",
+            color: theme.colors.text,
+            marginBottom: 4,
+          }}
+        >
+          {`Lv.${level} | EXP ${currentExp.toLocaleString()}`}
+          {expToNext > 0 &&
+            ` / ${nextLevelTotal.toLocaleString()} (+${expToNext.toLocaleString()})`}
+        </Text>
+        <View
+          style={{
+            width: "100%",
+            height: 10,
+            borderRadius: 6,
+            backgroundColor: theme.colors.backgroundAlt,
+            overflow: "hidden",
+          }}
+        >
+          <View
+            style={{
+              width: `${Math.round(progressRatio * 100)}%`,
+              height: "100%",
+              backgroundColor: theme.colors.tint,
+            }}
+          />
+        </View>
+      </View>
+    );
+  };
 
   // 사용자 프로필 데이터 조회
   const { data: profileData, refetch: refetchProfile } = useQuery<{
@@ -300,6 +377,8 @@ export default function ProfileScreen() {
             </Text>
           </View>
         ) : null}
+
+        {renderLevelProgress()}
 
         {/* 팀 정보 표시 */}
         {userProfile.myTeams && userProfile.myTeams.length > 0 ? (

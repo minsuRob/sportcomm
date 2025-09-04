@@ -1427,7 +1427,7 @@ const $categoryText: ThemedStyle<TextStyle> = () => ({
 const $textContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
   bottom: "25%",
-  left: spacing.xl,
+  left: spacing.xl + spacing.xs,
   right: spacing.sm,
   zIndex: 4, // 스트라이프(zIndex: 1.5)와 다른 UI 요소들(zIndex: 2, 3)보다 앞에 위치하여 텍스트가 가려지지 않도록 설정
   gap: spacing.xxs,

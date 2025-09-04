@@ -311,7 +311,9 @@ export default function FeedScreen() {
                     style={themed($myTeamDate)}
                     onPress={() => router.push("/(modals)/team-selection")}
                   >
-                    {"를 클릭해 좋아한 날을 기록하세요."}
+                    {", 클릭하여 "}
+                    <Text style={themed($myTeamDateUnderline)}>처음 좋아한 날</Text>
+                    {"을 기록하세요."}
                   </Text>
                 )}
                 {duration && (
@@ -519,6 +521,13 @@ const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   fontSize: 15,
   fontWeight: "800",
+});
+
+const $myTeamDateUnderline: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 15,
+  fontWeight: "800",
+  textDecorationLine: "underline",
 });
 
 const $myTeamDays: ThemedStyle<TextStyle> = ({ colors }) => ({

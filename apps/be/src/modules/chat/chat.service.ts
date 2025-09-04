@@ -9,6 +9,7 @@ import {
 import { User } from '../../entities/user.entity';
 import { UserTeam } from '../../entities/user-team.entity';
 import { Team } from '../../entities/team.entity';
+import { ProgressService } from '../progress/progress.service';
 
 /**
  * 채팅 서비스
@@ -29,6 +30,7 @@ export class ChatService {
     private readonly userTeamRepository: Repository<UserTeam>,
     @InjectRepository(Team)
     private readonly teamRepository: Repository<Team>,
+    private readonly progressService: ProgressService, // 포인트/경험치 적립 서비스 주입
   ) {}
 
   /**
@@ -267,6 +269,14 @@ export class ChatService {
     if (!messageWithRelations) {
       throw new Error('메시지 저장 후 조회에 실패했습니다.');
     }
+
+    // === 포인트/경험치 적립 처리 (채팅 메시지 작성 액션) ===
+    // 실패하더라도 채팅 흐름을 방해하지 않도록 별도 예외 전파 없이 로깅만 수행
+    this.progressService
+      .awardChatMessage(userId)
+      .catch((err) =>
+        console.error('[Progress] 채팅 메시지 적립 실패:', err?.message || err),
+      );
 
     return messageWithRelations;
   }

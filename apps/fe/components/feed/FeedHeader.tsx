@@ -12,7 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
 import ProfileContextPopover from "@/components/shared/ProfileContextPopover";
-import TeamFilterSelector from "@/components/TeamFilterSelector";
+
 import { NotificationBadge } from "@/components/notifications";
 import { useAppTheme } from "@/lib/theme/context";
 import { typography } from "@/lib/theme/typography";
@@ -21,15 +21,12 @@ import type { User } from "@/lib/auth";
 
 interface FeedHeaderProps {
   currentUser: User | null;
-  selectedTeamIds: string[] | null;
-  onTeamSelect: (ids: string[] | null) => void;
-  loading?: boolean;
   onNotificationPress: () => void;
-  onCreatePress: () => void;
   onProfilePress: () => void;
   onShopPress: () => void;
   onLotteryPress: () => void;
-  onBoardPress: () => void; // 상세 게시판 버튼 클릭 핸들러 추가
+  onBoardPress: () => void; // 상세 게시판 버튼 클릭 핸들러
+  onTeamFilterPress: () => void; // 프로필 팝오버에서 팀 필터 열기
 }
 
 /**
@@ -39,15 +36,12 @@ interface FeedHeaderProps {
  */
 export default function FeedHeader({
   currentUser,
-  selectedTeamIds,
-  onTeamSelect,
-  loading = false,
   onNotificationPress,
-  onCreatePress,
   onProfilePress,
   onShopPress,
   onLotteryPress,
-  onBoardPress, // 상세 게시판 버튼 클릭 핸들러 추가
+  onBoardPress,
+  onTeamFilterPress,
 }: FeedHeaderProps) {
   const { t } = useTranslation();
   const { themed, theme } = useAppTheme();
@@ -80,7 +74,6 @@ export default function FeedHeader({
 
   // 팀 메인/서브 컬러 (fallback 처리)
   const teamMain = theme.colors.teamMain ?? theme.colors.tint;
-  const teamSub = theme.colors.teamSub ?? theme.colors.accent;
 
   return (
     <View style={themed($header)}>
@@ -111,24 +104,17 @@ export default function FeedHeader({
           </>
         )}
         {currentUser && (
-          <>
-            <TeamFilterSelector
-              onTeamSelect={onTeamSelect}
-              selectedTeamIds={selectedTeamIds}
-              loading={loading}
+          <TouchableOpacity
+            style={themed($iconButton)}
+            onPress={onNotificationPress}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color={theme.colors.text}
             />
-            <TouchableOpacity
-              style={themed($iconButton)}
-              onPress={onNotificationPress}
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={theme.colors.text}
-              />
-              <NotificationBadge size="small" />
-            </TouchableOpacity>
-          </>
+            <NotificationBadge size="small" />
+          </TouchableOpacity>
         )}
         <TouchableOpacity
           ref={profileButtonRef}
@@ -166,6 +152,10 @@ export default function FeedHeader({
           onLotteryPress={() => {
             setProfileMenuVisible(false);
             onLotteryPress();
+          }}
+          onTeamFilterPress={() => {
+            setProfileMenuVisible(false);
+            onTeamFilterPress();
           }}
           anchorStyle={popoverPosition}
         />
@@ -239,37 +229,7 @@ const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "700",
 });
 
-// 아래 3개 버튼은 teamMain 기준 반투명 배경/테두리
-const $lotteryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
-  const main = colors.teamMain ?? colors.tint;
-  return {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: main + "15",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: main + "30",
-    marginRight: spacing.xs,
-  };
-};
-
-const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
-  const main = colors.teamMain ?? colors.tint;
-  return {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: main + "15",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: main + "30",
-    marginRight: spacing.xs,
-  };
-};
-
+// 아래 버튼은 teamMain 기준 반투명 배경/테두리
 const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
   const main = colors.teamMain ?? colors.tint;
   return {
@@ -286,5 +246,5 @@ const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
 };
 
 /*
-커밋 메세지: refactor(feed): FeedHeader 팀 컬러 teamMain/teamSub 적용 및 tint 직접 참조 제거
+커밋 메세지: refactor(feed): 불필요한 prop(onCreatePress) 및 미사용 스타일($lotteryButton, $shopButton) 제거
 */

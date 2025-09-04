@@ -24,6 +24,9 @@ interface TeamFilterSelectorProps {
   onTeamSelect: (teamIds: string[] | null) => void;
   selectedTeamIds: string[] | null;
   loading?: boolean;
+  open?: boolean; // 외부에서 모달 가시성 제어 (controlled 모드)
+  onOpenChange?: (open: boolean) => void; // controlled 모드에서 열림/닫힘 변경 콜백
+  hideTriggerButton?: boolean; // true 시 내부 트리거 버튼 숨김 (외부 메뉴/버튼으로만 열기)
 }
 
 /**
@@ -34,9 +37,21 @@ export default function TeamFilterSelector({
   onTeamSelect,
   selectedTeamIds,
   loading = false,
+  open,
+  onOpenChange,
+  hideTriggerButton = false,
 }: TeamFilterSelectorProps) {
   const { themed, theme } = useAppTheme();
-  const [modalVisible, setModalVisible] = useState(false);
+  // 내부/외부(Controlled) 모달 열림 상태 통합 관리
+  const [internalOpen, setInternalOpen] = useState(false);
+  const modalVisible = typeof open === "boolean" ? open : internalOpen;
+  const setModalVisible = (next: boolean) => {
+    if (typeof open === "boolean") {
+      onOpenChange?.(next);
+    } else {
+      setInternalOpen(next);
+    }
+  };
   // 체크박스처럼 모달 내에서만 임시 선택 상태를 유지하고, 적용 버튼에서만 반영
   const [pendingSelectedIds, setPendingSelectedIds] = useState<string[]>(
     selectedTeamIds ?? [],
@@ -138,31 +153,33 @@ export default function TeamFilterSelector({
 
   return (
     <>
-      {/* 필터 버튼 */}
-      <TouchableOpacity
-        style={themed($filterButton)}
-        onPress={() => setModalVisible(true)}
-        disabled={loading}
-      >
-        <TeamLogo
-          logoUrl={getDisplayLogo().logoUrl}
-          fallbackIcon={getDisplayLogo().fallbackIcon}
-          teamName={getDisplayLogo().teamName}
-          size={16}
-        />
-        <Text style={themed($filterText)} numberOfLines={1}>
-          {getDisplayText()}
-        </Text>
-        {loading ? (
-          <ActivityIndicator size="small" color={theme.colors.textDim} />
-        ) : (
-          <Ionicons
-            name="chevron-down"
-            size={14}
-            color={theme.colors.textDim}
+      {/* 필터 버튼 (hideTriggerButton=true 이면 외부 트리거 사용) */}
+      {!hideTriggerButton && (
+        <TouchableOpacity
+          style={themed($filterButton)}
+          onPress={() => setModalVisible(true)}
+          disabled={loading}
+        >
+          <TeamLogo
+            logoUrl={getDisplayLogo().logoUrl}
+            fallbackIcon={getDisplayLogo().fallbackIcon}
+            teamName={getDisplayLogo().teamName}
+            size={16}
           />
-        )}
-      </TouchableOpacity>
+          <Text style={themed($filterText)} numberOfLines={1}>
+            {getDisplayText()}
+          </Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={theme.colors.textDim} />
+          ) : (
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color={theme.colors.textDim}
+            />
+          )}
+        </TouchableOpacity>
+      )}
 
       {/* 팀 선택 모달 */}
       <Modal

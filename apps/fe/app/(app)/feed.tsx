@@ -52,6 +52,7 @@ import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
 import ShopModal from "@/components/shop/ShopModal";
+import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useChatRooms } from "@/lib/hooks/useChatRooms";
 import { useFeedPosts } from "@/lib/hooks/useFeedPosts";
@@ -64,6 +65,7 @@ export default function FeedScreen() {
   // 목록/로딩 상태는 전담 훅에서 관리
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [shopModalVisible, setShopModalVisible] = useState(false);
+  const [teamFilterOpen, setTeamFilterOpen] = useState(false); // 팀 필터 모달 외부 제어 상태
   const router = useRouter();
   const { currentUser, reload: reloadCurrentUser } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<string>("feed");
@@ -77,6 +79,7 @@ export default function FeedScreen() {
     selectedTeamIds,
     handleTeamFilterChange,
     performanceMetrics,
+    filterInitialized,
   } = useFeedPosts();
 
   const {
@@ -176,8 +179,15 @@ export default function FeedScreen() {
   };
 
   // 팀 필터 선택 핸들러는 useFeedPosts 훅에서 제공됨
-
   // 목록 재조회 효과는 훅 내부에서 처리됨
+  // 팀 필터 변경 시 강제 새로고침 (popover 통해 변경 시 refetch 누락 방지)
+  useEffect(() => {
+    if (!filterInitialized) return;
+    // handleTeamFilterChange 내부에서 authRefetch 호출 후 posts 초기화하지만
+    // 혹시 캐시 지연/레이스컨디션으로 목록이 즉시 갱신되지 않는 경우를 대비해 보조 새로고침 실행
+    handleRefresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTeamIds]);
 
   // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
   useEffect(() => {
@@ -194,11 +204,7 @@ export default function FeedScreen() {
       <View style={themed($container)}>
         <FeedHeader
           currentUser={currentUser}
-          selectedTeamIds={selectedTeamIds}
-          onTeamSelect={handleTeamFilterChange}
-          loading={true}
           onNotificationPress={handleNotificationPress}
-          onCreatePress={() => router.push("/(modals)/create-post")}
           onProfilePress={() =>
             currentUser
               ? router.push("/(app)/profile")
@@ -207,6 +213,7 @@ export default function FeedScreen() {
           onShopPress={handleShopPress}
           onLotteryPress={handleLotteryPress}
           onBoardPress={handleBoardPress}
+          onTeamFilterPress={() => setTeamFilterOpen(true)}
         />
         <View>
           {Array.from({ length: 5 }).map((_, index) => (
@@ -251,11 +258,7 @@ export default function FeedScreen() {
       {/* 헤더 */}
       <FeedHeader
         currentUser={currentUser}
-        selectedTeamIds={selectedTeamIds}
-        onTeamSelect={handleTeamFilterChange}
-        loading={fetching}
         onNotificationPress={handleNotificationPress}
-        onCreatePress={() => router.push("/(modals)/create-post")}
         onProfilePress={() =>
           currentUser
             ? router.push("/(app)/profile")
@@ -264,6 +267,7 @@ export default function FeedScreen() {
         onShopPress={handleShopPress}
         onLotteryPress={handleLotteryPress}
         onBoardPress={handleBoardPress}
+        onTeamFilterPress={() => setTeamFilterOpen(true)}
       />
 
       {/* 선택된 테마 팀(favoriteDate) 정보 표시
@@ -296,16 +300,13 @@ export default function FeedScreen() {
                   size={20}
                   color={theme.colors.tint}
                 />
-                <Text style={themed($myTeamText)}>
-                  {displayTeam.team.name}
-                </Text>
+                <Text style={themed($myTeamText)}>{displayTeam.team.name}</Text>
                 {duration ? (
                   <Text style={themed($myTeamDate)}>
                     {", 함께 한지"}
                     <Text style={themed($myTeamDays)}>
                       {" "}
-                      ({duration.totalDays}일)
-                      {" "}
+                      ({duration.totalDays}일){" "}
                     </Text>
                     {duration.years > 0
                       ? `${duration.years}년째..`
@@ -320,11 +321,7 @@ export default function FeedScreen() {
                   </Text>
                 )}
                 {duration && (
-                  <Ionicons
-                    name="heart"
-                    size={16}
-                    color={theme.colors.tint}
-                  />
+                  <Ionicons name="heart" size={16} color={theme.colors.tint} />
                 )}
               </View>
             );
@@ -338,6 +335,15 @@ export default function FeedScreen() {
         onClose={() => setShopModalVisible(false)}
         currentUser={currentUser}
         onPurchase={handleShopPurchase}
+      />
+      {/* 팀 필터 선택 모달 (트리거는 프로필 팝오버 메뉴) */}
+      <TeamFilterSelector
+        onTeamSelect={handleTeamFilterChange}
+        selectedTeamIds={selectedTeamIds}
+        loading={fetching}
+        open={teamFilterOpen}
+        onOpenChange={setTeamFilterOpen}
+        hideTriggerButton
       />
 
       {/* 로그인 버튼 섹션 (로그인 안 된 경우에만 표시) */}
@@ -417,6 +423,8 @@ export default function FeedScreen() {
 }
 
 // --- Styles ---
+//
+// 커밋 메세지: fix(feed): FeedHeader obsolete props 제거 및 onTeamFilterPress 추가
 
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
@@ -508,7 +516,6 @@ const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   justifyContent: "center",
   gap: spacing.xxs,
-  
 });
 
 const $myTeamText: ThemedStyle<TextStyle> = ({ colors }) => ({

@@ -19,12 +19,14 @@ export interface ProfileContextPopoverProps {
   onOpenProfile: () => void;
   onShopPress: () => void; // 상점(포인트 샵) 화면 열기 콜백
   onLotteryPress: () => void; // 로또/이벤트 화면 열기 콜백
+  onTeamFilterPress: () => void; // 팀 피드 필터(TeamFilterSelector) 열기 콜백
   anchorStyle?: ViewStyle; // 부모에서 위치 제어
 }
 
 /**
  * 프로필 드롭다운(팝오버) 메뉴
- * - 하단 시트가 아닌, 헤더 우측 아바타 아래에 표시되는 컨텍스트 메뉴
+ * - 헤더 우측 아바타 아래에 표시되는 컨텍스트 메뉴
+ * - TeamFilterSelector 접근 항목 추가 (팀 필터)
  */
 export default function ProfileContextPopover({
   visible,
@@ -32,6 +34,7 @@ export default function ProfileContextPopover({
   onOpenProfile,
   onShopPress,
   onLotteryPress,
+  onTeamFilterPress,
   anchorStyle,
 }: ProfileContextPopoverProps) {
   const { theme, toggleTheme, themed } = useAppTheme();
@@ -71,6 +74,18 @@ export default function ProfileContextPopover({
         },
       },
       {
+        key: "teamFilter",
+        label: "팀 필터",
+        icon: (
+          <Ionicons name="funnel-outline" size={18} color={theme.colors.text} />
+        ),
+        onPress: () => {
+          // FeedHeader 등에 있는 TeamFilterSelector 모달 트리거
+          onClose();
+          onTeamFilterPress();
+        },
+      },
+      {
         key: "lottery",
         label: "이벤트 / 추첨",
         icon: (
@@ -94,6 +109,21 @@ export default function ProfileContextPopover({
         onPress: () => {
           onClose();
           onShopPress();
+        },
+      },
+      {
+        key: "teamColorFilter",
+        label: "앱 색상 필터 (내 팀 기반)",
+        icon: (
+          <Ionicons
+            name="color-filter-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          onClose();
+          router.push({ pathname: "/(details)/team-colors-select" });
         },
       },
       {
@@ -122,24 +152,6 @@ export default function ProfileContextPopover({
           onClose();
         },
       },
-      {
-        key: "teamColorFilter",
-        label: "앱 색상 필터 (내 팀 기반)",
-        icon: (
-          <Ionicons
-            name="color-filter-outline"
-            size={18}
-            color={theme.colors.text}
-          />
-        ),
-        onPress: () => {
-          // 내 팀 기반의 앱 색상 필터 페이지로 이동합니다.
-          // 모달을 닫고 상세 페이지 스택의 team-colors 페이지로 이동하세요.
-          onClose();
-          // router.push에 문자열을 직접 전달하면 타입 불일치가 발생할 수 있어 객체 형식으로 호출합니다.
-          router.push({ pathname: "/(details)/team-colors-select" });
-        },
-      },
     ],
     [
       theme,
@@ -151,6 +163,7 @@ export default function ProfileContextPopover({
       router,
       onShopPress,
       onLotteryPress,
+      onTeamFilterPress,
     ],
   );
 
@@ -251,3 +264,7 @@ const $itemText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.text,
 });
+
+/*
+커밋 메세지: feat(popover): 프로필 컨텍스트 메뉴에 팀 필터(TeamFilterSelector) 진입 항목 추가
+*/

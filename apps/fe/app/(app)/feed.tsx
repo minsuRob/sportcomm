@@ -42,7 +42,6 @@ const formatFanDuration = (
 };
 import { Ionicons } from "@expo/vector-icons";
 import StorySection from "@/components/StorySection";
-import TabSlider from "@/components/TabSlider";
 import ChatRoomList from "@/components/chat/ChatRoomList";
 import { NotificationToast } from "@/components/notifications";
 import { showToast } from "@/components/CustomToast";
@@ -183,21 +182,20 @@ export default function FeedScreen() {
   // 팀 필터 변경 시 강제 새로고침 (popover 통해 변경 시 refetch 누락 방지)
   useEffect(() => {
     if (!filterInitialized) return;
-    // handleTeamFilterChange 내부에서 authRefetch 호출 후 posts 초기화하지만
-    // 혹시 캐시 지연/레이스컨디션으로 목록이 즉시 갱신되지 않는 경우를 대비해 보조 새로고침 실행
     handleRefresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeamIds]);
 
   // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
   useEffect(() => {
-    // 페이지 포커스 이벤트 리스너 (필요시 추가)
-    // navigation.addListener('focus', handleRefresh);
-
-    return () => {
-      // cleanup
-    };
+    return () => {};
   }, [handleRefresh]);
+
+  // 탭 데이터 (FeedHeader 로 전달하여 내부 TabSlider 렌더)
+  const tabs = [
+    { key: "feed", title: t(TRANSLATION_KEYS.FEED_TITLE) },
+    { key: "chat", title: t(TRANSLATION_KEYS.FEED_CHAT) },
+  ];
 
   if (fetching && posts.length === 0 && !isRefreshing) {
     return (
@@ -214,6 +212,9 @@ export default function FeedScreen() {
           onLotteryPress={handleLotteryPress}
           onBoardPress={handleBoardPress}
           onTeamFilterPress={() => setTeamFilterOpen(true)}
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
         <View>
           {Array.from({ length: 5 }).map((_, index) => (
@@ -241,12 +242,6 @@ export default function FeedScreen() {
 
   const footerLoading = fetching && !isRefreshing;
 
-  // 탭 데이터
-  const tabs = [
-    { key: "feed", title: t(TRANSLATION_KEYS.FEED_TITLE) },
-    { key: "chat", title: t(TRANSLATION_KEYS.FEED_CHAT) },
-  ];
-
   return (
     <View style={themed($container)}>
       <AuthModal
@@ -255,7 +250,7 @@ export default function FeedScreen() {
         onLoginSuccess={handleLoginSuccess}
       />
 
-      {/* 헤더 */}
+      {/* 헤더 (탭 슬라이더 포함) */}
       <FeedHeader
         currentUser={currentUser}
         onNotificationPress={handleNotificationPress}
@@ -268,20 +263,19 @@ export default function FeedScreen() {
         onLotteryPress={handleLotteryPress}
         onBoardPress={handleBoardPress}
         onTeamFilterPress={() => setTeamFilterOpen(true)}
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
-      {/* 선택된 테마 팀(favoriteDate) 정보 표시
-         - team-colors-select 에서 선택한 teamColorTeamId 우선
-         - 없거나 myTeams 에서 찾지 못하면 기존 priority 1 팀 fallback */}
+      {/* 선택된 테마 팀(favoriteDate) 정보 표시 */}
       {currentUser?.myTeams && currentUser.myTeams.length > 0 && (
         <View style={themed($myTeamContainer)}>
           {(() => {
-            // teamColorTeamId 로 현재 선택된 팀 찾기
             const selectedTeam = teamColorTeamId
               ? currentUser.myTeams.find((ut) => ut.team.id === teamColorTeamId)
               : undefined;
 
-            // fallback: priority 가장 높은 팀
             const fallbackTeam = currentUser.myTeams
               .slice()
               .sort((a, b) => a.priority - b.priority)[0];
@@ -336,7 +330,7 @@ export default function FeedScreen() {
         currentUser={currentUser}
         onPurchase={handleShopPurchase}
       />
-      {/* 팀 필터 선택 모달 (트리거는 프로필 팝오버 메뉴) */}
+      {/* 팀 필터 선택 모달 */}
       <TeamFilterSelector
         onTeamSelect={handleTeamFilterChange}
         selectedTeamIds={selectedTeamIds}
@@ -361,10 +355,7 @@ export default function FeedScreen() {
         </View>
       )}
 
-      {/* 탭 슬라이더 */}
-      <TabSlider tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {/* 탭 콘텐츠 */}
+      {/* 탭 콘텐츠 (TabSlider 는 FeedHeader 로 이동) */}
       {activeTab === "feed" ? (
         <FeedList
           posts={posts}
@@ -424,7 +415,7 @@ export default function FeedScreen() {
 
 // --- Styles ---
 //
-// 커밋 메세지: fix(feed): FeedHeader obsolete props 제거 및 onTeamFilterPress 추가
+// 커밋 메세지: refactor(feed): TabSlider 헤더로 이관 및 FeedHeader tabs/activeTab/onTabChange 전달
 
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
@@ -505,7 +496,6 @@ const $loadingFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $myTeamContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
-  // borderBottomWidth: 1,
   borderBottomColor: colors.border,
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.xs,
@@ -529,7 +519,6 @@ const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   fontSize: 15,
   fontWeight: "800",
-  // lineHeight: 16,
 });
 
 const $myTeamDays: ThemedStyle<TextStyle> = ({ colors }) => ({

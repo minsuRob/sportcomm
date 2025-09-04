@@ -18,6 +18,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
 import type { User } from "@/lib/auth";
+import TabSlider from "@/components/TabSlider";
 
 interface FeedHeaderProps {
   currentUser: User | null;
@@ -27,6 +28,10 @@ interface FeedHeaderProps {
   onLotteryPress: () => void;
   onBoardPress: () => void; // 상세 게시판 버튼 클릭 핸들러
   onTeamFilterPress: () => void; // 프로필 팝오버에서 팀 필터 열기
+  // TabSlider 이관 관련 (옵션: 기존 사용처 호환 유지)
+  tabs?: { key: string; title: string }[];
+  activeTab?: string;
+  onTabChange?: (key: string) => void;
 }
 
 /**
@@ -42,6 +47,9 @@ export default function FeedHeader({
   onLotteryPress,
   onBoardPress,
   onTeamFilterPress,
+  tabs,
+  activeTab,
+  onTabChange,
 }: FeedHeaderProps) {
   const { t } = useTranslation();
   const { themed, theme } = useAppTheme();
@@ -77,65 +85,80 @@ export default function FeedHeader({
 
   return (
     <View style={themed($header)}>
-      <View style={themed($headerLeft)}>
-        <Text style={themed($logoText)}>{t("SportCom")}</Text>
-      </View>
-      <View style={themed($headerRight)}>
-        {currentUser && (
-          <>
-            <TouchableOpacity
-              style={themed($pointsBadge)}
-              onPress={onShopPress}
-              activeOpacity={0.7}
-            >
-              <Text style={themed($pointsText)}>
-                {t("points", { points: currentUser.points ?? 0 })}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($boardButton)}
-              onPress={onBoardPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="list-outline" size={20} color={teamMain} />
-            </TouchableOpacity>
-            {/* 로또(이벤트) 버튼: ProfileContextPopover 메뉴로 이동됨 */}
-            {/* 샵 버튼: ProfileContextPopover 메뉴로 이동됨 */}
-          </>
-        )}
-        {currentUser && (
-          <TouchableOpacity
-            style={themed($iconButton)}
-            onPress={onNotificationPress}
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color={theme.colors.text}
-            />
-            <NotificationBadge size="small" />
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          ref={profileButtonRef}
-          style={themed($iconButton)}
-          onPress={handleProfilePress}
-        >
-          {currentUser ? (
-            <UserAvatar
-              imageUrl={currentUser.profileImageUrl}
-              name={currentUser.nickname}
-              size={28}
-            />
-          ) : (
-            <Ionicons
-              name="person-outline"
-              size={22}
-              color={theme.colors.text}
-            />
+      {/* 1행: 로고 + 우측 버튼들 */}
+      <View style={themed($headerRow)}>
+        <View style={themed($headerLeft)}>
+          <Text style={themed($logoText)}>{t("SportCom")}</Text>
+        </View>
+        <View style={themed($headerRight)}>
+          {currentUser && (
+            <>
+              <TouchableOpacity
+                style={themed($pointsBadge)}
+                onPress={onShopPress}
+                activeOpacity={0.7}
+              >
+                <Text style={themed($pointsText)}>
+                  {t("points", { points: currentUser.points ?? 0 })}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={themed($boardButton)}
+                onPress={onBoardPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="list-outline" size={20} color={teamMain} />
+              </TouchableOpacity>
+              {/* 로또(이벤트) 버튼: ProfileContextPopover 메뉴로 이동됨 */}
+              {/* 샵 버튼: ProfileContextPopover 메뉴로 이동됨 */}
+            </>
           )}
-        </TouchableOpacity>
+          {currentUser && (
+            <TouchableOpacity
+              style={themed($iconButton)}
+              onPress={onNotificationPress}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={theme.colors.text}
+              />
+              <NotificationBadge size="small" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            ref={profileButtonRef}
+            style={themed($iconButton)}
+            onPress={handleProfilePress}
+          >
+            {currentUser ? (
+              <UserAvatar
+                imageUrl={currentUser.profileImageUrl}
+                name={currentUser.nickname}
+                size={28}
+              />
+            ) : (
+              <Ionicons
+                name="person-outline"
+                size={22}
+                color={theme.colors.text}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* 2행: 탭 슬라이더 (옵션) */}
+      {tabs && tabs.length > 0 && (
+        <TabSlider
+          tabs={tabs}
+          /* activeTab 없으면 첫 번째 탭 사용 (안전 fallback) */
+          activeTab={activeTab ?? tabs[0].key}
+          onTabChange={(k) => onTabChange?.(k)}
+          variant="header"
+        />
+      )}
+
       {/* 프로필 컨텍스트 팝오버: 헤더 우측 아바타 아래 위치 */}
       {currentUser && (
         <ProfileContextPopover
@@ -165,11 +188,10 @@ export default function FeedHeader({
 }
 
 const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
+  flexDirection: "column",
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.md,
+  paddingTop: spacing.md,
+  paddingBottom: spacing.xs,
   backgroundColor: colors.card,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
@@ -245,6 +267,16 @@ const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
   };
 };
 
+/* 헤더 1행(Row) 스타일 */
+const $headerRow: ThemedStyle<ViewStyle> = ({}) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  width: "100%",
+  marginBottom: 4,
+});
+
 /*
 커밋 메세지: refactor(feed): 불필요한 prop(onCreatePress) 및 미사용 스타일($lotteryButton, $shopButton) 제거
+추가 커밋 메세지: feat(feed header): TabSlider 헤더 내 임베드 및 상태 리프트 (tabs/activeTab/onTabChange props)
 */

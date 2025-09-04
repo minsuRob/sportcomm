@@ -115,13 +115,13 @@ export default function FeedHeader({
           )}
           {currentUser && (
             <TouchableOpacity
-              style={themed($iconButton)}
+              style={themed($boardButton)}
               onPress={onNotificationPress}
             >
               <Ionicons
                 name="notifications-outline"
                 size={22}
-                color={theme.colors.text}
+                color={teamMain}
               />
               <NotificationBadge size="small" />
             </TouchableOpacity>

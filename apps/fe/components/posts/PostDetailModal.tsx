@@ -116,7 +116,7 @@ const $sheet: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderTopLeftRadius: 28,
   borderTopRightRadius: 28,
   minHeight: "68%",
-  maxHeight: "90%",
+  // maxHeight: "90%",
   overflow: "hidden",
   // iOS shadow
   shadowColor: "#000",

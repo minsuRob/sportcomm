@@ -806,58 +806,30 @@ const PostCard = React.memo(function PostCard({
                 />
               </TouchableOpacity>
 
-              {/* 닉네임 + 팔로우 버튼을 같은 행에 배치하고 시간은 아래에 배치 */}
-              <View style={themed($profileInfo)}>
-                <View style={themed($nameRow)}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      router.push(
-                        `/(modals)/user-profile?userId=${post.author.id}`,
-                      )
+              {/* 닉네임/시간 세로 정렬, 팔로우 버튼을 오른쪽에 배치 */}
+              <View style={themed($profileInfoColumn)}>
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push(
+                      `/(modals)/user-profile?userId=${post.author.id}`,
+                    )
+                  }
+                  activeOpacity={0.7}
+                  style={themed($nicknameTap)}
+                >
+                  <StrokedText
+                    content={post.author.nickname}
+                    fontSize={15}
+                    lineHeight={18}
+                    numberOfLines={1}
+                    borderThickness={0.5}
+                    mainColor={teamColors?.profileText || theme.colors.text}
+                    strokeColor={
+                      teamColors?.profileStroke || theme.colors.background
                     }
-                    activeOpacity={0.7}
-                    style={themed($nicknameTap)}
-                  >
-                    <StrokedText
-                      content={post.author.nickname}
-                      fontSize={15}
-                      lineHeight={18}
-                      numberOfLines={1}
-                      borderThickness={0.5}
-                      mainColor={teamColors?.profileText || theme.colors.text}
-                      strokeColor={
-                        teamColors?.profileStroke || theme.colors.background
-                      }
-                      teamColors={teamColors}
-                    />
-                  </TouchableOpacity>
-                  {currentUser && currentUser.id !== post.author.id && (
-                    <TouchableOpacity
-                      style={[
-                        themed($followButton),
-                        isFollowing && themed($followButtonActive),
-                      ]}
-                      onPress={handleFollowToggle}
-                      disabled={followLoading}
-                      activeOpacity={0.8}
-                    >
-                      {followLoading ? (
-                        <ActivityIndicator size="small" color="white" />
-                      ) : (
-                        <>
-                          <Ionicons
-                            name={isFollowing ? "person-remove" : "person-add"}
-                            size={12}
-                            color="white"
-                          />
-                          <Text style={themed($followButtonText)}>
-                            {isFollowing ? "언팔로우" : "팔로우"}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </View>
+                    teamColors={teamColors}
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() =>
                     router.push(
@@ -881,6 +853,32 @@ const PostCard = React.memo(function PostCard({
                   />
                 </TouchableOpacity>
               </View>
+              {currentUser && currentUser.id !== post.author.id && (
+                <TouchableOpacity
+                  style={[
+                    themed($followButton),
+                    isFollowing && themed($followButtonActive),
+                  ]}
+                  onPress={handleFollowToggle}
+                  disabled={followLoading}
+                  activeOpacity={0.8}
+                >
+                  {followLoading ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name={isFollowing ? "person-remove" : "person-add"}
+                        size={12}
+                        color="white"
+                      />
+                      <Text style={themed($followButtonText)}>
+                        {isFollowing ? "언팔로우" : "팔로우"}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
@@ -1199,6 +1197,15 @@ const $profileInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexShrink: 0,
   gap: 2,
   marginRight: spacing.xxxs,
+});
+
+/* 닉네임/시간 전용 컬럼 (팔로우 버튼은 형제 요소로 분리) */
+const $profileInfoColumn: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "column",
+  justifyContent: "center",
+  flexShrink: 0,
+  gap: 2,
+  marginRight: spacing.xs,
 });
 
 const $profileName: ThemedStyle<TextStyle> = () => ({

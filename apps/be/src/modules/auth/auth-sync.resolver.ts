@@ -119,35 +119,34 @@ export class AuthSyncResolver {
       }
 
       // CombinedUserInfo를 User 형태로 변환
-      const currentUser: User = {
-        id: combinedInfo.id,
-        nickname: combinedInfo.nickname,
-        email: combinedInfo.email || '',
-        role: combinedInfo.role,
-        profileImageUrl: combinedInfo.profileImageUrl,
-        bio: combinedInfo.bio,
-        isActive: combinedInfo.isActive,
-        isEmailVerified: !!combinedInfo.emailConfirmedAt,
-        createdAt: combinedInfo.createdAt,
-        updatedAt: combinedInfo.updatedAt,
-        points: (combinedInfo as any).points ?? 0,
-        // 관계 필드들은 필요시 별도 쿼리로 로드
-        posts: [],
-        comments: [],
-        following: [],
-        followers: [],
-        chatMessages: [],
-        likes: [],
-        blocking: [],
-        blockedBy: [],
-        bookmarks: [],
-        userTeams: [],
-        // 헬퍼 메서드들
-        isAdmin: () => combinedInfo.role === 'ADMIN',
-        isInfluencer: () => combinedInfo.role === 'INFLUENCER',
-        isUser: () => combinedInfo.role === 'USER',
-        getDisplayName: () => combinedInfo.nickname,
-      } as User;
+      // User 인스턴스를 직접 생성하여 클래스 메서드/게터(level 등) 호환성을 확보
+      const currentUser = new User();
+      currentUser.id = combinedInfo.id;
+      currentUser.nickname = combinedInfo.nickname;
+      currentUser.email = combinedInfo.email || '';
+      currentUser.role = combinedInfo.role;
+      currentUser.profileImageUrl = combinedInfo.profileImageUrl;
+      currentUser.bio = combinedInfo.bio;
+      currentUser.isActive = combinedInfo.isActive;
+      currentUser.isEmailVerified = !!combinedInfo.emailConfirmedAt;
+      currentUser.createdAt = combinedInfo.createdAt;
+      currentUser.updatedAt = combinedInfo.updatedAt;
+      currentUser.points = (combinedInfo as any).points ?? 0;
+      currentUser.experience = (combinedInfo as any).experience ?? 0;
+      currentUser.lastAttendanceAt =
+        (combinedInfo as any).lastAttendanceAt || undefined;
+      // 선택 필드(출석/레벨 계산 관련)는 entity 게터/메서드 내부 로직으로 처리됨
+      // 관계 배열은 지연 로딩/별도 조회 대상이므로 빈 배열로 초기화 (선택적)
+      currentUser.posts = [];
+      currentUser.comments = [];
+      currentUser.following = [];
+      currentUser.followers = [];
+      currentUser.chatMessages = [];
+      currentUser.likes = [];
+      currentUser.blocking = [];
+      currentUser.blockedBy = [];
+      currentUser.bookmarks = [];
+      currentUser.userTeams = [];
 
       return currentUser;
     } catch (error) {

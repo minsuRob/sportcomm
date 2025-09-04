@@ -466,10 +466,16 @@ export class UserSyncService {
       profileImageUrl: user.profileImageUrl,
       bio: user.bio,
       isActive: user.isActive,
-      // 포인트 (백엔드 엔티티 필드)
+      // 포인트 / 경험치 / 출석 관련 (백엔드 엔티티 필드)
       // CombinedUserInfo 타입 확장 없이 안전하게 캐스팅해서 전달
       ...(typeof (user as any).points === 'number'
         ? { points: (user as any).points }
+        : {}),
+      ...(typeof (user as any).experience === 'number'
+        ? { experience: (user as any).experience }
+        : {}),
+      ...(user && (user as any).lastAttendanceAt
+        ? { lastAttendanceAt: (user as any).lastAttendanceAt }
         : {}),
 
       // 공통 정보

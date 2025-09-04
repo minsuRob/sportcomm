@@ -644,6 +644,8 @@ export interface CombinedUserInfo {
   points?: number;
   /** 누적 경험치 */
   experience?: number;
+  /** 최근 출석 보상 수령 일시 */
+  lastAttendanceAt?: Date;
   /** 계산된 레벨 (가상 필드) */
   level?: number;
   /** 다음 레벨까지 필요 경험치 */

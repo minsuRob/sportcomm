@@ -39,6 +39,9 @@ export interface AwardResult {
   skipped?: boolean; // 중복 출석 등으로 보상 제외
   experienceToNextLevel: number;
   timestamp: Date;
+  // === 확장 필드 (커스텀 지급 등) ===
+  isCustom?: boolean;
+  reason?: string;
 }
 
 /**
@@ -184,6 +187,89 @@ export class ProgressService {
   }
 
   /**
+   * 커스텀 포인트/경험치 지급
+   *
+   * - 사유(reason)와 함께 임의 양 지급
+   * - 기존 enum 구조 유지 위해 action 필드는 임의 값(CHAT_MESSAGE) 사용,
+   *   isCustom=true 로 커스텀 지급 여부를 식별
+   * - 향후 UserProgressAction에 CUSTOM 추가 시 action 교체 가능
+   *
+   * @param userId 대상 사용자
+   * @param amount 지급 양 (포인트=경험치 동일 비율)
+   * @param reason 지급 사유 (로그/이벤트 메타데이터)
+   * @param now 기준 시간
+   */
+  async awardCustom(
+    userId: string,
+    amount: number,
+    reason?: string,
+    now: Date = new Date(),
+  ): Promise<AwardResult> {
+    if (amount <= 0) {
+      // 무효 지급 방지 (skipped 처리)
+      const snapshot = await this.getUserProgress(userId);
+      return {
+        userId,
+        action: UserProgressAction.CHAT_MESSAGE,
+        addedPoints: 0,
+        addedExperience: 0,
+        totalPoints: snapshot.points,
+        totalExperience: snapshot.experience,
+        previousLevel: snapshot.level,
+        newLevel: snapshot.level,
+        levelUp: false,
+        skipped: true,
+        experienceToNextLevel: snapshot.experienceToNextLevel,
+        timestamp: now,
+        isCustom: true,
+        reason,
+      };
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+    const previousLevel = user.level;
+
+    user.points = (user.points || 0) + amount;
+    user.experience = (user.experience || 0) + amount;
+    await this.userRepository.save(user);
+
+    const newLevel = user.level;
+
+    const result: AwardResult = {
+      userId,
+      action: UserProgressAction.CHAT_MESSAGE, // 임시(커스텀 구분은 isCustom 활용)
+      addedPoints: amount,
+      addedExperience: amount,
+      totalPoints: user.points,
+      totalExperience: user.experience,
+      previousLevel,
+      newLevel,
+      levelUp: newLevel > previousLevel,
+      skipped: false,
+      experienceToNextLevel: user.experienceToNextLevel,
+      timestamp: now,
+      isCustom: true,
+      reason,
+    };
+
+    this.eventEmitter.emit('progress.awarded', result);
+    if (result.levelUp) {
+      this.eventEmitter.emit('progress.levelup', {
+        userId,
+        previousLevel,
+        newLevel,
+        timestamp: now,
+        isCustom: true,
+        reason,
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * (헬퍼) 액션별 기본 보상 값 조회
    */
   getRewardValue(action: UserProgressAction): number {
@@ -192,5 +278,5 @@ export class ProgressService {
 }
 
 /*
-커밋 메세지: fix(progress): progress.service.ts 파일에서 마크다운 헤더 제거 및 순수 서비스 코드 작성
+커밋 메세지: feat(progress): 커스텀 포인트/경험치 지급 메서드 awardCustom 추가
 */

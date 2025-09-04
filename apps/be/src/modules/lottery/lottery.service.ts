@@ -13,6 +13,7 @@ import {
 } from '../../entities/point-lottery.entity';
 import { LotteryEntry } from '../../entities/lottery-entry.entity';
 import { User } from '../../entities/user.entity';
+import { ProgressService } from '../progress/progress.service';
 
 /**
  * 포인트 추첨 서비스
@@ -29,6 +30,7 @@ export class LotteryService {
     private readonly entryRepository: Repository<LotteryEntry>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly progressService: ProgressService, // 포인트/경험치 지급 서비스
   ) {
     // 서비스 시작 시 초기 추첨 생성
     this.initializeLotterySystem();
@@ -385,10 +387,25 @@ export class LotteryService {
       winnerEntry.markAsWinner(lottery.prizePerWinner);
       await this.entryRepository.save(winnerEntry);
 
-      // 사용자 포인트 지급
+      // 사용자 포인트/경험치 지급 (ProgressService 사용, 실패 시 fallback)
       const user = winnerEntry.user;
-      user.points = (user.points || 0) + lottery.prizePerWinner;
-      await this.userRepository.save(user);
+      try {
+        await this.progressService.awardCustom(
+          user.id,
+          lottery.prizePerWinner,
+          `lottery_win:${lottery.roundNumber}`,
+        );
+        console.log(
+          `✅ ProgressService 지급 완료: ${user.nickname} +${lottery.prizePerWinner}P`,
+        );
+      } catch (e) {
+        console.error(
+          '⚠️ ProgressService 지급 실패, fallback 적용:',
+          (e as any)?.message || e,
+        );
+        user.points = (user.points || 0) + lottery.prizePerWinner;
+        await this.userRepository.save(user);
+      }
 
       winnerIds.push(user.id);
 

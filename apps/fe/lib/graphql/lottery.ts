@@ -102,6 +102,7 @@ export const GET_LOTTERY_WINNERS = gql`
         id
         nickname
         profileImageUrl
+        points
       }
       lottery {
         id

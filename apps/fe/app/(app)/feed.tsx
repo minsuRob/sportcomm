@@ -42,6 +42,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
+import FeedNotice from "@/components/feed/notice/FeedNotice";
 import { useRouter } from "expo-router";
 
 import FeedList from "@/components/FeedList";
@@ -102,6 +103,11 @@ export default function FeedScreen() {
   const router = useRouter();
   const { currentUser, reload: reloadCurrentUser } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<string>("feed");
+  // 공지 섹션은 FeedNotice 컴포넌트로 분리 (로컬 상태 제거)
+
+  // (공지 표시 로직은 FeedNotice 내부로 이동)
+
+  // (닫기 로직은 FeedNotice 내부로 이동)
   // 고급 캐시 기반 피드 훅으로 교체 (팀 필터/차단/페이지네이션/TTL)
   const {
     posts,
@@ -307,61 +313,74 @@ export default function FeedScreen() {
 
       {/* 선택된 테마 팀(favoriteDate) 정보 표시 */}
       {currentUser?.myTeams && currentUser.myTeams.length > 0 && (
-        <View style={themed($myTeamContainer)}>
-          {(() => {
-            const selectedTeam = teamColorTeamId
-              ? currentUser.myTeams.find((ut) => ut.team.id === teamColorTeamId)
-              : undefined;
+        <>
+          <View style={themed($myTeamContainer)}>
+            {(() => {
+              const selectedTeam = teamColorTeamId
+                ? currentUser.myTeams.find(
+                    (ut) => ut.team.id === teamColorTeamId,
+                  )
+                : undefined;
 
-            const fallbackTeam = currentUser.myTeams
-              .slice()
-              .sort((a, b) => a.priority - b.priority)[0];
+              const fallbackTeam = currentUser.myTeams
+                .slice()
+                .sort((a, b) => a.priority - b.priority)[0];
 
-            const displayTeam = selectedTeam || fallbackTeam;
+              const displayTeam = selectedTeam || fallbackTeam;
 
-            if (!displayTeam) return null;
+              if (!displayTeam) return null;
 
-            const favDate = displayTeam.favoriteDate;
-            const duration = favDate ? formatFanDuration(favDate) : null;
+              const favDate = displayTeam.favoriteDate;
+              const duration = favDate ? formatFanDuration(favDate) : null;
 
-            return (
-              <View style={themed($myTeamItem)}>
-                <Ionicons
-                  name="baseball-outline"
-                  size={20}
-                  color={theme.colors.tint}
-                />
-                <Text style={themed($myTeamText)}>{displayTeam.team.name}</Text>
-                {duration ? (
-                  <Text style={themed($myTeamDate)}>
-                    {", 함께 한지"}
-                    <Text style={themed($myTeamDays)}>
-                      {" "}
-                      ({duration.totalDays}일){" "}
-                    </Text>
-                    {duration.years > 0
-                      ? `${duration.years}년째..`
-                      : `${duration.months + 1}개월째..`}
+              return (
+                <View style={themed($myTeamItem)}>
+                  <Ionicons
+                    name="baseball-outline"
+                    size={20}
+                    color={theme.colors.tint}
+                  />
+                  <Text style={themed($myTeamText)}>
+                    {displayTeam.team.name}
                   </Text>
-                ) : (
-                  <Text
-                    style={themed($myTeamDate)}
-                    onPress={() => router.push("/(modals)/team-selection")}
-                  >
-                    {", 클릭하여 "}
-                    <Text style={themed($myTeamDateUnderline)}>
-                      처음 좋아한 날
+                  {duration ? (
+                    <Text style={themed($myTeamDate)}>
+                      {", 함께 한지"}
+                      <Text style={themed($myTeamDays)}>
+                        {" "}
+                        ({duration.totalDays}일){" "}
+                      </Text>
+                      {duration.years > 0
+                        ? `${duration.years}년째..`
+                        : `${duration.months + 1}개월째..`}
                     </Text>
-                    {"을 기록하세요."}
-                  </Text>
-                )}
-                {duration && (
-                  <Ionicons name="heart" size={16} color={theme.colors.tint} />
-                )}
-              </View>
-            );
-          })()}
-        </View>
+                  ) : (
+                    <Text
+                      style={themed($myTeamDate)}
+                      onPress={() => router.push("/(modals)/team-selection")}
+                    >
+                      {", 클릭하여 "}
+                      <Text style={themed($myTeamDateUnderline)}>
+                        처음 좋아한 날
+                      </Text>
+                      {"을 기록하세요."}
+                    </Text>
+                  )}
+                  {duration && (
+                    <Ionicons
+                      name="heart"
+                      size={16}
+                      color={theme.colors.tint}
+                    />
+                  )}
+                </View>
+              );
+            })()}
+          </View>
+
+          {/* 공지 섹션 (분리된 컴포넌트) */}
+          <FeedNotice />
+        </>
       )}
 
       {/* 상점 모달 */}
@@ -573,6 +592,9 @@ const $myTeamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "400",
   color: colors.textDim,
 });
+
+/* 공지 섹션 스타일 */
+/* 공지 섹션 스타일 제거됨 (FeedNotice 내부로 이전) */
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",

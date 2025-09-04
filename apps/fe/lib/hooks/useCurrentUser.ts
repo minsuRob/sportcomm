@@ -135,7 +135,7 @@ export function useCurrentUser() {
 
                 if (!mountedRef.current) return;
 
-                // 로컬 세션 업데이트 (points/experience/level 등 최신화)
+                // 로컬 세션 업데이트 (포인트 및 myTeams 최신화 - 팀별 경험치는 myTeams[].experience / level 사용)
                 await saveSession({
                   id: remoteUser.id,
                   nickname: remoteUser.nickname,
@@ -143,24 +143,11 @@ export function useCurrentUser() {
                   role: remoteUser.role,
                   profileImageUrl: remoteUser.profileImageUrl,
                   bio: remoteUser.bio,
-                  myTeams: (nextUser as any).myTeams,
+                  myTeams:
+                    (remoteUser as any).myTeams ?? (nextUser as any).myTeams,
                   userTeams: undefined,
                   points:
                     (remoteUser as any).points ?? (nextUser as any).points ?? 0,
-                  experience:
-                    (remoteUser as any).experience ??
-                    (nextUser as any).experience ??
-                    0,
-                  level:
-                    (remoteUser as any).level ?? (nextUser as any).level ?? 1,
-                  experienceToNextLevel:
-                    (remoteUser as any).experienceToNextLevel ??
-                    (nextUser as any).experienceToNextLevel ??
-                    0,
-                  lastAttendanceAt:
-                    (remoteUser as any).lastAttendanceAt ??
-                    (nextUser as any).lastAttendanceAt ??
-                    null,
                 } as any);
 
                 nextUser = (await getSession()).user;

@@ -59,6 +59,10 @@ export const GET_FEED_DATA = gql`
             favoriteDate
             favoritePlayerName
             favoritePlayerNumber
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
             createdAt
             team {
               id
@@ -107,6 +111,10 @@ export const GET_FEED_DATA = gql`
       favoriteDate
       favoritePlayerName
       favoritePlayerNumber
+      experience
+      level
+      experienceToNextLevel
+      levelProgressRatio
       createdAt
       team {
         id
@@ -173,6 +181,10 @@ export const GET_POSTS = gql`
             favoriteDate
             favoritePlayerName
             favoritePlayerNumber
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
             createdAt
             team {
               id
@@ -456,6 +468,10 @@ export const GET_USER_PROFILE = gql`
         favoriteDate
         favoritePlayerName
         favoritePlayerNumber
+        experience
+        level
+        experienceToNextLevel
+        levelProgressRatio
         team {
           id
           name
@@ -501,6 +517,10 @@ export const GET_USER_POSTS = gql`
             favoriteDate
             favoritePlayerName
             favoritePlayerNumber
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
             createdAt
             team {
               id

@@ -22,11 +22,11 @@ export interface User {
   userTeams?: any[];
   /** 유저 포인트 (가상 자산). 없으면 0으로 간주 */
   points?: number;
-  /** 누적 경험치 (없으면 0) */
+  /** @deprecated 전역 경험치 필드 (팀별 구조 이관) - use myTeams[].experience */
   experience?: number;
-  /** 현재 레벨 (없으면 1) */
+  /** @deprecated 전역 레벨 필드 (팀별 구조 이관) - use myTeams[].level */
   level?: number;
-  /** 다음 레벨까지 필요한 경험치 (없으면 0) */
+  /** @deprecated 전역 남은 경험치 필드 (팀별 구조 이관) - use myTeams[].experienceToNextLevel */
   experienceToNextLevel?: number;
   /** 마지막 출석(출석체크) 일시 */
   lastAttendanceAt?: string | null;

@@ -98,24 +98,19 @@ export default function ProfileScreen() {
   ];
 
   /**
-   * 경험치/레벨 진행도 계산
-   * - 백엔드에서 내려준 현재 경험치(currentUser.experience)
-   * - 다음 레벨까지 남은 경험치(currentUser.experienceToNextLevel)
-   * 을 이용해 전체 Progress 비율을 구합니다.
+   * 팀별 경험치/레벨 진행도 계산 (전역 User 경험치 → 팀별 구조 전환)
+   * - primary team(priority=0) 기준, 없으면 첫 번째 팀
+   * - 팀 정보 없으면 기본 Lv.1 / 0 EXP
    */
-  const currentExp =
-    (currentUser as any)?.experience && (currentUser as any).experience > 0
-      ? (currentUser as any).experience
-      : 0;
-  const level =
-    (currentUser as any)?.level && (currentUser as any).level > 0
-      ? (currentUser as any).level
-      : 1;
-  const expToNext =
-    (currentUser as any)?.experienceToNextLevel &&
-    (currentUser as any).experienceToNextLevel > 0
-      ? (currentUser as any).experienceToNextLevel
-      : 0;
+  const primaryTeam =
+    (currentUser as any)?.myTeams && (currentUser as any).myTeams.length > 0
+      ? (currentUser as any).myTeams.find((t: any) => t.priority === 0) ||
+        (currentUser as any).myTeams[0]
+      : null;
+
+  const currentExp = primaryTeam?.experience ?? 0;
+  const level = primaryTeam?.level ?? 1;
+  const expToNext = primaryTeam?.experienceToNextLevel ?? 0;
   const nextLevelTotal = currentExp + expToNext;
   const progressRatio =
     nextLevelTotal > 0 ? Math.min(1, currentExp / nextLevelTotal) : 0;

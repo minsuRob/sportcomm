@@ -25,12 +25,32 @@ import { PostDetailContent } from "./PostDetailContent";
  * 3) URL 쿼리 (?modal=1) 와 동기화하여 웹 환경에서 히스토리 관리
  */
 export interface PostDetailModalProps {
-  visible: boolean;                        // 모달 표시 여부
-  postId: string;                          // 대상 게시물 ID
-  onClose: () => void;                     // 닫기 콜백
+  visible: boolean; // 모달 표시 여부
+  postId: string; // 대상 게시물 ID
+  onClose: () => void; // 닫기 콜백
   onPostUpdated?: () => Promise<void> | void; // 게시물 수정/댓글 후 상위 통지
-  enableBackdropPress?: boolean;           // 오버레이 터치 닫기 활성화 여부
-  testID?: string;                         // 테스트 식별자
+  enableBackdropPress?: boolean; // 오버레이 터치 닫기 활성화 여부
+  testID?: string; // 테스트 식별자
+  /**
+   * 피드(목록)에서 이미 가져온 게시물 요약 데이터
+   * - 느린 상세 쿼리 로딩 전에 낙관적(프리) 렌더를 위해 사용
+   * - teamId 필드 추가 (PostDetailContent initialPost 스키마와 동기화)
+   */
+  initialPost?: {
+    id: string;
+    title?: string;
+    content: string;
+    author?: { id: string; nickname: string; profileImageUrl?: string };
+    createdAt?: string;
+    teamId?: string;
+    likeCount?: number;
+    commentCount?: number;
+    viewCount?: number;
+    isLiked?: boolean;
+    isBookmarked?: boolean;
+    media?: Array<{ id: string; url: string; type: "image" | "video" }>;
+    tags?: Array<{ id: string; name: string; color?: string }>;
+  };
 }
 
 export const PostDetailModal: React.FC<PostDetailModalProps> = ({
@@ -40,6 +60,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   onPostUpdated,
   enableBackdropPress = true,
   testID = "post-detail-modal",
+  initialPost, // 아직 내부 PostDetailContent 에 직접 전달되지는 않음 (후속 구현에서 활용)
 }) => {
   const { themed } = useAppTheme();
 
@@ -75,7 +96,10 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
           style={themed($sheetWrapper)}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <Pressable style={themed($sheet)} accessibilityHint="게시물 상세 모달">
+          <Pressable
+            style={themed($sheet)}
+            accessibilityHint="게시물 상세 모달"
+          >
             {/* 상단 드래그 핸들 (시각적 힌트) */}
             <View style={themed($handleWrapper)}>
               <View style={themed($handle)} />
@@ -87,6 +111,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               variant="modal"
               onClose={onClose}
               onPostUpdated={onPostUpdated}
+              initialPost={initialPost}
             />
           </Pressable>
         </KeyboardAvoidingView>

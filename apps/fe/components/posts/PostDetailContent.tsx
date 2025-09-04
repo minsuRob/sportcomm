@@ -28,12 +28,32 @@ import ReportModal from "@/components/ReportModal";
  * - 페이지 / 모달 두 가지 형태로 표시 가능
  * - 기존 (details)/post/[postId].tsx 의 UI + 로직을 캡슐화
  * - variant 에 따라 헤더/레이아웃 차이를 최소한으로 분기
+ * - initialPost 를 통해 피드에서 이미 로드된 데이터로 즉시(빠른) 1차 렌더 후 상세 쿼리 보강
  */
 export interface PostDetailContentProps {
-  postId: string;                    // 게시물 ID
-  variant?: "page" | "modal";        // 표시 형태
-  onClose?: () => void;              // 모달 닫기 콜백 (modal 일 때 사용)
+  postId: string; // 게시물 ID
+  variant?: "page" | "modal"; // 표시 형태
+  onClose?: () => void; // 모달 닫기 콜백 (modal 일 때 사용)
   onPostUpdated?: () => Promise<void> | void; // 게시물 수정/댓글 추가 후 상위 통지
+  initialPost?: {
+    id: string;
+    title?: string;
+    content: string;
+    author?: { id: string; nickname: string; profileImageUrl?: string };
+    createdAt?: string;
+    teamId?: string;
+    likeCount?: number;
+    commentCount?: number;
+    viewCount?: number;
+    isLiked?: boolean;
+    isBookmarked?: boolean;
+    media?: Array<{
+      id: string;
+      url: string;
+      type: "image" | "video" | "IMAGE" | "VIDEO";
+    }>;
+    tags?: Array<{ id: string; name: string; color?: string }>;
+  };
 }
 
 export function PostDetailContent({
@@ -41,6 +61,7 @@ export function PostDetailContent({
   variant = "page",
   onClose,
   onPostUpdated,
+  initialPost,
 }: PostDetailContentProps) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
@@ -49,12 +70,64 @@ export function PostDetailContent({
   const [showReportModal, setShowReportModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // 게시물/사용자 데이터 조회
-  const { post, currentUser, loading, error, refetch } = usePostDetail({
+  // 게시물/사용자 상세 데이터 (상세 쿼리)
+  const {
+    post: fetchedPost,
+    currentUser,
+    loading,
+    error,
+    refetch,
+  } = usePostDetail({
     postId: postId || "",
   });
 
-  // 좋아요 / 팔로우 / 북마크 등 상호작용 상태 & 핸들러
+  /**
+   * initialPost -> 상세 화면에서 필요한 필드 형태로 정규화
+   * (fetchedPost 수신 전 임시/낙관적 뷰)
+   */
+  const normalizedInitialPost = useMemo(() => {
+    if (!initialPost) return null;
+    return {
+      id: initialPost.id,
+      title: initialPost.title,
+      content: initialPost.content,
+      createdAt: initialPost.createdAt || new Date().toISOString(),
+      teamId: initialPost.teamId || "default",
+      viewCount: initialPost.viewCount ?? 0,
+      likeCount: initialPost.likeCount ?? 0,
+      commentCount: initialPost.commentCount ?? 0,
+      shareCount: 0,
+      isPinned: false,
+      isPublic: true,
+      isLiked: initialPost.isLiked ?? false,
+      isBookmarked: initialPost.isBookmarked ?? false,
+      author: initialPost.author || { id: "", nickname: "" },
+      media:
+        initialPost.media?.map((m) => ({
+          id: m.id,
+          url: m.url,
+          type:
+            m.type === "IMAGE"
+              ? "image"
+              : m.type === "VIDEO"
+                ? "video"
+                : (m.type as "image" | "video"),
+        })) || [],
+      comments: [],
+      tags:
+        initialPost.tags?.map((t) => ({
+          id: t.id,
+          name: t.name,
+          color: t.color || theme.colors.tint,
+        })) || [],
+    };
+  }, [initialPost, theme.colors.tint]);
+
+  // effective post (상세 데이터 우선, 없으면 초기 데이터)
+  const post = fetchedPost || normalizedInitialPost;
+  const isPartial = !fetchedPost && !!normalizedInitialPost;
+
+  // 좋아요 / 팔로우 / 북마크 등 상호작용 상태 & 핸들러 (초기값에 initialPost 반영)
   const {
     currentUserId,
     isLiked,
@@ -69,8 +142,8 @@ export function PostDetailContent({
     handleBookmark,
   } = usePostInteractions({
     postId: postId || "",
-    authorId: post?.author.id || "",
-    authorName: post?.author.nickname || "",
+    authorId: post?.author?.id || "",
+    authorName: post?.author?.nickname || "",
     initialLikeCount: post?.likeCount || 0,
     initialIsLiked: post?.isLiked || false,
     initialIsFollowing: false, // TODO: 팔로우 상태 별도 API 연동 시 초기값 반영
@@ -128,9 +201,7 @@ export function PostDetailContent({
    */
   const HeaderComponent = useMemo(() => {
     const titleNode = (
-      <Text style={themed($headerTitle)}>
-        {t(TRANSLATION_KEYS.POST_TITLE)}
-      </Text>
+      <Text style={themed($headerTitle)}>{t(TRANSLATION_KEYS.POST_TITLE)}</Text>
     );
 
     if (variant === "modal") {
@@ -165,9 +236,9 @@ export function PostDetailContent({
         {titleNode}
         <TouchableOpacity
           onPress={handleRefresh}
-            style={themed($iconButton)}
-            disabled={refreshing}
-          >
+          style={themed($iconButton)}
+          disabled={refreshing}
+        >
           <Ionicons
             name="refresh"
             size={20}
@@ -176,20 +247,13 @@ export function PostDetailContent({
         </TouchableOpacity>
       </View>
     );
-  }, [
-    variant,
-    themed,
-    theme.colors,
-    t,
-    handleRefresh,
-    refreshing,
-    onClose,
-  ]);
+  }, [variant, themed, theme.colors, t, handleRefresh, refreshing, onClose]);
 
   /**
    * 로딩 상태 렌더
+   * - initialPost 가 있으면 즉시 본문 렌더 (스피너 생략)
    */
-  if (loading) {
+  if (loading && !post) {
     return (
       <View
         style={[
@@ -211,7 +275,7 @@ export function PostDetailContent({
   /**
    * 에러 / 데이터 없음
    */
-  if (error || !post) {
+  if ((error || !post) && !loading) {
     return (
       <View
         style={[
@@ -230,10 +294,7 @@ export function PostDetailContent({
             {error?.message || t(TRANSLATION_KEYS.POST_NOT_FOUND)}
           </Text>
           {variant === "modal" && (
-            <TouchableOpacity
-              style={themed($retryButton)}
-              onPress={onClose}
-            >
+            <TouchableOpacity style={themed($retryButton)} onPress={onClose}>
               <Text style={themed($retryButtonText)}>닫기</Text>
             </TouchableOpacity>
           )}
@@ -243,7 +304,7 @@ export function PostDetailContent({
   }
 
   /**
-   * 정상 렌더
+   * 정상 / 부분(초기) 렌더
    */
   return (
     <KeyboardAvoidingView
@@ -277,20 +338,20 @@ export function PostDetailContent({
             onPostUpdated={handlePostUpdatedInternal}
           />
 
-            {/* 본문 내용 */}
+          {/* 본문 내용 */}
           <View style={themed($postContent)}>
             <Text style={themed($contentText)}>{post.content}</Text>
           </View>
 
           {/* 미디어 */}
-          {post.media.length > 0 && (
+          {post.media?.length > 0 && (
             <View style={themed($mediaSection)}>
               <PostMedia media={post.media} variant="detail" />
             </View>
           )}
 
           {/* 태그 */}
-          {post.tags.length > 0 && (
+          {post.tags?.length > 0 && (
             <View style={themed($tagsSection)}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {post.tags.map((tag) => (
@@ -308,7 +369,7 @@ export function PostDetailContent({
             </View>
           )}
 
-          {/* 통계 */}
+          {/* 통계 (partial 상태에서는 초기값 / fetching 중엔 약간 dim 처리) */}
           <PostStats
             likeCount={likeCount}
             commentCount={post.commentCount}
@@ -328,26 +389,48 @@ export function PostDetailContent({
             onShare={handleShare}
             variant="detail"
           />
+
+          {isPartial && (
+            <View
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                backgroundColor: theme.colors.background + "CC",
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ fontSize: 11, color: theme.colors.textDim }}>
+                로딩 중...
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* 댓글 */}
-        <View style={themed($commentsCard)}>
-          <CommentSection
-            postId={post.id}
-            comments={post.comments || []}
-            currentUser={currentUser}
-            onCommentAdded={handleCommentAdded}
-            postAuthorId={post.author?.id}
-          />
-        </View>
+        {/* 댓글 (partial 이면 숨김 - 상세 데이터 도착 후 표시) */}
+        {(!isPartial || fetchedPost) && (
+          <View style={themed($commentsCard)}>
+            <CommentSection
+              postId={post.id}
+              comments={post.comments || []}
+              currentUser={currentUser}
+              onCommentAdded={handleCommentAdded}
+              postAuthorId={post.author?.id}
+            />
+          </View>
+        )}
       </ScrollView>
 
-      {/* 신고 모달 (현재 상세 뷰 내부 상태 플래그, UI 후속용) */}
-      <ReportModal
-        visible={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        postId={post.id}
-      />
+      {/* 신고 모달 */}
+      {fetchedPost && (
+        <ReportModal
+          visible={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          postId={post.id}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

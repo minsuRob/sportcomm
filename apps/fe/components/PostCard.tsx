@@ -1046,6 +1046,37 @@ const PostCard = React.memo(function PostCard({
         postId={post.id}
         onClose={() => setDetailVisible(false)}
         onPostUpdated={() => onPostUpdated?.(post)}
+        initialPost={{
+          id: post.id,
+          title: post.title,
+          content: post.content,
+          author: {
+            id: post.author.id,
+            nickname: post.author.nickname,
+            profileImageUrl: post.author.profileImageUrl,
+          },
+          createdAt: post.createdAt,
+          teamId: post.teamId,
+          likeCount: likeCount,
+          commentCount: post.commentCount || 0,
+          viewCount: post.viewCount || 0,
+          isLiked: isLiked,
+          isBookmarked: isBookmarked,
+          media: post.media?.map((m) => ({
+            id: m.id,
+            url: m.url,
+            type:
+              m.type === "IMAGE" || m.type === "image"
+                ? "image"
+                : m.type === "VIDEO" || m.type === "video"
+                  ? "video"
+                  : (m.type as any),
+          })),
+          tags: post.tags?.map((tag) => ({
+            id: tag.id,
+            name: tag.name,
+          })),
+        }}
       />
     </View>
   );

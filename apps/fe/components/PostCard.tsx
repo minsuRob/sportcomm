@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { PostDetailModal } from "@/components/posts/PostDetailModal";
 import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -171,9 +172,6 @@ const formatTimeAgo = (createdAt: string): string => {
   });
 };
 
-
-
-
 /**
  * 콘텐츠 텍스트 렌더링 함수
  */
@@ -220,6 +218,8 @@ const PostCard = React.memo(function PostCard({
   const [postCardWidth, setPostCardWidth] = useState(0);
   const [postCardHeight, setPostCardHeight] = useState(0);
   const postCardRef = useRef<View>(null);
+  // 상세 모달 표시 상태
+  const [detailVisible, setDetailVisible] = useState(false);
 
   useEffect(() => {
     const measurePostCardDimensions = () => {
@@ -243,10 +243,10 @@ const PostCard = React.memo(function PostCard({
 
   // 미디어 타입별 필터링
   const imageMedia = post.media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE"
+    (item) => item.type === "image" || item.type === "IMAGE",
   );
   const videoMedia = post.media.filter(
-    (item) => item.type === "video" || item.type === "VIDEO"
+    (item) => item.type === "video" || item.type === "VIDEO",
   );
 
   /**
@@ -279,7 +279,7 @@ const PostCard = React.memo(function PostCard({
   const { imageAspectRatio, imageHeight, imageLoading } =
     usePostImageDimensions(
       imageMedia.length > 0 ? imageMedia[0]?.url : null,
-      isWeb()
+      isWeb(),
     );
 
   // 미디어 컨테이너의 실제 너비 계산 (화면 너비 - 좌우 패딩)
@@ -319,12 +319,10 @@ const PostCard = React.memo(function PostCard({
   });
 
   // 게시물 상세 페이지로 이동하는 함수
+  // 게시물 카드 클릭 시: 모달 형태 상세 열기
   const handlePostPress = useCallback(() => {
-    router.push({
-      pathname: "/post/[postId]",
-      params: { postId: post.id },
-    });
-  }, [post.id, router]);
+    setDetailVisible(true);
+  }, []);
 
   // 비디오 터치 핸들러
   const handleVideoPress = useCallback(() => {
@@ -477,7 +475,7 @@ const PostCard = React.memo(function PostCard({
     const authorMyTeams = anyPost?.author?.myTeams;
     if (Array.isArray(authorMyTeams)) {
       const found = authorMyTeams.find(
-        (ut: any) => ut?.team?.id === post.teamId
+        (ut: any) => ut?.team?.id === post.teamId,
       );
       if (found?.team?.name) return found.team.name as string;
     }
@@ -487,11 +485,11 @@ const PostCard = React.memo(function PostCard({
 
   // 디버깅을 위한 로그 (개발 환경에서만)
   if (__DEV__) {
-    console.log('PostCard 팀 정보:', {
+    console.log("PostCard 팀 정보:", {
       teamId: post.teamId,
       teamName,
       postTeamName: (post as any)?.team?.name,
-      postTeamNameField: (post as any)?.teamName
+      postTeamNameField: (post as any)?.teamName,
     });
   }
 
@@ -510,7 +508,7 @@ const PostCard = React.memo(function PostCard({
     {
       // 테마 모드: 현재 전역 테마에 따라 동적 설정
       themeMode: theme.isDark ? "dark" : "light",
-    }
+    },
   );
 
   // 팀별 색상 가져오기 (다크모드/라이트모드 구분)
@@ -524,7 +522,7 @@ const PostCard = React.memo(function PostCard({
     iconBadgeBg: teamColors.postActionsBackground + "99",
     moreButtonBg: teamColors.postActionsBackground + "CC",
     glowColor: teamColors.uniformDecoration,
-            borderColor: teamColors.cardBorder,
+    borderColor: teamColors.cardBorder,
   };
 
   // 팀 커스터마이징 시스템 적용
@@ -536,7 +534,7 @@ const PostCard = React.memo(function PostCard({
     subColor: (post.team as any)?.subColor,
     darkMainColor: (post.team as any)?.darkMainColor,
     darkSubColor: (post.team as any)?.darkSubColor,
-    sport: (post.team as any)?.sport
+    sport: (post.team as any)?.sport,
   });
 
   return (
@@ -582,7 +580,12 @@ const PostCard = React.memo(function PostCard({
           ]}
         >
           <TouchableOpacity onPress={handlePostPress} activeOpacity={0.9}>
-            <View style={[themed($mediaContainer), { backgroundColor: teamColors.uniformBackground }]}>
+            <View
+              style={[
+                themed($mediaContainer),
+                { backgroundColor: teamColors.uniformBackground },
+              ]}
+            >
               {videoMedia.length > 0 ? (
                 // 동영상이 있는 경우
                 <Pressable
@@ -678,7 +681,7 @@ const PostCard = React.memo(function PostCard({
                     <Text style={themed($videoDurationText)}>
                       {videoMedia[0]
                         ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
-                            ((videoMedia[0] as any).duration || 0) % 60
+                            ((videoMedia[0] as any).duration || 0) % 60,
                           )
                             .toString()
                             .padStart(2, "0")}`
@@ -689,8 +692,16 @@ const PostCard = React.memo(function PostCard({
               ) : imageMedia.length > 0 ? (
                 imageLoading ? (
                   // 이미지 로딩 중
-                  <View style={[themed($loadingContainer), { backgroundColor: teamColors.uniformBackground }]}>
-                    <ActivityIndicator size="large" color={teamColors.uniformText} />
+                  <View
+                    style={[
+                      themed($loadingContainer),
+                      { backgroundColor: teamColors.uniformBackground },
+                    ]}
+                  >
+                    <ActivityIndicator
+                      size="large"
+                      color={teamColors.uniformText}
+                    />
                   </View>
                 ) : (
                   // 이미지가 있고 로딩 완료된 상태
@@ -714,7 +725,7 @@ const PostCard = React.memo(function PostCard({
                       source={{
                         uri: selectOptimizedImageUrl(
                           imageMedia[0],
-                          isDesktop ? "desktop" : "mobile"
+                          isDesktop ? "desktop" : "mobile",
                         ),
                       }}
                       style={{
@@ -749,14 +760,12 @@ const PostCard = React.memo(function PostCard({
                 // 미디어가 없는 경우 - 유니폼 스타일 플레이스홀더 (최애 선수 정보 동적 반영)
                 <UniformPlaceholder
                   text={
-                    post.author.myTeams?.find(
-                      (t) => t.team.id === post.teamId
-                    )?.favoritePlayerName || "니퍼트"
+                    post.author.myTeams?.find((t) => t.team.id === post.teamId)
+                      ?.favoritePlayerName || "니퍼트"
                   }
                   number={String(
-                    post.author.myTeams?.find(
-                      (t) => t.team.id === post.teamId
-                    )?.favoritePlayerNumber ?? "40"
+                    post.author.myTeams?.find((t) => t.team.id === post.teamId)
+                      ?.favoritePlayerNumber ?? "40",
                   )}
                   mainColor={teamColors.uniformText}
                   subColor={teamColors.uniformNumberText}
@@ -773,9 +782,10 @@ const PostCard = React.memo(function PostCard({
                 style={[
                   themed($gradientOverlay),
                   // 이미지가 없으면 투명도 제거
-                  videoMedia.length === 0 && imageMedia.length === 0 && {
-                    backgroundColor: "rgba(0, 0, 0, 0)",
-                  },
+                  videoMedia.length === 0 &&
+                    imageMedia.length === 0 && {
+                      backgroundColor: "rgba(0, 0, 0, 0)",
+                    },
                   // { backgroundColor: teamPalette.overlayGradient },
                 ]}
               />
@@ -809,7 +819,9 @@ const PostCard = React.memo(function PostCard({
                   numberOfLines={1}
                   borderThickness={0.5}
                   mainColor={teamColors?.profileText || theme.colors.text}
-                  strokeColor={teamColors?.profileStroke || theme.colors.background}
+                  strokeColor={
+                    teamColors?.profileStroke || theme.colors.background
+                  }
                   teamColors={teamColors}
                 />
                 <StrokedText
@@ -819,7 +831,9 @@ const PostCard = React.memo(function PostCard({
                   numberOfLines={1}
                   borderThickness={0.3}
                   mainColor={teamColors?.profileTime || theme.colors.textDim}
-                  strokeColor={teamColors?.profileStroke || theme.colors.background}
+                  strokeColor={
+                    teamColors?.profileStroke || theme.colors.background
+                  }
                   teamColors={teamColors}
                 />
               </TouchableOpacity>
@@ -926,45 +940,49 @@ const PostCard = React.memo(function PostCard({
 
             {/* 팀별 커스터마이징 장식 요소 - 미디어가 없을 때(uniformPlaceholder 사용 시)만 표시 */}
             {teamCustomization.hasDecoration &&
-             videoMedia.length === 0 &&
-             imageMedia.length === 0 && (
-              <TeamDecorationRenderer
-                teamId={post.teamId}
-                teamData={{
-                  id: post.teamId,
-                  name: teamName,
-                  mainColor: (post.team as any)?.mainColor,
-                  subColor: (post.team as any)?.subColor,
-                  darkMainColor: (post.team as any)?.darkMainColor,
-                  darkSubColor: (post.team as any)?.darkSubColor,
-                  sport: (post.team as any)?.sport,
-                  // 팀별 커스텀 색상 추가
-                  decorationBorder: teamColors.decorationBorder,
-                  cardBorder: teamColors.cardBorder,
-                  // 기존 색상들도 유지
-                  ...teamColors
-                }}
-                decorations={teamCustomization.decorations}
-                color={teamColors.decorationBorder || teamPalette.borderColor || categoryInfo.colors.border}
-                teamPalette={teamPalette}
-                categoryInfo={categoryInfo}
-              />
-            )}
+              videoMedia.length === 0 &&
+              imageMedia.length === 0 && (
+                <TeamDecorationRenderer
+                  teamId={post.teamId}
+                  teamData={{
+                    id: post.teamId,
+                    name: teamName,
+                    mainColor: (post.team as any)?.mainColor,
+                    subColor: (post.team as any)?.subColor,
+                    darkMainColor: (post.team as any)?.darkMainColor,
+                    darkSubColor: (post.team as any)?.darkSubColor,
+                    sport: (post.team as any)?.sport,
+                    // 팀별 커스텀 색상 추가
+                    decorationBorder: teamColors.decorationBorder,
+                    cardBorder: teamColors.cardBorder,
+                    // 기존 색상들도 유지
+                    ...teamColors,
+                  }}
+                  decorations={teamCustomization.decorations}
+                  color={
+                    teamColors.decorationBorder ||
+                    teamPalette.borderColor ||
+                    categoryInfo.colors.border
+                  }
+                  teamPalette={teamPalette}
+                  categoryInfo={categoryInfo}
+                />
+              )}
 
             {/* 제목과 콘텐츠를 묶는 컨테이너 */}
             <View style={themed($textContainer)}>
               {/* 제목 표시 */}
               {post.title && post.title.trim() && (
                 <View>
-                                  <StrokedText
-                  content={post.title}
-                  fontSize={24}
-                  lineHeight={42}
-                  numberOfLines={2}
-                  borderThickness={1.5}
-                  teamColors={teamColors}
-                  mainColor={"white"}
-                />
+                  <StrokedText
+                    content={post.title}
+                    fontSize={24}
+                    lineHeight={42}
+                    numberOfLines={2}
+                    borderThickness={1.5}
+                    teamColors={teamColors}
+                    mainColor={"white"}
+                  />
                 </View>
               )}
 
@@ -1021,6 +1039,13 @@ const PostCard = React.memo(function PostCard({
         currentUserId={currentUser?.id}
         onPostUpdated={onPostUpdated}
         isBookmarked={isBookmarked}
+      />
+      {/* 게시물 상세 하단 모달 */}
+      <PostDetailModal
+        visible={detailVisible}
+        postId={post.id}
+        onClose={() => setDetailVisible(false)}
+        onPostUpdated={() => onPostUpdated?.(post)}
       />
     </View>
   );
@@ -1274,15 +1299,10 @@ const $textContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.xxs,
 });
 
-
-
 // 콘텐츠 컨테이너
 const $contentContainer: ThemedStyle<ViewStyle> = () => ({
   // position, bottom 속성 제거
 });
-
-
-
 
 // 유니폼 플레이스홀더 스타일 (350px 고정 높이)
 const $uniformPlaceholder: ThemedStyle<ViewStyle> = () => ({

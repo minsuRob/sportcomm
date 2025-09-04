@@ -1,0 +1,501 @@
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ViewStyle,
+  TextStyle,
+} from "react-native";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { useAppTheme } from "@/lib/theme/context";
+import type { ThemedStyle } from "@/lib/theme/types";
+import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import { usePostDetail } from "@/lib/hooks/usePostDetail";
+import { usePostInteractions } from "../../hooks/usePostInteractions";
+import PostHeader from "@/components/shared/PostHeader";
+import PostMedia from "@/components/shared/PostMedia";
+import PostStats from "@/components/shared/PostStats";
+import PostActions from "@/components/shared/PostActions";
+import CommentSection from "@/components/CommentSection";
+import ReportModal from "@/components/ReportModal";
+
+/**
+ * 재사용 가능한 게시물 상세 컨텐츠 컴포넌트
+ * - 페이지 / 모달 두 가지 형태로 표시 가능
+ * - 기존 (details)/post/[postId].tsx 의 UI + 로직을 캡슐화
+ * - variant 에 따라 헤더/레이아웃 차이를 최소한으로 분기
+ */
+export interface PostDetailContentProps {
+  postId: string;                    // 게시물 ID
+  variant?: "page" | "modal";        // 표시 형태
+  onClose?: () => void;              // 모달 닫기 콜백 (modal 일 때 사용)
+  onPostUpdated?: () => Promise<void> | void; // 게시물 수정/댓글 추가 후 상위 통지
+}
+
+export function PostDetailContent({
+  postId,
+  variant = "page",
+  onClose,
+  onPostUpdated,
+}: PostDetailContentProps) {
+  const { themed, theme } = useAppTheme();
+  const { t } = useTranslation();
+
+  // 지역 상태
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // 게시물/사용자 데이터 조회
+  const { post, currentUser, loading, error, refetch } = usePostDetail({
+    postId: postId || "",
+  });
+
+  // 좋아요 / 팔로우 / 북마크 등 상호작용 상태 & 핸들러
+  const {
+    currentUserId,
+    isLiked,
+    likeCount,
+    isFollowing,
+    isBookmarked,
+    isLikeProcessing,
+    isBookmarkProcessing,
+    isLikeError,
+    handleLike,
+    handleFollowToggle,
+    handleBookmark,
+  } = usePostInteractions({
+    postId: postId || "",
+    authorId: post?.author.id || "",
+    authorName: post?.author.nickname || "",
+    initialLikeCount: post?.likeCount || 0,
+    initialIsLiked: post?.isLiked || false,
+    initialIsFollowing: false, // TODO: 팔로우 상태 별도 API 연동 시 초기값 반영
+    initialIsBookmarked: post?.isBookmarked || false,
+  });
+
+  /**
+   * 새로고침 로직
+   */
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch({ fetchPolicy: "network-only" });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+
+  /**
+   * 댓글 추가 후 데이터 재조회
+   */
+  const handleCommentAdded = useCallback(async () => {
+    try {
+      await refetch({ fetchPolicy: "network-only" });
+      if (onPostUpdated) {
+        await onPostUpdated();
+      }
+    } catch (e) {
+      console.log("댓글 추가 후 재조회 실패:", e);
+    }
+  }, [refetch, onPostUpdated]);
+
+  /**
+   * 게시물 수정 후 (PostHeader 내 수정 모달 등)
+   */
+  const handlePostUpdatedInternal = useCallback(async () => {
+    await refetch({ fetchPolicy: "network-only" });
+    if (onPostUpdated) {
+      await onPostUpdated();
+    }
+  }, [refetch, onPostUpdated]);
+
+  /**
+   * 공유 (추후 구현 예정)
+   * - 현재는 로그 출력만
+   */
+  const handleShare = useCallback(() => {
+    console.log("공유 - postId:", postId);
+  }, [postId]);
+
+  /**
+   * 헤더 구성 (variant 별 분기)
+   * - 페이지: 좌측/우측 여백 동일한 기본 헤더
+   * - 모달: 닫기 버튼 + 리프레시 버튼
+   */
+  const HeaderComponent = useMemo(() => {
+    const titleNode = (
+      <Text style={themed($headerTitle)}>
+        {t(TRANSLATION_KEYS.POST_TITLE)}
+      </Text>
+    );
+
+    if (variant === "modal") {
+      return (
+        <View style={themed($modalHeader)}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={themed($iconButton)}
+            accessibilityLabel="닫기"
+          >
+            <Ionicons name="close" size={22} color={theme.colors.text} />
+          </TouchableOpacity>
+          {titleNode}
+          <TouchableOpacity
+            onPress={handleRefresh}
+            style={themed($iconButton)}
+            disabled={refreshing}
+            accessibilityLabel="새로고침"
+          >
+            <Ionicons
+              name="refresh"
+              size={20}
+              color={refreshing ? theme.colors.textDim : theme.colors.text}
+            />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={themed($pageHeader)}>
+        {titleNode}
+        <TouchableOpacity
+          onPress={handleRefresh}
+            style={themed($iconButton)}
+            disabled={refreshing}
+          >
+          <Ionicons
+            name="refresh"
+            size={20}
+            color={refreshing ? theme.colors.textDim : theme.colors.text}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  }, [
+    variant,
+    themed,
+    theme.colors,
+    t,
+    handleRefresh,
+    refreshing,
+    onClose,
+  ]);
+
+  /**
+   * 로딩 상태 렌더
+   */
+  if (loading) {
+    return (
+      <View
+        style={[
+          themed($rootContainer),
+          variant === "modal" && themed($modalVariantRoot),
+        ]}
+      >
+        {HeaderComponent}
+        <View style={themed($centerStateContainer)}>
+          <ActivityIndicator size="large" color={theme.colors.tint} />
+          <Text style={themed($stateText)}>
+            {t(TRANSLATION_KEYS.POST_LOADING)}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  /**
+   * 에러 / 데이터 없음
+   */
+  if (error || !post) {
+    return (
+      <View
+        style={[
+          themed($rootContainer),
+          variant === "modal" && themed($modalVariantRoot),
+        ]}
+      >
+        {HeaderComponent}
+        <View style={themed($centerStateContainer)}>
+          <MaterialIcons
+            name="error-outline"
+            size={48}
+            color={theme.colors.error}
+          />
+          <Text style={themed($errorText)}>
+            {error?.message || t(TRANSLATION_KEYS.POST_NOT_FOUND)}
+          </Text>
+          {variant === "modal" && (
+            <TouchableOpacity
+              style={themed($retryButton)}
+              onPress={onClose}
+            >
+              <Text style={themed($retryButtonText)}>닫기</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  /**
+   * 정상 렌더
+   */
+  return (
+    <KeyboardAvoidingView
+      style={[
+        themed($rootContainer),
+        variant === "modal" && themed($modalVariantRoot),
+      ]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      {HeaderComponent}
+
+      <ScrollView
+        style={themed($scrollContainer)}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 메인 카드 */}
+        <View style={themed($postCard)}>
+          <PostHeader
+            post={{
+              id: post.id,
+              title: post.title,
+              content: post.content,
+              author: post.author,
+              createdAt: post.createdAt,
+              teamId: post.teamId || "default",
+            }}
+            currentUserId={currentUserId}
+            isFollowing={isFollowing}
+            onFollowToggle={handleFollowToggle}
+            showFollowButton={currentUserId !== post.author.id}
+            onPostUpdated={handlePostUpdatedInternal}
+          />
+
+            {/* 본문 내용 */}
+          <View style={themed($postContent)}>
+            <Text style={themed($contentText)}>{post.content}</Text>
+          </View>
+
+          {/* 미디어 */}
+          {post.media.length > 0 && (
+            <View style={themed($mediaSection)}>
+              <PostMedia media={post.media} variant="detail" />
+            </View>
+          )}
+
+          {/* 태그 */}
+          {post.tags.length > 0 && (
+            <View style={themed($tagsSection)}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {post.tags.map((tag) => (
+                  <View
+                    key={tag.id}
+                    style={[
+                      themed($tag),
+                      { backgroundColor: tag.color || theme.colors.tint },
+                    ]}
+                  >
+                    <Text style={themed($tagText)}>#{tag.name}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* 통계 */}
+          <PostStats
+            likeCount={likeCount}
+            commentCount={post.commentCount}
+            viewCount={post.viewCount}
+            variant="detail"
+          />
+
+          {/* 액션 버튼 */}
+          <PostActions
+            isLiked={isLiked}
+            isBookmarked={isBookmarked}
+            isLikeProcessing={isLikeProcessing}
+            isBookmarkProcessing={isBookmarkProcessing}
+            isLikeError={isLikeError}
+            onLike={handleLike}
+            onBookmark={handleBookmark}
+            onShare={handleShare}
+            variant="detail"
+          />
+        </View>
+
+        {/* 댓글 */}
+        <View style={themed($commentsCard)}>
+          <CommentSection
+            postId={post.id}
+            comments={post.comments || []}
+            currentUser={currentUser}
+            onCommentAdded={handleCommentAdded}
+            postAuthorId={post.author?.id}
+          />
+        </View>
+      </ScrollView>
+
+      {/* 신고 모달 (현재 상세 뷰 내부 상태 플래그, UI 후속용) */}
+      <ReportModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        postId={post.id}
+      />
+    </KeyboardAvoidingView>
+  );
+}
+
+/* ================= 스타일 정의 ================= */
+
+const $rootContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+});
+
+const $modalVariantRoot: ThemedStyle<ViewStyle> = () => ({
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
+  overflow: "hidden",
+});
+
+/** 페이지 헤더 스타일 (기본 상세 페이지) */
+const $pageHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.md,
+  backgroundColor: colors.background,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+/** 모달 헤더 스타일 (닫기 + 새로고침) */
+const $modalHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: spacing.lg,
+  paddingTop: spacing.md,
+  paddingBottom: spacing.sm,
+  backgroundColor: colors.background,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "bold",
+  color: colors.text,
+});
+
+const $iconButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
+  borderRadius: 20,
+});
+
+const $centerStateContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "center",
+  padding: spacing.lg,
+});
+
+const $stateText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.md,
+  fontSize: 16,
+  color: colors.textDim,
+});
+
+const $errorText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  color: colors.error,
+  marginTop: spacing.md,
+  textAlign: "center",
+});
+
+const $retryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.lg,
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  borderRadius: 8,
+});
+
+const $retryButtonText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 14,
+  color: "white",
+  fontWeight: "600",
+});
+
+const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $postCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.background,
+  marginHorizontal: spacing.md,
+  marginTop: spacing.md,
+  borderRadius: 12,
+  elevation: 3,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  overflow: "hidden",
+});
+
+const $postContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingBottom: spacing.md,
+});
+
+const $contentText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  lineHeight: 24,
+  color: colors.text,
+});
+
+const $mediaSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingBottom: spacing.md,
+});
+
+const $tagsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingBottom: spacing.md,
+});
+
+const $tag: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  marginRight: spacing.xs,
+});
+
+const $tagText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 12,
+  fontWeight: "500",
+});
+
+const $commentsCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.background,
+  marginHorizontal: spacing.md,
+  marginTop: spacing.md,
+  marginBottom: spacing.lg,
+  borderRadius: 12,
+  elevation: 3,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  overflow: "hidden",
+});

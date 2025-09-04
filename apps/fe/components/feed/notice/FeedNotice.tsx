@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import AppDialog from "@/components/ui/AppDialog";
 
 /**
  * Feed 상단(or 특정 위치)에 표시할 닫기 가능한 공지 컴포넌트
@@ -67,6 +68,7 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   const { themed, theme } = useAppTheme();
   const [checking, setChecking] = useState<boolean>(true);
   const [visible, setVisible] = useState<boolean>(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
 
   /**
    * AsyncStorage에서 숨김 여부 로드
@@ -106,11 +108,19 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   }, [storageKey, forceShow, disabled]);
 
   /**
-   * 닫기 핸들러
-   * - forceShow인 경우에도 닫기 허용 (디자인 선택)
-   * - AsyncStorage에 "1" 저장
+   * 닫기 버튼 클릭 핸들러
+   * - 확인 다이얼로그 표시
    */
-  const handleDismiss = useCallback(async () => {
+  const handleClosePress = useCallback(() => {
+    setShowConfirmDialog(true);
+  }, []);
+
+  /**
+   * 닫기 확인 핸들러
+   * - 실제 닫기 처리
+   */
+  const handleConfirmDismiss = useCallback(async () => {
+    setShowConfirmDialog(false);
     setVisible(false);
     try {
       if (!forceShow) {
@@ -121,6 +131,13 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
     }
     onDismiss?.();
   }, [storageKey, forceShow, onDismiss]);
+
+  /**
+   * 취소 핸들러
+   */
+  const handleCancelDismiss = useCallback(() => {
+    setShowConfirmDialog(false);
+  }, []);
 
   // 초기 조회 중이거나 표시 조건이 아니면 렌더하지 않음
   if (checking || !visible || disabled) return null;
@@ -141,8 +158,8 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
           {children || defaultMessage}
         </Text>
         <TouchableOpacity
-          onPress={handleDismiss}
-            style={themed($noticeCloseButton)}
+          onPress={handleClosePress}
+          style={themed($noticeCloseButton)}
           accessibilityLabel="공지 닫기"
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -150,6 +167,17 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
           <Ionicons name="close" size={16} color={theme.colors.textDim} />
         </TouchableOpacity>
       </View>
+
+      {/* 공지 닫기 확인 다이얼로그 */}
+      <AppDialog
+        visible={showConfirmDialog}
+        onClose={handleCancelDismiss}
+        title="공지 닫기"
+        description="이 공지를 닫으시겠습니까? 다시 표시되지 않습니다."
+        confirmText="닫기"
+        cancelText="취소"
+        onConfirm={handleConfirmDismiss}
+      />
     </View>
   );
 };

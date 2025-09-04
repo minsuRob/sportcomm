@@ -132,7 +132,6 @@ export class AuthSyncResolver {
       currentUser.createdAt = combinedInfo.createdAt;
       currentUser.updatedAt = combinedInfo.updatedAt;
       currentUser.points = (combinedInfo as any).points ?? 0;
-      currentUser.experience = (combinedInfo as any).experience ?? 0;
       currentUser.lastAttendanceAt =
         (combinedInfo as any).lastAttendanceAt || undefined;
       // 선택 필드(출석/레벨 계산 관련)는 entity 게터/메서드 내부 로직으로 처리됨

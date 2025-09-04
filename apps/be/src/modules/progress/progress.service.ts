@@ -30,14 +30,8 @@ export interface AwardResult {
   userId: string;
   action: UserProgressAction;
   addedPoints: number;
-  addedExperience: number;
   totalPoints: number;
-  totalExperience: number;
-  previousLevel: number;
-  newLevel: number;
-  levelUp: boolean;
   skipped?: boolean; // 중복 출석 등으로 보상 제외
-  experienceToNextLevel: number;
   timestamp: Date;
   // === 확장 필드 (커스텀 지급 등) ===
   isCustom?: boolean;
@@ -50,10 +44,6 @@ export interface AwardResult {
 export interface UserProgressSnapshot {
   userId: string;
   points: number;
-  experience: number;
-  level: number;
-  experienceToNextLevel: number;
-  levelProgressRatio: number; // 0~1
   lastAttendanceAt?: Date;
   timestamp: Date;
 }
@@ -76,10 +66,6 @@ export class ProgressService {
     return {
       userId: user.id,
       points: user.points || 0,
-      experience: user.experience || 0,
-      level: user.level,
-      experienceToNextLevel: user.experienceToNextLevel,
-      levelProgressRatio: user.getLevelProgressRatio(),
       lastAttendanceAt: user.lastAttendanceAt,
       timestamp: new Date(),
     };
@@ -94,18 +80,12 @@ export class ProgressService {
     action: UserProgressAction,
     now: Date = new Date(),
   ): Promise<AwardResult> {
-    // 1. 사용자 조회
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      // 동시성 이슈 증가 시 lock: { mode: 'pessimistic_write' } 고려
-    });
+    const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
-    const previousLevel = user.level;
     const beforePoints = user.points || 0;
-    const beforeExp = user.experience || 0;
 
-    // 2. 데일리 출석 중복 처리
+    // 출석 중복 방지
     if (
       action === UserProgressAction.DAILY_ATTENDANCE &&
       !user.canClaimDailyAttendance(now)
@@ -114,54 +94,31 @@ export class ProgressService {
         userId,
         action,
         addedPoints: 0,
-        addedExperience: 0,
         totalPoints: beforePoints,
-        totalExperience: beforeExp,
-        previousLevel,
-        newLevel: previousLevel,
-        levelUp: false,
         skipped: true,
-        experienceToNextLevel: user.experienceToNextLevel,
         timestamp: now,
       };
     }
 
-    // 3. 엔티티 헬퍼를 통한 적립
-    const progressResult = user.awardProgress(action, now);
+    const reward = USER_PROGRESS_REWARD[action] ?? 0;
+    if (reward > 0) {
+      user.points = beforePoints + reward;
+      if (action === UserProgressAction.DAILY_ATTENDANCE) {
+        user.lastAttendanceAt = now;
+      }
+      await this.userRepository.save(user);
+    }
 
-    // 4. DB 반영
-    //    (고빈도 액션이면 쿼리 빌더 UPDATE ... SET points = points + X 사용 고려)
-    await this.userRepository.save(user);
-
-    const newLevel = user.level;
-
-    // 5. 결과 DTO 구성
     const result: AwardResult = {
       userId,
       action,
-      addedPoints: progressResult.added,
-      addedExperience: progressResult.added,
+      addedPoints: reward,
       totalPoints: user.points,
-      totalExperience: user.experience,
-      previousLevel,
-      newLevel,
-      levelUp: newLevel > previousLevel,
-      skipped: progressResult.skipped,
-      experienceToNextLevel: user.experienceToNextLevel,
+      skipped: false,
       timestamp: now,
     };
 
-    // 6. 이벤트 발행 (비동기 확장: 알림/배지/로그)
     this.eventEmitter.emit('progress.awarded', result);
-    if (result.levelUp) {
-      this.eventEmitter.emit('progress.levelup', {
-        userId,
-        previousLevel,
-        newLevel,
-        timestamp: now,
-      });
-    }
-
     return result;
   }
 
@@ -206,20 +163,13 @@ export class ProgressService {
     now: Date = new Date(),
   ): Promise<AwardResult> {
     if (amount <= 0) {
-      // 무효 지급 방지 (skipped 처리)
       const snapshot = await this.getUserProgress(userId);
       return {
         userId,
         action: UserProgressAction.CHAT_MESSAGE,
         addedPoints: 0,
-        addedExperience: 0,
         totalPoints: snapshot.points,
-        totalExperience: snapshot.experience,
-        previousLevel: snapshot.level,
-        newLevel: snapshot.level,
-        levelUp: false,
         skipped: true,
-        experienceToNextLevel: snapshot.experienceToNextLevel,
         timestamp: now,
         isCustom: true,
         reason,
@@ -229,43 +179,21 @@ export class ProgressService {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
-    const previousLevel = user.level;
-
     user.points = (user.points || 0) + amount;
-    user.experience = (user.experience || 0) + amount;
     await this.userRepository.save(user);
-
-    const newLevel = user.level;
 
     const result: AwardResult = {
       userId,
-      action: UserProgressAction.CHAT_MESSAGE, // 임시(커스텀 구분은 isCustom 활용)
+      action: UserProgressAction.CHAT_MESSAGE,
       addedPoints: amount,
-      addedExperience: amount,
       totalPoints: user.points,
-      totalExperience: user.experience,
-      previousLevel,
-      newLevel,
-      levelUp: newLevel > previousLevel,
       skipped: false,
-      experienceToNextLevel: user.experienceToNextLevel,
       timestamp: now,
       isCustom: true,
       reason,
     };
 
     this.eventEmitter.emit('progress.awarded', result);
-    if (result.levelUp) {
-      this.eventEmitter.emit('progress.levelup', {
-        userId,
-        previousLevel,
-        newLevel,
-        timestamp: now,
-        isCustom: true,
-        reason,
-      });
-    }
-
     return result;
   }
 

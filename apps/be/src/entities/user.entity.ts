@@ -170,20 +170,6 @@ export class User {
   points: number;
 
   /**
-   * 누적 경험치
-   * 활동(채팅, 게시글 작성, 출석 등)을 통해 적립되는 값이며
-   * 레벨 계산의 기초 데이터입니다.
-   */
-  @Field(() => Number, { description: '누적 경험치', defaultValue: 0 })
-  @Column({
-    type: 'integer',
-    default: 0,
-    nullable: false,
-    comment: '누적 경험치 (기본값 0)',
-  })
-  experience: number;
-
-  /**
    * 최근 출석(데일리 출석 보상) 적립 일시
    * 하루 1회 출석 보상 중복 방지를 위한 기준 값입니다.
    */
@@ -197,27 +183,6 @@ export class User {
     comment: '최근 데일리 출석 보상 수령 일시',
   })
   lastAttendanceAt?: Date;
-
-  /**
-   * 계산된 레벨 (가상 필드)
-   * 경험치에 기반하여 동적으로 계산됩니다. DB에는 저장되지 않습니다.
-   */
-  @Field(() => Number, { description: '경험치 기반 레벨' })
-  get level(): number {
-    return User.calculateLevel(this.experience || 0);
-  }
-
-  /**
-   * 다음 레벨까지 남은 경험치 (UI 편의용)
-   */
-  @Field(() => Number, {
-    description: '다음 레벨까지 필요한 경험치',
-  })
-  get experienceToNextLevel(): number {
-    const currentLevel = this.level;
-    const nextThreshold = User.getExperienceThreshold(currentLevel + 1);
-    return Math.max(nextThreshold - (this.experience || 0), 0);
-  }
 
   /**
    * 사용자 비밀번호 (해시된 값) - DEPRECATED
@@ -447,62 +412,7 @@ export class User {
     return this.nickname || this.email.split('@')[0];
   }
 
-  // ===== 경험치/레벨 관련 정적 & 인스턴스 메서드 =====
-
-  /**
-   * 레벨 기준 경험치 테이블 (시작 경험치)
-   * 인덱스 = 레벨, 값 = 해당 레벨 도달에 필요한 최소 누적 경험치
-   * 레벨 1은 0부터 시작. 이후 구간은 점증 폭 증가(선형 + 가중).
-   * 필요 시 마이그레이션 없이 상수 조정만으로 커브 변경 가능.
-   */
-  private static readonly LEVEL_THRESHOLDS: number[] = [
-    0, // Lv1
-    100, // Lv2
-    250, // Lv3
-    450, // Lv4
-    700, // Lv5
-    1000, // Lv6
-    1400, // Lv7
-    1850, // Lv8
-    2350, // Lv9
-    2900, // Lv10
-  ];
-
-  /**
-   * 주어진 레벨의 시작 경험치(임계값)를 반환
-   * 정의된 표 이후 레벨은 마지막 증가폭을 점차 10%씩 증가시키며 확장.
-   */
-  static getExperienceThreshold(level: number): number {
-    if (level <= 1) return 0;
-    const table = User.LEVEL_THRESHOLDS;
-    if (level <= table.length) return table[level - 1];
-
-    // 확장 구간: 마지막 두 구간 증가폭 기반으로 가중 증가
-    const last = table[table.length - 1];
-    // 기본 증가폭: 최근 구간 평균
-    const baseDelta = table[table.length - 1] - table[table.length - 2] || 500;
-    // 초과 레벨(테이블 밖) offset
-    const extraLevels = level - table.length;
-    // 10% 복리 증가
-    const delta = Math.floor(baseDelta * Math.pow(1.1, extraLevels - 1));
-    return last + delta * extraLevels;
-  }
-
-  /**
-   * 경험치 → 레벨 계산
-   */
-  static calculateLevel(experience: number): number {
-    if (experience <= 0) return 1;
-
-    let level = 1;
-    while (
-      experience >= User.getExperienceThreshold(level + 1) &&
-      level < 999 // 안전 상한
-    ) {
-      level++;
-    }
-    return level;
-  }
+  // (경험치/레벨 관련 정적 메서드 제거됨)
 
   /**
    * 데일리 출석 보상 수령 가능 여부
@@ -517,83 +427,11 @@ export class User {
   }
 
   /**
-   * 포인트 & 경험치 적립 (원자적 증가 로직, 서비스 레이어에서 트랜잭션 권장)
-   * 현재는 같은 비율(=동일 값) 적용. 향후 구조 확장을 위해 반환 구조 유지.
-   *
-   * @param action 적립 액션
-   * @param now 기준 시간 (테스트 용이성)
-   * @returns { added: number; totalPoints: number; totalExperience: number; skipped?: boolean }
+   * (경험치 시스템 제거) 포인트 적립만 필요 시 별도 서비스 로직에서 직접 points 필드 증가 처리
+   * 기존 awardProgress 메서드 삭제됨.
    */
-  awardProgress(
-    action: UserProgressAction,
-    now: Date = new Date(),
-  ): {
-    added: number;
-    totalPoints: number;
-    totalExperience: number;
-    skipped?: boolean;
-  } {
-    // 데일리 출석 중복 처리
-    if (
-      action === UserProgressAction.DAILY_ATTENDANCE &&
-      !this.canClaimDailyAttendance(now)
-    ) {
-      return {
-        added: 0,
-        totalPoints: this.points,
-        totalExperience: this.experience,
-        skipped: true,
-      };
-    }
 
-    const reward = USER_PROGRESS_REWARD[action] ?? 0;
-    if (reward <= 0) {
-      return {
-        added: 0,
-        totalPoints: this.points,
-        totalExperience: this.experience,
-        skipped: true,
-      };
-    }
-
-    // 증가
-    this.points = (this.points || 0) + reward;
-    this.experience = (this.experience || 0) + reward;
-
-    if (action === UserProgressAction.DAILY_ATTENDANCE) {
-      this.lastAttendanceAt = now;
-    }
-
-    return {
-      added: reward,
-      totalPoints: this.points,
-      totalExperience: this.experience,
-    };
-  }
-
-  /**
-   * 다음 레벨 시작 경험치 반환
-   */
-  getNextLevelThreshold(): number {
-    return User.getExperienceThreshold(this.level + 1);
-  }
-
-  /**
-   * 현재 레벨의 시작 경험치
-   */
-  getCurrentLevelThreshold(): number {
-    return User.getExperienceThreshold(this.level);
-  }
-
-  /**
-   * 현재 레벨 진행률 (0~1)
-   */
-  getLevelProgressRatio(): number {
-    const curStart = this.getCurrentLevelThreshold();
-    const next = this.getNextLevelThreshold();
-    if (next === curStart) return 1;
-    return Math.min(1, (this.experience - curStart) / (next - curStart));
-  }
+  // 레벨/경험치 계산 관련 메서드 제거됨
 }
 
 /**
@@ -642,14 +480,8 @@ export interface CombinedUserInfo {
   isActive: boolean;
   /** 사용자 포인트 (가상 자산) */
   points?: number;
-  /** 누적 경험치 */
-  experience?: number;
   /** 최근 출석 보상 수령 일시 */
   lastAttendanceAt?: Date;
-  /** 계산된 레벨 (가상 필드) */
-  level?: number;
-  /** 다음 레벨까지 필요 경험치 */
-  experienceToNextLevel?: number;
   // 공통 정보
   createdAt: Date;
   updatedAt: Date;

@@ -799,8 +799,41 @@ const PostCard = React.memo(function PostCard({
                 }
                 activeOpacity={0.7}
               >
+                {/* UserAvatar: 프로필 이미지가 비어있으면 해당 게시물 teamId에 매칭되는 팀 로고를 fallback으로 사용 */}
                 <UserAvatar
-                  imageUrl={post.author.profileImageUrl}
+                  imageUrl={
+                    (post.author.profileImageUrl &&
+                      post.author.profileImageUrl.trim() !== "" &&
+                      post.author.profileImageUrl) ||
+                    (() => {
+                      const anyPost: any = post as any;
+
+                      // 1) post.team.logoUrl (정식 타입 정의엔 없지만 확장 필드 고려)
+                      if (anyPost?.team?.logoUrl) return anyPost.team.logoUrl;
+
+                      // 2) author.myTeams 내부 team.id 매칭
+                      const myTeams = anyPost?.author?.myTeams;
+                      if (Array.isArray(myTeams)) {
+                        const found = myTeams.find(
+                          (ut: any) =>
+                            ut?.team?.id === post.teamId && ut?.team?.logoUrl,
+                        );
+                        if (found?.team?.logoUrl) return found.team.logoUrl;
+                      }
+
+                      // 3) author.authorTeams (백워드 호환)
+                      const authorTeams = anyPost?.author?.authorTeams;
+                      if (Array.isArray(authorTeams)) {
+                        const found2 = authorTeams.find(
+                          (t: any) => t?.id === post.teamId && t?.logoUrl,
+                        );
+                        if (found2?.logoUrl) return found2.logoUrl;
+                      }
+
+                      // 4) 모든 경로 실패 시 undefined -> UserAvatar 내부 기본 person 아이콘
+                      return undefined;
+                    })()
+                  }
                   name={post.author.nickname}
                   size={40}
                 />

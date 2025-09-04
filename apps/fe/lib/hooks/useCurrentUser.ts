@@ -135,7 +135,7 @@ export function useCurrentUser() {
 
                 if (!mountedRef.current) return;
 
-                // 로컬 세션 업데이트 (포인트 및 myTeams 최신화 - 팀별 경험치는 myTeams[].experience / level 사용)
+                // 로컬 세션 업데이트 (포인트 및 myTeams 최신화)
                 await saveSession({
                   id: remoteUser.id,
                   nickname: remoteUser.nickname,

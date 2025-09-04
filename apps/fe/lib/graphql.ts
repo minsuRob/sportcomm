@@ -453,9 +453,6 @@ export const GET_USER_PROFILE = gql`
       age
       role
       points
-      experience
-      level
-      experienceToNextLevel
       isFollowing
       followerCount
       followingCount
@@ -521,7 +518,6 @@ export const GET_USER_POSTS = gql`
             level
             experienceToNextLevel
             levelProgressRatio
-            createdAt
             team {
               id
               name
@@ -897,6 +893,10 @@ export const GET_STORY_POSTS = gql`
             teamId
             priority
             notificationEnabled
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
             createdAt
             team {
               id

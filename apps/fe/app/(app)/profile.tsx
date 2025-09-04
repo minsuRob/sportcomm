@@ -42,11 +42,8 @@ interface UserProfile {
   followingCount: number;
   postCount: number;
   myTeams?: UserTeam[];
-  // 확장된 필드 (경험치/레벨/포인트)
+  // 확장된 필드 (포인트)
   points?: number;
-  experience?: number;
-  level?: number;
-  experienceToNextLevel?: number;
   lastAttendanceAt?: string | null;
 }
 
@@ -97,71 +94,8 @@ export default function ProfileScreen() {
     { key: "bookmarks", title: "북마크" },
   ];
 
-  /**
-   * 팀별 경험치/레벨 진행도 계산 (전역 User 경험치 → 팀별 구조 전환)
-   * - primary team(priority=0) 기준, 없으면 첫 번째 팀
-   * - 팀 정보 없으면 기본 Lv.1 / 0 EXP
-   */
-  const primaryTeam =
-    (currentUser as any)?.myTeams && (currentUser as any).myTeams.length > 0
-      ? (currentUser as any).myTeams.find((t: any) => t.priority === 0) ||
-        (currentUser as any).myTeams[0]
-      : null;
-
-  const currentExp = primaryTeam?.experience ?? 0;
-  const level = primaryTeam?.level ?? 1;
-  const expToNext = primaryTeam?.experienceToNextLevel ?? 0;
-  const nextLevelTotal = currentExp + expToNext;
-  const progressRatio =
-    nextLevelTotal > 0 ? Math.min(1, currentExp / nextLevelTotal) : 0;
-  /**
-   * 레벨 Progress UI 렌더러
-   * - 프로필 상단(아바타/닉네임 영역 하단)에 배치하기 위해 호출 위치에서 그대로 JSX 삽입
-   * - currentUser 없으면 렌더링 생략
-   */
-  const renderLevelProgress = () => {
-    if (!currentUser) return null;
-    return (
-      <View
-        style={{
-          width: "100%",
-          marginTop: 12,
-          alignItems: "center",
-          paddingHorizontal: 8,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "700",
-            color: theme.colors.text,
-            marginBottom: 4,
-          }}
-        >
-          {`Lv.${level} | EXP ${currentExp.toLocaleString()}`}
-          {expToNext > 0 &&
-            ` / ${nextLevelTotal.toLocaleString()} (+${expToNext.toLocaleString()})`}
-        </Text>
-        <View
-          style={{
-            width: "100%",
-            height: 10,
-            borderRadius: 6,
-            backgroundColor: theme.colors.backgroundAlt,
-            overflow: "hidden",
-          }}
-        >
-          <View
-            style={{
-              width: `${Math.round(progressRatio * 100)}%`,
-              height: "100%",
-              backgroundColor: theme.colors.tint,
-            }}
-          />
-        </View>
-      </View>
-    );
-  };
+  // 팀별 경험치/레벨 기능 제거됨 (이관 준비 단계)
+  // 추후 재도입 시 primary team 기반 계산 로직을 별도 훅으로 분리 예정.
 
   // 사용자 프로필 데이터 조회
   const { data: profileData, refetch: refetchProfile } = useQuery<{
@@ -373,7 +307,7 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {renderLevelProgress()}
+        {/* 팀별 경험치 Progress UI 제거됨 */}
 
         {/* 팀 정보 표시 */}
         {userProfile.myTeams && userProfile.myTeams.length > 0 ? (

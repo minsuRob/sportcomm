@@ -170,10 +170,7 @@ export interface User {
     favoriteDate?: string;
     favoritePlayerName?: string;
     favoritePlayerNumber?: number;
-    experience: number;
-    level: number;
-    experienceToNextLevel: number;
-    levelProgressRatio: number;
+
     team: {
       id: string;
       name: string;

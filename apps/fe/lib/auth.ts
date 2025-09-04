@@ -22,12 +22,7 @@ export interface User {
   userTeams?: any[];
   /** 유저 포인트 (가상 자산). 없으면 0으로 간주 */
   points?: number;
-  /** @deprecated 전역 경험치 필드 (팀별 구조 이관) - use myTeams[].experience */
-  experience?: number;
-  /** @deprecated 전역 레벨 필드 (팀별 구조 이관) - use myTeams[].level */
-  level?: number;
-  /** @deprecated 전역 남은 경험치 필드 (팀별 구조 이관) - use myTeams[].experienceToNextLevel */
-  experienceToNextLevel?: number;
+
   /** 마지막 출석(출석체크) 일시 */
   lastAttendanceAt?: string | null;
 }
@@ -59,19 +54,7 @@ export const saveSession = async (
       if (typeof (user as any).points !== "number") {
         (user as any).points = 0;
       }
-      // 경험치/레벨 기본값 보정
-      if (typeof (user as any).experience !== "number") {
-        (user as any).experience = 0;
-      }
-      if (typeof (user as any).level !== "number" || (user as any).level <= 0) {
-        (user as any).level = 1;
-      }
-      if (
-        typeof (user as any).experienceToNextLevel !== "number" ||
-        (user as any).experienceToNextLevel < 0
-      ) {
-        (user as any).experienceToNextLevel = 0;
-      }
+
       await setItem(USER_KEY, JSON.stringify(user));
       console.log("세션 저장 완료: 토큰과 사용자 정보가 모두 저장됨");
       // --- 세션 이벤트 브로드캐스트 (로그인/토큰+유저 저장) ---
@@ -95,22 +78,7 @@ export const saveSession = async (
       if (typeof (tokenOrUser as any).points !== "number") {
         (tokenOrUser as any).points = 0;
       }
-      // 경험치/레벨 기본값 보정
-      if (typeof (tokenOrUser as any).experience !== "number") {
-        (tokenOrUser as any).experience = 0;
-      }
-      if (
-        typeof (tokenOrUser as any).level !== "number" ||
-        (tokenOrUser as any).level <= 0
-      ) {
-        (tokenOrUser as any).level = 1;
-      }
-      if (
-        typeof (tokenOrUser as any).experienceToNextLevel !== "number" ||
-        (tokenOrUser as any).experienceToNextLevel < 0
-      ) {
-        (tokenOrUser as any).experienceToNextLevel = 0;
-      }
+
       await setItem(USER_KEY, JSON.stringify(tokenOrUser));
       // --- 세션 이벤트 브로드캐스트 (프로필/포인트 등 사용자 정보 업데이트) ---
       emitSessionChange({

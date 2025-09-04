@@ -165,11 +165,11 @@ const formatTimeAgo = (createdAt: string): string => {
   if (diffInHours < 24) return `${diffInHours}시간 전`;
   if (diffInDays < 7) return `${diffInDays}일 전`;
 
-  return postDate.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // YYYY.MM.DD 형식 (예: 2025.08.27)
+  const year = postDate.getFullYear();
+  const month = String(postDate.getMonth() + 1).padStart(2, "0");
+  const day = String(postDate.getDate()).padStart(2, "0");
+  return `${year}.${month}.${day}`;
 };
 
 /**
@@ -805,66 +805,82 @@ const PostCard = React.memo(function PostCard({
                   size={40}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={themed($profileInfo)}
-                onPress={() =>
-                  router.push(`/(modals)/user-profile?userId=${post.author.id}`)
-                }
-                activeOpacity={0.7}
-              >
-                <StrokedText
-                  content={post.author.nickname}
-                  fontSize={15}
-                  lineHeight={18}
-                  numberOfLines={1}
-                  borderThickness={0.5}
-                  mainColor={teamColors?.profileText || theme.colors.text}
-                  strokeColor={
-                    teamColors?.profileStroke || theme.colors.background
-                  }
-                  teamColors={teamColors}
-                />
-                <StrokedText
-                  content={formatTimeAgo(post.createdAt)}
-                  fontSize={13}
-                  lineHeight={16}
-                  numberOfLines={1}
-                  borderThickness={0.3}
-                  mainColor={teamColors?.profileTime || theme.colors.textDim}
-                  strokeColor={
-                    teamColors?.profileStroke || theme.colors.background
-                  }
-                  teamColors={teamColors}
-                />
-              </TouchableOpacity>
 
-              {/* 팔로우 버튼 - 자신의 게시물이 아닌 경우에만 표시 */}
-              {currentUser && currentUser.id !== post.author.id && (
-                <TouchableOpacity
-                  style={[
-                    themed($followButton),
-                    isFollowing && themed($followButtonActive),
-                  ]}
-                  onPress={handleFollowToggle}
-                  disabled={followLoading}
-                  activeOpacity={0.8}
-                >
-                  {followLoading ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <>
-                      <Ionicons
-                        name={isFollowing ? "person-remove" : "person-add"}
-                        size={12}
-                        color="white"
-                      />
-                      <Text style={themed($followButtonText)}>
-                        {isFollowing ? "언팔로우" : "팔로우"}
-                      </Text>
-                    </>
+              {/* 닉네임 + 팔로우 버튼을 같은 행에 배치하고 시간은 아래에 배치 */}
+              <View style={themed($profileInfo)}>
+                <View style={themed($nameRow)}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push(
+                        `/(modals)/user-profile?userId=${post.author.id}`,
+                      )
+                    }
+                    activeOpacity={0.7}
+                    style={themed($nicknameTap)}
+                  >
+                    <StrokedText
+                      content={post.author.nickname}
+                      fontSize={15}
+                      lineHeight={18}
+                      numberOfLines={1}
+                      borderThickness={0.5}
+                      mainColor={teamColors?.profileText || theme.colors.text}
+                      strokeColor={
+                        teamColors?.profileStroke || theme.colors.background
+                      }
+                      teamColors={teamColors}
+                    />
+                  </TouchableOpacity>
+                  {currentUser && currentUser.id !== post.author.id && (
+                    <TouchableOpacity
+                      style={[
+                        themed($followButton),
+                        isFollowing && themed($followButtonActive),
+                      ]}
+                      onPress={handleFollowToggle}
+                      disabled={followLoading}
+                      activeOpacity={0.8}
+                    >
+                      {followLoading ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <>
+                          <Ionicons
+                            name={isFollowing ? "person-remove" : "person-add"}
+                            size={12}
+                            color="white"
+                          />
+                          <Text style={themed($followButtonText)}>
+                            {isFollowing ? "언팔로우" : "팔로우"}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   )}
+                </View>
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push(
+                      `/(modals)/user-profile?userId=${post.author.id}`,
+                    )
+                  }
+                  activeOpacity={0.7}
+                  style={themed($timeTap)}
+                >
+                  <StrokedText
+                    content={formatTimeAgo(post.createdAt)}
+                    fontSize={13}
+                    lineHeight={16}
+                    numberOfLines={1}
+                    borderThickness={0.3}
+                    mainColor={teamColors?.profileTime || theme.colors.textDim}
+                    strokeColor={
+                      teamColors?.profileStroke || theme.colors.background
+                    }
+                    teamColors={teamColors}
+                  />
                 </TouchableOpacity>
-              )}
+              </View>
             </View>
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
@@ -1177,8 +1193,12 @@ const $profileImage: ThemedStyle<ImageStyle> = () => ({
   borderColor: "rgba(255, 255, 255, 0.3)",
 });
 
-const $profileInfo: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
+const $profileInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "column",
+  justifyContent: "center",
+  flexShrink: 0,
+  gap: 2,
+  marginRight: spacing.xxxs,
 });
 
 const $profileName: ThemedStyle<TextStyle> = () => ({
@@ -1216,7 +1236,6 @@ const $followButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.xs,
   borderRadius: 16,
-  marginLeft: spacing.sm,
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.2,
   shadowRadius: 4,
@@ -1403,4 +1422,20 @@ const $videoPlaceholderText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   marginTop: 8,
   textAlign: "center",
+});
+
+/* 추가 스타일 - 닉네임/팔로우 한 줄 배치 */
+const $nameRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+});
+
+const $nicknameTap: ThemedStyle<ViewStyle> = () => ({
+  flexShrink: 1,
+});
+
+const $timeTap: ThemedStyle<ViewStyle> = () => ({
+  flexShrink: 1,
+  marginTop: 2,
 });

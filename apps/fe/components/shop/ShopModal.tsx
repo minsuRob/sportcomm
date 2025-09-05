@@ -341,13 +341,24 @@ const $balanceAmount: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.tint,
 });
 
-const $categoryTabs: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $categoryTabs: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+  // 가로 스크롤 바 컨테이너 - 불필요한 세로 확장 방지
   paddingHorizontal: spacing.lg,
   marginBottom: spacing.md,
+  flexGrow: 0,
+  flexShrink: 0,
+  // 웹 환경에서 height 늘어나는 케이스 대응 (auto 비슷한 효과)
+  alignSelf: "flex-start",
+  // 배경 추가시 카드처럼 보이도록 할 수도 있으나 현재는 투명 유지
+  // backgroundColor: colors.backgroundAlt,
 });
 
 const $categoryTabsContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.sm,
+  flexDirection: "row",
+  alignItems: "center",
+  flexWrap: "nowrap",
+  paddingVertical: 0,
 });
 
 const $categoryTab: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -358,6 +369,7 @@ const $categoryTab: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderRadius: 20,
   backgroundColor: colors.backgroundAlt,
   gap: spacing.xs,
+  alignSelf: "flex-start", // 세로 방향으로 늘어나지 않도록 고정
 });
 
 const $categoryTabActive: ThemedStyle<ViewStyle> = ({ colors }) => ({

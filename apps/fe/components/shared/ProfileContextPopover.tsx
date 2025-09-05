@@ -17,14 +17,18 @@ export interface ProfileContextPopoverProps {
   visible: boolean;
   onClose: () => void;
   onOpenProfile: () => void;
-  onShopPress: () => void; // 상점(포인트 샵) 화면 열기 콜백
-  onLotteryPress: () => void; // 로또/이벤트 화면 열기 콜백
-  anchorStyle?: ViewStyle; // 부모에서 위치 제어
+  onShopPress: () => void; // 포인트 상점(Shop) 화면 열기
+  onLotteryPress: () => void; // 이벤트/포인트 추첨(lottery) 화면 열기
+  onBoardPress: () => void; // 상세 게시판 화면 열기 (기존 FeedHeader 버튼 이관)
+  onTeamFilterPress: () => void; // 팀 피드 필터(TeamFilterSelector) 모달 열기
+  onNotificationPress: () => void; // 알림 목록 화면 열기 (기존 FeedHeader 알림 버튼 이관)
+  anchorStyle?: ViewStyle; // 부모에서 위치/포지션 제어 (measure 결과 전달)
 }
 
 /**
  * 프로필 드롭다운(팝오버) 메뉴
- * - 하단 시트가 아닌, 헤더 우측 아바타 아래에 표시되는 컨텍스트 메뉴
+ * - 헤더 우측 아바타 아래에 표시되는 컨텍스트 메뉴
+ * - TeamFilterSelector / 상세 게시판 진입 항목 포함
  */
 export default function ProfileContextPopover({
   visible,
@@ -32,6 +36,9 @@ export default function ProfileContextPopover({
   onOpenProfile,
   onShopPress,
   onLotteryPress,
+  onBoardPress,
+  onTeamFilterPress,
+  onNotificationPress,
   anchorStyle,
 }: ProfileContextPopoverProps) {
   const { theme, toggleTheme, themed } = useAppTheme();
@@ -71,6 +78,44 @@ export default function ProfileContextPopover({
         },
       },
       {
+        key: "notifications",
+        label: "알림",
+        icon: (
+          <Ionicons
+            name="notifications-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          onClose();
+          onNotificationPress();
+        },
+      },
+      {
+        key: "teamFilter",
+        label: "팀 필터",
+        icon: (
+          <Ionicons name="funnel-outline" size={18} color={theme.colors.text} />
+        ),
+        onPress: () => {
+          // FeedHeader 등에 있는 TeamFilterSelector 모달 트리거
+          onClose();
+          onTeamFilterPress();
+        },
+      },
+      {
+        key: "board",
+        label: "상세 게시판",
+        icon: (
+          <Ionicons name="list-outline" size={18} color={theme.colors.text} />
+        ),
+        onPress: () => {
+          onClose();
+          onBoardPress();
+        },
+      },
+      {
         key: "lottery",
         label: "이벤트 / 추첨",
         icon: (
@@ -94,6 +139,21 @@ export default function ProfileContextPopover({
         onPress: () => {
           onClose();
           onShopPress();
+        },
+      },
+      {
+        key: "teamColorFilter",
+        label: "앱 색상 필터 (내 팀 기반)",
+        icon: (
+          <Ionicons
+            name="color-filter-outline"
+            size={18}
+            color={theme.colors.text}
+          />
+        ),
+        onPress: () => {
+          onClose();
+          router.push({ pathname: "/(details)/team-colors-select" });
         },
       },
       {
@@ -122,24 +182,6 @@ export default function ProfileContextPopover({
           onClose();
         },
       },
-      {
-        key: "teamColorFilter",
-        label: "앱 색상 필터 (내 팀 기반)",
-        icon: (
-          <Ionicons
-            name="color-filter-outline"
-            size={18}
-            color={theme.colors.text}
-          />
-        ),
-        onPress: () => {
-          // 내 팀 기반의 앱 색상 필터 페이지로 이동합니다.
-          // 모달을 닫고 상세 페이지 스택의 team-colors 페이지로 이동하세요.
-          onClose();
-          // router.push에 문자열을 직접 전달하면 타입 불일치가 발생할 수 있어 객체 형식으로 호출합니다.
-          router.push({ pathname: "/(details)/team-colors-select" });
-        },
-      },
     ],
     [
       theme,
@@ -151,6 +193,9 @@ export default function ProfileContextPopover({
       router,
       onShopPress,
       onLotteryPress,
+      onBoardPress,
+      onTeamFilterPress,
+      onNotificationPress,
     ],
   );
 
@@ -251,3 +296,9 @@ const $itemText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.text,
 });
+
+/*
+커밋 메세지: feat(popover): 프로필 컨텍스트 메뉴에 팀 필터(TeamFilterSelector) 진입 항목 추가
+커밋 메세지: feat(popover): 상세 게시판(onBoardPress) 항목 추가 및 FeedHeader 버튼 기능 이관
+커밋 메세지: feat(popover): 알림(onNotificationPress) 항목 추가 및 FeedHeader 알림 버튼 제거
+*/

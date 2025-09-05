@@ -42,6 +42,9 @@ interface UserProfile {
   followingCount: number;
   postCount: number;
   myTeams?: UserTeam[];
+  // 확장된 필드 (포인트)
+  points?: number;
+  lastAttendanceAt?: string | null;
 }
 
 /**
@@ -90,6 +93,9 @@ export default function ProfileScreen() {
     { key: "posts", title: "내 게시물" },
     { key: "bookmarks", title: "북마크" },
   ];
+
+  // 팀별 경험치/레벨 기능 제거됨 (이관 준비 단계)
+  // 추후 재도입 시 primary team 기반 계산 로직을 별도 훅으로 분리 예정.
 
   // 사용자 프로필 데이터 조회
   const { data: profileData, refetch: refetchProfile } = useQuery<{
@@ -300,6 +306,8 @@ export default function ProfileScreen() {
             </Text>
           </View>
         ) : null}
+
+        {/* 팀별 경험치 Progress UI 제거됨 */}
 
         {/* 팀 정보 표시 */}
         {userProfile.myTeams && userProfile.myTeams.length > 0 ? (

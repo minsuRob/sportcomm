@@ -22,6 +22,9 @@ export interface User {
   userTeams?: any[];
   /** 유저 포인트 (가상 자산). 없으면 0으로 간주 */
   points?: number;
+
+  /** 마지막 출석(출석체크) 일시 */
+  lastAttendanceAt?: string | null;
 }
 
 export const saveSession = async (
@@ -51,6 +54,7 @@ export const saveSession = async (
       if (typeof (user as any).points !== "number") {
         (user as any).points = 0;
       }
+
       await setItem(USER_KEY, JSON.stringify(user));
       console.log("세션 저장 완료: 토큰과 사용자 정보가 모두 저장됨");
       // --- 세션 이벤트 브로드캐스트 (로그인/토큰+유저 저장) ---
@@ -74,6 +78,7 @@ export const saveSession = async (
       if (typeof (tokenOrUser as any).points !== "number") {
         (tokenOrUser as any).points = 0;
       }
+
       await setItem(USER_KEY, JSON.stringify(tokenOrUser));
       // --- 세션 이벤트 브로드캐스트 (프로필/포인트 등 사용자 정보 업데이트) ---
       emitSessionChange({

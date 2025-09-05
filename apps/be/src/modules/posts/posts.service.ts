@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ProgressService } from '../progress/progress.service';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
@@ -126,6 +127,7 @@ export class PostsService {
     private dataSource: DataSource,
     private readonly mediaService: MediaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly progressService: ProgressService, // 포인트/경험치 적립 서비스
   ) {}
 
   /**
@@ -193,6 +195,14 @@ export class PostsService {
 
     // 첫 번째 버전 생성 (원본 버전)
     await this.createPostVersion(savedPost, 1, '게시물 생성');
+
+    // 포인트/경험치 적립 (게시글 작성 액션)
+    // 실패하더라도 게시물 생성 흐름에 영향을 주지 않도록 예외는 로깅 후 무시
+    this.progressService
+      ?.awardPostCreate(authorId)
+      .catch((err) =>
+        console.error('[Progress] 게시글 작성 적립 실패:', err?.message || err),
+      );
 
     // 작성자 정보와 함께 반환
     return await this.findById(savedPost.id);

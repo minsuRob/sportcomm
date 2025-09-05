@@ -7,6 +7,7 @@ import { ChatMessage } from '../../entities/chat-message.entity';
 import { User } from '../../entities/user.entity';
 import { UserTeam } from '../../entities/user-team.entity';
 import { Team } from '../../entities/team.entity';
+import { ProgressModule } from '../progress/progress.module';
 
 /**
  * 채팅 모듈
@@ -17,6 +18,7 @@ import { Team } from '../../entities/team.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([ChatRoom, ChatMessage, User, UserTeam, Team]),
+    ProgressModule,
   ],
   providers: [ChatService, ChatResolver],
   exports: [ChatService],

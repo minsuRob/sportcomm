@@ -119,6 +119,33 @@ export default function LotteryScreen() {
     },
   );
 
+  /**
+   * 발표(announce) 단계에서 당첨자 목록에 현재 사용자가 포함된 경우
+   * - 사용자 포인트/경험치 등이 즉시 반영되도록 사용자 정보를 강제 새로고침
+   * - 이미 다른 경로(폴링/수동 새로고침)로 반영될 수도 있으나 즉시 UX 향상 목적
+   */
+  useEffect(() => {
+    if (
+      lotteryData?.currentPhase === "announce" &&
+      winnersData?.lotteryWinners &&
+      winnersData.lotteryWinners.length > 0 &&
+      currentUser
+    ) {
+      const isWinner = winnersData.lotteryWinners.some(
+        (w: any) => w.user?.id === currentUser.id,
+      );
+      if (isWinner) {
+        // 강제 동기화 (true 플래그는 내부 구현에서 즉시 원격 재조회 유도 용도라고 가정)
+        reloadCurrentUser(true);
+      }
+    }
+  }, [
+    lotteryData?.currentPhase,
+    winnersData?.lotteryWinners,
+    currentUser?.id,
+    reloadCurrentUser,
+  ]);
+
   // 새로고침 처리
   const handleRefresh = async () => {
     setRefreshing(true);

@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import {
   Entity,
   ManyToOne,
@@ -10,6 +11,7 @@ import { ObjectType, Field } from '@nestjs/graphql';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { Team } from './team.entity';
+import { LevelUtil } from '../utils/level.util';
 
 /**
  * 사용자-팀 관계 엔티티
@@ -103,6 +105,55 @@ export class UserTeam extends BaseEntity {
     comment: '사용자가 지정한 최애 선수 등번호',
   })
   favoritePlayerNumber?: number;
+
+  /**
+   * 이 사용자-팀 관계에 대한 누적 경험치
+   * 사용자 전역 경험치와 분리 (팀별 활동 추적)
+   */
+  @Field(() => Number, {
+    description: '해당 팀에 대한 누적 경험치',
+    defaultValue: 0,
+  })
+  @Column({
+    type: 'int',
+    default: 0,
+    nullable: false,
+    comment: '사용자-팀 개별 누적 경험치',
+  })
+  experience: number;
+
+  /**
+   * 팀 개별 레벨 (LevelUtil 기반 계산 필드)
+   */
+  @Field(() => Number, { description: '팀 개별 레벨' })
+  get level(): number {
+    return LevelUtil.calculateLevel(this.experience || 0);
+  }
+
+  /**
+   * 이 팀 레벨업까지 필요한 경험치
+   */
+  @Field(() => Number, {
+    description: '이 팀 레벨업까지 남은 경험치',
+  })
+  get experienceToNextLevel(): number {
+    const currentLevel = this.level;
+    const nextThreshold = LevelUtil.getExperienceThreshold(currentLevel + 1);
+    return Math.max(nextThreshold - (this.experience || 0), 0);
+  }
+
+  /**
+   * 팀 레벨 진행률 (0~1)
+   */
+  @Field(() => Number, {
+    description: '현재 팀 레벨 진행률 (0~1)',
+  })
+  get levelProgressRatio(): number {
+    const curStart = LevelUtil.getExperienceThreshold(this.level);
+    const next = LevelUtil.getExperienceThreshold(this.level + 1);
+    if (next === curStart) return 1;
+    return Math.min(1, (this.experience - curStart) / (next - curStart || 1));
+  }
 
   // === 관계 설정 ===
 

@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { useStoryData } from "@/lib/hooks/useStoryData";
+import { feedAdvancedCache, buildFeedKey } from "@/lib/state/feedAdvancedCache";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 
 /**
@@ -229,12 +229,83 @@ export default function StorySection({
   const { currentUser: hookCurrentUser } = useCurrentUser();
   const currentUser = propCurrentUser || hookCurrentUser;
 
-  const { stories, loading, error, refresh, hasMore } = useStoryData({
-    storyTypes,
-    maxItems,
-    userId: currentUser?.id,
-    teamIds: teamIds, // 팀 필터 전달
-  });
+  // 고급 피드 캐시(feedAdvancedCache) 기반 스토리 데이터 구성
+  // - 별도 스토리 전용 쿼리를 호출하지 않고 현재 피드 버킷(팀 필터 동일)에서 상위 N개를 추출
+  // - 필요 시 추후 storyBucket 네임스페이스 확장 가능
+  const [stories, setStories] = useState<StoryItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(false); // 현재는 피드 상위 일부만 사용하므로 false
+
+  useEffect(() => {
+    const key = buildFeedKey(teamIds || null);
+    // 구독: 피드 버킷 변경 시 스토리 리스트 재구성
+    const unsubscribe = feedAdvancedCache.subscribe(key, (snap) => {
+      if (!snap) {
+        setStories([]);
+        setLoading(false);
+        return;
+      }
+      try {
+        // 피드에서 최신 posts 가져와 StoryItem으로 변환
+        const sourcePosts = snap.posts.slice(0, maxItems);
+        const derived: StoryItem[] = sourcePosts.map((p) => {
+          const isMyTeam = !!currentUser?.myTeams?.some(
+            (mt: any) => mt.team.id === p.teamId,
+          );
+          const type: StoryType = isMyTeam ? "myteams" : "popular";
+          const media = (p.media || []).map((m: any) => ({
+            id: m.id,
+            url: m.url,
+            type: (m.type || "").toUpperCase() as any,
+            width: (m as any).width,
+            height: (m as any).height,
+          }));
+          return {
+            id: p.id,
+            type,
+            title: p.title || p.content?.slice(0, 30) || "",
+            content: p.content,
+            createdAt: p.createdAt,
+            teamId: p.teamId,
+            media,
+            thumbnailUrl:
+              media.find(
+                (m) =>
+                  m.type === "IMAGE" ||
+                  m.type === "image" ||
+                  m.type === "IMAGE",
+              )?.url || p.author?.profileImageUrl,
+            author: {
+              id: p.author.id,
+              nickname: p.author.nickname,
+              profileImageUrl: p.author.profileImageUrl,
+            },
+            metadata: {
+              likeCount: p.likeCount,
+              commentCount: p.commentCount,
+              viewCount: p.viewCount,
+              teamName: p.team?.name,
+              isPopular: (p.likeCount || 0) > 10,
+            },
+          } as StoryItem;
+        });
+        setStories(derived);
+        setHasMore(false); // 별도 페이지네이션 미사용
+        setLoading(false);
+      } catch (e: any) {
+        setError(e);
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [teamIds, maxItems, currentUser]);
+
+  // refresh 대체: 피드 버킷을 stale 처리하면 상위 컴포넌트의 피드 새로고침 로직이 재로딩
+  const refresh = useCallback(() => {
+    const key = buildFeedKey(teamIds || null);
+    feedAdvancedCache.markStale(key);
+  }, [teamIds]);
 
   // 스토리 클릭 핸들러
   const handleStoryPress = useCallback(

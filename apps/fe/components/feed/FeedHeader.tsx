@@ -12,42 +12,44 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import UserAvatar from "@/components/users/UserAvatar";
 import ProfileContextPopover from "@/components/shared/ProfileContextPopover";
-import TeamFilterSelector from "@/components/TeamFilterSelector";
-import { NotificationBadge } from "@/components/notifications";
+
 import { useAppTheme } from "@/lib/theme/context";
 import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
 import type { User } from "@/lib/auth";
+import TabSlider from "@/components/TabSlider";
 
 interface FeedHeaderProps {
   currentUser: User | null;
-  selectedTeamIds: string[] | null;
-  onTeamSelect: (ids: string[] | null) => void;
-  loading?: boolean;
   onNotificationPress: () => void;
-  onCreatePress: () => void;
   onProfilePress: () => void;
   onShopPress: () => void;
   onLotteryPress: () => void;
-  onBoardPress: () => void; // 상세 게시판 버튼 클릭 핸들러 추가
+  onBoardPress: () => void; // 상세 게시판 버튼 클릭 핸들러
+  onTeamFilterPress: () => void; // 프로필 팝오버에서 팀 필터 열기
+  tabs?: { key: string; title: string }[];
+  activeTab?: string;
+  onTabChange?: (key: string) => void;
+  selectedTeamIds?: string[] | null; // 인라인 팀 필터 버튼 표시용 (선택된 팀 개수 표시)
 }
 
 /**
  * 피드 상단 헤더 컴포넌트
- * - 팀 필터, 알림, 글쓰기, 프로필 버튼을 포함합니다.
- * - 팀 컬러 오버라이드 도입: theme.colors.teamMain / teamSub (fallback: tint/accent)
+ * - 동일 1행 라인에 로고 / 탭 / 우측 액션 배치
+ * - 탭 너비는 헤더 전체의 약 25% (최소 가로폭 확보)
  */
 export default function FeedHeader({
   currentUser,
-  selectedTeamIds,
-  onTeamSelect,
-  loading = false,
   onNotificationPress,
-  onCreatePress,
   onProfilePress,
   onShopPress,
   onLotteryPress,
-  onBoardPress, // 상세 게시판 버튼 클릭 핸들러 추가
+  onBoardPress,
+  onTeamFilterPress,
+  tabs,
+  activeTab,
+  onTabChange,
+  selectedTeamIds,
 }: FeedHeaderProps) {
   const { t } = useTranslation();
   const { themed, theme } = useAppTheme();
@@ -57,16 +59,13 @@ export default function FeedHeader({
     right: 0,
   });
 
-  // 프로필 버튼의 ref를 생성하여 위치 측정에 사용
   const profileButtonRef = React.useRef<View>(null);
 
   const handleProfilePress = (event: GestureResponderEvent) => {
     if (currentUser) {
-      // React Native에서는 ref를 통해 measure 함수에 접근해야 함
       profileButtonRef.current?.measure((x, y, width, height, pageX, pageY) => {
         const windowWidth = Dimensions.get("window").width;
         const right = windowWidth - pageX - width;
-
         setPopoverPosition({
           top: pageY + height + 8,
           right: right,
@@ -78,79 +77,96 @@ export default function FeedHeader({
     }
   };
 
-  // 팀 메인/서브 컬러 (fallback 처리)
-  const teamMain = theme.colors.teamMain ?? theme.colors.tint;
-  const teamSub = theme.colors.teamSub ?? theme.colors.accent;
-
   return (
     <View style={themed($header)}>
-      <View style={themed($headerLeft)}>
-        <Text style={themed($logoText)}>{t("SportCom")}</Text>
-      </View>
-      <View style={themed($headerRight)}>
-        {currentUser && (
-          <>
-            <TouchableOpacity
-              style={themed($pointsBadge)}
-              onPress={onShopPress}
-              activeOpacity={0.7}
-            >
-              <Text style={themed($pointsText)}>
-                {t("points", { points: currentUser.points ?? 0 })}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={themed($boardButton)}
-              onPress={onBoardPress}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="list-outline" size={20} color={teamMain} />
-            </TouchableOpacity>
-            {/* 로또(이벤트) 버튼: ProfileContextPopover 메뉴로 이동됨 */}
-            {/* 샵 버튼: ProfileContextPopover 메뉴로 이동됨 */}
-          </>
+      {/* 1행: 로고 + (탭) + 우측 버튼들 */}
+      <View style={themed($headerRow)}>
+        <View style={themed($headerLeft)}>
+          <Text style={themed($logoText)}>{t("SportCom")}</Text>
+        </View>
+
+        {tabs && tabs.length > 0 && (
+          <View style={themed($tabCenterOverlay)} pointerEvents="box-none">
+            <View style={themed($tabInlineCenter)} pointerEvents="auto">
+              <TabSlider
+                tabs={tabs}
+                activeTab={activeTab ?? tabs[0].key}
+                onTabChange={(k) => onTabChange?.(k)}
+                variant="header"
+                height={32}
+              />
+            </View>
+          </View>
         )}
-        {currentUser && (
-          <>
-            <TeamFilterSelector
-              onTeamSelect={onTeamSelect}
-              selectedTeamIds={selectedTeamIds}
-              loading={loading}
+
+        {/* 인라인 팀 필터 트리거 (프로필 팝오버 경로 외 직접 접근)
+            - selectedTeamIds 길이에 따라 라벨 동적 표시
+            - FeedScreen 에서 selectedTeamIds 전달 필요 (선택적 prop)
+        */}
+        {/* {onTeamFilterPress && (
+          <TouchableOpacity
+            style={themed($teamFilterInline)}
+            onPress={onTeamFilterPress}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="funnel-outline"
+              size={14}
+              color={theme.colors.textDim}
             />
-            <TouchableOpacity
-              style={themed($iconButton)}
-              onPress={onNotificationPress}
-            >
+            <Text style={themed($teamFilterInlineText)} numberOfLines={1}>
+              {(() => {
+                const ids = selectedTeamIds ?? [];
+                if (ids.length === 0) return "모든 팀";
+                if (ids.length === 1) return "1팀";
+                return `${ids.length}팀`;
+              })()}
+            </Text>
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color={theme.colors.textDim}
+            />
+          </TouchableOpacity>
+        )} */}
+
+        <View style={themed($headerRight)}>
+          {currentUser && (
+            <>
+              <TouchableOpacity
+                style={themed($pointsBadge)}
+                onPress={onShopPress}
+                activeOpacity={0.7}
+              >
+                <Text style={themed($pointsText)}>
+                  {(currentUser.points ?? 0).toLocaleString()}P
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          <TouchableOpacity
+            ref={profileButtonRef}
+            style={themed($iconButton)}
+            onPress={handleProfilePress}
+          >
+            {currentUser ? (
+              <UserAvatar
+                imageUrl={currentUser.profileImageUrl}
+                name={currentUser.nickname}
+                size={28}
+              />
+            ) : (
               <Ionicons
-                name="notifications-outline"
+                name="person-outline"
                 size={22}
                 color={theme.colors.text}
               />
-              <NotificationBadge size="small" />
-            </TouchableOpacity>
-          </>
-        )}
-        <TouchableOpacity
-          ref={profileButtonRef}
-          style={themed($iconButton)}
-          onPress={handleProfilePress}
-        >
-          {currentUser ? (
-            <UserAvatar
-              imageUrl={currentUser.profileImageUrl}
-              name={currentUser.nickname}
-              size={28}
-            />
-          ) : (
-            <Ionicons
-              name="person-outline"
-              size={22}
-              color={theme.colors.text}
-            />
-          )}
-        </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
-      {/* 프로필 컨텍스트 팝오버: 헤더 우측 아바타 아래 위치 */}
+
       {currentUser && (
         <ProfileContextPopover
           visible={profileMenuVisible}
@@ -167,6 +183,18 @@ export default function FeedHeader({
             setProfileMenuVisible(false);
             onLotteryPress();
           }}
+          onBoardPress={() => {
+            setProfileMenuVisible(false);
+            onBoardPress();
+          }}
+          onTeamFilterPress={() => {
+            setProfileMenuVisible(false);
+            onTeamFilterPress();
+          }}
+          onNotificationPress={() => {
+            setProfileMenuVisible(false);
+            onNotificationPress();
+          }}
           anchorStyle={popoverPosition}
         />
       )}
@@ -175,11 +203,10 @@ export default function FeedHeader({
 }
 
 const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.md,
+  flexDirection: "column",
+  paddingHorizontal: spacing.sm,
+  paddingTop: spacing.md,
+  paddingBottom: spacing.xs,
   backgroundColor: colors.card,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
@@ -190,18 +217,9 @@ const $headerLeft: ThemedStyle<ViewStyle> = () => ({
   justifyContent: "center",
 });
 
-const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 18,
-  fontWeight: "bold",
-  color: colors.text,
-  flex: 1,
-  textAlign: "center",
-});
-
 const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "900",
-  // 팀 색상 오버라이드 시 teamMain 사용, 없으면 기본 tint
   color: colors.teamMain ?? colors.tint,
   fontFamily: typography.logo.normal,
 });
@@ -209,8 +227,9 @@ const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $headerRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  justifyContent: "flex-end",
   gap: spacing.xs,
+  marginLeft: "auto",
+  // 우측 끝으로 자연스럽게 정렬
 });
 
 const $iconButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
@@ -239,37 +258,6 @@ const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "700",
 });
 
-// 아래 3개 버튼은 teamMain 기준 반투명 배경/테두리
-const $lotteryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
-  const main = colors.teamMain ?? colors.tint;
-  return {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: main + "15",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: main + "30",
-    marginRight: spacing.xs,
-  };
-};
-
-const $shopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
-  const main = colors.teamMain ?? colors.tint;
-  return {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: main + "15",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: main + "30",
-    marginRight: spacing.xs,
-  };
-};
-
 const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
   const main = colors.teamMain ?? colors.tint;
   return {
@@ -285,6 +273,52 @@ const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {
   };
 };
 
+const $headerRow: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+  width: "100%",
+  // space-between 제거 -> 중앙 탭 영역 배치 위해 직접 margin 제어
+});
+
+const $tabCenterOverlay: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  top: 0,
+  bottom: 0,
+  alignItems: "center",
+  justifyContent: "center",
+  pointerEvents: "box-none",
+});
+
+const $tabInlineCenter: ThemedStyle<ViewStyle> = () => ({
+  minWidth: 180,
+  maxWidth: 320,
+  alignSelf: "center",
+  pointerEvents: "auto",
+});
+
+const $teamFilterInline: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.backgroundAlt,
+  borderRadius: 18,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  marginRight: spacing.sm,
+  gap: spacing.xxs,
+  minHeight: 32,
+});
+
+const $teamFilterInlineText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.text,
+  fontWeight: "600",
+  maxWidth: 60,
+});
+
 /*
-커밋 메세지: refactor(feed): FeedHeader 팀 컬러 teamMain/teamSub 적용 및 tint 직접 참조 제거
+커밋 메세지: feat(feed header): TabSlider 1행 내 25% 폭 중앙 배치 및 2행 제거
+추가 커밋 메세지: feat(feed header): 인라인 팀 필터 버튼 추가 (TeamFilterSelector 접근성 복구)
+추가 커밋 메세지: refactor(feed header): 알림 버튼 제거 및 ProfileContextPopover로 이관
 */

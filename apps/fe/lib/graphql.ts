@@ -15,7 +15,10 @@ export * from "./graphql/admin";
  * 피드 게시물, 내 팀 목록, 차단 사용자를 한 번에 가져옵니다.
  */
 export const GET_FEED_DATA = gql`
-  query GetFeedData($input: FindPostsInput, $includeBlockedUsers: Boolean = false) {
+  query GetFeedData(
+    $input: FindPostsInput
+    $includeBlockedUsers: Boolean = false
+  ) {
     posts(input: $input) {
       posts {
         id
@@ -56,6 +59,10 @@ export const GET_FEED_DATA = gql`
             favoriteDate
             favoritePlayerName
             favoritePlayerNumber
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
             createdAt
             team {
               id
@@ -104,6 +111,10 @@ export const GET_FEED_DATA = gql`
       favoriteDate
       favoritePlayerName
       favoritePlayerNumber
+      experience
+      level
+      experienceToNextLevel
+      levelProgressRatio
       createdAt
       team {
         id
@@ -170,6 +181,10 @@ export const GET_POSTS = gql`
             favoriteDate
             favoritePlayerName
             favoritePlayerNumber
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
             createdAt
             team {
               id
@@ -437,6 +452,7 @@ export const GET_USER_PROFILE = gql`
       comment
       age
       role
+      points
       isFollowing
       followerCount
       followingCount
@@ -449,6 +465,10 @@ export const GET_USER_PROFILE = gql`
         favoriteDate
         favoritePlayerName
         favoritePlayerNumber
+        experience
+        level
+        experienceToNextLevel
+        levelProgressRatio
         team {
           id
           name
@@ -494,7 +514,10 @@ export const GET_USER_POSTS = gql`
             favoriteDate
             favoritePlayerName
             favoritePlayerNumber
-            createdAt
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
             team {
               id
               name
@@ -870,6 +893,10 @@ export const GET_STORY_POSTS = gql`
             teamId
             priority
             notificationEnabled
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
             createdAt
             team {
               id

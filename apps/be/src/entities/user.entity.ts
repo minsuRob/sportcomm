@@ -22,6 +22,28 @@ import { Bookmark } from './bookmark.entity';
 import { UserTeam } from './user-team.entity';
 
 /**
+ * 경험치/포인트 적립 액션 (확장 가능)
+ * 새로운 적립 이벤트가 필요할 때 enum과 매핑 객체만 확장하면 됩니다.
+ */
+export enum UserProgressAction {
+  CHAT_MESSAGE = 'CHAT_MESSAGE',
+  POST_CREATE = 'POST_CREATE',
+  DAILY_ATTENDANCE = 'DAILY_ATTENDANCE',
+}
+
+/**
+ * 액션별 기본 적립 포인트/경험치 매핑
+ * - value = 포인트 = 경험치 (현재는 동일 비율 요구사항)
+ * 필요 시 향후 포인트와 경험치를 분리하여 다른 비율로 제공할 수 있도록
+ * 구조를 객체 형태로 확장 가능 (예: { points: 5, exp: 10 }).
+ */
+export const USER_PROGRESS_REWARD: Record<UserProgressAction, number> = {
+  [UserProgressAction.CHAT_MESSAGE]: 5,
+  [UserProgressAction.POST_CREATE]: 5,
+  [UserProgressAction.DAILY_ATTENDANCE]: 20,
+};
+
+/**
  * 사용자 역할 열거형
  * 시스템 내에서 사용자의 권한과 역할을 정의합니다.
  */
@@ -135,6 +157,8 @@ export class User {
   /**
    * 사용자 포인트
    * 유료 메시지/꾸미기 등에 사용되는 가상 자산 값입니다.
+   * 경험치와 동일 비율(현재 요구사항)로 적립되지만 구조적으로 분리되어
+   * 향후 독립 비율/소모 설계가 가능하도록 유지합니다.
    */
   @Field(() => Number, { description: '사용자 포인트', defaultValue: 0 })
   @Column({
@@ -144,6 +168,21 @@ export class User {
     comment: '사용자 포인트 (기본값 0)',
   })
   points: number;
+
+  /**
+   * 최근 출석(데일리 출석 보상) 적립 일시
+   * 하루 1회 출석 보상 중복 방지를 위한 기준 값입니다.
+   */
+  @Field(() => Date, {
+    nullable: true,
+    description: '최근 출석 체크 일시 (하루 1회 보상 제한)',
+  })
+  @Column({
+    type: 'timestamp with time zone',
+    nullable: true,
+    comment: '최근 데일리 출석 보상 수령 일시',
+  })
+  lastAttendanceAt?: Date;
 
   /**
    * 사용자 비밀번호 (해시된 값) - DEPRECATED
@@ -372,6 +411,27 @@ export class User {
   getDisplayName(): string {
     return this.nickname || this.email.split('@')[0];
   }
+
+  // (경험치/레벨 관련 정적 메서드 제거됨)
+
+  /**
+   * 데일리 출석 보상 수령 가능 여부
+   * 같은 '날짜(YYYY-MM-DD)' 내 중복 수령 방지.
+   */
+  canClaimDailyAttendance(now: Date = new Date()): boolean {
+    if (!this.lastAttendanceAt) return true;
+    const last = this.lastAttendanceAt;
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    return fmt(last) !== fmt(now);
+  }
+
+  /**
+   * (경험치 시스템 제거) 포인트 적립만 필요 시 별도 서비스 로직에서 직접 points 필드 증가 처리
+   * 기존 awardProgress 메서드 삭제됨.
+   */
+
+  // 레벨/경험치 계산 관련 메서드 제거됨
 }
 
 /**
@@ -420,6 +480,8 @@ export interface CombinedUserInfo {
   isActive: boolean;
   /** 사용자 포인트 (가상 자산) */
   points?: number;
+  /** 최근 출석 보상 수령 일시 */
+  lastAttendanceAt?: Date;
   // 공통 정보
   createdAt: Date;
   updatedAt: Date;

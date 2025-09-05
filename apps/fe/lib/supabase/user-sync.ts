@@ -23,6 +23,24 @@ const SYNC_USER_MUTATION = gql`
       points
       createdAt
       updatedAt
+      myTeams {
+        id
+        teamId
+        priority
+        favoriteDate
+        favoritePlayerName
+        favoritePlayerNumber
+        experience
+        level
+        experienceToNextLevel
+        levelProgressRatio
+        team {
+          id
+          name
+          logoUrl
+          icon
+        }
+      }
     }
   }
 `;
@@ -42,6 +60,24 @@ const UPDATE_USER_PROFILE_MUTATION = gql`
       points
       createdAt
       updatedAt
+      myTeams {
+        id
+        teamId
+        priority
+        favoriteDate
+        favoritePlayerName
+        favoritePlayerNumber
+        experience
+        level
+        experienceToNextLevel
+        levelProgressRatio
+        team {
+          id
+          name
+          logoUrl
+          icon
+        }
+      }
     }
   }
 `;
@@ -62,16 +98,22 @@ const GET_CURRENT_USER_INFO_QUERY = gql`
       createdAt
       updatedAt
       myTeams {
+        id
+        teamId
+        priority
+        favoriteDate
+        favoritePlayerName
+        favoritePlayerNumber
+        experience
+        level
+        experienceToNextLevel
+        levelProgressRatio
         team {
           id
           name
           logoUrl
           icon
         }
-        favoriteDate
-        favoritePlayerName
-        favoritePlayerNumber
-        priority
       }
     }
   }
@@ -118,8 +160,24 @@ export interface User {
   isActive: boolean;
   isEmailVerified: boolean;
   points?: number;
+  // 팀별 경험치는 myTeams[].experience / level / experienceToNextLevel 사용
   createdAt: string;
   updatedAt: string;
+  myTeams?: Array<{
+    id: string;
+    teamId: string;
+    priority: number;
+    favoriteDate?: string;
+    favoritePlayerName?: string;
+    favoritePlayerNumber?: number;
+
+    team: {
+      id: string;
+      name: string;
+      logoUrl?: string;
+      icon?: string;
+    };
+  }>;
 }
 
 /**

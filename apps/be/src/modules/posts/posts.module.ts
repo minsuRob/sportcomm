@@ -15,6 +15,7 @@ import { Media } from '../../entities/media.entity';
 import { User } from '../../entities/user.entity';
 import { Notification } from '../../entities/notification.entity';
 import { UserTeam } from '../../entities/user-team.entity';
+import { ProgressModule } from '../progress/progress.module';
 
 // Command Handlers
 import { CreatePostHandler } from './commands/handlers/create-post.handler';
@@ -61,6 +62,7 @@ import { PostCreatedHandler } from './events/handlers/post-created.handler';
     BookmarkModule,
     // 알림 기능 사용을 위한 NotificationsModule 가져오기
     NotificationsModule,
+    ProgressModule,
   ],
 
   // 서비스, 리졸버, CQRS 핸들러 제공

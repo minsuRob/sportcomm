@@ -135,7 +135,7 @@ export function useCurrentUser() {
 
                 if (!mountedRef.current) return;
 
-                // 로컬 세션 업데이트 (points 등 최신화)
+                // 로컬 세션 업데이트 (포인트 및 myTeams 최신화)
                 await saveSession({
                   id: remoteUser.id,
                   nickname: remoteUser.nickname,
@@ -143,7 +143,8 @@ export function useCurrentUser() {
                   role: remoteUser.role,
                   profileImageUrl: remoteUser.profileImageUrl,
                   bio: remoteUser.bio,
-                  myTeams: (nextUser as any).myTeams,
+                  myTeams:
+                    (remoteUser as any).myTeams ?? (nextUser as any).myTeams,
                   userTeams: undefined,
                   points:
                     (remoteUser as any).points ?? (nextUser as any).points ?? 0,

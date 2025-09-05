@@ -149,9 +149,9 @@ export const teamColors = {
       accent: "#FF6B35",
       decorationBorder: "#00204B",
       cardBorder: "#00204B",
-      profileText: "#00204B",
-      profileTime: "#6B7280",
-      profileStroke: "#FFFFFF",
+      profileText: "#FFFFFF",
+      profileTime: "#FFFFFF",
+      profileStroke: "#000000",
     },
     dark: {
       uniformBackground: "#0F3578",
@@ -325,9 +325,9 @@ export const teamColors = {
       accent: "#FFD700",
       decorationBorder: "#1F152A",
       cardBorder: "#002E5F",
-      profileText: "#E2222C",
-      profileTime: "#E2222C",
-      profileStroke: "#FFFFFF",
+      profileText: "#FFFFFF",
+      profileTime: "#B2B2B2",
+      profileStroke: "#000000",
     },
     dark: {
       uniformBackground: "#1F152A", //남색

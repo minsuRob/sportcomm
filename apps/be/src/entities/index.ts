@@ -38,6 +38,8 @@ export {
   UserRole,
   SupabaseAuthUser,
   CombinedUserInfo,
+  UserProgressAction,
+  USER_PROGRESS_REWARD,
 } from './user.entity';
 
 // 게시물 관련 엔티티

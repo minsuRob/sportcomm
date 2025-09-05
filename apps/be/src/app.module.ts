@@ -24,6 +24,7 @@ import { SupabaseModule } from './modules/supabase/supabase.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { LotteryModule } from './modules/lottery/lottery.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ProgressModule } from './modules/progress/progress.module'; // 포인트/경험치 Progress 모듈 추가
 
 /**
  * 메인 애플리케이션 모듈
@@ -279,6 +280,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     SportsModule,
     ChatModule,
     LotteryModule,
+    ProgressModule, // Progress 모듈 추가
   ],
 
   // 컨트롤러 및 서비스

@@ -1,3 +1,37 @@
+/**
+ * NOTE: 피드 & 스토리 데이터 로딩 정책 개편 안내
+ *
+ * 현재 이 파일은 기존 useFeedPosts + (StorySection 내부 useStoryData) 조합으로
+ * 매 화면 진입 시 네트워크 로드를 조건부 수행합니다.
+ *
+ * 새 캐싱 전략:
+ *  - 중앙 메모리 캐시 유틸: feedStoryCache (TTL 1분)
+ *  - 통합 훅: useFeedStoryData (피드 + 스토리 동시 캐시/새로고침 제어)
+ *  - 화면 전환(프로필, 슬라이더, 기타 탭) 후 복귀 시:
+ *      -> 1분 이내면 네트워크 재호출 없이 즉시 캐시된 posts/stories 표시
+ *      -> 1분 이상 경과 & 앱/탭 비활성 → 활성 복귀 후 첫 접근 시에만 refresh
+ *  - 수동 새로고침(Pull-To-Refresh)은 refreshFeed / refreshStories / refreshAll 호출
+ *
+ * 단계적 전환 가이드 (차후 적용 시):
+ *  1) useFeedPosts 사용 구간을 useFeedStoryData로 교체
+ *      const {
+ *        posts, stories, loadingFeed, loadingStories,
+ *        refreshFeed, refreshStories, refreshAll,
+ *        needsFeedRefresh, needsStoryRefresh
+ *      } = useFeedStoryData({ teamIds: selectedTeamIds });
+ *
+ *  2) 기존 posts 상태/새로고침 로직은 유지하되
+ *     - 초기 마운트 시 needsFeedRefresh가 false면 setPosts(feedStoryCache.getFeed()!.posts) 형태로 즉시 반영
+ *     - StorySection props로 stories/refreshStories 전달(또는 내부 훅 제거)
+ *
+ *  3) AppState / visibility 기반 1분 경과 처리(백그라운드 → 복귀)는 feedStoryCache 내부 handleForeground 로직이 수행
+ *
+ *  4) 기존 useFeedPosts의 팀 필터/차단 사용자 로직 등 추가 기능이 필요하면
+ *     - useFeedStoryData에 확장 (페이지네이션, 필터별 캐시 Key 분리 등)
+ *
+ * 현재 커밋에서는 설명 주석만 추가하고 실제 전환 코드는 적용하지 않았습니다.
+ * 추후 점진적 마이그레이션 시 이 주석을 참고하세요.
+ */
 import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
@@ -8,6 +42,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
+import FeedNotice from "@/components/feed/notice/FeedNotice";
 import { useRouter } from "expo-router";
 
 import FeedList from "@/components/FeedList";
@@ -42,7 +77,6 @@ const formatFanDuration = (
 };
 import { Ionicons } from "@expo/vector-icons";
 import StorySection from "@/components/StorySection";
-import TabSlider from "@/components/TabSlider";
 import ChatRoomList from "@/components/chat/ChatRoomList";
 import { NotificationToast } from "@/components/notifications";
 import { showToast } from "@/components/CustomToast";
@@ -52,9 +86,10 @@ import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
 import ShopModal from "@/components/shop/ShopModal";
+import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useChatRooms } from "@/lib/hooks/useChatRooms";
-import { useFeedPosts } from "@/lib/hooks/useFeedPosts";
+import { useAdvancedFeed } from "@/lib/hooks/useAdvancedFeed";
 
 // --- Type Definitions ---
 
@@ -64,20 +99,34 @@ export default function FeedScreen() {
   // 목록/로딩 상태는 전담 훅에서 관리
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [shopModalVisible, setShopModalVisible] = useState(false);
+  const [teamFilterOpen, setTeamFilterOpen] = useState(false); // 팀 필터 모달 외부 제어 상태
   const router = useRouter();
   const { currentUser, reload: reloadCurrentUser } = useCurrentUser();
   const [activeTab, setActiveTab] = useState<string>("feed");
+  // 공지 섹션은 FeedNotice 컴포넌트로 분리 (로컬 상태 제거)
+
+  // (공지 표시 로직은 FeedNotice 내부로 이동)
+
+  // (닫기 로직은 FeedNotice 내부로 이동)
+  // 고급 캐시 기반 피드 훅으로 교체 (팀 필터/차단/페이지네이션/TTL)
   const {
     posts,
-    fetching,
+    loadingInitial,
+    loadingMore,
+    refreshing,
+    hasNext,
+    loadMore,
+    refresh,
+    teamIds,
+    setTeamFilter,
     error,
-    isRefreshing,
-    handleRefresh,
-    handleLoadMore,
-    selectedTeamIds,
-    handleTeamFilterChange,
-    performanceMetrics,
-  } = useFeedPosts();
+  } = useAdvancedFeed({
+    teamIds: null,
+    pageSize: 10,
+    includeBlockedUsers: true,
+    autoLoad: true,
+  });
+  const fetching = loadingInitial || loadingMore;
 
   const {
     chatRooms,
@@ -176,29 +225,27 @@ export default function FeedScreen() {
   };
 
   // 팀 필터 선택 핸들러는 useFeedPosts 훅에서 제공됨
-
   // 목록 재조회 효과는 훅 내부에서 처리됨
+  // 팀 필터 변경 시 강제 새로고침 (popover 통해 변경 시 refetch 누락 방지)
+  // (구) 필터 초기화/변경 useEffect 제거: useAdvancedFeed 내부에서 teamIds 변경 시 자동 처리
 
   // 게시물 작성 완료 후 피드 새로고침을 위한 useEffect
   useEffect(() => {
-    // 페이지 포커스 이벤트 리스너 (필요시 추가)
-    // navigation.addListener('focus', handleRefresh);
+    return () => {};
+  }, [refresh]);
 
-    return () => {
-      // cleanup
-    };
-  }, [handleRefresh]);
+  // 탭 데이터 (FeedHeader 로 전달하여 내부 TabSlider 렌더)
+  const tabs = [
+    { key: "feed", title: t(TRANSLATION_KEYS.FEED_TITLE) },
+    { key: "chat", title: t(TRANSLATION_KEYS.FEED_CHAT) },
+  ];
 
-  if (fetching && posts.length === 0 && !isRefreshing) {
+  if (fetching && posts.length === 0 && !refreshing) {
     return (
       <View style={themed($container)}>
         <FeedHeader
           currentUser={currentUser}
-          selectedTeamIds={selectedTeamIds}
-          onTeamSelect={handleTeamFilterChange}
-          loading={true}
           onNotificationPress={handleNotificationPress}
-          onCreatePress={() => router.push("/(modals)/create-post")}
           onProfilePress={() =>
             currentUser
               ? router.push("/(app)/profile")
@@ -207,6 +254,10 @@ export default function FeedScreen() {
           onShopPress={handleShopPress}
           onLotteryPress={handleLotteryPress}
           onBoardPress={handleBoardPress}
+          onTeamFilterPress={() => setTeamFilterOpen(true)}
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
         <View>
           {Array.from({ length: 5 }).map((_, index) => (
@@ -225,20 +276,14 @@ export default function FeedScreen() {
         </Text>
         <Button
           title={t(TRANSLATION_KEYS.COMMON_RETRY)}
-          onPress={handleRefresh}
+          onPress={refresh}
           color={theme.colors.tint}
         />
       </View>
     );
   }
 
-  const footerLoading = fetching && !isRefreshing;
-
-  // 탭 데이터
-  const tabs = [
-    { key: "feed", title: t(TRANSLATION_KEYS.FEED_TITLE) },
-    { key: "chat", title: t(TRANSLATION_KEYS.FEED_CHAT) },
-  ];
+  const footerLoading = fetching && !refreshing;
 
   return (
     <View style={themed($container)}>
@@ -248,14 +293,10 @@ export default function FeedScreen() {
         onLoginSuccess={handleLoginSuccess}
       />
 
-      {/* 헤더 */}
+      {/* 헤더 (탭 슬라이더 포함) */}
       <FeedHeader
         currentUser={currentUser}
-        selectedTeamIds={selectedTeamIds}
-        onTeamSelect={handleTeamFilterChange}
-        loading={fetching}
         onNotificationPress={handleNotificationPress}
-        onCreatePress={() => router.push("/(modals)/create-post")}
         onProfilePress={() =>
           currentUser
             ? router.push("/(app)/profile")
@@ -264,72 +305,88 @@ export default function FeedScreen() {
         onShopPress={handleShopPress}
         onLotteryPress={handleLotteryPress}
         onBoardPress={handleBoardPress}
+        onTeamFilterPress={() => setTeamFilterOpen(true)}
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
-      {/* 선택된 테마 팀(favoriteDate) 정보 표시
-         - team-colors-select 에서 선택한 teamColorTeamId 우선
-         - 없거나 myTeams 에서 찾지 못하면 기존 priority 1 팀 fallback */}
+      {/* 선택된 테마 팀(favoriteDate) 정보 표시 */}
       {currentUser?.myTeams && currentUser.myTeams.length > 0 && (
-        <View style={themed($myTeamContainer)}>
-          {(() => {
-            // teamColorTeamId 로 현재 선택된 팀 찾기
-            const selectedTeam = teamColorTeamId
-              ? currentUser.myTeams.find((ut) => ut.team.id === teamColorTeamId)
-              : undefined;
+        <>
+          <View style={themed($myTeamContainer)}>
+            {(() => {
+              const selectedTeam = teamColorTeamId
+                ? currentUser.myTeams.find(
+                    (ut) => ut.team.id === teamColorTeamId,
+                  )
+                : undefined;
 
-            // fallback: priority 가장 높은 팀
-            const fallbackTeam = currentUser.myTeams
-              .slice()
-              .sort((a, b) => a.priority - b.priority)[0];
+              const fallbackTeam = currentUser.myTeams
+                .slice()
+                .sort((a, b) => a.priority - b.priority)[0];
 
-            const displayTeam = selectedTeam || fallbackTeam;
+              const displayTeam = selectedTeam || fallbackTeam;
 
-            if (!displayTeam) return null;
+              if (!displayTeam) return null;
 
-            const favDate = displayTeam.favoriteDate;
-            const duration = favDate ? formatFanDuration(favDate) : null;
+              const favDate = displayTeam.favoriteDate;
+              const duration = favDate ? formatFanDuration(favDate) : null;
 
-            return (
-              <View style={themed($myTeamItem)}>
-                <Ionicons
-                  name="football-outline"
-                  size={20}
-                  color={theme.colors.tint}
-                />
-                <Text style={themed($myTeamText)}>
-                  {displayTeam.team.name}
-                </Text>
-                {duration ? (
-                  <Text style={themed($myTeamDate)}>
-                    {"(와)과 함께 한지"}
-                    <Text style={themed($myTeamDays)}>
-                      {" "}
-                      ({duration.totalDays}일)
-                      {" "}
-                    </Text>
-                    {duration.years > 0
-                      ? `${duration.years}년째..`
-                      : `${duration.months}개월째..`}
-                  </Text>
-                ) : (
-                  <Text
-                    style={themed($myTeamDate)}
-                    onPress={() => router.push("/(modals)/team-selection")}
-                  >
-                    {"를 클릭해 좋아한 날을 기록하세요"}
-                  </Text>
-                )}
-                {duration && (
+              return (
+                <View style={themed($myTeamItem)}>
                   <Ionicons
-                    name="heart"
-                    size={16}
+                    name="baseball-outline"
+                    size={20}
                     color={theme.colors.tint}
                   />
-                )}
-              </View>
-            );
-          })()}
-        </View>
+
+                  {duration ? (
+                    <>
+                      <Text style={themed($myTeamText)}>
+                        {displayTeam.team.name}
+                      </Text>
+                      <Text style={themed($myTeamDate)}>
+                        {", 함께 한지"}
+                        <Text style={themed($myTeamDays)}>
+                          {" "}
+                          ({duration.totalDays}일){" "}
+                        </Text>
+                        {duration.years > 0
+                          ? `${duration.years}년째..`
+                          : `${duration.months + 1}개월째..`}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text
+                      style={themed($myTeamDate)}
+                      onPress={() => router.push("/(modals)/team-selection")}
+                    >
+                      <Text style={themed($myTeamText)}>
+                        {displayTeam.team.name}
+                      </Text>
+                      {", 클릭하여 "}
+                      <Text style={themed($myTeamDateUnderline)}>
+                        처음 좋아한 날
+                      </Text>
+                      {"을 기록하세요."}
+                    </Text>
+                  )}
+                  {duration && (
+                    <Ionicons
+                      name="heart"
+                      size={16}
+                      color={theme.colors.tint}
+                    />
+                  )}
+                </View>
+              );
+            })()}
+          </View>
+
+          {/* 공지 섹션 (분리된 컴포넌트) */}
+          <FeedNotice />
+        </>
       )}
 
       {/* 상점 모달 */}
@@ -338,6 +395,15 @@ export default function FeedScreen() {
         onClose={() => setShopModalVisible(false)}
         currentUser={currentUser}
         onPurchase={handleShopPurchase}
+      />
+      {/* 팀 필터 선택 모달 */}
+      <TeamFilterSelector
+        onTeamSelect={setTeamFilter}
+        selectedTeamIds={teamIds}
+        loading={fetching}
+        open={teamFilterOpen}
+        onOpenChange={setTeamFilterOpen}
+        hideTriggerButton
       />
 
       {/* 로그인 버튼 섹션 (로그인 안 된 경우에만 표시) */}
@@ -355,23 +421,19 @@ export default function FeedScreen() {
         </View>
       )}
 
-      {/* 탭 슬라이더 */}
-      <TabSlider tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {/* 탭 콘텐츠 */}
+      {/* 탭 콘텐츠 (TabSlider 는 FeedHeader 로 이동) */}
       {activeTab === "feed" ? (
         <FeedList
           posts={posts}
           fetching={fetching}
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          onEndReached={handleLoadMore}
+          refreshing={refreshing}
+          onRefresh={refresh}
+          onEndReached={() => {
+            if (hasNext && !loadingMore) loadMore();
+          }}
           ListHeaderComponent={
             currentUser ? (
-              <StorySection
-                teamIds={selectedTeamIds}
-                currentUser={currentUser}
-              />
+              <StorySection teamIds={teamIds} currentUser={currentUser} />
             ) : null
           }
           ListFooterComponent={
@@ -417,6 +479,8 @@ export default function FeedScreen() {
 }
 
 // --- Styles ---
+//
+// 커밋 메세지: refactor(feed): TabSlider 헤더로 이관 및 FeedHeader tabs/activeTab/onTabChange 전달
 
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
@@ -497,10 +561,9 @@ const $loadingFooter: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $myTeamContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
-  borderBottomWidth: 1,
   borderBottomColor: colors.border,
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
+  paddingVertical: spacing.xs,
 });
 
 const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -511,23 +574,33 @@ const $myTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $myTeamText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 14,
-  fontWeight: "900",
+  color: colors.teamMain ?? colors.tint,
+  fontSize: 15,
+  fontWeight: "800",
+  marginRight: -4,
 });
 
 const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
-  fontSize: 12,
-  fontWeight: "400",
-  lineHeight: 16,
+  fontSize: 15,
+  fontWeight: "800",
+});
+
+const $myTeamDateUnderline: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 15,
+  fontWeight: "800",
+  textDecorationLine: "underline",
 });
 
 const $myTeamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 11,
+  fontSize: 15,
   fontWeight: "400",
   color: colors.textDim,
 });
+
+/* 공지 섹션 스타일 */
+/* 공지 섹션 스타일 제거됨 (FeedNotice 내부로 이전) */
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",

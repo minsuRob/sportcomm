@@ -263,16 +263,10 @@ export default function ProfileScreen() {
     postCount: 0,
   };
 
-  // 아바타 URL 정규화: 기존 post-images 경로가 남아 있으면 avatars 버킷 경로로 교체
-  const normalizeAvatarUrl = (url?: string) => {
-    if (!url) return undefined;
-    return url.includes("/post-images/")
-      ? url.replace("/post-images/", "/avatars/")
-      : url;
-  };
   const avatarUrl =
-    normalizeAvatarUrl(userProfile.profileImageUrl) ||
+    userProfile.profileImageUrl ||
     `https://i.pravatar.cc/150?u=${userProfile.id}`;
+  //
   return (
     <View style={themed($container)}>
       {/* 헤더 - 전체 너비 사용 */}

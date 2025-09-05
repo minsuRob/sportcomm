@@ -21,8 +21,8 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { existsSync, mkdirSync } from 'fs';
-import { HttpAuthGuard } from '../../common/guards/http-auth.guard';
-import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
+import { HttpAuthGuard } from 'src/common/guards/http-auth.guard';
+import { SupabaseAuthGuard } from 'src/common/guards/supabase-auth.guard';
 
 /**
  * 인증 관련 파일 업로드 컨트롤러
@@ -177,11 +177,10 @@ export class AuthController {
         `프로필 이미지 정보: ${file.originalname}, 크기: ${file.size}바이트, 타입: ${file.mimetype}`,
       );
 
-      // MediaService를 사용하여 미디어 엔티티 생성 (avatars 버킷 강제)
+      // MediaService를 사용하여 미디어 엔티티 생성
       const mediaEntities = await this.mediaService.createMediaFromFiles(
         [file],
         user.id,
-        { forceAvatarBucket: true },
       );
 
       if (mediaEntities.length === 0) {

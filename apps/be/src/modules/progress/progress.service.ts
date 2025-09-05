@@ -102,12 +102,20 @@ export class ProgressService {
 
     const reward = USER_PROGRESS_REWARD[action] ?? 0;
     if (reward > 0) {
-      user.points = beforePoints + reward;
+      // user.points = beforePoints + reward;
+      // if (action === UserProgressAction.DAILY_ATTENDANCE) {
+      //   user.lastAttendanceAt = now;
+      // }
+      // await this.userRepository.save(user);
+      await this.userRepository.increment({ id: userId }, 'points', reward);
       if (action === UserProgressAction.DAILY_ATTENDANCE) {
-        user.lastAttendanceAt = now;
+        await this.userRepository.update({ id: userId }, { lastAttendanceAt: now });
       }
-      await this.userRepository.save(user);
+      // 로컬 user 객체의 points를 업데이트하여 반환값에 반영
+      user.points = beforePoints + reward;
     }
+
+
 
     const result: AwardResult = {
       userId,

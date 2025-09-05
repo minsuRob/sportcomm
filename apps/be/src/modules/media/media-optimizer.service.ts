@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import * as sharp from 'sharp';
+// Sharp CJS/ESM 호환 팩토리 (sharp가 ESM(default) 혹은 CJS(함수 자체) 모두 대응)
+const sharpFactory: any = (sharp as any)?.default || (sharp as any);
 import * as ffmpeg from 'fluent-ffmpeg';
 import axios from 'axios';
 import * as path from 'path';
@@ -50,16 +51,22 @@ export class MediaOptimizerService {
     },
   ];
 
+  // Repositories (DataSource 기반 수동 주입)
+  private optimizerRepo: Repository<MediaOptimizer>;
+  private mediaRepo: Repository<Media>;
+
   constructor(
-    @InjectRepository(MediaOptimizer)
-    private readonly optimizerRepo: Repository<MediaOptimizer>,
-    @InjectRepository(Media)
-    private readonly mediaRepo: Repository<Media>,
+    private readonly dataSource: DataSource,
     private readonly supabaseService: SupabaseService,
-  ) {}
+  ) {
+    this.optimizerRepo = this.dataSource.getRepository(MediaOptimizer);
+    this.mediaRepo = this.dataSource.getRepository(Media);
+  }
 
   /**
-   * 주어진 `Media`(IMAGE)에 대해 3종(WebP) 최적화를 생성 후 저장
+   * 이미지 최적화 처리
+   * - 아바타(avatars 버킷 / 파일명 포함 avatar|profile)는 추가 최적화 스킵 (이미 200x200 변환 완료됨)
+   * - 일반 이미지는 3종(WebP: thumbnail/mobile/desktop) 생성
    */
   async optimizeImageMedia(media: Media): Promise<MediaOptimizer[]> {
     if (media.type !== MediaType.IMAGE) {
@@ -78,6 +85,18 @@ export class MediaOptimizerService {
     const isAnimatedGif =
       /gif$/i.test(media.extension || '') || /gif/i.test(media.mimeType || '');
 
+    // 아바타 여부 판단: 원본 이름 또는 URL 에 avatar/profile 포함 + avatars 버킷 경로
+    const isAvatar =
+      (media.originalName || '').toLowerCase().includes('avatar') ||
+      (media.originalName || '').toLowerCase().includes('profile') ||
+      media.url.includes('/avatars/') ||
+      media.url.includes('/avatar/');
+
+    if (isAvatar) {
+      this.logger.log(`아바타 이미지 - 추가 최적화 스킵 (mediaId=${media.id})`);
+      return [];
+    }
+    // 일반 이미지: 3종 생성
     for (const size of this.mediaSizes) {
       const { buffer, width, height } = await this.createOptimizedImage(
         originalBuffer,
@@ -107,7 +126,53 @@ export class MediaOptimizerService {
       results.push(await this.optimizerRepo.save(entity));
     }
 
-    // 원본 이미지 URL은 추후 삭제 예정이라고 했으므로, 여기서는 유지하고 후속 작업에서 제거
+    // 일반 이미지 후처리: desktop 대표 URL 교체 + post-images 원본 삭제 (thumbnailUrl 제거, 아바타는 이전에 return)
+    try {
+      const originalUrl = media.url;
+      const POST_IMAGES_SEGMENT = '/storage/v1/object/public/post-images/';
+      const isPostImagesOriginal = originalUrl.includes(POST_IMAGES_SEGMENT);
+
+      const desktopOpt = results.find(
+        (r) => r.mediaOptType === MediaOptimizationType.DESKTOP,
+      );
+      if (desktopOpt) {
+        media.url = desktopOpt.url;
+        media.mimeType = 'image/webp';
+        media.extension = 'webp';
+        await this.mediaRepo.save(media);
+        this.logger.log(
+          `일반 이미지 desktop URL 교체 완료 (mediaId=${media.id})`,
+        );
+      } else {
+        this.logger.warn(
+          `desktop 최적화 결과 없음 - media.url 교체 생략 (mediaId=${media.id})`,
+        );
+      }
+
+      if (isPostImagesOriginal) {
+        const objectPath = originalUrl.split(POST_IMAGES_SEGMENT)[1];
+        if (objectPath) {
+          try {
+            await this.supabaseService.deleteFiles('post-images', [objectPath]);
+            this.logger.log(
+              `post-images 원본 삭제 완료: ${objectPath} (mediaId=${media.id})`,
+            );
+          } catch (delErr: any) {
+            this.logger.warn(
+              `post-images 원본 삭제 실패 (mediaId=${media.id}): ${delErr?.message || delErr}`,
+            );
+          }
+        } else {
+          this.logger.warn(
+            `post-images 원본 object path 추출 실패 (mediaId=${media.id})`,
+          );
+        }
+      }
+    } catch (afterError: any) {
+      this.logger.warn(
+        `일반 이미지 후처리(대표URL 교체/원본삭제) 실패 (mediaId=${media.id}): ${afterError?.message || afterError}`,
+      );
+    }
     return results;
   }
 
@@ -119,11 +184,11 @@ export class MediaOptimizerService {
     sizeConfig: MediaSizeConfig,
     isAnimated: boolean = false,
   ): Promise<{ buffer: Buffer; width?: number; height?: number }> {
-    // Sharp 인스턴스 생성
+    // Sharp 인스턴스 생성 (CJS/ESM 호환 sharpFactory 사용)
     const instance =
       typeof source === 'string'
-        ? sharp(source, { animated: isAnimated })
-        : sharp(source, { animated: isAnimated });
+        ? sharpFactory(source, { animated: isAnimated })
+        : sharpFactory(source, { animated: isAnimated });
 
     // 메타데이터로 원본 크기 파악 후 리사이즈 전략
     const metadata = await instance.metadata();
@@ -147,7 +212,7 @@ export class MediaOptimizerService {
     const output = await pipeline.toBuffer({ resolveWithObject: true });
 
     // 결과 메타데이터에서 실제 저장 크기 파생
-    const outMeta = await sharp(output.data, {
+    const outMeta = await sharpFactory(output.data, {
       animated: isAnimated,
     }).metadata();
     return {

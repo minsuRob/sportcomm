@@ -23,8 +23,8 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { existsSync, mkdirSync } from 'fs';
-import { GqlAuthGuard } from 'src/common/guards/gql-auth.guard';
-import { HttpAuthGuard } from 'src/common/guards/http-auth.guard';
+import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
+import { HttpAuthGuard } from '../../common/guards/http-auth.guard';
 // Multer 타입 정의 추가
 import 'multer';
 
@@ -249,7 +249,7 @@ export class MediaController {
     @CurrentUser() user: User,
     @Body() body: any,
     @Req() req: Request,
-  ) {
+  ): Promise<any> {
     // 업로드 디버그 정보 추가
     console.log('요청 Content-Type:', req.headers['content-type']);
     console.log('요청 Content-Length:', req.headers['content-length']);
@@ -424,7 +424,6 @@ export class MediaController {
             fileSize: media.fileSize,
             type: media.type,
             status: media.status,
-            thumbnailUrl: media.thumbnailUrl,
           })),
           totalCount: uploadedMedia.length,
         },
@@ -552,8 +551,7 @@ export class MediaController {
   async uploadSingleFile(
     @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: User,
-    @Body() body: any,
-  ) {
+  ): Promise<any> {
     console.log('단일 파일 업로드 요청 받음:', {
       hasFiles: !!files?.length,
       userId: user?.id,
@@ -585,7 +583,6 @@ export class MediaController {
           fileSize: media.fileSize,
           type: media.type,
           status: media.status,
-          thumbnailUrl: media.thumbnailUrl,
         },
         timestamp: new Date().toISOString(),
       };
@@ -633,6 +630,117 @@ export class MediaController {
       }
     } finally {
       this.logger.log(`파일 업로드 요청 처리 완료`);
+    }
+  }
+
+  /**
+   * 아바타(프로필) 이미지 전용 업로드 엔드포인트
+   * - 단일 이미지만 업로드
+   * - avatar 버킷(단수) 경로 사용 (최종 공개경로: /storage/v1/object/public/avatar/파일명)
+   * - 200x200 단일 webp 생성 (MediaService.createAvatarMedia / forceAvatarBucket 매핑)
+   * - 향후 team-logos 등 prefix/bucket 확장 고려한 mapBucketAndKey 전략과 일관성 유지
+   */
+  @Post('avatar')
+  @UseGuards(HttpAuthGuard)
+  @UseInterceptors(
+    FilesInterceptor('file', 1, {
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+        files: 1,
+      },
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          if (!file.mimetype.startsWith('image/')) {
+            return cb(
+              new Error('아바타 이미지는 이미지 파일만 업로드 가능합니다.'),
+              '',
+            );
+          }
+          const uploadPath = join(process.cwd(), 'uploads', 'avatars-temp');
+          try {
+            if (!existsSync(uploadPath)) {
+              mkdirSync(uploadPath, { recursive: true });
+            }
+            cb(null, uploadPath);
+          } catch (e) {
+            cb(e as Error, '');
+          }
+        },
+        filename: (req, file, cb) => {
+          const ext = extname(file.originalname).toLowerCase() || '.jpg';
+          const safe = `avatar_${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+          cb(null, safe);
+        },
+      }),
+      fileFilter: (req, file, callback) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowed.includes(file.mimetype)) {
+          return callback(
+            new UnsupportedMediaTypeException(
+              '지원되지 않는 이미지 형식입니다. (jpeg/png/gif/webp)',
+            ),
+            false,
+          );
+        }
+        return callback(null, true);
+      },
+    }),
+  )
+  async uploadAvatar(
+    @UploadedFiles() files: Express.Multer.File[],
+    @CurrentUser() user: User,
+  ): Promise<any> {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('업로드할 아바타 이미지가 없습니다.');
+    }
+    if (files.length > 1) {
+      throw new BadRequestException(
+        '아바타 이미지는 1개만 업로드할 수 있습니다.',
+      );
+    }
+
+    const file = files[0];
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('이미지 파일만 업로드할 수 있습니다.');
+    }
+
+    try {
+      const uploadedMediaArr = await this.mediaService.createMediaFromFiles(
+        [file],
+        user.id,
+        { forceAvatarBucket: true },
+      );
+
+      if (!uploadedMediaArr.length) {
+        throw new Error('아바타 업로드 처리 실패');
+      }
+
+      const media = uploadedMediaArr[0];
+
+      return {
+        success: true,
+        message: '아바타 이미지가 성공적으로 업로드되었습니다.',
+        data: {
+          files: [
+            {
+              id: media.id,
+              url: media.url,
+              originalName: media.originalName,
+              mimeType: media.mimeType,
+              fileSize: media.fileSize,
+              type: media.type,
+              status: media.status,
+            },
+          ],
+          totalCount: 1,
+        },
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error('아바타 업로드 실패:', error);
+      throw new BadRequestException(
+        error?.message || '아바타 업로드 중 오류가 발생했습니다.',
+      );
     }
   }
 
@@ -731,8 +839,7 @@ export class MediaController {
   async uploadProfileImage(
     @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: User,
-    @Req() req: Request,
-  ) {
+  ): Promise<any> {
     const requestId = uuidv4().substring(0, 8);
 
     try {

@@ -95,11 +95,14 @@ export default function EditProfileScreen() {
 
       // 플랫폼별 업로드
       if (isWeb()) {
-        uploadedFiles = await uploadFilesWeb([file as File], progressCallback);
+        uploadedFiles = await uploadFilesWeb([file as File], progressCallback, {
+          category: "avatar",
+        });
       } else {
         uploadedFiles = await uploadFilesMobile(
           [file as { uri: string; name: string; type: string }],
           progressCallback,
+          { category: "avatar" },
         );
       }
 

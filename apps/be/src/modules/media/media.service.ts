@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, DataSource } from 'typeorm';
 import { Media, MediaType, UploadStatus } from '../../entities/media.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
 import {
@@ -8,10 +7,11 @@ import {
   generatePostMediaFileName,
   getMimeTypeFromFileName,
 } from '../../common/utils/file-utils';
-import * as sharp from 'sharp';
-// Sharp 옵션 조정 - 애플리케이션 시작 시 한 번 설정
-sharp.cache(false); // 캐시 비활성화로 메모리 누수 방지
-sharp.concurrency(2); // 병렬 처리 제한
+import {
+  getSharpFactory,
+  convertToAvatarWebp,
+} from '../../common/utils/sharp-helper';
+const sharpFactory = getSharpFactory();
 import * as path from 'path';
 import * as ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs';
@@ -25,13 +25,15 @@ import { MediaOptimizerService } from './media-optimizer.service';
 export class MediaService {
   private readonly logger = new Logger(MediaService.name);
 
+  // DataSource 기반 리포지토리 수동 주입
+  private mediaRepository: Repository<Media>;
+
   constructor(
-    @InjectRepository(Media)
-    private readonly mediaRepository: Repository<Media>,
+    private readonly dataSource: DataSource,
     private readonly supabaseService: SupabaseService,
     private readonly mediaOptimizerService: MediaOptimizerService,
   ) {
-    // 서비스 시작 시 Sharp 설정 로그
+    this.mediaRepository = this.dataSource.getRepository(Media);
     this.logger.log('Sharp 이미지 처리 라이브러리 초기화 완료');
   }
 
@@ -63,27 +65,40 @@ export class MediaService {
         throw new Error('아바타는 이미지 파일만 업로드 가능합니다.');
       }
 
-      // 이미지 메타데이터 추출
-      const metadata = await this.extractImageMetadata(file.path);
+      // (변경) 아바타는 200x200 단일 WebP 썸네일만 저장
+      // 1) Sharp 로 200x200 cover 리사이즈 + webp 변환
+      // 2) avatars 버킷 루트에 저장 (공개 경로: /storage/v1/object/public/avatars/파일명)
+      // 3) 원본 확장자/포맷 무시하고 webp 단일 포맷 유지
 
-      // 파일을 Supabase Storage에 업로드
-      const fileBuffer = await fs.promises.readFile(file.path);
+      const originalBuffer = await fs.promises.readFile(file.path);
 
-      // 한글 파일명 처리: 안전한 아바타 파일명 생성
-      const fileName = generateAvatarFileName(file.originalname, userId);
+      // 공용 헬퍼 이용 (200x200 cover webp)
+      const {
+        buffer: webpBuffer,
+        width: finalW,
+        height: finalH,
+      } = await convertToAvatarWebp(originalBuffer, {
+        animated: true,
+        quality: 85,
+      });
 
-      console.log(`아바타 파일명 변환: ${file.originalname} -> ${fileName}`);
+      // 안전한 파일명 (확장자 제거 후 webp 확장자 강제)
+      const rawFileName = generateAvatarFileName(file.originalname, userId);
+      const baseName = rawFileName.replace(/\.[^.]+$/, '');
+      const objectKey = `${baseName}.webp`; // avatars 버킷 루트 경로
 
-      // Supabase Storage avatars 버킷에 업로드
-      await this.supabaseService.uploadFile(
-        'avatars',
-        fileName,
-        fileBuffer,
-        file.mimetype,
+      console.log(
+        `아바타 처리: 원본=${file.originalname}, 저장경로=${objectKey}, 크기=${webpBuffer.length} bytes`,
       );
 
-      // Supabase Storage 공개 URL 생성
-      const publicUrl = this.supabaseService.getPublicUrl('avatars', fileName);
+      await this.supabaseService.uploadFile(
+        'avatars',
+        objectKey,
+        webpBuffer,
+        'image/webp',
+      );
+
+      const publicUrl = this.supabaseService.getPublicUrl('avatars', objectKey);
 
       // 로컬 파일 정리
       try {
@@ -98,11 +113,11 @@ export class MediaService {
         url: publicUrl,
         type: MediaType.IMAGE,
         status: UploadStatus.COMPLETED,
-        fileSize: file.size,
-        mimeType: file.mimetype,
-        extension: path.extname(file.originalname).substring(1),
-        width: metadata.width,
-        height: metadata.height,
+        fileSize: webpBuffer.length,
+        mimeType: 'image/webp',
+        extension: 'webp',
+        width: finalW || 200,
+        height: finalH || 200,
       });
 
       const savedMedia = await this.mediaRepository.save(media);
@@ -134,6 +149,36 @@ export class MediaService {
   }
 
   /**
+   * 스토리지 버킷/오브젝트 키 매핑 유틸
+   * - 아바타: bucket 'avatars' 로 업로드, 최종 경로 /public/avatars/파일명
+   * - 팀 로고(확장성): bucket 'team-logos', objectKey 자동 prefix 제외(이미 bucket명이 경로 세그먼트)
+   * - 일반 포스트 이미지: 기존 로직 유지
+   */
+  private mapBucketAndKey(
+    logicalBucket: string,
+    fileName: string,
+    options?: { forceAvatarBucket?: boolean; entityHint?: string },
+  ): { bucket: string; objectKey: string } {
+    // 아바타 처리 (forceAvatarBucket 또는 파일명 힌트)
+    if (
+      options?.forceAvatarBucket ||
+      /avatar|profile/i.test(fileName) ||
+      logicalBucket === 'avatars'
+    ) {
+      // 단수 bucket 이름 사용 요청 반영
+      return { bucket: 'avatars', objectKey: fileName };
+    }
+
+    // 팀 로고 확장 대비 (지금은 bucket 그대로)
+    if (logicalBucket === 'team-logos') {
+      return { bucket: 'team-logos', objectKey: fileName };
+    }
+
+    // 기본 (post-images / post-videos 등)
+    return { bucket: logicalBucket, objectKey: fileName };
+  }
+
+  /**
    * 업로드된 파일들로부터 미디어 엔티티를 생성합니다.
    * @param files 업로드된 파일 배열
    * @param userId 업로드한 사용자 ID
@@ -142,6 +187,7 @@ export class MediaService {
   async createMediaFromFiles(
     files: Express.Multer.File[],
     userId: string,
+    options: { forceAvatarBucket?: boolean } = {},
   ): Promise<Media[]> {
     const mediaEntities: Media[] = [];
 
@@ -208,38 +254,88 @@ export class MediaService {
 
         console.log(`파일명 변환: ${file.originalname} -> ${fileName}`);
 
-        // Supabase Storage에 업로드
-        await this.supabaseService.uploadFile(
+        // 버킷 및 오브젝트 키 매핑 (아바타 / 팀로고 등 확장성 고려)
+        const { bucket: mappedBucket, objectKey } = this.mapBucketAndKey(
           bucket,
           fileName,
+          { forceAvatarBucket: options.forceAvatarBucket },
+        );
+
+        // Supabase Storage에 업로드
+        await this.supabaseService.uploadFile(
+          mappedBucket,
+          objectKey,
           fileBuffer,
           file.mimetype,
         );
 
         // Supabase Storage 공개 URL 생성
-        const publicUrl = this.supabaseService.getPublicUrl(bucket, fileName);
+        const publicUrl = this.supabaseService.getPublicUrl(
+          mappedBucket,
+          objectKey,
+        );
 
-        // 로컬 파일 정리 (업로드 완료 후)
-        try {
-          await fs.promises.unlink(file.path);
-          this.logger.log(`로컬 파일 삭제 완료: ${file.path}`);
-        } catch (unlinkError) {
-          this.logger.warn(`로컬 파일 삭제 실패: ${file.path}`, unlinkError);
+        // 아바타 강제 업로드 옵션이 설정되어 있고 이미지인 경우 200x200 webp로 재가공
+        let effectiveUrl = publicUrl;
+        let effectiveFileSize = file.size;
+        let effectiveMimeType = file.mimetype;
+        let effectiveExtension = path.extname(file.originalname).substring(1);
+        let effectiveWidth = metadata.width;
+        let effectiveHeight = metadata.height;
+
+        if (options.forceAvatarBucket && !isVideo) {
+          try {
+            const avatarBaseName = generateAvatarFileName(
+              file.originalname,
+              userId,
+            ).replace(/\.[^.]+$/, '');
+            const avatarObjectKey = `${avatarBaseName}.webp`;
+
+            const {
+              buffer: resized,
+              width: avatarW,
+              height: avatarH,
+            } = await convertToAvatarWebp(fileBuffer, {
+              animated: true,
+              quality: 85,
+            });
+
+            await this.supabaseService.uploadFile(
+              'avatars',
+              avatarObjectKey,
+              resized,
+              'image/webp',
+            );
+            effectiveUrl = this.supabaseService.getPublicUrl(
+              'avatars',
+              avatarObjectKey,
+            );
+            effectiveFileSize = resized.length;
+            effectiveMimeType = 'image/webp';
+            effectiveExtension = 'webp';
+            effectiveWidth = avatarW || 200;
+            effectiveHeight = avatarH || 200;
+            this.logger.log(
+              `forceAvatarBucket 적용 - 아바타 webp 생성 완료: ${avatarObjectKey}`,
+            );
+          } catch (avatarErr) {
+            this.logger.warn(
+              `아바타 강제 변환 실패, 원본 메타데이터로 진행: ${avatarErr?.message || avatarErr}`,
+            );
+          }
         }
 
         const media = this.mediaRepository.create({
           originalName: file.originalname,
-          url: publicUrl, // Supabase Storage 공개 URL 사용
-
+          url: effectiveUrl,
           type: mediaTypeEnum,
           status: UploadStatus.COMPLETED,
-          fileSize: file.size,
-          mimeType: file.mimetype,
-          extension: path.extname(file.originalname).substring(1),
-          width: metadata.width,
-          height: metadata.height,
+          fileSize: effectiveFileSize,
+          mimeType: effectiveMimeType,
+          extension: effectiveExtension,
+          width: effectiveWidth,
+          height: effectiveHeight,
           duration: metadata.duration, // 동영상인 경우에만 값이 있음 (decimal 타입으로 소수점 지원)
-          // postId는 나중에 게시물 작성 시 연결됨
         });
 
         const savedMedia = await this.mediaRepository.save(media);
@@ -255,11 +351,18 @@ export class MediaService {
           }
         } else {
           // 이미지인 경우 WebP 최적화 3종 생성
-          try {
-            await this.mediaOptimizerService.optimizeImageMedia(savedMedia);
-          } catch (optError) {
-            this.logger.warn(
-              `이미지 최적화 실패: ${file.originalname} - ${optError?.message || optError}`,
+          // 아바타(avatars 버킷) 는 추가 썸네일/최적화 생성 스킵
+          if (!(options.forceAvatarBucket || mappedBucket === 'avatars')) {
+            try {
+              await this.mediaOptimizerService.optimizeImageMedia(savedMedia);
+            } catch (optError) {
+              this.logger.warn(
+                `이미지 최적화 실패: ${file.originalname} - ${optError?.message || optError}`,
+              );
+            }
+          } else {
+            this.logger.log(
+              `avatars 버킷 이미지 - 추가 최적화 스킵: ${file.originalname}`,
             );
           }
         }
@@ -353,7 +456,7 @@ export class MediaService {
       let metadata;
       try {
         // failOn: 'none'으로 설정하여 일부 오류를 무시
-        metadata = await sharp(filePath, {
+        metadata = await sharpFactory(filePath, {
           failOn: 'none',
           limitInputPixels: false, // 픽셀 수 제한 해제
           sequentialRead: true, // 순차적 읽기

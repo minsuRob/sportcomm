@@ -2,6 +2,8 @@
  * 웹 환경 전용 파일 업로드 유틸리티
  *
  * 웹 브라우저 환경에서의 파일 업로드 기능을 제공합니다.
+ * - category 옵션 추가 (avatar, default)
+ *   avatar: /api/upload/avatar 엔드포인트 사용 및 avatar 전용 안전 파일명 유지
  */
 
 import { getSession } from "@/lib/auth";
@@ -22,9 +24,24 @@ import { generateSafeFileName } from "../utils/file-utils";
 export interface WebUploadResponse {
   success: boolean;
   message: string;
+  /**
+   * 백엔드 응답 통합:
+   * - 일반 업로드: { files: UploadedMedia[]; totalCount: number }
+   * - 아바타 업로드: 단일 객체 { id, url, ... }
+   * 단일 객체 응답도 data.files 배열로 정규화하여 최종 resolve 시 일관된 UploadedMedia[] 제공
+   */
   data: {
-    files: UploadedMedia[];
-    totalCount: number;
+    // 다중 업로드 필드
+    files?: UploadedMedia[];
+    totalCount?: number;
+    // 단일(아바타) 업로드 필드
+    id?: string;
+    url?: string;
+    originalName?: string;
+    mimeType?: string;
+    fileSize?: number;
+    type?: string;
+    status?: string;
   };
   timestamp: string;
 }
@@ -48,9 +65,20 @@ export interface WebSingleUploadResponse {
  * @returns 업로드된 미디어 파일 정보 배열
  * @throws UploadError 업로드 실패 시
  */
+export interface UploadFilesWebOptions {
+  /**
+   * 업로드 카테고리
+   * - default : 일반(post-images 포함) 업로드
+   * - avatar   : 아바타 전용 (/api/upload/avatar, avatars 버킷)
+   * - teamLogo : 팀 로고 (파일명 team_logo_ 프리픽스로 bucket 선택 로직 유도, 일반 업로드 엔드포인트 사용)
+   */
+  category?: "default" | "avatar" | "teamLogo";
+}
+
 export async function uploadFilesWeb(
   files: Array<File | Blob>,
   onProgress?: ProgressCallback,
+  options: UploadFilesWebOptions = { category: "default" },
 ): Promise<UploadedMedia[]> {
   if (!isWeb()) {
     throw new UploadError("이 함수는 웹 환경에서만 사용할 수 있습니다.", 400);
@@ -94,12 +122,21 @@ export async function uploadFilesWeb(
     validFiles.forEach((file, index) => {
       const originalName =
         file instanceof File ? file.name : `file_${index}_${Date.now()}`;
+      // avatar 업로드 시 prefix 를 avatar 로 고정
+      const prefix =
+        options.category === "avatar"
+          ? "avatar"
+          : options.category === "teamLogo"
+            ? "team_logo"
+            : "upload";
       const safeFileName = generateSafeFileName(
         originalName,
-        "upload",
+        prefix,
         index.toString(),
       );
-      formData.append("files", file, safeFileName);
+      // avatar 업로드 시 서버 단일 파일 필드명을 'file' 로 사용하도록 조정 (백엔드 avatar 엔드포인트와 합의)
+      const fieldName = options.category === "avatar" ? "file" : "files";
+      formData.append(fieldName, file, safeFileName);
 
       console.log(
         `웹 환경 - 파일 추가: ${originalName} -> ${safeFileName}, 크기: ${file.size}바이트, 타입: ${file.type || "알 수 없음"}`,
@@ -107,6 +144,8 @@ export async function uploadFilesWeb(
     });
 
     const endpoints = getUploadEndpoints();
+    const targetUrl =
+      options.category === "avatar" ? endpoints.avatar : endpoints.upload; // teamLogo 는 일반 업로드 엔드포인트 사용
 
     // XMLHttpRequest 사용 (진행률 추적을 위함)
     return new Promise((resolve, reject) => {
@@ -132,9 +171,20 @@ export async function uploadFilesWeb(
           try {
             const response = JSON.parse(xhr.responseText) as WebUploadResponse;
             if (response.success) {
+              // 단일/아바타 응답도 이제 서버에서 통일된 형태: data.files[]
+              if (!Array.isArray(response.data?.files)) {
+                reject(
+                  new UploadError(
+                    "업로드 응답에 files 배열이 없습니다.",
+                    xhr.status,
+                    response,
+                  ),
+                );
+                return;
+              }
               console.log(
                 "웹 파일 업로드 성공:",
-                response.data.totalCount,
+                response.data.files.length,
                 "개 파일",
               );
               resolve(response.data.files);
@@ -178,7 +228,7 @@ export async function uploadFilesWeb(
       });
 
       // 요청 초기화 및 전송
-      xhr.open("POST", endpoints.upload, true);
+      xhr.open("POST", targetUrl, true);
 
       // 인증 헤더 설정
       if (token) {

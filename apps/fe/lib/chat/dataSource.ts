@@ -1,4 +1,3 @@
-// import { USE_SUPABASE } from "@env";
 import {
   supabaseChatService,
   ChannelInfo,

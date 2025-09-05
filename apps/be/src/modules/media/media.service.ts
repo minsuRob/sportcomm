@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+
+import { Repository, In, DataSource } from 'typeorm';
 import { Media, MediaType, UploadStatus } from '../../entities/media.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
 import {
@@ -8,7 +8,7 @@ import {
   generatePostMediaFileName,
   getMimeTypeFromFileName,
 } from '../../common/utils/file-utils';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 // Sharp 옵션 조정 - 애플리케이션 시작 시 한 번 설정
 sharp.cache(false); // 캐시 비활성화로 메모리 누수 방지
 sharp.concurrency(2); // 병렬 처리 제한
@@ -24,13 +24,16 @@ import { MediaOptimizerService } from './media-optimizer.service';
 @Injectable()
 export class MediaService {
   private readonly logger = new Logger(MediaService.name);
+  // DataSource 기반 수동 주입으로 전환 (@InjectRepository 제거)
+  private mediaRepository: Repository<Media>;
 
   constructor(
-    @InjectRepository(Media)
-    private readonly mediaRepository: Repository<Media>,
+    private readonly dataSource: DataSource,
     private readonly supabaseService: SupabaseService,
     private readonly mediaOptimizerService: MediaOptimizerService,
   ) {
+    // 리포지토리 수동 할당 (데코레이터 파싱 오류 회피)
+    this.mediaRepository = this.dataSource.getRepository(Media);
     // 서비스 시작 시 Sharp 설정 로그
     this.logger.log('Sharp 이미지 처리 라이브러리 초기화 완료');
   }
@@ -142,6 +145,7 @@ export class MediaService {
   async createMediaFromFiles(
     files: Express.Multer.File[],
     userId: string,
+    options: { forceAvatarBucket?: boolean } = {},
   ): Promise<Media[]> {
     const mediaEntities: Media[] = [];
 
@@ -180,18 +184,22 @@ export class MediaService {
 
           mediaTypeEnum = MediaType.IMAGE;
 
-          // 파일명에 따라 버킷 결정 (아바타 / 팀 로고 / 일반 이미지)
-          const lowerName = file.originalname.toLowerCase();
-          if (lowerName.includes('profile') || lowerName.includes('avatar')) {
+          // 버킷 결정 로직 (옵션 강제 > 파일명 패턴)
+          if (options.forceAvatarBucket) {
             bucket = 'avatars';
-          } else if (
-            lowerName.includes('team_logo') ||
-            lowerName.includes('team-logo') ||
-            lowerName.includes('teamlogo')
-          ) {
-            bucket = 'team-logos';
           } else {
-            bucket = 'post-images';
+            const lowerName = file.originalname.toLowerCase();
+            if (lowerName.includes('profile') || lowerName.includes('avatar')) {
+              bucket = 'avatars';
+            } else if (
+              lowerName.includes('team_logo') ||
+              lowerName.includes('team-logo') ||
+              lowerName.includes('teamlogo')
+            ) {
+              bucket = 'team-logos';
+            } else {
+              bucket = 'post-images';
+            }
           }
         }
 

@@ -26,7 +26,20 @@ export default function UserAvatar({
   const { themed, theme } = useAppTheme();
   const [loadFailed, setLoadFailed] = useState(false);
 
-  const showFallback = !imageUrl || loadFailed;
+  /**
+   * 아바타 URL 정규화
+   * - 과거 post-images 버킷 경로를 avatars 버킷 경로로 치환
+   * - null/undefined 안전 처리
+   */
+  const normalizeAvatarUrl = (url?: string | null) =>
+    url && url.includes("/post-images/")
+      ? url.replace("/post-images/", "/avatars/")
+      : url || undefined;
+
+  const normalizedUrl = normalizeAvatarUrl(imageUrl);
+
+  // 표시 가능한 유효 URL 없거나 로딩 실패 시 fallback 아이콘 사용
+  const showFallback = !normalizedUrl || loadFailed;
 
   return (
     <View
@@ -50,7 +63,8 @@ export default function UserAvatar({
           />
         ) : (
           <Image
-            source={{ uri: imageUrl! }}
+            // 정규화된 URL 사용
+            source={{ uri: normalizedUrl! }}
             style={{ width: size, height: size, borderRadius: size / 2 }}
             onError={() => setLoadFailed(true)}
             contentFit="cover"

@@ -34,8 +34,6 @@ module.exports = {
     experiments: {
       typedRoutes: true,
     },
-    extra: {
-      GRAPHQL_URL: process.env.GRAPHQL_URL || "http://localhost:4000/graphql",
-    },
+    extra: {},
   },
 };

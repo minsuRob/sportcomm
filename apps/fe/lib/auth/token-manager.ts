@@ -90,7 +90,7 @@ export class TokenManager {
       }
 
       if (!this.currentSession) {
-        console.warn("⚠️ 활성 세션이 없음");
+        // console.warn("⚠️ 활성 세션이 없음");
         return null;
       }
 

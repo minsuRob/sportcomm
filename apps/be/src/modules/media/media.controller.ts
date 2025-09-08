@@ -551,11 +551,12 @@ export class MediaController {
   async uploadSingleFile(
     @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: User,
+    @Req() req: Request,
   ): Promise<any> {
     console.log('단일 파일 업로드 요청 받음:', {
       hasFiles: !!files?.length,
       userId: user?.id,
-      bodyParams: Object.keys(body || {}),
+      bodyParams: Object.keys(req?.body || {}),
     });
 
     if (!files || files.length === 0) {
@@ -839,6 +840,7 @@ export class MediaController {
   async uploadProfileImage(
     @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: User,
+    @Req() req: Request,
   ): Promise<any> {
     const requestId = uuidv4().substring(0, 8);
 

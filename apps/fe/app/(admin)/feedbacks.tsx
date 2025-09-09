@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+// NOTE: 이후 중복된 핸들러(旧 handleRespondToFeedback / handleUpdateStatus / handleUpdatePriority)가 남아있다면
+// 최신 GraphQL 연동 로직(위 useMutation 정의 및 새 핸들러)만 남기고 제거해야 합니다.
 import {
   View,
   Text,
@@ -15,6 +17,13 @@ import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
+import { useQuery, useMutation } from "@apollo/client";
+import {
+  GET_ADMIN_FEEDBACKS,
+  RESPOND_TO_FEEDBACK,
+  UPDATE_FEEDBACK_STATUS,
+  UPDATE_FEEDBACK_PRIORITY,
+} from "@/lib/graphql/admin";
 
 // 피드백 정보 타입
 interface FeedbackInfo {
@@ -51,8 +60,33 @@ interface FeedbackInfo {
 export default function AdminFeedbacksScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [feedbacks, setFeedbacks] = useState<FeedbackInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // 페이지네이션 (추후 확장 대비)
+  const [page, setPage] = useState(1);
+
+  // 서버 데이터 로드 (Mock 제거)
+  interface FeedbacksResponse {
+    adminGetAllFeedbacks: {
+      feedbacks: FeedbackInfo[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }
+
+  const { data, loading, error, refetch } = useQuery<FeedbacksResponse>(
+    GET_ADMIN_FEEDBACKS,
+    {
+      variables: { page, limit: 50 },
+      fetchPolicy: "cache-and-network",
+      errorPolicy: "all",
+    },
+  );
+
+  const feedbacks = data?.adminGetAllFeedbacks.feedbacks ?? [];
+
+  // UI 상태
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackInfo | null>(
     null,
   );
@@ -61,211 +95,127 @@ export default function AdminFeedbacksScreen() {
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterType, setFilterType] = useState<string>("ALL");
 
-  // 피드백 데이터 로드
-  const loadFeedbacks = async () => {
-    try {
-      setIsLoading(true);
+  // 뮤테이션 정의
+  const [respondToFeedback, { loading: respondLoading }] = useMutation(
+    RESPOND_TO_FEEDBACK,
+    {
+      refetchQueries: [
+        { query: GET_ADMIN_FEEDBACKS, variables: { page, limit: 50 } },
+      ],
+      onCompleted: () =>
+        showToast({
+          type: "success",
+          title: "응답 완료",
+          message: "피드백에 응답이 등록되었습니다.",
+          duration: 2000,
+        }),
+      onError: (err) =>
+        showToast({
+          type: "error",
+          title: "응답 실패",
+          message: err.message,
+          duration: 3000,
+        }),
+    },
+  );
 
-      // TODO: GraphQL 쿼리로 실제 데이터 로드
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  const [updateFeedbackStatus, { loading: statusLoading }] = useMutation(
+    UPDATE_FEEDBACK_STATUS,
+    {
+      refetchQueries: [
+        { query: GET_ADMIN_FEEDBACKS, variables: { page, limit: 50 } },
+      ],
+      onCompleted: (d) =>
+        showToast({
+          type: "success",
+          title: "상태 변경",
+          message: `피드백 상태가 '${d.adminUpdateFeedbackStatus.status}'(으)로 변경되었습니다.`,
+          duration: 2000,
+        }),
+      onError: (err) =>
+        showToast({
+          type: "error",
+          title: "상태 변경 실패",
+          message: err.message,
+          duration: 3000,
+        }),
+    },
+  );
 
-      const mockFeedbacks: FeedbackInfo[] = [
-        {
-          id: "1",
-          title: "앱이 자주 크래시됩니다",
-          content:
-            "게시물을 작성할 때 앱이 자주 종료됩니다. 특히 이미지를 첨부할 때 문제가 발생합니다.",
-          type: "BUG_REPORT",
-          status: "NEW",
-          priority: "HIGH",
-          submitter: {
-            id: "user1",
-            nickname: "사용자1",
-            email: "user1@example.com",
-          },
-          contactInfo: "010-1234-5678",
-          createdAt: "2024-02-08T10:30:00Z",
-          updatedAt: "2024-02-08T10:30:00Z",
-        },
-        {
-          id: "2",
-          title: "다크모드 지원 요청",
-          content: "다크모드를 지원해주세요. 밤에 사용할 때 눈이 아픕니다.",
-          type: "FEATURE_REQUEST",
-          status: "IN_PROGRESS",
-          priority: "MEDIUM",
-          submitter: {
-            id: "user2",
-            nickname: "사용자2",
-            email: "user2@example.com",
-          },
-          adminResponse:
-            "다크모드 기능을 개발 중입니다. 다음 업데이트에서 제공될 예정입니다.",
-          respondedAt: "2024-02-07T14:20:00Z",
-          createdAt: "2024-02-06T15:20:00Z",
-          updatedAt: "2024-02-07T14:20:00Z",
-        },
-        {
-          id: "3",
-          title: "검색 기능 개선 제안",
-          content:
-            "검색 결과가 정확하지 않습니다. 태그 기반 검색이나 필터 기능을 추가해주세요.",
-          type: "IMPROVEMENT",
-          status: "COMPLETED",
-          priority: "MEDIUM",
-          submitter: {
-            id: "user3",
-            nickname: "사용자3",
-            email: "user3@example.com",
-          },
-          adminResponse:
-            "검색 알고리즘을 개선하고 태그 필터 기능을 추가했습니다. 업데이트를 확인해주세요.",
-          respondedAt: "2024-02-05T16:30:00Z",
-          createdAt: "2024-02-03T11:45:00Z",
-          updatedAt: "2024-02-05T16:30:00Z",
-        },
-        {
-          id: "4",
-          title: "앱이 정말 좋아요!",
-          content:
-            "스포츠 팬들을 위한 최고의 앱입니다. 개발팀에게 감사드립니다.",
-          type: "COMPLIMENT",
-          status: "COMPLETED",
-          priority: "LOW",
-          submitter: {
-            id: "user4",
-            nickname: "사용자4",
-            email: "user4@example.com",
-          },
-          adminResponse:
-            "소중한 피드백 감사합니다! 더 좋은 서비스를 위해 노력하겠습니다.",
-          respondedAt: "2024-02-04T10:15:00Z",
-          createdAt: "2024-02-04T09:30:00Z",
-          updatedAt: "2024-02-04T10:15:00Z",
-        },
-        {
-          id: "5",
-          title: "알림이 너무 많아요",
-          content:
-            "알림이 너무 자주 와서 불편합니다. 알림 설정을 더 세분화해주세요.",
-          type: "COMPLAINT",
-          status: "REVIEWING",
-          priority: "MEDIUM",
-          submitter: {
-            id: "user5",
-            nickname: "사용자5",
-            email: "user5@example.com",
-          },
-          createdAt: "2024-02-07T13:20:00Z",
-          updatedAt: "2024-02-08T09:10:00Z",
-        },
-      ];
+  const [updateFeedbackPriority, { loading: priorityLoading }] = useMutation(
+    UPDATE_FEEDBACK_PRIORITY,
+    {
+      refetchQueries: [
+        { query: GET_ADMIN_FEEDBACKS, variables: { page, limit: 50 } },
+      ],
+      onCompleted: (d) =>
+        showToast({
+          type: "success",
+          title: "우선순위 변경",
+          message: `피드백 우선순위가 '${d.adminUpdateFeedbackPriority.priority}'(으)로 변경되었습니다.`,
+          duration: 2000,
+        }),
+      onError: (err) =>
+        showToast({
+          type: "error",
+          title: "우선순위 변경 실패",
+          message: err.message,
+          duration: 3000,
+        }),
+    },
+  );
 
-      setFeedbacks(mockFeedbacks);
-    } catch (error) {
+  // 에러 토스트
+  useEffect(() => {
+    if (error) {
       console.error("피드백 데이터 로드 실패:", error);
       showToast({
         type: "error",
         title: "데이터 로드 실패",
-        message: "피드백 데이터를 불러오는 중 오류가 발생했습니다.",
-        duration: 3000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadFeedbacks();
-  }, []);
-
-  // 피드백 응답 핸들러
-  const handleRespondToFeedback = async (
-    feedbackId: string,
-    response: string,
-  ) => {
-    try {
-      // TODO: GraphQL 뮤테이션으로 피드백 응답
-      console.log("피드백 응답:", { feedbackId, response });
-
-      showToast({
-        type: "success",
-        title: "응답 완료",
-        message: "피드백에 응답이 등록되었습니다.",
-        duration: 2000,
-      });
-
-      setShowDetailModal(false);
-      setSelectedFeedback(null);
-      setAdminResponse("");
-      loadFeedbacks();
-    } catch (error) {
-      console.error("피드백 응답 실패:", error);
-      showToast({
-        type: "error",
-        title: "응답 실패",
-        message: "피드백 응답 중 오류가 발생했습니다.",
+        message:
+          error.message || "피드백 데이터를 불러오는 중 오류가 발생했습니다.",
         duration: 3000,
       });
     }
-  };
+  }, [error]);
 
-  // 피드백 상태 변경 핸들러
-  const handleUpdateStatus = async (feedbackId: string, status: string) => {
-    try {
-      // TODO: GraphQL 뮤테이션으로 피드백 상태 업데이트
-      console.log("피드백 상태 변경:", { feedbackId, status });
-
-      showToast({
-        type: "success",
-        title: "상태 변경 완료",
-        message: `피드백 상태가 ${getFeedbackStatusDisplay(status).label}(으)로 변경되었습니다.`,
-        duration: 2000,
-      });
-
-      loadFeedbacks();
-    } catch (error) {
-      console.error("피드백 상태 변경 실패:", error);
-      showToast({
-        type: "error",
-        title: "상태 변경 실패",
-        message: "피드백 상태 변경 중 오류가 발생했습니다.",
-        duration: 3000,
-      });
-    }
-  };
-
-  // 피드백 우선순위 변경 핸들러
-  const handleUpdatePriority = async (feedbackId: string, priority: string) => {
-    try {
-      // TODO: GraphQL 뮤테이션으로 피드백 우선순위 업데이트
-      console.log("피드백 우선순위 변경:", { feedbackId, priority });
-
-      showToast({
-        type: "success",
-        title: "우선순위 변경 완료",
-        message: `피드백 우선순위가 ${getFeedbackPriorityDisplay(priority).label}(으)로 변경되었습니다.`,
-        duration: 2000,
-      });
-
-      loadFeedbacks();
-    } catch (error) {
-      console.error("피드백 우선순위 변경 실패:", error);
-      showToast({
-        type: "error",
-        title: "우선순위 변경 실패",
-        message: "피드백 우선순위 변경 중 오류가 발생했습니다.",
-        duration: 3000,
-      });
-    }
-  };
-
-  // 피드백 상세 보기
+  // 상세 모달 열기 (단일 정의)
   const openFeedbackDetail = (feedback: FeedbackInfo) => {
     setSelectedFeedback(feedback);
     setAdminResponse(feedback.adminResponse || "");
     setShowDetailModal(true);
   };
+
+  // 응답 처리
+  const handleRespondToFeedback = (feedbackId: string, response: string) => {
+    if (!response.trim()) {
+      showToast({
+        type: "error",
+        title: "입력 오류",
+        message: "응답 내용을 입력해주세요.",
+        duration: 2500,
+      });
+      return;
+    }
+    respondToFeedback({
+      variables: { feedbackId, response: response.trim() },
+    });
+    setShowDetailModal(false);
+    setSelectedFeedback(null);
+    setAdminResponse("");
+  };
+
+  // 상태 변경
+  const handleUpdateStatus = (feedbackId: string, status: string) => {
+    updateFeedbackStatus({ variables: { feedbackId, status } });
+  };
+
+  // 우선순위 변경
+  const handleUpdatePriority = (feedbackId: string, priority: string) => {
+    updateFeedbackPriority({ variables: { feedbackId, priority } });
+  };
+
+  // (중복 제거됨) - 기존에 중복 선언되었던 openFeedbackDetail 함수 제거
 
   // 피드백 유형 표시
   const getFeedbackTypeDisplay = (type: string) => {
@@ -351,7 +301,7 @@ export default function AdminFeedbacksScreen() {
     });
   };
 
-  if (isLoading) {
+  if (loading && !data) {
     return (
       <View style={themed($container)}>
         <View style={themed($loadingContainer)}>

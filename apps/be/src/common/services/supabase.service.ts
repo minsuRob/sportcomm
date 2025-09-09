@@ -11,7 +11,7 @@ import { sanitizeFileName } from '../utils/file-utils';
  */
 @Injectable()
 export class SupabaseService {
-  private supabase: SupabaseClient;
+  public readonly supabase: SupabaseClient;
 
   constructor(private readonly configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');

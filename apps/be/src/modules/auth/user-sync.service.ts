@@ -131,9 +131,23 @@ export class UserSyncService {
         supabaseUser.email?.split('@')[0] ||
         `user_${userId.slice(0, 8)}`;
 
-      // 역할 결정 (우선순위: 입력값 > Supabase metadata > 기본값)
-      const finalRole =
-        role || (supabaseUser.user_metadata?.role as UserRole) || UserRole.USER;
+      // 역할 결정 (기존 사용자의 경우 기존 role 우선 보존)
+      let finalRole: UserRole;
+      if (user) {
+        // 기존 사용자의 경우: 입력값이 있으면 사용, 없으면 기존 값 보존
+        const inputRole = role || (supabaseUser.user_metadata?.role as UserRole);
+        
+        // 관리자 역할 보호: 기존이 ADMIN이고 입력값이 USER인 경우 기존 값 유지
+        if (user.role === UserRole.ADMIN && inputRole === UserRole.USER) {
+          this.logger.warn(`관리자 역할 보호: ${userId}의 ADMIN 역할을 USER로 변경 시도 차단`);
+          finalRole = user.role; // 기존 ADMIN 역할 유지
+        } else {
+          finalRole = inputRole || user.role;
+        }
+      } else {
+        // 새 사용자의 경우: 입력값 > Supabase metadata > 기본값
+        finalRole = role || (supabaseUser.user_metadata?.role as UserRole) || UserRole.USER;
+      }
 
       if (user) {
         // 기존 사용자 정보 업데이트 (변경사항이 있을 때만)
@@ -144,7 +158,9 @@ export class UserSyncService {
           hasChanges = true;
         }
 
+        // role 변경 시에만 업데이트 (기존 값과 다를 때만)
         if (user.role !== finalRole) {
+          console.log(`🔄 사용자 role 변경: ${user.role} -> ${finalRole} (사용자: ${userId})`);
           user.role = finalRole;
           hasChanges = true;
         }
@@ -199,11 +215,20 @@ export class UserSyncService {
         user = await this.userRepository.save(user);
       }
 
-      // Supabase Auth의 user_metadata 업데이트
-      await this.updateSupabaseMetadata(userId, {
-        nickname: user.nickname,
-        role: user.role,
-      });
+      // Supabase Auth의 user_metadata 업데이트 (실패해도 계속 진행)
+      try {
+        await this.updateSupabaseMetadata(userId, {
+          nickname: user.nickname,
+          role: user.role,
+        });
+        this.logger.log(`Supabase 메타데이터 업데이트 성공: ${userId} (role: ${user.role})`);
+      } catch (metadataError) {
+        this.logger.warn(
+          `Supabase 메타데이터 업데이트 실패 (계속 진행): ${userId}`,
+          metadataError.message,
+        );
+        // 메타데이터 업데이트 실패해도 로컬 DB는 이미 저장되었으므로 계속 진행
+      }
 
       this.logger.log(`사용자 동기화 완료: ${userId} (${user.nickname})`);
       return user;
@@ -428,14 +453,26 @@ export class UserSyncService {
     metadata: { nickname: string; role: UserRole },
   ): Promise<void> {
     try {
-      await this.supabaseService.updateUserRole(userId, metadata.role);
-      // 추가적인 메타데이터 업데이트가 필요하면 여기에 구현
+      // role과 nickname을 함께 업데이트
+      const { error } = await this.supabaseService.supabase.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          role: metadata.role,
+          nickname: metadata.nickname,
+        },
+      });
+
+      if (error) {
+        throw new Error(`Supabase 사용자 메타데이터 업데이트 실패: ${error.message}`);
+      }
+
+      this.logger.log(`Supabase 메타데이터 업데이트 성공: ${userId} (role: ${metadata.role}, nickname: ${metadata.nickname})`);
     } catch (error) {
       this.logger.warn(
         `Supabase 메타데이터 업데이트 실패: ${userId}`,
         error.message,
       );
       // 메타데이터 업데이트 실패는 치명적이지 않으므로 에러를 던지지 않음
+      throw error; // 상위에서 처리하도록 에러 전파
     }
   }
 

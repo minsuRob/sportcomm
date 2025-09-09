@@ -6,7 +6,6 @@ import {
   ViewStyle,
   TextStyle,
   StyleSheet,
-  Animated,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -19,7 +18,9 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { clearSession, getSession, User } from "@/lib/auth";
 import Toast from "react-native-toast-message";
 
-// 안드로이드에서 LayoutAnimation 활성화
+/**
+ * 안드로이드에서 LayoutAnimation 활성화
+ */
 if (
   Platform.OS === "android" &&
   UIManager.setLayoutAnimationEnabledExperimental
@@ -29,7 +30,8 @@ if (
 
 /**
  * 설정 화면 컴포넌트
- * 앱의 다양한 설정을 관리합니다.
+ * - 테마 / 언어 / 앱 색상 / 도움말 / 로그아웃
+ * - 수정사항: 상단 헤더에 뒤로가기 버튼 추가 및 제목을 가운데 정렬
  */
 export default function SettingsScreen() {
   const { themed, theme, toggleTheme, setAppColor, appColor } = useAppTheme();
@@ -37,21 +39,22 @@ export default function SettingsScreen() {
   const { switchLanguage, currentLanguage } = useTranslation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // 설정 섹션 상태 관리
+  // 펼쳐진 설정 섹션 상태
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
-  // 현재 로그인된 사용자 정보 불러오기
+  /**
+   * 현재 사용자 세션 불러오기
+   */
   useEffect(() => {
     const fetchUserSession = async () => {
       const { user } = await getSession();
       setCurrentUser(user);
     };
-
     fetchUserSession();
   }, []);
 
   /**
-   * 로그아웃 처리 함수
+   * 로그아웃 처리
    */
   const handleLogout = async (): Promise<void> => {
     try {
@@ -63,7 +66,6 @@ export default function SettingsScreen() {
         text2: "로그아웃이 완료되었습니다.",
         position: "bottom",
       });
-      // 피드 화면으로 이동
       router.push("/feed");
     } catch (error) {
       console.error("로그아웃 중 오류 발생:", error);
@@ -77,15 +79,15 @@ export default function SettingsScreen() {
   };
 
   /**
-   * 도움말 화면으로 이동하는 함수
+   * 도움말 (향후 확장)
    */
   const handleHelp = (): void => {
-    // TODO: 도움말 화면 이동 로직 구현
-    console.log("도움말");
+    // TODO: 도움말 화면 이동
+    console.log("도움말 진입 예정");
   };
 
   /**
-   * 드롭다운 섹션 토글 함수
+   * 드롭다운(아코디언) 토글
    */
   const toggleSection = (section: string): void => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -93,16 +95,16 @@ export default function SettingsScreen() {
   };
 
   /**
-   * 언어 선택 처리 함수
+   * 언어 선택
    */
-  const handleLanguageSelect = (language: string): void => {
+  const handleLanguageSelect = (language: "ko" | "en"): void => {
     switchLanguage(language);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedSection(null);
   };
 
   /**
-   * 앱 색상 선택 처리 함수
+   * 앱 대표 색상 선택
    */
   const handleAppColorSelect = (color: string): void => {
     setAppColor(color as any);
@@ -112,14 +114,31 @@ export default function SettingsScreen() {
 
   return (
     <View style={themed($container)}>
-      {/* 헤더 */}
+      {/* ---------- 헤더: 뒤로가기 + 제목 중앙 정렬 ---------- */}
       <View style={themed($header)}>
-        <Text style={themed($headerTitle)}>설정</Text>
-      </View>
+        {/* 뒤로가기 버튼 (좌측) */}
+        <TouchableOpacity
+          style={themed($headerSide)}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로가기"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+        </TouchableOpacity>
 
-      {/* 설정 메뉴 */}
+        {/* 중앙 제목 (flex:1 로 정확히 가운데 정렬) */}
+        <Text style={themed($headerTitle)}>설정</Text>
+
+        {/* 우측 더미 영역: 좌측 버튼과 폭 균형 맞춰 제목을 시각적으로 정확히 중앙에 고정 */}
+        <View style={themed($headerSide)} />
+      </View>
+      {/* ---------- /헤더 ---------- */}
+
+      {/* 설정 메뉴 컨테이너 */}
       <View style={themed($menuContainer)}>
-        {/* 테마 설정 드롭다운 */}
+        {/* 테마 설정 */}
         <View style={themed($menuSection)}>
           <TouchableOpacity
             style={themed($menuHeader)}
@@ -202,7 +221,7 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* 언어 설정 드롭다운 */}
+        {/* 언어 설정 */}
         <View style={themed($menuSection)}>
           <TouchableOpacity
             style={themed($menuHeader)}
@@ -281,7 +300,7 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* 앱 색상 설정 드롭다운 */}
+        {/* 앱 색상 설정 */}
         <View style={themed($menuSection)}>
           <TouchableOpacity
             style={themed($menuHeader)}
@@ -417,7 +436,7 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* 일반 메뉴 아이템 */}
+        {/* 도움말 */}
         <TouchableOpacity
           style={themed($menuHeader)}
           onPress={handleHelp}
@@ -440,6 +459,7 @@ export default function SettingsScreen() {
           />
         </TouchableOpacity>
 
+        {/* 로그아웃 */}
         <TouchableOpacity
           style={themed($menuHeader)}
           onPress={handleLogout}
@@ -466,9 +486,9 @@ export default function SettingsScreen() {
   );
 }
 
-/**
- * 색상 이름에 따른 실제 색상 값 반환
- */
+/* -------------------------------------------------
+ * 유틸: 색상 이름 → 실제 HEX/RGB 값
+ * ------------------------------------------------- */
 const getColorByName = (colorName: string): string => {
   switch (colorName) {
     case "red":
@@ -481,9 +501,9 @@ const getColorByName = (colorName: string): string => {
   }
 };
 
-/**
- * 색상 이름의 한국어 표현 반환
- */
+/* -------------------------------------------------
+ * 유틸: 색상 이름 → 한국어 표현
+ * ------------------------------------------------- */
 const getColorNameInKorean = (colorName: string): string => {
   switch (colorName) {
     case "red":
@@ -496,7 +516,9 @@ const getColorNameInKorean = (colorName: string): string => {
   }
 };
 
-// 색상 미리보기를 위한 스타일
+/**
+ * 고정(비테마) 스타일: 미세 색상 미리보기
+ */
 const styles = StyleSheet.create({
   colorIndicator: {
     width: 12,
@@ -516,15 +538,19 @@ const styles = StyleSheet.create({
   },
 });
 
-// --- 스타일 정의 ---
+/* -------------------------------------------------
+ * Themed 스타일
+ * ------------------------------------------------- */
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
   backgroundColor: colors.background,
 });
 
+/**
+ * 헤더: 좌/우 동일 폭 영역 확보 후 가운데 제목 배치
+ */
 const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
-  justifyContent: "space-between",
   alignItems: "center",
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.lg,
@@ -532,7 +558,21 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderBottomColor: colors.border,
 });
 
+/**
+ * 좌/우 사이드 영역 (너비 고정)
+ */
+const $headerSide: ThemedStyle<ViewStyle> = () => ({
+  width: 44,
+  justifyContent: "center",
+  alignItems: "flex-start",
+});
+
+/**
+ * 중앙 제목
+ */
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  flex: 1,
+  textAlign: "center",
   fontSize: 20,
   fontWeight: "600",
   color: colors.text,
@@ -603,7 +643,7 @@ const $dropdownItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   justifyContent: "space-between",
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.sm,
-  paddingLeft: 54,
+  paddingLeft: 54, // 아이콘 영역 정렬
 });
 
 const $selectedDropdownItem: ThemedStyle<ViewStyle> = ({ colors }) => ({
@@ -636,3 +676,5 @@ const $menuItemValue: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.textDim,
 });
+
+// commit: feat(fe): 설정 화면 헤더에 뒤로가기 버튼 추가 및 제목 중앙 정렬

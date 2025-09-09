@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
+import { useRouter } from "expo-router";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { usePostDetail } from "@/lib/hooks/usePostDetail";
@@ -65,6 +66,7 @@ export function PostDetailContent({
 }: PostDetailContentProps) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
+  const router = useRouter(); // 페이지 variant 뒤로가기용
 
   // 지역 상태
   const [showReportModal, setShowReportModal] = useState(false);
@@ -233,11 +235,24 @@ export function PostDetailContent({
 
     return (
       <View style={themed($pageHeader)}>
+        {/* 뒤로가기 버튼 (페이지 variant) */}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={themed($iconButton)}
+          accessibilityLabel="뒤로가기"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+        </TouchableOpacity>
+
         {titleNode}
+
+        {/* 새로고침 버튼 */}
         <TouchableOpacity
           onPress={handleRefresh}
           style={themed($iconButton)}
           disabled={refreshing}
+          accessibilityLabel="새로고침"
         >
           <Ionicons
             name="refresh"
@@ -474,14 +489,20 @@ const $modalHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  flex: 1, // 가운데 정렬을 위한 flex
+  textAlign: "center", // 텍스트 중앙 배치
   fontSize: 18,
   fontWeight: "bold",
   color: colors.text,
 });
 
 const $iconButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  width: 44, // 좌우 아이콘 영역 고정폭 확보로 제목 정확한 중앙 정렬
+  height: 44,
+  justifyContent: "center",
+  alignItems: "center",
   padding: spacing.xs,
-  borderRadius: 20,
+  borderRadius: 22,
 });
 
 const $centerStateContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

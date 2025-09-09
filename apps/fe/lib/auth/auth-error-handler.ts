@@ -179,7 +179,7 @@ export class AuthErrorHandler {
 
       // 사용자에게 알림
       Alert.alert(
-        "인증 필요",
+        "인증 필요2",
         message,
         [
           {

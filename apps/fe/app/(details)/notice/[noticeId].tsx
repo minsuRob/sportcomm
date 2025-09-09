@@ -345,6 +345,17 @@ export default function NoticeDetailScreen() {
             </View>
           )}
 
+          <TouchableOpacity
+            style={themed($allNoticesButton)}
+            onPress={() => router.push("/(details)/notice")}
+            accessibilityRole="button"
+            accessibilityLabel="공지 전체 목록 보기"
+            activeOpacity={0.8}
+          >
+            <Ionicons name="list" size={16} color="#fff" />
+            <Text style={themed($allNoticesButtonText)}>공지 전체보기</Text>
+          </TouchableOpacity>
+
           <View style={themed($bottomSpace)} />
         </ScrollView>
       )}
@@ -570,6 +581,28 @@ const $tagText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
 });
 
+/**
+ * 공지 전체보기 버튼 스타일
+ * - 피드 이동과 구분되는 명확한 Call-To-Action
+ */
+const $allNoticesButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  borderRadius: 10,
+  marginTop: spacing.md,
+  gap: spacing.xs,
+});
+
+const $allNoticesButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 14,
+  fontWeight: "700",
+});
+
 const $bottomSpace: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   height: spacing.xl,
 });
@@ -578,7 +611,8 @@ const $bottomSpace: ThemedStyle<ViewStyle> = ({ spacing }) => ({
  * 커밋 요약:
  * - 공지 상세 페이지 구현 (목업 데이터 기반)
  * - 중요도/카테고리/상태/태그/기간/공유/에러 처리 포함
- * - 향후 서버 연동 및 마크다운 확장 가이드 주석 추가
+ * - 태그 아래 '공지 전체보기' 버튼 추가 (공지 목록 화면 진입)
+ * - 향후 서버 연동 및 마크다운 확장 가이드 주석 유지
  */
 //
-// commit: feat(notice): 공지 상세 페이지 구현 및 상태/중요도 UI 추가
+// commit: feat(notice): 공지 상세 페이지에 '공지 전체보기' 버튼 추가

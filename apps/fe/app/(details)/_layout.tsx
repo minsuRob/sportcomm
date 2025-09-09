@@ -12,6 +12,7 @@ export default function DetailsLayout() {
   return (
     <Stack
       screenOptions={{
+        headerShown: false,
         headerStyle: {
           backgroundColor: theme.colors.background,
         },

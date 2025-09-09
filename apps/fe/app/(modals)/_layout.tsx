@@ -12,6 +12,7 @@ export default function ModalsLayout() {
   return (
     <Stack
       screenOptions={{
+        headerShown: false,
         headerStyle: {
           backgroundColor: theme.colors.background,
         },

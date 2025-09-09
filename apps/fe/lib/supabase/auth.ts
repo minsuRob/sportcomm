@@ -329,22 +329,13 @@ export class SupabaseAuthService {
   }
 
   /**
-   * 인증 상태 변경 리스너 등록
-   * @param callback 상태 변경 콜백
-   * @returns 구독 해제 함수
+   * (제거됨) 중복 onAuthStateChange 래퍼
+   * Supabase auto refresh 및 단일 AuthEventListener 사용 전략으로
+   * 이 메서드는 더 이상 필요하지 않으므로 제거되었습니다.
+   * 외부에서는 직접 supabase.auth.onAuthStateChange 또는
+   * 중앙 AuthEventListener를 사용하세요.
    */
-  static onAuthStateChange(callback: (event: string, session: any) => void) {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("🔄 인증 상태 변경:", event, session?.user?.id);
-      callback(event, session);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }
+  // static onAuthStateChange(...) { /* removed to prevent duplicate listeners */ }
 
   /**
    * 비밀번호 재설정 이메일 전송
@@ -431,6 +422,6 @@ export const signIn = SupabaseAuthService.signIn;
 export const signOut = SupabaseAuthService.signOut;
 export const getCurrentSession = SupabaseAuthService.getCurrentSession;
 export const getCurrentUser = SupabaseAuthService.getCurrentUser;
-export const onAuthStateChange = SupabaseAuthService.onAuthStateChange;
+// onAuthStateChange 제거됨: 중복 리스너 방지를 위해 직접 supabase.auth.onAuthStateChange 사용 권장
 export const resetPassword = SupabaseAuthService.resetPassword;
 export const resendConfirmation = SupabaseAuthService.resendConfirmation;

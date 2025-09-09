@@ -3,11 +3,15 @@
  *
  * JWT 토큰 만료 및 인증 관련 오류를 처리하고,
  * 필요시 사용자에게 재로그인을 요청합니다.
+ *
+ * 변경 사항 (단순화된 TokenManager 적용):
+ *  - 커스텀 5분 전 선제 갱신 로직 제거 (Supabase auto refresh 신뢰)
+ *  - 필요 시 만료 감지 후 refreshSession 직접 호출 (tokenManager.refreshToken)
+ *  - 사용하지 않는 supabase 직접 import 제거
  */
 
 import { Alert } from "react-native";
 import { tokenManager } from "./token-manager";
-import { supabase } from "@/lib/supabase/client";
 
 export interface AuthError {
   message: string;
@@ -121,7 +125,7 @@ export class AuthErrorHandler {
     }
 
     try {
-      console.log("🔄 토큰 만료 감지, 자동 갱신 시도...", {
+      console.log("🔄 토큰 만료 감지, refreshSession 직접 호출 시도...", {
         operationName,
         attempt: currentAttempts + 1,
       });

@@ -119,15 +119,7 @@ export interface Database {
           roomId?: string;
           userId?: string;
         };
-        Update: {
-          id?: string;
-          channel_id?: string;
-          user_id?: string;
-          is_admin?: boolean;
-          joined_at?: string;
-          last_read_at?: string | null;
-          is_active?: boolean;
-        };
+        // 중복된 Update 정의 제거 (채널 관련 필드) - 타입 충돌 해결
       };
       users: {
         Row: {
@@ -246,6 +238,12 @@ export const getCurrentSession = () => {
  * 사용자 인증 상태 변경 리스너 등록
  * @param callback 인증 상태 변경 시 호출될 콜백 함수
  * @returns 구독 해제 함수
+ */
+/**
+ * @deprecated 중복 Auth 이벤트 리스너가 발생할 수 있으므로 사용을 지양하세요.
+ * Supabase auto refresh + 중앙 AuthEventListener (auth-listener.ts) 또는
+ * 직접 supabase.auth.onAuthStateChange 사용을 권장합니다.
+ * 추후 제거 예정.
  */
 export const onAuthStateChange = (
   callback: (event: string, session: any) => void,

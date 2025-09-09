@@ -1,10 +1,18 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ViewStyle, TextStyle } from "react-native";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ViewStyle,
+  TextStyle,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import AppDialog from "@/components/ui/AppDialog";
+import { useRouter } from "expo-router";
+import { NOTICE_MOCKS, isActive } from "@/lib/notice/types";
 
 /**
  * Feed 상단(or 특정 위치)에 표시할 닫기 가능한 공지 컴포넌트
@@ -27,6 +35,8 @@ export interface FeedNoticeProps {
   forceShow?: boolean;
   /** 표시 비활성화 (조건부 렌더 외부 제어) */
   disabled?: boolean;
+  /** 공지를 탭하면 상세(또는 공지 목록)으로 이동할지 여부 (기본 true) */
+  navigateOnPress?: boolean;
   /** 닫기 후 콜백 */
   onDismiss?: () => void;
   /** 커스텀 접근성 라벨 */
@@ -57,6 +67,7 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   iconName = "megaphone-outline",
   forceShow = false,
   disabled = false,
+  navigateOnPress = true,
   onDismiss,
   accessibilityLabel = "피드 공지",
   testID = "feed-notice",
@@ -66,9 +77,26 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   children,
 }) => {
   const { themed, theme } = useAppTheme();
+  const router = useRouter();
   const [checking, setChecking] = useState<boolean>(true);
   const [visible, setVisible] = useState<boolean>(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+  /**
+   * 최신 강조(highlightBanner) 공지 (활성 + 최신 createdAt)
+   * - 실서비스 전환 시 서버 API로 대체
+   */
+  const bannerNotice = useMemo(() => {
+    try {
+      return (
+        NOTICE_MOCKS.filter((n) => n.highlightBanner && isActive(n)).sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0] || null
+      );
+    } catch {
+      return null;
+    }
+  }, []);
 
   /**
    * AsyncStorage에서 숨김 여부 로드
@@ -138,6 +166,22 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   const handleCancelDismiss = useCallback(() => {
     setShowConfirmDialog(false);
   }, []);
+  /**
+   * 공지 영역 클릭 → 상세 또는 목록 이동
+   * - 강조 공지 존재 시 해당 공지 상세
+   * - 없으면 공지 목록
+   */
+  const handlePressNotice = useCallback(() => {
+    if (!navigateOnPress) return;
+    if (bannerNotice) {
+      router.push({
+        pathname: "/(details)/notice/[noticeId]",
+        params: { noticeId: bannerNotice.id },
+      });
+    } else {
+      router.push("/(details)/notice");
+    }
+  }, [navigateOnPress, bannerNotice, router]);
 
   // 초기 조회 중이거나 표시 조건이 아니면 렌더하지 않음
   if (checking || !visible || disabled) return null;
@@ -148,17 +192,26 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
       accessibilityLabel={accessibilityLabel}
       testID={testID}
     >
-      <View style={[themed($noticeItem), contentStyle]}>
+      <TouchableOpacity
+        style={[themed($noticeItem), contentStyle]}
+        activeOpacity={0.85}
+        onPress={handlePressNotice}
+        accessibilityRole="button"
+        accessibilityLabel="공지 상세 보기로 이동"
+      >
         <Ionicons name={iconName} size={16} color={theme.colors.tint} />
         <Text
           style={[themed($noticeText), textStyle]}
           numberOfLines={2}
           accessibilityRole="text"
         >
-          {children || defaultMessage}
+          {children || (bannerNotice ? bannerNotice.title : defaultMessage)}
         </Text>
         <TouchableOpacity
-          onPress={handleClosePress}
+          onPress={(e: any) => {
+            e?.stopPropagation?.();
+            handleClosePress();
+          }}
           style={themed($noticeCloseButton)}
           accessibilityLabel="공지 닫기"
           accessibilityRole="button"
@@ -166,7 +219,7 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
         >
           <Ionicons name="close" size={16} color={theme.colors.textDim} />
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
 
       {/* 공지 닫기 확인 다이얼로그 */}
       <AppDialog
@@ -223,6 +276,7 @@ export default FeedNotice;
  * - Feed 화면 내 임시 공지 UI를 재사용 가능한 FeedNotice 컴포넌트로 분리
  * - AsyncStorage 기반 dismiss 상태 저장
  * - props 로 메시지/아이콘/키/강제표시 제어
+ * - 공지 클릭 시 최신 강조(highlightBanner) 공지 상세 또는 목록으로 네비게이션 추가
  */
 
-// commit: feat(feed): FeedNotice 컴포넌트 분리 및 dismiss 상태 영구 저장
+// commit: feat(feed): FeedNotice 클릭 시 공지 상세/목록 네비게이션 및 강조 공지 연동

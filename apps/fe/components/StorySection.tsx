@@ -15,6 +15,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { feedAdvancedCache, buildFeedKey } from "@/lib/state/feedAdvancedCache";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
+import type { Post } from "@/components/PostCard"; // 추가: feedPosts 폴백 타입
 
 /**
  * 스토리 아이템 타입 정의
@@ -82,6 +83,7 @@ interface StorySectionProps {
   maxItems?: number; // 최대 표시 개수
   teamIds?: string[] | null; // 팀 필터 (null이면 모든 팀)
   currentUser?: any; // 피드에서 전달받은 사용자 정보 (중복 API 호출 방지)
+  feedPosts?: Post[]; // 추가: useAdvancedFeed 미사용 시 상위 피드 posts 폴백
 }
 
 /**
@@ -221,6 +223,7 @@ export default function StorySection({
   maxItems = 8,
   teamIds,
   currentUser: propCurrentUser,
+  feedPosts,
 }: StorySectionProps) {
   const { themed } = useAppTheme();
   const router = useRouter();
@@ -300,6 +303,58 @@ export default function StorySection({
     });
     return () => unsubscribe();
   }, [teamIds, maxItems, currentUser]);
+
+  // feedPosts 폴백: 고급 캐시 스냅샷이 없고(또는 비어있고) 상위에서 feedPosts가 전달되면 스토리 유도 구성
+  useEffect(() => {
+    if (!feedPosts || feedPosts.length === 0) return;
+    // 캐시 구독에서 이미 stories 가 구성되었다면 폴백 불필요
+    if (stories.length > 0) return;
+    // feedPosts 기반 파생 스토리 생성 (상위  maxItems )
+    try {
+      const derived = feedPosts.slice(0, maxItems).map((p) => {
+        const media = (p.media || []).map((m: any) => ({
+          id: m.id,
+          url: m.url,
+          type: (m.type || "").toUpperCase(),
+          width: (m as any).width,
+          height: (m as any).height,
+        }));
+        return {
+          id: p.id,
+          type: "popular",
+          title: p.title || p.content?.slice(0, 30) || "",
+          content: p.content,
+          createdAt: p.createdAt,
+          teamId: (p as any).teamId,
+          media,
+          thumbnailUrl:
+            media.find(
+              (m) =>
+                m.type === "IMAGE" || m.type === "image" || m.type === "IMAGE",
+            )?.url || p.author?.profileImageUrl,
+          author: {
+            id: p.author.id,
+            nickname: p.author.nickname,
+            profileImageUrl: p.author.profileImageUrl,
+          },
+          metadata: {
+            likeCount: (p as any).likeCount,
+            commentCount: (p as any).commentCount,
+            viewCount: (p as any).viewCount,
+            teamName: (p as any).team?.name,
+            isPopular: ((p as any).likeCount || 0) > 10,
+          },
+        } as StoryItem;
+      });
+      if (derived.length > 0) {
+        setStories(derived);
+        setLoading(false);
+      }
+    } catch (e) {
+      // 폴백 변환 실패는 치명적이지 않으므로 로깅만
+      console.warn("feedPosts 폴백 스토리 변환 실패:", e);
+    }
+  }, [feedPosts, maxItems, stories.length]);
 
   // refresh 대체: 피드 버킷을 stale 처리하면 상위 컴포넌트의 피드 새로고침 로직이 재로딩
   const refresh = useCallback(() => {

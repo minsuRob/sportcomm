@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import AppDialog from "@/components/ui/AppDialog";
 import { showToast } from "@/components/CustomToast";
 import { useQuery, useMutation } from "@apollo/client";
 import {
@@ -23,6 +24,7 @@ import {
   RESPOND_TO_FEEDBACK,
   UPDATE_FEEDBACK_STATUS,
   UPDATE_FEEDBACK_PRIORITY,
+  ADMIN_AWARD_USER_POINTS,
 } from "@/lib/graphql/admin";
 
 // 피드백 정보 타입
@@ -94,6 +96,12 @@ export default function AdminFeedbacksScreen() {
   const [adminResponse, setAdminResponse] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterType, setFilterType] = useState<string>("ALL");
+  const [showAwardDialog, setShowAwardDialog] = useState(false);
+  const [awardTarget, setAwardTarget] = useState<{
+    userId: string;
+    nickname: string;
+    feedbackId: string;
+  } | null>(null);
 
   // 뮤테이션 정의
   const [respondToFeedback, { loading: respondLoading }] = useMutation(
@@ -165,6 +173,27 @@ export default function AdminFeedbacksScreen() {
     },
   );
 
+  // 포인트 지급 뮤테이션
+  const [adminAwardUserPoints, { loading: awardLoading }] = useMutation(
+    ADMIN_AWARD_USER_POINTS,
+    {
+      onCompleted: () =>
+        showToast({
+          type: "success",
+          title: "포인트 지급",
+          message: "사용자에게 포인트가 지급되었습니다.",
+          duration: 2000,
+        }),
+      onError: (err) =>
+        showToast({
+          type: "error",
+          title: "포인트 지급 실패",
+          message: err.message,
+          duration: 3000,
+        }),
+    },
+  );
+
   // 에러 토스트
   useEffect(() => {
     if (error) {
@@ -213,6 +242,26 @@ export default function AdminFeedbacksScreen() {
   // 우선순위 변경
   const handleUpdatePriority = (feedbackId: string, priority: string) => {
     updateFeedbackPriority({ variables: { feedbackId, priority } });
+  };
+
+  // 10포인트 지급 핸들러
+  // - 특정 사용자(userId)에게 지정된 양(amount)의 포인트를 지급합니다.
+  // - reason은 지급 사유로, 서버 로그/분석 등에서 활용할 수 있습니다.
+  const handleAwardPoints = (
+    userId: string,
+    amount: number,
+    reason?: string,
+  ) => {
+    if (!userId || amount <= 0) {
+      showToast({
+        type: "error",
+        title: "지급 실패",
+        message: "올바르지 않은 포인트 지급 요청입니다.",
+        duration: 2500,
+      });
+      return;
+    }
+    adminAwardUserPoints({ variables: { userId, amount, reason } });
   };
 
   // (중복 제거됨) - 기존에 중복 선언되었던 openFeedbackDetail 함수 제거
@@ -785,6 +834,24 @@ export default function AdminFeedbacksScreen() {
             {/* 응답 버튼 */}
             <View style={themed($modalActions)}>
               <TouchableOpacity
+                style={themed($awardButton)}
+                disabled={awardLoading}
+                onPress={() => {
+                  if (!selectedFeedback) return;
+                  setAwardTarget({
+                    userId: selectedFeedback.submitter.id,
+                    nickname: selectedFeedback.submitter.nickname,
+                    feedbackId: selectedFeedback.id,
+                  });
+                  setShowAwardDialog(true);
+                }}
+              >
+                <Text style={themed($awardButtonText)}>
+                  {awardLoading ? "지급 중..." : "10포인트 지급"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={themed($responseButton)}
                 onPress={() => {
                   if (!adminResponse.trim()) {
@@ -807,6 +874,32 @@ export default function AdminFeedbacksScreen() {
           </View>
         </View>
       </Modal>
+      <AppDialog
+        visible={showAwardDialog}
+        onClose={() => {
+          setShowAwardDialog(false);
+          setAwardTarget(null);
+        }}
+        title="포인트 지급"
+        description={
+          awardTarget
+            ? `${awardTarget.nickname}에게 10포인트를 지급할까요?`
+            : "해당 사용자에게 10포인트를 지급할까요?"
+        }
+        confirmText={awardLoading ? "지급 중..." : "지급"}
+        cancelText="취소"
+        confirmDisabled={awardLoading}
+        onConfirm={async () => {
+          if (!awardTarget) return;
+          await handleAwardPoints(
+            awardTarget.userId,
+            10,
+            `피드백 보상(${awardTarget.feedbackId})`,
+          );
+          setShowAwardDialog(false);
+          setAwardTarget(null);
+        }}
+      />
     </View>
   );
 }
@@ -1142,9 +1235,19 @@ const $priorityButtonText: ThemedStyle<TextStyle> = () => ({
 
 const $modalActions: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginTop: spacing.lg,
-  alignItems: "flex-end",
+  alignItems: "center",
+  flexDirection: "row",
+  justifyContent: "flex-end",
+  gap: spacing.sm,
 });
 
+const $awardButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  borderRadius: 8,
+  backgroundColor: "#10B981",
+  marginRight: spacing.sm,
+});
 const $responseButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingHorizontal: spacing.lg,
   paddingVertical: spacing.sm,
@@ -1152,6 +1255,11 @@ const $responseButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.tint,
 });
 
+const $awardButtonText: ThemedStyle<TextStyle> = () => ({
+  fontSize: 14,
+  color: "white",
+  fontWeight: "500",
+});
 const $responseButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   color: "white",

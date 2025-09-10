@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProgressService } from './progress.service';
+import { ProgressResolver } from './progress.resolver';
 import { User } from '../../entities/user.entity';
 
 /**
@@ -22,7 +23,7 @@ import { User } from '../../entities/user.entity';
     // 포인트/경험치 적립을 위해 User 엔티티 접근
     TypeOrmModule.forFeature([User]),
   ],
-  providers: [ProgressService],
+  providers: [ProgressService, ProgressResolver],
   exports: [
     // 다른 모듈(채팅, 게시글 등)에서 ProgressService 사용을 위해 export
     ProgressService,

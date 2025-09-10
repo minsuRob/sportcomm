@@ -83,6 +83,29 @@ export default function PostHeader({
 
   const { author, createdAt, teamId } = post;
 
+  // 상대 시간 포맷터: 분/시간/일/날짜 표기
+  const formatTimeAgo = (dateInput: string): string => {
+    const now = new Date();
+    const date = new Date(dateInput);
+    const diffMs = now.getTime() - date.getTime();
+    const minutes = Math.floor(diffMs / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (minutes < 1) return "방금 전";
+    if (minutes < 60) return `${minutes}분 전`;
+    if (hours < 24) return `${hours}시간 전`;
+    if (days < 7) return `${days}일 전`;
+
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}.${m}.${d}`;
+  };
+
+  // 렌더링용 포맷 결과
+  const formattedTimeAgo: string = formatTimeAgo(createdAt);
+
   const avatarUrl =
     author.profileImageUrl || `https://i.pravatar.cc/150?u=${author.id}`;
 
@@ -116,15 +139,7 @@ export default function PostHeader({
       <Image source={{ uri: avatarUrl }} style={themed($avatar)} />
       <View style={themed($userInfo)}>
         <Text style={themed($username)}>{author.nickname}</Text>
-        <Text style={themed($timestamp)}>
-          {new Date(createdAt).toLocaleDateString("ko-KR", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </Text>
+        <Text style={themed($timestamp)}>{formattedTimeAgo}</Text>
       </View>
     </>
   );

@@ -213,8 +213,8 @@ export class Notice {
    */
   @AfterLoad()
   private setComputedFields(): void {
-    (this as any).isActive = this.computeIsActive();
-    (this as any).lifecycleStatus = this.computeLifecycleStatus();
+      this.isActive = this.computeIsActive();
+      this.lifecycleStatus = this.computeLifecycleStatus();
   }
 
   /**

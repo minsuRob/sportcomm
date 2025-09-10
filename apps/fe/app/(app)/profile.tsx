@@ -122,6 +122,7 @@ export default function ProfileScreen({
 
   // 팔로우 관련 상태 (타인 프로필일 때만 사용)
   const [isFollowing, setIsFollowing] = useState<boolean | undefined>(undefined);
+  // comment commit
 
   // 팀별 경험치/레벨 기능 제거됨 (이관 준비 단계)
   // 추후 재도입 시 primary team 기반 계산 로직을 별도 훅으로 분리 예정.

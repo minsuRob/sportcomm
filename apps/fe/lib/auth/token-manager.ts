@@ -25,6 +25,7 @@ import type { Session } from "@supabase/supabase-js";
 interface ITokenManager {
   getValidToken(): Promise<string | null>;
   refreshToken(): Promise<Session | null>;
+  ensureFreshSession(): Promise<Session | null>;
   getCurrentSession(): Session | null;
   isTokenValid(): boolean;
   signOut(): Promise<void>;
@@ -175,6 +176,20 @@ class SimpleTokenManager implements ITokenManager {
   }
 
   /**
+   * 세션이 없거나 만료 임박/만료 상태라면 강제로 최신 세션을 확보합니다.
+   * - 우선 강제 syncSession(true)로 최신 상태 반영
+   * - 유효하지 않으면 refreshToken() 시도
+   * - 최종 세션(Session | null) 반환
+   */
+  async ensureFreshSession(): Promise<Session | null> {
+    await this.syncSession(true);
+    if (this.session && this.isTokenValid()) {
+      return this.session;
+    }
+    return await this.refreshToken();
+  }
+
+  /**
    * 현재 세션 반환 (캐시 그대로)
    */
   getCurrentSession(): Session | null {
@@ -232,6 +247,7 @@ export const tokenManager = SimpleTokenManager.getInstance();
  */
 export const getValidToken = () => tokenManager.getValidToken();
 export const refreshToken = () => tokenManager.refreshToken();
+export const ensureFreshSession = () => tokenManager.ensureFreshSession();
 export const getCurrentSession = () => tokenManager.getCurrentSession();
 export const isTokenValid = () => tokenManager.isTokenValid();
 export const signOut = () => tokenManager.signOut();

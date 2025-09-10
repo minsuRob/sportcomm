@@ -51,11 +51,16 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
  * 인증 링크 (단순화 버전)
  */
 const authLink = setContext(async (_, { headers }) => {
-  // TokenManager를 통해 최신/유효 토큰 획득 (만료 시 내부적으로 refreshSession 시도)
+  // 최신 세션 확보 (만료/부재 시 refresh 포함)
+  await tokenManager.ensureFreshSession();
+
+  // 유효 토큰 획득 (ensureFreshSession 이후 재확인)
   const token = await tokenManager.getValidToken();
 
   if (!token) {
-    console.log("Auth Link: No valid token (anonymous request).");
+    console.log(
+      "Auth Link: No valid token after ensureFreshSession (anonymous request).",
+    );
   }
 
   return {

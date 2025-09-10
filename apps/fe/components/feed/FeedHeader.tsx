@@ -99,37 +99,6 @@ export default function FeedHeader({
           </View>
         )}
 
-        {/* 인라인 팀 필터 트리거 (프로필 팝오버 경로 외 직접 접근)
-            - selectedTeamIds 길이에 따라 라벨 동적 표시
-            - FeedScreen 에서 selectedTeamIds 전달 필요 (선택적 prop)
-        */}
-        {/* {onTeamFilterPress && (
-          <TouchableOpacity
-            style={themed($teamFilterInline)}
-            onPress={onTeamFilterPress}
-            accessibilityRole="button"
-          >
-            <Ionicons
-              name="funnel-outline"
-              size={14}
-              color={theme.colors.textDim}
-            />
-            <Text style={themed($teamFilterInlineText)} numberOfLines={1}>
-              {(() => {
-                const ids = selectedTeamIds ?? [];
-                if (ids.length === 0) return "모든 팀";
-                if (ids.length === 1) return "1팀";
-                return `${ids.length}팀`;
-              })()}
-            </Text>
-            <Ionicons
-              name="chevron-down"
-              size={14}
-              color={theme.colors.textDim}
-            />
-          </TouchableOpacity>
-        )} */}
-
         <View style={themed($headerRight)}>
           {currentUser && (
             <>
@@ -205,7 +174,7 @@ export default function FeedHeader({
 const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "column",
   paddingHorizontal: spacing.sm,
-  paddingTop: spacing.md,
+  paddingTop: spacing.xxxs,
   paddingBottom: spacing.xs,
   backgroundColor: colors.card,
   borderBottomWidth: 1,

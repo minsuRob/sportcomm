@@ -582,13 +582,13 @@ const $myTeamText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.teamMain ?? colors.tint,
   fontSize: 15,
   fontWeight: "800",
-  marginRight: -4,
+  // marginRight: -4,
 });
 
 const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   fontSize: 15,
-  fontWeight: "800",
+  fontWeight: "400",
 });
 
 const $myTeamDateUnderline: ThemedStyle<TextStyle> = ({ colors }) => ({

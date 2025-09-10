@@ -12,16 +12,23 @@ import {
   ImageBackground,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@apollo/client";
+import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User, getSession, saveSession } from "@/lib/auth";
 import { useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
 import {
   GET_USER_PROFILE,
   GET_USER_POSTS,
   GET_USER_BOOKMARKS,
+  TOGGLE_FOLLOW,
 } from "@/lib/graphql";
+import {
+  CREATE_OR_GET_PRIVATE_CHAT,
+  GET_USER_PRIVATE_CHATS,
+  type CreatePrivateChatResponse,
+} from "@/lib/graphql/user-chat";
 import { type UserTeam } from "@/lib/graphql/teams";
 import TeamLogo from "@/components/TeamLogo";
 import FeedList from "@/components/FeedList";
@@ -78,11 +85,22 @@ const formatFanDuration = (
   return { years, months, totalDays };
 };
 
+interface ProfileScreenProps {
+  userId?: string;
+  isModal?: boolean;
+  onClose?: () => void;
+}
+
 /**
  * 프로필 화면 컴포넌트
  * 사용자의 프로필 정보와 작성한 게시물을 표시합니다
+ * 본인 프로필과 다른 사용자 프로필을 모두 지원합니다
  */
-export default function ProfileScreen() {
+export default function ProfileScreen({
+  userId,
+  isModal = false,
+  onClose,
+}: ProfileScreenProps) {
   const { themed, theme } = useAppTheme();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
@@ -90,21 +108,34 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<string>("posts");
   const router = useRouter();
 
-  // 탭 설정
-  const tabs = [
-    { key: "posts", title: "내 게시물" },
-    { key: "bookmarks", title: "북마크" },
-  ];
+  // 본인 프로필인지 확인
+  const isOwnProfile = !userId || currentUser?.id === userId;
+  const targetUserId = userId || currentUser?.id;
+
+  // 탭 설정 (본인/타인에 따라 다름)
+  const tabs = isOwnProfile
+    ? [
+        { key: "posts", title: "내 게시물" },
+        { key: "bookmarks", title: "북마크" },
+      ]
+    : [{ key: "posts", title: "게시물" }];
+
+  // 팔로우 관련 상태 (타인 프로필일 때만 사용)
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
 
   // 팀별 경험치/레벨 기능 제거됨 (이관 준비 단계)
   // 추후 재도입 시 primary team 기반 계산 로직을 별도 훅으로 분리 예정.
 
   // 사용자 프로필 데이터 조회
-  const { data: profileData, refetch: refetchProfile } = useQuery<{
+  const {
+    data: profileData,
+    loading: profileLoading,
+    refetch: refetchProfile,
+  } = useQuery<{
     getUserById: UserProfile;
   }>(GET_USER_PROFILE, {
-    variables: { userId: currentUser?.id },
-    skip: !currentUser?.id, // currentUser가 없으면 쿼리 중단
+    variables: { userId: targetUserId },
+    skip: !targetUserId, // targetUserId가 없으면 쿼리 중단
     fetchPolicy: "network-only", // 캐시를 사용하지 않고 항상 네트워크 요청
   });
 
@@ -116,12 +147,12 @@ export default function ProfileScreen() {
   } = useQuery<{
     posts: { posts: Post[] };
   }>(GET_USER_POSTS, {
-    variables: { input: { authorId: currentUser?.id } },
-    skip: !currentUser?.id,
+    variables: { input: { authorId: targetUserId } },
+    skip: !targetUserId,
     fetchPolicy: "network-only",
   });
 
-  // 사용자의 북마크 목록 조회
+  // 사용자의 북마크 목록 조회 (본인 프로필일 때만)
   const {
     data: bookmarksData,
     loading: bookmarksLoading,
@@ -129,10 +160,21 @@ export default function ProfileScreen() {
   } = useQuery<{
     getUserBookmarks: Post[];
   }>(GET_USER_BOOKMARKS, {
-    variables: { userId: currentUser?.id },
-    skip: !currentUser?.id,
+    variables: { userId: targetUserId },
+    skip: !targetUserId || !isOwnProfile,
     fetchPolicy: "network-only",
   });
+
+  // 팔로우 토글 뮤테이션 (타인 프로필일 때만 사용)
+  const [toggleFollow, { loading: followLoading }] = useMutation(TOGGLE_FOLLOW);
+
+  // DM 생성 뮤테이션 (타인 프로필일 때만 사용)
+  const [createOrGetPrivateChat, { loading: createChatLoading }] =
+    useMutation<CreatePrivateChatResponse>(CREATE_OR_GET_PRIVATE_CHAT, {
+      refetchQueries: [
+        { query: GET_USER_PRIVATE_CHATS, variables: { page: 1, limit: 100 } },
+      ],
+    });
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -155,18 +197,22 @@ export default function ProfileScreen() {
   // 프로필 데이터가 로드되면 사용자 정보 업데이트
   useEffect(() => {
     if (profileData?.getUserById) {
-      // GraphQL에서 가져온 사용자 정보와 세션의 사용자 정보를 병합
-      const updatedUser = {
-        ...currentUser,
-        ...profileData.getUserById,
-      };
+      // 본인 프로필일 때만 세션 업데이트
+      if (isOwnProfile) {
+        const updatedUser = {
+          ...currentUser,
+          ...profileData.getUserById,
+        };
+        saveSession(updatedUser);
+        setCurrentUser(updatedUser);
+      }
 
-      // 세션 업데이트
-      saveSession(updatedUser);
-      // 현재 사용자 상태 업데이트
-      setCurrentUser(updatedUser);
+      // 타인 프로필일 때는 팔로우 상태 업데이트
+      if (!isOwnProfile && profileData.getUserById.isFollowing !== undefined) {
+        setIsFollowing(profileData.getUserById.isFollowing);
+      }
     }
-  }, [profileData?.getUserById]);
+  }, [profileData?.getUserById, isOwnProfile]);
 
   // 게시물 데이터가 변경되면 상태 업데이트
   useEffect(() => {
@@ -213,6 +259,113 @@ export default function ProfileScreen() {
   /**
    * 탭 변경 핸들러
    */
+  /**
+   * 팔로우/언팔로우 핸들러
+   */
+  const handleFollowToggle = async () => {
+    if (!currentUser?.id || !targetUserId) {
+      Toast.show({
+        type: "error",
+        text1: "로그인 필요",
+        text2: "팔로우하려면 로그인이 필요합니다.",
+        visibilityTime: 3000,
+      });
+      return;
+    }
+
+    if (currentUser.id === targetUserId) return;
+
+    const previousIsFollowing = isFollowing;
+    setIsFollowing(!previousIsFollowing);
+
+    try {
+      const result = await toggleFollow({
+        variables: { userId: targetUserId },
+      });
+
+      if (result.errors || !result.data) {
+        setIsFollowing(previousIsFollowing);
+        Toast.show({
+          type: "error",
+          text1: "팔로우 실패",
+          text2: result.errors?.[0]?.message || "팔로우 처리 중 오류가 발생했습니다.",
+          visibilityTime: 3000,
+        });
+        return;
+      }
+
+      const newIsFollowing = result.data.toggleFollow;
+      setIsFollowing(newIsFollowing);
+
+      Toast.show({
+        type: "success",
+        text1: "성공",
+        text2: newIsFollowing
+          ? "팔로우했습니다"
+          : "언팔로우했습니다",
+        visibilityTime: 2000,
+      });
+
+      refetchProfile();
+    } catch (error) {
+      setIsFollowing(previousIsFollowing);
+      Toast.show({
+        type: "error",
+        text1: "팔로우 실패",
+        text2: "팔로우 처리 중 오류가 발생했습니다.",
+        visibilityTime: 3000,
+      });
+    }
+  };
+
+  /**
+   * DM 시작 핸들러
+   */
+  const handleStartDM = async () => {
+    if (!currentUser?.id || !targetUserId) {
+      Toast.show({
+        type: "error",
+        text1: "로그인 필요",
+        text2: "메시지를 보내려면 로그인이 필요합니다.",
+        visibilityTime: 3000,
+      });
+      return;
+    }
+
+    if (currentUser.id === targetUserId) return;
+
+    try {
+      const { data } = await createOrGetPrivateChat({
+        variables: { targetUserId },
+      });
+
+      if (data) {
+        const chatRoom = data.createOrGetPrivateChat;
+        const displayName =
+          chatRoom.participants.find((p) => p.id !== currentUser.id)
+            ?.nickname || chatRoom.name;
+
+        if (isModal && onClose) {
+          onClose();
+        }
+        router.replace({
+          pathname: "/(details)/chat/[roomId]",
+          params: {
+            roomId: chatRoom.id,
+            roomName: displayName,
+          },
+        });
+      }
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "오류",
+        text2: "채팅을 시작할 수 없습니다.",
+        visibilityTime: 3000,
+      });
+    }
+  };
+
   const handleTabChange = (tabKey: string) => {
     setActiveTab(tabKey);
   };
@@ -235,16 +388,35 @@ export default function ProfileScreen() {
    * 현재 활성 탭에 따른 빈 상태 메시지 반환
    */
   const getEmptyMessage = (): string => {
+    if (!isOwnProfile) {
+      return "아직 작성한 게시물이 없습니다";
+    }
     return activeTab === "posts"
       ? "아직 작성한 게시물이 없습니다"
       : "아직 북마크한 게시물이 없습니다";
   };
 
-  if (!currentUser) {
+  if (profileLoading || !currentUser) {
     return (
       <View style={themed($container)}>
         <View style={themed($loadingContainer)}>
+          <ActivityIndicator size="large" color={theme.colors.tint} />
           <Text style={themed($loadingText)}>프로필을 불러오는 중...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!profileData?.getUserById) {
+    return (
+      <View style={themed($container)}>
+        <View style={themed($errorContainer)}>
+          <Text style={themed($errorText)}>사용자를 찾을 수 없습니다.</Text>
+          {isModal && onClose && (
+            <TouchableOpacity style={themed($closeButton)} onPress={onClose}>
+              <Text style={themed($closeButtonText)}>닫기</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -278,14 +450,31 @@ export default function ProfileScreen() {
       >
         {/* 헤더 - 배경 이미지 위에 표시 */}
         <View style={themed($header)}>
-          <Text style={themed($headerTitle)}>프로필</Text>
-          <TouchableOpacity onPress={handleSettings}>
-            <Ionicons
-              name="settings-outline"
-              color={"#fff"}
-              size={24}
-            />
-          </TouchableOpacity>
+          {isModal ? (
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons
+                name="arrow-back"
+                color={"#fff"}
+                size={24}
+              />
+            </TouchableOpacity>
+          ) : (
+            <View />
+          )}
+          <Text style={themed($headerTitle)}>
+            {isOwnProfile ? "프로필" : `${userProfile.nickname}님의 프로필`}
+          </Text>
+          {!isModal && isOwnProfile ? (
+            <TouchableOpacity onPress={handleSettings}>
+              <Ionicons
+                name="settings-outline"
+                color={"#fff"}
+                size={24}
+              />
+            </TouchableOpacity>
+          ) : (
+            <View />
+          )}
         </View>
       </ImageBackground>
 
@@ -377,43 +566,74 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 프로필 편집 및 팀 선택 버튼 */}
-        <View style={themed($buttonContainer)}>
-          <TouchableOpacity
-            style={themed($editButton)}
-            onPress={handleEditProfile}
-          >
-            <Ionicons
-              name="create-outline"
-              color={theme.colors.tint}
-              size={16}
-            />
-            <Text style={themed($editButtonText)}>프로필 편집</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={themed($teamButton)}
-            onPress={handleTeamSelection}
-          >
-            <Ionicons
-              name="trophy-outline"
-              color={theme.colors.tint}
-              size={16}
-            />
-            <Text style={themed($teamButtonText)}>My Team</Text>
-          </TouchableOpacity>
-
-          {/* 관리자 전용 버튼 */}
-          {userProfile.role === "ADMIN" && (
+        {/* 버튼 컨테이너 - 본인/타인에 따라 다른 버튼 표시 */}
+        {!isOwnProfile ? (
+          // 타인 프로필일 때: 팔로우, DM 버튼
+          <View style={themed($buttonContainer)}>
             <TouchableOpacity
-              style={themed($adminButton)}
-              onPress={handleAdminDashboard}
+              style={themed($saveContactButton)}
+              onPress={handleFollowToggle}
+              disabled={followLoading}
             >
-              <Ionicons name="settings-outline" color="#EF4444" size={16} />
-              <Text style={themed($adminButtonText)}>관리자</Text>
+              {followLoading ? (
+                <ActivityIndicator size="small" color={theme.colors.text} />
+              ) : (
+                <Text style={themed($saveContactButtonText)}>
+                  {isFollowing ? "Following" : "Save contact"}
+                </Text>
+              )}
             </TouchableOpacity>
-          )}
-        </View>
+            <TouchableOpacity
+              style={themed($exchangeContactButton)}
+              onPress={handleStartDM}
+              disabled={createChatLoading}
+            >
+              {createChatLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={themed($exchangeContactButtonText)}>DM</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // 본인 프로필일 때: 프로필편집, My Team 버튼
+          <View style={themed($buttonContainer)}>
+            <TouchableOpacity
+              style={themed($editButton)}
+              onPress={handleEditProfile}
+            >
+              <Ionicons
+                name="create-outline"
+                color={theme.colors.tint}
+                size={16}
+              />
+              <Text style={themed($editButtonText)}>프로필 편집</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={themed($teamButton)}
+              onPress={handleTeamSelection}
+            >
+              <Ionicons
+                name="trophy-outline"
+                color={theme.colors.tint}
+                size={16}
+              />
+              <Text style={themed($teamButtonText)}>My Team</Text>
+            </TouchableOpacity>
+
+            {/* 관리자 전용 버튼 */}
+            {userProfile.role === "ADMIN" && (
+              <TouchableOpacity
+                style={themed($adminButton)}
+                onPress={handleAdminDashboard}
+              >
+                <Ionicons name="settings-outline" color="#EF4444" size={16} />
+                <Text style={themed($adminButtonText)}>관리자</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <View style={themed($contentContainer)}>
           {/* 탭 슬라이더 */}
@@ -700,4 +920,60 @@ const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
   color: colors.textDim,
   marginTop: spacing.sm,
+});
+
+const $errorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: spacing.xl,
+});
+
+const $errorText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 18,
+  color: colors.text,
+  textAlign: "center",
+  marginBottom: spacing.lg,
+});
+
+const $closeButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  backgroundColor: colors.tint,
+  borderRadius: 8,
+});
+
+const $closeButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.background,
+  fontWeight: "600",
+});
+
+const $saveContactButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flex: 1,
+  paddingVertical: spacing.md,
+  backgroundColor: colors.background,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.border,
+  alignItems: "center",
+  justifyContent: "center",
+});
+
+const $saveContactButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontWeight: "600",
+});
+
+const $exchangeContactButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  paddingVertical: spacing.md,
+  backgroundColor: "#F97316", // 오렌지색
+  borderRadius: 8,
+  alignItems: "center",
+  justifyContent: "center",
+});
+
+const $exchangeContactButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "#fff",
+  fontWeight: "600",
 });

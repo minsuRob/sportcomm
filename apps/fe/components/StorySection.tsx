@@ -465,7 +465,7 @@ export default function StorySection({
 
 // --- 스타일 정의 ---
 const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  backgroundColor: colors.backgroundAlt,
+  // backgroundColor: colors.backgroundAlt,
   // paddingVertical: spacing.md,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,

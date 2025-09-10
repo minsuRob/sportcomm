@@ -385,9 +385,12 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
 // -------- 스타일 정의 --------
 const $noticeContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.backgroundAlt,
+  borderTopColor: colors.border,
+  borderTopWidth: 1,
   borderBottomColor: colors.border,
+  borderBottomWidth: 1,
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.xs,
+  paddingVertical: spacing.xxxs,
 });
 
 const $noticeItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({

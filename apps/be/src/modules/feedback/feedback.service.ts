@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Feedback, FeedbackStatus, FeedbackPriority } from '../../entities/feedback.entity';
@@ -87,7 +87,7 @@ export class FeedbackService {
 
     // 본인이 작성한 피드백만 조회 가능
     if (feedback.submitterId !== user.id) {
-      throw new NotFoundException('접근 권한이 없습니다.');
+      throw new ForbiddenException('접근 권한이 없습니다.');
     }
 
     return feedback;

@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  Animated,
+  Easing,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,49 +17,35 @@ import { useRouter } from "expo-router";
 import type { Notice } from "@/lib/notice/types";
 import {
   fetchLatestActiveBannerNotice,
-  fetchNewestNotice,
+  fetchLatestNotices,
 } from "@/lib/notice/api";
 
 /**
  * Feed 상단(or 특정 위치)에 표시할 닫기 가능한 공지 컴포넌트
  * - 닫기(X)를 누르면 AsyncStorage에 플래그를 저장하여 이후 재방문 시 숨김
- * - props.children 을 제공하면 기본 메시지 대신 렌더
- * - version(또는 storageKey 변경) 을 통해 강제 재노출 가능
- *
- * 예시 사용:
- * <FeedNotice defaultMessage="새 기능을 준비중입니다. 의견을 남겨주세요!" />
+ * - 최신 공지를 여러 건 조회하여 작은 슬라이드/페이드 애니메이션으로 자동 롤링
+ * - version(또는 storageKey 변경) 으로 강제 재노출 가능
  */
-
 export interface FeedNoticeProps {
-  /** AsyncStorage Key (버전 변경 시 Suffix 조정) */
   storageKey?: string;
-  /** 기본 문구 (children 지정 시 무시) */
   defaultMessage?: string;
-  /** Ionicons 아이콘 이름 */
   iconName?: keyof typeof Ionicons.glyphMap;
-  /** 강제로 항상 표시 (스토리지 무시) */
   forceShow?: boolean;
-  /** 표시 비활성화 (조건부 렌더 외부 제어) */
   disabled?: boolean;
-  /** 공지를 탭하면 상세(또는 공지 목록)으로 이동할지 여부 (기본 true) */
   navigateOnPress?: boolean;
-  /** 닫기 후 콜백 */
   onDismiss?: () => void;
-  /** 커스텀 접근성 라벨 */
   accessibilityLabel?: string;
-  /** 테스트용 ID */
   testID?: string;
-  /** 외부 스타일 확장 (컨테이너) */
   containerStyle?: Partial<ViewStyle>;
-  /** 외부 스타일 확장 (내부 아이템) */
   contentStyle?: Partial<ViewStyle>;
-  /** 텍스트 스타일 확장 */
   textStyle?: Partial<TextStyle>;
-  /** children 전달 시 메시지 대체 */
   children?: React.ReactNode;
 }
 
 const DEFAULT_STORAGE_KEY = "feed_notice_hidden";
+const ROLL_INTERVAL_MS = 20000; // 롤링 간격
+const ENTER_MS = 180;
+const EXIT_MS = 140;
 
 /**
  * 내부 표시 상태:
@@ -82,31 +70,43 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
 }) => {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
+
   const [checking, setChecking] = useState<boolean>(true);
   const [visible, setVisible] = useState<boolean>(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
-  // 최신 강조(highlightBanner) 공지 및 '가장 최근' 공지
-  const [bannerNotice, setBannerNotice] = useState<Notice | null>(null);
-  const [newestNotice, setNewestNotice] = useState<Notice | null>(null);
 
+  // 공지 데이터
+  const [bannerNotice, setBannerNotice] = useState<Notice | null>(null);
+  const [latestNotices, setLatestNotices] = useState<Notice[]>([]);
+
+  // 애니메이션 값 (0: 숨김/전환 시작, 1: 표시)
+  const anim = React.useRef(new Animated.Value(0)).current;
+  const slideY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-6, 0], // 작은 슬라이드 업 효과
+  });
+
+  // 롤링 인덱스
+  const [index, setIndex] = useState<number>(0);
+
+  // 공지 조회: 강조 공지 + 최신 공지 여러 건
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        // 강조 공지와 가장 최신 공지를 병렬로 조회
-        const [latestBanner, newest] = await Promise.all([
+        const [banner, newestList] = await Promise.all([
           fetchLatestActiveBannerNotice({ debug: __DEV__ }),
-          fetchNewestNotice({ debug: __DEV__ }),
+          fetchLatestNotices({ limit: 5, activeOnly: true, debug: __DEV__ }),
         ]);
-        if (active) {
-          setBannerNotice(latestBanner);
-          setNewestNotice(newest);
-        }
+        if (!active) return;
+
+        setBannerNotice(banner ?? null);
+        setLatestNotices(Array.isArray(newestList) ? newestList : []);
       } catch (e) {
         console.warn("[FeedNotice] 공지 조회 실패", e);
         if (active) {
           setBannerNotice(null);
-          setNewestNotice(null);
+          setLatestNotices([]);
         }
       }
     })();
@@ -114,6 +114,23 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
       active = false;
     };
   }, []);
+
+  // 컨텐츠 구성: 강조 공지를 최상단에 배치(중복 제거)
+  const entries: Notice[] = useMemo(() => {
+    const ids = new Set<string>();
+    const list: Notice[] = [];
+    if (bannerNotice?.id) {
+      ids.add(bannerNotice.id);
+      list.push(bannerNotice);
+    }
+    for (const n of latestNotices) {
+      if (n?.id && !ids.has(n.id)) {
+        ids.add(n.id);
+        list.push(n);
+      }
+    }
+    return list;
+  }, [bannerNotice, latestNotices]);
 
   /**
    * AsyncStorage에서 숨김 여부 로드
@@ -140,7 +157,6 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
           mounted && setVisible(false);
         }
       } catch (e) {
-        // 조회 실패 시에는 UX상 표시 (사용자에게 정보를 보여주는 것이 더 낫다)
         mounted && setVisible(true);
         console.warn("[FeedNotice] failed to read storage", e);
       } finally {
@@ -152,14 +168,26 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
     };
   }, [storageKey, forceShow, disabled]);
 
+  // 표시 상태 변화에 따른 진입 애니메이션
+  useEffect(() => {
+    if (visible) {
+      anim.setValue(0);
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: ENTER_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible, anim]);
+
   // 새 공지 감지 시 자동 재활성화: 마지막으로 닫은 noticeKey와 현재 noticeKey 비교
   const getCurrentNoticeKey = useCallback((): string => {
-    const target = bannerNotice ?? newestNotice;
-    return target?.id ? `ID:${target.id}` : `DEFAULT:${defaultMessage}`;
-  }, [bannerNotice, newestNotice, defaultMessage]);
+    const current = entries[index] ?? null;
+    return current?.id ? `ID:${current.id}` : `DEFAULT:${defaultMessage}`;
+  }, [entries, index, defaultMessage]);
 
   useEffect(() => {
-    // disabled 상태에서는 동작하지 않음
     if (disabled) return;
     (async () => {
       try {
@@ -167,7 +195,6 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
         const dismissedKey = await AsyncStorage.getItem(
           `${storageKey}:dismissed_key`,
         );
-        // 이전에 닫은 키와 현재 키가 다르면 새로운 공지로 판단 → 숨김 플래그 제거 및 재표시
         if (dismissedKey && dismissedKey !== currentKey) {
           await AsyncStorage.removeItem(storageKey);
           setVisible(true);
@@ -177,17 +204,53 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
       }
     })();
   }, [
-    bannerNotice,
-    newestNotice,
+    entries,
+    index,
     defaultMessage,
     storageKey,
     disabled,
     getCurrentNoticeKey,
   ]);
 
+  // 자동 롤링: 여러 공지일 때만
+  useEffect(() => {
+    if (!visible) return;
+    if (!entries || entries.length <= 1) return;
+
+    anim.setValue(1); // 표시 상태에서 시작
+    let mounted = true;
+
+    const tick = async () => {
+      // 퇴장
+      await new Promise<void>((resolve) => {
+        Animated.timing(anim, {
+          toValue: 0,
+          duration: EXIT_MS,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }).start(() => resolve());
+      });
+      if (!mounted) return;
+      // 다음 인덱스로
+      setIndex((prev) => (prev + 1) % entries.length);
+      // 진입
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: ENTER_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const id = setInterval(tick, ROLL_INTERVAL_MS);
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, [visible, entries, anim]);
+
   /**
    * 닫기 버튼 클릭 핸들러
-   * - 확인 다이얼로그 표시
    */
   const handleClosePress = useCallback(() => {
     setShowConfirmDialog(true);
@@ -195,35 +258,35 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
 
   /**
    * 닫기 확인 핸들러
-   * - 실제 닫기 처리
    * - 현재 공지 키를 저장하여 이후 새로운 공지(키 변경) 감지 시 자동 재활성화
    */
   const handleConfirmDismiss = useCallback(async () => {
     setShowConfirmDialog(false);
-    setVisible(false);
     try {
+      // 퇴장 애니메이션 후 숨김
+      await new Promise<void>((resolve) => {
+        Animated.timing(anim, {
+          toValue: 0,
+          duration: EXIT_MS,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }).start(() => resolve());
+      });
+      setVisible(false);
+
       if (!forceShow) {
-        // 숨김 플래그
         await AsyncStorage.setItem(storageKey, "1");
-        // 마지막으로 닫은 공지 키 저장 (공지 ID가 있으면 ID, 없으면 DEFAULT:문구)
-        const dismissedKey = ((): string => {
-          const target = bannerNotice ?? newestNotice;
-          return target?.id ? `ID:${target.id}` : `DEFAULT:${defaultMessage}`;
-        })();
+        const current = entries[index] ?? null;
+        const dismissedKey = current?.id
+          ? `ID:${current.id}`
+          : `DEFAULT:${defaultMessage}`;
         await AsyncStorage.setItem(`${storageKey}:dismissed_key`, dismissedKey);
       }
     } catch (e) {
       console.warn("[FeedNotice] failed to store dismiss flag", e);
     }
     onDismiss?.();
-  }, [
-    storageKey,
-    forceShow,
-    onDismiss,
-    bannerNotice,
-    newestNotice,
-    defaultMessage,
-  ]);
+  }, [storageKey, forceShow, onDismiss, entries, index, defaultMessage, anim]);
 
   /**
    * 취소 핸들러
@@ -231,15 +294,14 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   const handleCancelDismiss = useCallback(() => {
     setShowConfirmDialog(false);
   }, []);
+
   /**
-   * 공지 영역 클릭 → 상세 또는 목록 이동
-   * - 강조 공지 존재 시 해당 공지 상세
-   * - 없으면 공지 목록
+   * 공지 클릭 → 상세/목록 이동
    */
   const handlePressNotice = useCallback(() => {
     if (!navigateOnPress) return;
-    const target = bannerNotice ?? newestNotice;
-    if (target) {
+    const target = entries[index] ?? null;
+    if (target?.id) {
       router.push({
         pathname: "/(details)/notice/[noticeId]",
         params: { noticeId: target.id },
@@ -247,21 +309,24 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
     } else {
       router.push("/(details)/notice");
     }
-  }, [navigateOnPress, bannerNotice, newestNotice, router]);
+  }, [navigateOnPress, entries, index, router]);
 
-  // 표시 텍스트 결정: 강조 공지 > 최신 공지 > 기본 메시지
+  // 표시 텍스트 결정
   const displayTitle =
-    (bannerNotice && bannerNotice.title) ||
-    (newestNotice && newestNotice.title) ||
+    (entries[index] && entries[index].title) ||
     defaultMessage ||
     "[공지] 새로운 소식이 있습니다.";
 
-  // 초기 조회 중이거나 표시 조건이 아니면 렌더하지 않음
+  // 초기/비표시 조건
   if (checking || !visible || disabled) return null;
 
   return (
-    <View
-      style={[themed($noticeContainer), containerStyle]}
+    <Animated.View
+      style={[
+        themed($noticeContainer),
+        containerStyle,
+        { opacity: anim, transform: [{ translateY: slideY }] },
+      ]}
       accessibilityLabel={accessibilityLabel}
       testID={testID}
     >
@@ -294,7 +359,6 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
         </TouchableOpacity>
       </TouchableOpacity>
 
-      {/* 공지 닫기 확인 다이얼로그 */}
       <AppDialog
         visible={showConfirmDialog}
         onClose={handleCancelDismiss}
@@ -304,7 +368,7 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
         cancelText="취소"
         onConfirm={handleConfirmDismiss}
       />
-    </View>
+    </Animated.View>
   );
 };
 
@@ -341,15 +405,11 @@ const $noticeCloseButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   marginLeft: spacing.xs,
 });
 
-// 기본 내보내기
 export default FeedNotice;
 
 /**
  * 변경 요약:
- * - Feed 화면 내 임시 공지 UI를 재사용 가능한 FeedNotice 컴포넌트로 분리
- * - AsyncStorage 기반 dismiss 상태 저장
- * - props 로 메시지/아이콘/키/강제표시 제어
- * - 공지 클릭 시 최신 강조(highlightBanner) 공지 상세 또는 목록으로 네비게이션 추가
+ * - 최신 공지 여러 건 롤링(슬라이드/페이드) 표시
+ * - AsyncStorage 닫힘 상태 유지 + 새 공지 도착 시 자동 재활성화
+ * - 웹/iOS/Android 공통 Animated 기반으로 가벼운 전환 적용
  */
-
-// commit: feat(feed): FeedNotice 클릭 시 공지 상세/목록 네비게이션 및 강조 공지 연동

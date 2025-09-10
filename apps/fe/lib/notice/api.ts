@@ -314,6 +314,101 @@ export async function fetchNewestNotice(options?: {
 }
 
 /**
+ * 최신 공지 여러 건 조회 (최신순)
+ * - draft 제외
+ * - createdAt DESC
+ * - activeOnly=true 시 현재 시각 기준 isActive 필터 적용
+ */
+export async function fetchLatestNotices(options?: {
+  tableName?: string;
+  limit?: number; // 기본 5
+  activeOnly?: boolean; // 기본 true
+  now?: Date;
+  debug?: boolean;
+}): Promise<Notice[]> {
+  const {
+    tableName = DEFAULT_NOTICE_TABLE,
+    limit = 5,
+    activeOnly = true,
+    now = new Date(),
+    debug = false,
+  } = options ?? {};
+
+  try {
+    const client: any = supabase as any;
+
+    // 1) camelCase 시도
+    let rows: Record<string, any>[] = [];
+    let firstError: any = null;
+    try {
+      const { data, error } = await buildNewestQuery(
+        client,
+        tableName,
+        limit,
+        "camel",
+      );
+      if (error) firstError = error;
+      if (Array.isArray(data) && data.length > 0) rows = data;
+    } catch (e) {
+      firstError = e;
+    }
+
+    // 2) 필요 시 snake_case 재시도
+    if (rows.length === 0) {
+      try {
+        const { data, error } = await buildNewestQuery(
+          client,
+          tableName,
+          limit,
+          "snake",
+        );
+        if (error && debug) {
+          console.warn(
+            "[notice/api] fetchLatestNotices snake_case 에러:",
+            error,
+          );
+        }
+        if (Array.isArray(data) && data.length > 0) rows = data;
+      } catch (e) {
+        if (debug) {
+          console.warn("[notice/api] fetchLatestNotices snake_case 예외:", e);
+        }
+      }
+    }
+
+    if (rows.length === 0) {
+      if (firstError && debug) {
+        console.warn(
+          "[notice/api] fetchLatestNotices camelCase 에러:",
+          firstError,
+        );
+      }
+      return [];
+    }
+
+    // 매핑 및 활성 필터
+    let notices = rows.map(mapDbRowToNotice);
+    if (activeOnly) {
+      notices = notices.filter((n) => isActive(n, now));
+    }
+
+    // 최신순 정렬 보강
+    notices.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    // 방어적 제한
+    return notices.slice(0, Math.max(0, limit));
+  } catch (e) {
+    if (debug) {
+      console.warn("[notice/api] fetchLatestNotices 예외:", e);
+    }
+    return [];
+  }
+}
+
+/**
  * 최신 활성 배너 공지 1건 조회
  * - DB에서 조회 (목업 fallback 제거)
  *

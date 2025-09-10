@@ -15,14 +15,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import {
-  NOTICE_MOCKS,
   Notice,
   NoticeImportance,
   NoticeCategory,
-  buildPreviewText,
-  isActive,
   getLifecycleStatus,
 } from "@/lib/notice/types";
+import { useQuery } from "@apollo/client";
+import { GET_NOTICE } from "@/lib/graphql/notices";
 
 /**
  * 공지 상세 페이지
@@ -43,41 +42,22 @@ export default function NoticeDetailScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [notice, setNotice] = useState<Notice | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error } = useQuery(GET_NOTICE, {
+    variables: { id: noticeId },
+    skip: !noticeId,
+    fetchPolicy: "cache-first",
+  });
+  const notice: Notice | null = data?.notice ?? null;
 
   /**
    * 간단한 목업 단건 조회
    * - 실제 API 연동 시: try/catch + 네트워크/HTTP 에러 처리 + 재시도 로직
    */
+  // GraphQL useQuery 가 로딩/에러 상태를 관리하므로 추가 사이드이펙트 불필요
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        if (!noticeId) {
-          setError("잘못된 접근입니다 (noticeId 없음).");
-          return;
-        }
-        // 목업에서 검색
-        const found = NOTICE_MOCKS.find((n) => n.id === noticeId) || null;
-        if (!found) {
-          setError("해당 공지를 찾을 수 없습니다.");
-          return;
-        }
-        if (mounted) setNotice(found);
-      } catch (e: any) {
-        if (mounted)
-          setError(e?.message || "공지 로드 중 오류가 발생했습니다.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+    if (!noticeId) {
+      console.warn("잘못된 접근: noticeId 없음");
+    }
   }, [noticeId]);
 
   /**
@@ -154,9 +134,11 @@ export default function NoticeDetailScreen() {
   const handleShare = async () => {
     if (!notice) return;
     try {
+      // 간단한 프리뷰 (앞부분 140자)
+      const preview = notice.content.replace(/\s+/g, " ").trim().slice(0, 140);
       await Share.share({
         title: notice.title,
-        message: `[공지] ${notice.title}\n\n${buildPreviewText(notice, 140)}\n\n(앱에서 계속 보기)`,
+        message: `[공지] ${notice.title}\n\n${preview}${preview.length === 140 ? "…" : ""}\n\n(앱에서 계속 보기)`,
       });
     } catch (e) {
       Alert.alert("공유 실패", "공유 중 문제가 발생했습니다.");
@@ -173,7 +155,19 @@ export default function NoticeDetailScreen() {
   /**
    * 활성 여부 + 표시 상태
    */
-  const active = notice ? isActive(notice) : false;
+  // GraphQL Notice에는 isActive 필드가 포함되지만 FE Notice 타입 정의에 없으므로 안전 캐스트 후 fallback 계산
+  const active =
+    (notice as any)?.isActive !== undefined
+      ? (notice as any).isActive
+      : notice
+        ? (() => {
+            const now = new Date();
+            const startOk = !notice.startAt || new Date(notice.startAt) <= now;
+            const endOk = !notice.endAt || new Date(notice.endAt) >= now;
+            const notDraft = !(notice as any)?.draft;
+            return startOk && endOk && notDraft;
+          })()
+        : false;
 
   return (
     <View style={themed($container)}>
@@ -216,7 +210,9 @@ export default function NoticeDetailScreen() {
 
       {!loading && error && (
         <View style={themed($centerFill)}>
-          <Text style={themed($errorText)}>{error}</Text>
+          <Text style={themed($errorText)}>
+            {(error as any)?.message || "오류가 발생했습니다."}
+          </Text>
           <TouchableOpacity
             onPress={handleBack}
             style={themed($backButtonInline)}

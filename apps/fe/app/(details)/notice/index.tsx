@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react"; // GraphQL notices migrated
 import {
   View,
   Text,
@@ -14,13 +14,9 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import {
-  fetchMockNotices,
-  NoticeSummary,
-  NoticeImportance,
-  NoticeCategory,
-  NoticePage,
-} from "@/lib/notice/types";
+import { useQuery } from "@apollo/client";
+import { GET_NOTICES, Notice as NoticeGql } from "@/lib/graphql/notices";
+// 로컬 enum 대신 GraphQL 응답 문자열을 직접 사용 (타입 충돌 제거)
 
 /**
  * 공지 목록 페이지
@@ -42,13 +38,49 @@ export default function NoticeListScreen() {
   const router = useRouter();
 
   // 상태 정의
-  const [items, setItems] = useState<NoticeSummary[]>([]);
+  const [items, setItems] = useState<NoticeGql[]>([]);
   const [page, setPage] = useState<number>(1);
-  const [pageInfo, setPageInfo] = useState<NoticePage["pageInfo"] | null>(null);
+  const [pageInfo, setPageInfo] = useState<{ hasNext: boolean } | null>(null);
   const [initialLoading, setInitialLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // GraphQL 공지 목록 Query (1페이지)
+  const {
+    data,
+    loading: queryLoading,
+    error: queryError,
+    fetchMore,
+    refetch,
+  } = useQuery(GET_NOTICES, {
+    variables: {
+      input: {
+        page: 1,
+        limit: PAGE_SIZE,
+        pinnedFirst: true,
+        activeOnly: false,
+      },
+    },
+    notifyOnNetworkStatusChange: true,
+    fetchPolicy: "cache-first",
+  });
+
+  // 서버 에러 동기화
+  useEffect(() => {
+    if (queryError) setError(queryError.message);
+  }, [queryError]);
+
+  // 최초/리패치 데이터 -> 상태 반영
+  useEffect(() => {
+    if (data?.notices && data.notices.page === 1) {
+      setItems(data.notices.items);
+      setPageInfo({ hasNext: data.notices.hasNext });
+      setPage(1);
+      setInitialLoading(false);
+      setRefreshing(false);
+    }
+  }, [data]);
 
   /**
    * 날짜 표시 포맷 (간단)
@@ -64,16 +96,16 @@ export default function NoticeListScreen() {
    * 중요도 → 색상/라벨 매핑
    */
   const getImportanceMeta = (
-    imp: NoticeImportance,
+    imp: NoticeGql["importance"],
   ): { label: string; color: string } => {
     switch (imp) {
-      case NoticeImportance.CRITICAL:
+      case "CRITICAL":
         return { label: "긴급", color: theme.colors.error ?? "#EF4444" };
-      case NoticeImportance.HIGH:
+      case "HIGH":
         return { label: "중요", color: theme.colors.tint };
-      case NoticeImportance.NORMAL:
+      case "NORMAL":
         return { label: "안내", color: theme.colors.textDim };
-      case NoticeImportance.LOW:
+      case "LOW":
       default:
         return { label: "기타", color: theme.colors.border };
     }
@@ -82,17 +114,17 @@ export default function NoticeListScreen() {
   /**
    * 카테고리 → 라벨
    */
-  const categoryLabel = (c: NoticeCategory): string => {
+  const categoryLabel = (c: NoticeGql["category"]): string => {
     switch (c) {
-      case NoticeCategory.GENERAL:
+      case "GENERAL":
         return "일반";
-      case NoticeCategory.FEATURE:
+      case "FEATURE":
         return "기능";
-      case NoticeCategory.EVENT:
+      case "EVENT":
         return "이벤트";
-      case NoticeCategory.MAINTENANCE:
+      case "MAINTENANCE":
         return "점검";
-      case NoticeCategory.POLICY:
+      case "POLICY":
         return "정책";
       default:
         return c;
@@ -102,38 +134,73 @@ export default function NoticeListScreen() {
   /**
    * 공지 목록 로드 (공통)
    */
-  const loadPage = useCallback(async (targetPage: number, replace: boolean) => {
-    try {
+  const loadPage = useCallback(
+    async (targetPage: number, replace: boolean) => {
       if (targetPage === 1) {
         setError(null);
         setInitialLoading(true);
+        try {
+          const refreshed = await refetch({
+            input: {
+              page: 1,
+              limit: PAGE_SIZE,
+              pinnedFirst: true,
+              activeOnly: false,
+            },
+          });
+          const payload = refreshed.data?.notices;
+          if (payload) {
+            setItems(payload.items);
+            setPageInfo({ hasNext: payload.hasNext });
+            setPage(1);
+          }
+        } catch (e: any) {
+          setError(e?.message || "공지 목록을 불러오지 못했습니다.");
+        } finally {
+          setInitialLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+        }
+        return;
       }
-      const res = fetchMockNotices(targetPage, PAGE_SIZE, {
-        order: "PINNED_FIRST",
-        activeOnly: false,
-      });
-      if (replace) {
-        setItems(res.items);
-      } else {
-        setItems((prev) => [...prev, ...res.items]);
+      if (loadingMore) return;
+      setLoadingMore(true);
+      try {
+        const more = await fetchMore({
+          variables: {
+            input: {
+              page: targetPage,
+              limit: PAGE_SIZE,
+              pinnedFirst: true,
+              activeOnly: false,
+            },
+          },
+        });
+        const payload = more.data?.notices;
+        if (payload) {
+          setItems((prev) => [...prev, ...payload.items]);
+          setPageInfo({ hasNext: payload.hasNext });
+          setPage(targetPage);
+        }
+      } catch (e: any) {
+        setError(e?.message || "추가 공지를 불러오지 못했습니다.");
+      } finally {
+        setLoadingMore(false);
+        setRefreshing(false);
       }
-      setPageInfo(res.pageInfo);
-      setPage(targetPage);
-    } catch (e: any) {
-      setError(e?.message || "공지 목록을 불러오지 못했습니다.");
-    } finally {
-      setInitialLoading(false);
-      setRefreshing(false);
-      setLoadingMore(false);
-    }
-  }, []);
+    },
+    [fetchMore, refetch, loadingMore],
+  );
 
   /**
    * 초기 로드
    */
+  // 초기 로드는 useQuery 기본 호출로 대체 (필요 시 강제 refetch 로직 유지 가능)
   useEffect(() => {
-    loadPage(1, true);
-  }, [loadPage]);
+    if (queryLoading && items.length === 0) {
+      setInitialLoading(true);
+    }
+  }, [queryLoading, items.length]);
 
   /**
    * 당겨서 새로고침
@@ -163,7 +230,7 @@ export default function NoticeListScreen() {
   /**
    * 아이템 클릭 → 상세 페이지 이동
    */
-  const handlePressItem = (notice: NoticeSummary) => {
+  const handlePressItem = (notice: NoticeGql) => {
     // 추후 / (details)/notice/[noticeId].tsx 파일 생성 필요
     router.push({
       pathname: "/(details)/notice/[noticeId]",
@@ -181,7 +248,7 @@ export default function NoticeListScreen() {
   /**
    * 렌더 - 공지 아이템
    */
-  const renderItem = ({ item }: { item: NoticeSummary }) => {
+  const renderItem = ({ item }: { item: NoticeGql }) => {
     const impMeta = getImportanceMeta(item.importance);
     return (
       <TouchableOpacity
@@ -241,7 +308,7 @@ export default function NoticeListScreen() {
         </View>
 
         <Text style={themed($itemPreview)} numberOfLines={2}>
-          {item.previewText}
+          {item.content.replace(/\s+/g, " ").trim().slice(0, 110)}
         </Text>
       </TouchableOpacity>
     );
@@ -251,7 +318,7 @@ export default function NoticeListScreen() {
    * 빈 상태
    */
   const listEmpty = () => {
-    if (initialLoading) {
+    if (initialLoading || queryLoading) {
       return (
         <View style={themed($emptyContainer)}>
           <ActivityIndicator color={theme.colors.tint} />

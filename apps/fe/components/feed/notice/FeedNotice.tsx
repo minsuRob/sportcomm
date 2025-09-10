@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import AppDialog from "@/components/ui/AppDialog";
 import { useRouter } from "expo-router";
-import { NOTICE_MOCKS, isActive } from "@/lib/notice/types";
+import { useQuery } from "@apollo/client";
+import { GET_HIGHLIGHT_NOTICE } from "@/lib/graphql/notices";
 
 /**
  * Feed 상단(or 특정 위치)에 표시할 닫기 가능한 공지 컴포넌트
@@ -81,22 +82,17 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   const [checking, setChecking] = useState<boolean>(true);
   const [visible, setVisible] = useState<boolean>(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
-  /**
-   * 최신 강조(highlightBanner) 공지 (활성 + 최신 createdAt)
-   * - 실서비스 전환 시 서버 API로 대체
-   */
-  const bannerNotice = useMemo(() => {
-    try {
-      return (
-        NOTICE_MOCKS.filter((n) => n.highlightBanner && isActive(n)).sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        )[0] || null
-      );
-    } catch {
-      return null;
-    }
-  }, []);
+
+  // GraphQL: 강조 배너 공지 1건 (없으면 null)
+  const {
+    data: highlightData,
+    loading: highlightLoading,
+    error: highlightError,
+  } = useQuery(GET_HIGHLIGHT_NOTICE, {
+    fetchPolicy: "cache-first",
+  });
+
+  const bannerNotice = highlightData?.highlightNotice || null;
 
   /**
    * AsyncStorage에서 숨김 여부 로드
@@ -106,28 +102,30 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
     let mounted = true;
     (async () => {
       if (disabled) {
-        mounted && setVisible(false);
-        mounted && setChecking(false);
+        if (mounted) {
+          setVisible(false);
+          setChecking(false);
+        }
         return;
       }
       if (forceShow) {
-        mounted && setVisible(true);
-        mounted && setChecking(false);
+        if (mounted) {
+          setVisible(true);
+          setChecking(false);
+        }
         return;
       }
       try {
         const flag = await AsyncStorage.getItem(storageKey);
-        if (!flag) {
-          mounted && setVisible(true);
-        } else {
-          mounted && setVisible(false);
+        if (mounted) {
+          setVisible(!flag); // flag 없으면 표시
         }
       } catch (e) {
-        // 조회 실패 시에는 UX상 표시 (사용자에게 정보를 보여주는 것이 더 낫다)
-        mounted && setVisible(true);
+        // 조회 실패 시: 사용자에게 정보 보여주는 것이 낫다고 판단하여 표시
+        if (mounted) setVisible(true);
         console.warn("[FeedNotice] failed to read storage", e);
       } finally {
-        mounted && setChecking(false);
+        if (mounted) setChecking(false);
       }
     })();
     return () => {
@@ -137,7 +135,6 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
 
   /**
    * 닫기 버튼 클릭 핸들러
-   * - 확인 다이얼로그 표시
    */
   const handleClosePress = useCallback(() => {
     setShowConfirmDialog(true);
@@ -145,7 +142,6 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
 
   /**
    * 닫기 확인 핸들러
-   * - 실제 닫기 처리
    */
   const handleConfirmDismiss = useCallback(async () => {
     setShowConfirmDialog(false);
@@ -166,10 +162,9 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   const handleCancelDismiss = useCallback(() => {
     setShowConfirmDialog(false);
   }, []);
+
   /**
    * 공지 영역 클릭 → 상세 또는 목록 이동
-   * - 강조 공지 존재 시 해당 공지 상세
-   * - 없으면 공지 목록
    */
   const handlePressNotice = useCallback(() => {
     if (!navigateOnPress) return;
@@ -205,7 +200,14 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
           numberOfLines={2}
           accessibilityRole="text"
         >
-          {children || (bannerNotice ? bannerNotice.title : defaultMessage)}
+          {children ||
+            (highlightLoading
+              ? "공지 로딩 중..."
+              : bannerNotice
+                ? bannerNotice.title
+                : highlightError
+                  ? defaultMessage
+                  : defaultMessage)}
         </Text>
         <TouchableOpacity
           onPress={(e: any) => {
@@ -272,11 +274,8 @@ const $noticeCloseButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 export default FeedNotice;
 
 /**
- * 변경 요약:
- * - Feed 화면 내 임시 공지 UI를 재사용 가능한 FeedNotice 컴포넌트로 분리
- * - AsyncStorage 기반 dismiss 상태 저장
- * - props 로 메시지/아이콘/키/강제표시 제어
- * - 공지 클릭 시 최신 강조(highlightBanner) 공지 상세 또는 목록으로 네비게이션 추가
+ * 변경 요약 (GraphQL 전환):
+ * - 목업 NOTICE_MOCKS 제거, highlightNotice GraphQL Query 연동
+ * - 로딩/에러 상태 최소 처리 (로딩 시 텍스트, 에러 시 기본 메시지)
+ * - 기존 dismiss 로직 및 네비게이션 동작 유지
  */
-
-// commit: feat(feed): FeedNotice 클릭 시 공지 상세/목록 네비게이션 및 강조 공지 연동

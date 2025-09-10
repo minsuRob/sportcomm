@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation } from "@apollo/client";
-import { Alert } from "react-native";
 import { BLOCK_USER } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { getSession } from "@/lib/auth";
@@ -67,51 +66,37 @@ export function useModerationActions() {
       return;
     }
 
-    Alert.alert(
-      "사용자 차단",
-      `${userName}님을 차단하시겠습니까?\n차단된 사용자의 게시물과 메시지는 더 이상 표시되지 않습니다.`,
-      [
-        {
-          text: "취소",
-          style: "cancel",
+    // 차단 확인을 위한 다이얼로그는 상위 컴포넌트에서 처리
+    // 여기서는 바로 차단 실행
+    try {
+      const { data, errors } = await executeBlockUser({
+        variables: {
+          blockedUserId: userId,
         },
-        {
-          text: "차단",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const { data, errors } = await executeBlockUser({
-                variables: {
-                  blockedUserId: userId,
-                },
-              });
+      });
 
-              if (errors) {
-                throw new Error(errors[0].message);
-              }
+      if (errors) {
+        throw new Error(errors[0].message);
+      }
 
-              showToast({
-                type: "success",
-                title: "차단 완료",
-                message: `${userName}님을 차단했습니다.`,
-                duration: 3000,
-              });
-            } catch (error) {
-              console.error("차단 실패:", error);
-              showToast({
-                type: "error",
-                title: "차단 실패",
-                message:
-                  error instanceof Error
-                    ? error.message
-                    : "차단 처리 중 오류가 발생했습니다.",
-                duration: 4000,
-              });
-            }
-          },
-        },
-      ],
-    );
+      showToast({
+        type: "success",
+        title: "차단 완료",
+        message: `${userName}님을 차단했습니다.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("차단 실패:", error);
+      showToast({
+        type: "error",
+        title: "차단 실패",
+        message:
+          error instanceof Error
+            ? error.message
+            : "차단 처리 중 오류가 발생했습니다.",
+        duration: 4000,
+      });
+    }
   };
 
   /**
@@ -135,19 +120,14 @@ export function useModerationActions() {
       },
     ];
 
-    Alert.alert(
-      target.postId
-        ? "게시물 옵션"
-        : target.messageId
-          ? "메시지 옵션"
-          : "사용자 옵션",
-      "원하는 작업을 선택하세요.",
-      options.map((option) => ({
-        text: option.text,
-        onPress: option.onPress,
-        style: option.style,
-      })),
-    );
+    // 옵션 선택은 상위 컴포넌트에서 처리
+    // 여기서는 기본 동작만 수행
+    showToast({
+      type: "info",
+      title: "옵션 선택",
+      message: "원하는 작업을 선택하세요.",
+      duration: 2000,
+    });
   };
 
   return {

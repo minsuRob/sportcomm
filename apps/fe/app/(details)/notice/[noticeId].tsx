@@ -8,7 +8,6 @@ import {
   Share,
   ViewStyle,
   TextStyle,
-  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +21,7 @@ import {
 } from "@/lib/notice/types";
 import { useQuery } from "@apollo/client";
 import { GET_NOTICE } from "@/lib/graphql/notices";
+import AppDialog from "@/components/ui/AppDialog";
 
 /**
  * 공지 상세 페이지
@@ -48,6 +48,10 @@ export default function NoticeDetailScreen() {
     fetchPolicy: "cache-first",
   });
   const notice: Notice | null = data?.notice ?? null;
+
+  // 다이얼로그 상태
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   /**
    * 간단한 목업 단건 조회
@@ -141,7 +145,8 @@ export default function NoticeDetailScreen() {
         message: `[공지] ${notice.title}\n\n${preview}${preview.length === 140 ? "…" : ""}\n\n(앱에서 계속 보기)`,
       });
     } catch (e) {
-      Alert.alert("공유 실패", "공유 중 문제가 발생했습니다.");
+      setErrorMessage("공유 중 문제가 발생했습니다.");
+      setShowErrorDialog(true);
     }
   };
 
@@ -355,6 +360,16 @@ export default function NoticeDetailScreen() {
           <View style={themed($bottomSpace)} />
         </ScrollView>
       )}
+
+      {/* 에러 다이얼로그 */}
+      <AppDialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="공유 실패"
+        description={errorMessage}
+        confirmText="확인"
+        onConfirm={() => setShowErrorDialog(false)}
+      />
     </View>
   );
 }

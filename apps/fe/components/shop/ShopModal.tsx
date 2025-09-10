@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import type { User } from "@/lib/auth";
 import ShopItem from "./ShopItem";
+import AppDialog from "@/components/ui/AppDialog";
 
 // 상점 아이템 타입 정의
 export interface ShopItemData {
@@ -115,6 +115,14 @@ export default function ShopModal({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
 
+  // 다이얼로그 상태
+  const [showInsufficientPointsDialog, setShowInsufficientPointsDialog] = useState(false);
+  const [showPurchaseConfirmDialog, setShowPurchaseConfirmDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState("");
+  const [selectedItem, setSelectedItem] = useState<ShopItemData | null>(null);
+
   const categories = [
     { key: "all", label: "전체", icon: "grid-outline" },
     { key: "decoration", label: "꾸미기", icon: "color-palette-outline" },
@@ -138,41 +146,33 @@ export default function ShopModal({
       : item.price;
 
     if (userPoints < finalPrice) {
-      Alert.alert(
-        "포인트 부족",
-        `이 아이템을 구매하려면 ${finalPrice}P가 필요합니다.\n현재 보유: ${userPoints}P`,
-        [{ text: "확인", style: "default" }],
-      );
+      setDialogMessage(`이 아이템을 구매하려면 ${finalPrice}P가 필요합니다.\n현재 보유: ${userPoints}P`);
+      setShowInsufficientPointsDialog(true);
       return;
     }
 
-    Alert.alert(
-      "구매 확인",
-      `${item.name}을(를) ${finalPrice}P에 구매하시겠습니까?`,
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "구매",
-          style: "default",
-          onPress: async () => {
-            setPurchasingItemId(item.id);
-            try {
-              if (onPurchase) {
-                await onPurchase(item);
-              }
-              Alert.alert(
-                "구매 완료",
-                `${item.name}을(를) 성공적으로 구매했습니다!`,
-              );
-            } catch (error) {
-              Alert.alert("구매 실패", "구매 중 오류가 발생했습니다.");
-            } finally {
-              setPurchasingItemId(null);
-            }
-          },
-        },
-      ],
-    );
+    setSelectedItem(item);
+    setDialogMessage(`${item.name}을(를) ${finalPrice}P에 구매하시겠습니까?`);
+    setShowPurchaseConfirmDialog(true);
+  };
+
+  // 구매 확인 처리
+  const handleConfirmPurchase = async () => {
+    if (!selectedItem || !onPurchase) return;
+
+    setPurchasingItemId(selectedItem.id);
+    setShowPurchaseConfirmDialog(false);
+    
+    try {
+      await onPurchase(selectedItem);
+      setDialogMessage(`${selectedItem.name}을(를) 성공적으로 구매했습니다!`);
+      setShowSuccessDialog(true);
+    } catch (error) {
+      setDialogMessage("구매 중 오류가 발생했습니다.");
+      setShowErrorDialog(true);
+    } finally {
+      setPurchasingItemId(null);
+    }
   };
 
   return (
@@ -262,6 +262,47 @@ export default function ShopModal({
           </ScrollView>
         </View>
       </View>
+
+      {/* 포인트 부족 다이얼로그 */}
+      <AppDialog
+        visible={showInsufficientPointsDialog}
+        onClose={() => setShowInsufficientPointsDialog(false)}
+        title="포인트 부족"
+        description={dialogMessage}
+        confirmText="확인"
+        onConfirm={() => setShowInsufficientPointsDialog(false)}
+      />
+
+      {/* 구매 확인 다이얼로그 */}
+      <AppDialog
+        visible={showPurchaseConfirmDialog}
+        onClose={() => setShowPurchaseConfirmDialog(false)}
+        title="구매 확인"
+        description={dialogMessage}
+        confirmText="구매"
+        cancelText="취소"
+        onConfirm={handleConfirmPurchase}
+      />
+
+      {/* 구매 성공 다이얼로그 */}
+      <AppDialog
+        visible={showSuccessDialog}
+        onClose={() => setShowSuccessDialog(false)}
+        title="구매 완료"
+        description={dialogMessage}
+        confirmText="확인"
+        onConfirm={() => setShowSuccessDialog(false)}
+      />
+
+      {/* 구매 실패 다이얼로그 */}
+      <AppDialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="구매 실패"
+        description={dialogMessage}
+        confirmText="확인"
+        onConfirm={() => setShowErrorDialog(false)}
+      />
     </Modal>
   );
 }

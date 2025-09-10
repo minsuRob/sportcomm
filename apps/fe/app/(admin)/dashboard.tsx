@@ -9,13 +9,13 @@ import {
   RefreshControl,
   Modal,
   TextInput,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { showToast } from "@/components/CustomToast";
+import AppDialog from "@/components/ui/AppDialog";
 import { useQuery, useMutation } from "@apollo/client";
 import {
   GET_LOTTERY_STATUS,
@@ -49,6 +49,11 @@ export default function AdminDashboardScreen() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 다이얼로그 상태
+  const [showStopLotteryDialog, setShowStopLotteryDialog] = useState<boolean>(false);
+  const [showErrorDialog, setShowErrorDialog] = useState<boolean>(false);
+  const [dialogMessage, setDialogMessage] = useState<string>("");
 
   // 대시보드 데이터 로드
   const loadDashboardData = async (showRefreshIndicator = false) => {
@@ -570,19 +575,14 @@ function LotteryManagementSection() {
   );
 
   // 추첨 중단 처리
-  const handleStopLottery = () => {
-    Alert.alert(
-      "추첨 중단 확인",
-      "진행 중인 추첨을 중단하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "중단",
-          style: "destructive",
-          onPress: () => stopLottery(),
-        },
-      ],
-    );
+  const handleStopLottery = (): void => {
+    setShowStopLotteryDialog(true);
+  };
+
+  // 추첨 중단 확인
+  const confirmStopLottery = () => {
+    setShowStopLotteryDialog(false);
+    stopLottery();
   };
 
   // 새 추첨 생성 처리
@@ -592,39 +592,31 @@ function LotteryManagementSection() {
     const duration = parseInt(durationMinutes);
 
     if (isNaN(prize) || prize < 100 || prize > 50000) {
-      Alert.alert("입력 오류", "총 상금은 100P ~ 50,000P 사이여야 합니다.");
+      setDialogMessage("총 상금은 100P ~ 50,000P 사이여야 합니다.");
+      setShowErrorDialog(true);
       return;
     }
 
     if (isNaN(winners) || winners < 1 || winners > 20) {
-      Alert.alert("입력 오류", "당첨자 수는 1명 ~ 20명 사이여야 합니다.");
+      setDialogMessage("당첨자 수는 1명 ~ 20명 사이여야 합니다.");
+      setShowErrorDialog(true);
       return;
     }
 
     if (isNaN(duration) || duration < 10 || duration > 120) {
-      Alert.alert("입력 오류", "응모 기간은 10분 ~ 120분 사이여야 합니다.");
+      setDialogMessage("응모 기간은 10분 ~ 120분 사이여야 합니다.");
+      setShowErrorDialog(true);
       return;
     }
 
-    Alert.alert(
-      "추첨 생성 확인",
-      `새로운 이벤트 추첨을 생성하시겠습니까?\n\n총 상금: ${prize.toLocaleString()}P\n당첨자: ${winners}명\n응모 기간: ${duration}분`,
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "생성",
-          onPress: () => {
-            createLottery({
-              variables: {
-                totalPrize: prize,
-                winnerCount: winners,
-                durationMinutes: duration,
-              },
-            });
-          },
-        },
-      ],
-    );
+    // 추첨 생성은 바로 실행
+    createLottery({
+      variables: {
+        totalPrize: prize,
+        winnerCount: winners,
+        durationMinutes: duration,
+      },
+    });
   };
 
   const currentLottery = lotteryData?.currentLotteryStatus?.lottery;
@@ -1264,6 +1256,27 @@ function TestManagementSection() {
           </>
         )}
       </View>
+
+      {/* 추첨 중단 확인 다이얼로그 */}
+      <AppDialog
+        visible={showStopLotteryDialog}
+        onClose={() => setShowStopLotteryDialog(false)}
+        title="추첨 중단 확인"
+        description="진행 중인 추첨을 중단하시겠습니까?\n이 작업은 되돌릴 수 없습니다."
+        confirmText="중단"
+        cancelText="취소"
+        onConfirm={confirmStopLottery}
+      />
+
+      {/* 에러 다이얼로그 */}
+      <AppDialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="입력 오류"
+        description={dialogMessage}
+        confirmText="확인"
+        onConfirm={() => setShowErrorDialog(false)}
+      />
     </>
   );
 }

@@ -263,7 +263,6 @@ export default function FeedScreen() {
           onTabChange={setActiveTab}
         />
         <View>
-        {/* <FeedNotice /> */}
           {Array.from({ length: 5 }).map((_, index) => (
             <PostCardSkeleton key={index} />
           ))}
@@ -314,7 +313,6 @@ export default function FeedScreen() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
-
 
       {/* 선택된 테마 팀(favoriteDate) 정보 표시 */}
       {currentUser?.myTeams && currentUser.myTeams.length > 0 && (
@@ -391,7 +389,6 @@ export default function FeedScreen() {
 
           {/* 공지 섹션 제거: 상단으로 이동 */}
           <FeedNotice />
-
         </>
       )}
 

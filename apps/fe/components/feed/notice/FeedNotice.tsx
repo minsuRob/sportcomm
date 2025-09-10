@@ -67,7 +67,7 @@ const DEFAULT_STORAGE_KEY = "feed_notice_hidden";
  */
 export const FeedNotice: React.FC<FeedNoticeProps> = ({
   storageKey = DEFAULT_STORAGE_KEY,
-  defaultMessage = "[공지] 임시 안내: 새로운 커뮤니티 기능을 준비 중입니다. 의견을 남겨주세요!",
+  defaultMessage = "",
   iconName = "megaphone-outline",
   forceShow = false,
   disabled = false,
@@ -152,6 +152,39 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
     };
   }, [storageKey, forceShow, disabled]);
 
+  // 새 공지 감지 시 자동 재활성화: 마지막으로 닫은 noticeKey와 현재 noticeKey 비교
+  const getCurrentNoticeKey = useCallback((): string => {
+    const target = bannerNotice ?? newestNotice;
+    return target?.id ? `ID:${target.id}` : `DEFAULT:${defaultMessage}`;
+  }, [bannerNotice, newestNotice, defaultMessage]);
+
+  useEffect(() => {
+    // disabled 상태에서는 동작하지 않음
+    if (disabled) return;
+    (async () => {
+      try {
+        const currentKey = getCurrentNoticeKey();
+        const dismissedKey = await AsyncStorage.getItem(
+          `${storageKey}:dismissed_key`,
+        );
+        // 이전에 닫은 키와 현재 키가 다르면 새로운 공지로 판단 → 숨김 플래그 제거 및 재표시
+        if (dismissedKey && dismissedKey !== currentKey) {
+          await AsyncStorage.removeItem(storageKey);
+          setVisible(true);
+        }
+      } catch (e) {
+        console.warn("[FeedNotice] failed to compare notice keys", e);
+      }
+    })();
+  }, [
+    bannerNotice,
+    newestNotice,
+    defaultMessage,
+    storageKey,
+    disabled,
+    getCurrentNoticeKey,
+  ]);
+
   /**
    * 닫기 버튼 클릭 핸들러
    * - 확인 다이얼로그 표시
@@ -163,19 +196,34 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   /**
    * 닫기 확인 핸들러
    * - 실제 닫기 처리
+   * - 현재 공지 키를 저장하여 이후 새로운 공지(키 변경) 감지 시 자동 재활성화
    */
   const handleConfirmDismiss = useCallback(async () => {
     setShowConfirmDialog(false);
     setVisible(false);
     try {
       if (!forceShow) {
+        // 숨김 플래그
         await AsyncStorage.setItem(storageKey, "1");
+        // 마지막으로 닫은 공지 키 저장 (공지 ID가 있으면 ID, 없으면 DEFAULT:문구)
+        const dismissedKey = ((): string => {
+          const target = bannerNotice ?? newestNotice;
+          return target?.id ? `ID:${target.id}` : `DEFAULT:${defaultMessage}`;
+        })();
+        await AsyncStorage.setItem(`${storageKey}:dismissed_key`, dismissedKey);
       }
     } catch (e) {
       console.warn("[FeedNotice] failed to store dismiss flag", e);
     }
     onDismiss?.();
-  }, [storageKey, forceShow, onDismiss]);
+  }, [
+    storageKey,
+    forceShow,
+    onDismiss,
+    bannerNotice,
+    newestNotice,
+    defaultMessage,
+  ]);
 
   /**
    * 취소 핸들러

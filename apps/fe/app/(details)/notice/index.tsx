@@ -428,7 +428,7 @@ export default function NoticeListScreen() {
             accessibilityRole="button"
           >
             <Ionicons name="create" size={16} color={theme.colors.tint} />
-            <Text style={themed($writeButtonText)}>글쓰기</Text>
+            <Text style={themed($writeButtonText)}>공지쓰기</Text>
           </TouchableOpacity>
         ) : (
           <View style={themed($headerRightPlaceholder)} />

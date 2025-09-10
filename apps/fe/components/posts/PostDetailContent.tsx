@@ -14,6 +14,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
+import { useRouter } from "expo-router";
 import { usePostDetail } from "@/lib/hooks/usePostDetail";
 import { usePostInteractions } from "../../hooks/usePostInteractions";
 import PostHeader from "@/components/shared/PostHeader";
@@ -65,6 +66,7 @@ export function PostDetailContent({
 }: PostDetailContentProps) {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
+  const router = useRouter();
 
   // 지역 상태
   const [showReportModal, setShowReportModal] = useState(false);
@@ -195,6 +197,23 @@ export function PostDetailContent({
   }, [postId]);
 
   /**
+   * 뒤로가기 핸들러
+   * - modal: onClose 사용
+   * - page: expo-router 로 뒤로가기
+   */
+  const handleGoBack = useCallback(() => {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    try {
+      router.back();
+    } catch (e) {
+      console.log("뒤로가기 실패:", e);
+    }
+  }, [onClose, router]);
+
+  /**
    * 헤더 구성 (variant 별 분기)
    * - 페이지: 좌측/우측 여백 동일한 기본 헤더
    * - 모달: 닫기 버튼 + 리프레시 버튼
@@ -208,13 +227,15 @@ export function PostDetailContent({
       return (
         <View style={themed($modalHeader)}>
           <TouchableOpacity
-            onPress={onClose}
+            onPress={handleGoBack}
             style={themed($iconButton)}
-            accessibilityLabel="닫기"
+            accessibilityLabel="뒤로가기"
           >
             <Ionicons name="close" size={22} color={theme.colors.text} />
           </TouchableOpacity>
-          {titleNode}
+          <View style={themed($headerCenter)} pointerEvents="none">
+            {titleNode}
+          </View>
           <TouchableOpacity
             onPress={handleRefresh}
             style={themed($iconButton)}
@@ -233,7 +254,16 @@ export function PostDetailContent({
 
     return (
       <View style={themed($pageHeader)}>
-        {titleNode}
+        <TouchableOpacity
+          onPress={handleGoBack}
+          style={themed($iconButton)}
+          accessibilityLabel="뒤로가기"
+        >
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
+        </TouchableOpacity>
+        <View style={themed($headerCenter)} pointerEvents="none">
+          {titleNode}
+        </View>
         <TouchableOpacity
           onPress={handleRefresh}
           style={themed($iconButton)}
@@ -449,6 +479,7 @@ const $pageHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
+  position: "relative",
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.md,
   backgroundColor: colors.background,
@@ -461,12 +492,20 @@ const $modalHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
+  position: "relative",
   paddingHorizontal: spacing.lg,
   paddingTop: spacing.md,
   paddingBottom: spacing.sm,
   backgroundColor: colors.background,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
+});
+
+const $headerCenter: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  alignItems: "center",
 });
 
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({

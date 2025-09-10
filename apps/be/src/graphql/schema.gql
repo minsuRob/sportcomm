@@ -1,4 +1,3 @@
-scalar Upload
 
 type Query {
   _empty: String

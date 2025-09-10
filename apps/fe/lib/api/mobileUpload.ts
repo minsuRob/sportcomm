@@ -17,7 +17,11 @@ import {
   createReactNativeFile,
   getUploadEndpoints,
 } from "./common";
-import { generatePostMediaFileName, isImageFile } from "../utils/file-utils";
+import {
+  generatePostMediaFileName,
+  isImageFile,
+  generateSafeFileName,
+} from "../utils/file-utils";
 import { Image } from "react-native";
 // --------------------------
 // 모바일 전용 타입 정의
@@ -64,6 +68,7 @@ export interface SelectedImage {
 export async function uploadFilesMobile(
   files: Array<{ uri: string; name: string; type: string }>,
   onProgress?: ProgressCallback,
+  options: { category?: "default" | "avatar" | "teamLogo" } = {},
 ): Promise<UploadedMedia[]> {
   if (!isReactNative()) {
     throw new UploadError(
@@ -126,11 +131,17 @@ export async function uploadFilesMobile(
       const fileExt = mimeToExt[file.type] || "jpg";
       const originalName = file.name || `file_${index}.${fileExt}`;
       const mediaType = isImageFile(originalName) ? "image" : "video";
-      const fileName = generatePostMediaFileName(
-        originalName,
-        mediaType,
-        index,
-      );
+      let fileName: string;
+      if (options?.category === "avatar") {
+        // 아바타: prefix avatar
+        fileName = generateSafeFileName(originalName, "avatar");
+      } else if (options?.category === "teamLogo") {
+        // 팀 로고: prefix team_logo
+        fileName = generateSafeFileName(originalName, "team_logo");
+      } else {
+        // 기본(post 이미지/비디오)
+        fileName = generatePostMediaFileName(originalName, mediaType, index);
+      }
 
       // 실제 파일 데이터를 포함하는 객체 생성
       const fileObj = {
@@ -142,7 +153,9 @@ export async function uploadFilesMobile(
       console.log(`모바일 환경 - 파일 추가: ${JSON.stringify(fileObj)}`);
 
       // @ts-ignore: React Native의 FormData는 객체 형식 지원
-      formData.append("files", fileObj);
+      const fieldName = options?.category === "avatar" ? "file" : "files";
+      // React Native FormData 타입 제한을 우회하기 위해 any 캐스팅
+      formData.append(fieldName, fileObj as any);
       console.log(
         `React Native (${Platform.OS}) - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
       );
@@ -222,7 +235,9 @@ export async function uploadFilesMobile(
       });
 
       // 요청 초기화 및 전송
-      xhr.open("POST", endpoints.upload, true);
+      const targetUrl =
+        options?.category === "avatar" ? endpoints.avatar : endpoints.upload;
+      xhr.open("POST", targetUrl, true);
 
       // 인증 헤더 설정
       if (token) {

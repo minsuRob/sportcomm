@@ -134,14 +134,17 @@ const $backdropTouchable: ThemedStyle<ViewStyle> = () => ({
 
 const $sheetWrapper: ThemedStyle<ViewStyle> = () => ({
   width: "100%",
+  alignSelf: "stretch",
+  maxHeight: "85%",
+  minHeight: "85%",
+  flexShrink: 0,
 });
 
 const $sheet: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
   borderTopLeftRadius: 28,
   borderTopRightRadius: 28,
-  minHeight: "68%",
-  // maxHeight: "90%",
+  flex: 1, // 래퍼($sheetWrapper)의 높이 제약 내에서만 확장
   overflow: "hidden",
   // iOS shadow
   shadowColor: "#000",

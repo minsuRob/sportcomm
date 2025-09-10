@@ -25,9 +25,9 @@ function MobileTabLayout() {
         headerShown: false,
         tabBarActiveTintColor: teamMain, // 활성 탭 색상을 팀 메인 컬러로 설정
         tabBarStyle: {
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 60,
+          paddingBottom: 2,
+          // paddingTop: 2,
+          height: 55,
         },
       }}
     >

@@ -9,7 +9,6 @@ import {
   TextStyle,
   Animated,
   Easing,
-  Alert,
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,6 +24,7 @@ import {
 } from "@/lib/graphql/lottery";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { showToast } from "@/components/CustomToast";
+import AppDialog from "@/components/ui/AppDialog";
 
 interface LotteryData {
   hasActiveLottery: boolean;
@@ -60,6 +60,11 @@ export default function LotteryScreen() {
   const [isEntering, setIsEntering] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // 다이얼로그 상태
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState("");
+
   // 애니메이션 값들
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -83,11 +88,8 @@ export default function LotteryScreen() {
 
   const [enterLottery] = useMutation(ENTER_LOTTERY, {
     onCompleted: async () => {
-      Alert.alert(
-        "응모 완료! 🎉",
-        "포인트 추첨에 성공적으로 응모했습니다!\n결과는 추첨 종료 후 확인할 수 있습니다.",
-        [{ text: "확인", style: "default" }],
-      );
+      setDialogMessage("포인트 추첨에 성공적으로 응모했습니다!\n결과는 추첨 종료 후 확인할 수 있습니다.");
+      setShowSuccessDialog(true);
       await refetch();
       await reloadCurrentUser(); // 포인트 업데이트
       showToast({
@@ -98,11 +100,8 @@ export default function LotteryScreen() {
       });
     },
     onError: (error) => {
-      Alert.alert(
-        "응모 실패",
-        error.message || "응모 중 오류가 발생했습니다.",
-        [{ text: "확인", style: "default" }],
-      );
+      setDialogMessage(error.message || "응모 중 오류가 발생했습니다.");
+      setShowErrorDialog(true);
     },
   });
 
@@ -251,7 +250,8 @@ export default function LotteryScreen() {
   // 응모 처리
   const handleEnterLottery = async () => {
     if (!currentUser) {
-      Alert.alert("로그인 필요", "추첨에 응모하려면 로그인이 필요합니다.");
+      setDialogMessage("추첨에 응모하려면 로그인이 필요합니다.");
+      setShowErrorDialog(true);
       return;
     }
 
@@ -580,6 +580,26 @@ export default function LotteryScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* 성공 다이얼로그 */}
+      <AppDialog
+        visible={showSuccessDialog}
+        onClose={() => setShowSuccessDialog(false)}
+        title="응모 완료! 🎉"
+        description={dialogMessage}
+        confirmText="확인"
+        onConfirm={() => setShowSuccessDialog(false)}
+      />
+
+      {/* 에러 다이얼로그 */}
+      <AppDialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="알림"
+        description={dialogMessage}
+        confirmText="확인"
+        onConfirm={() => setShowErrorDialog(false)}
+      />
     </View>
   );
 }

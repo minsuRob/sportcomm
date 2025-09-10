@@ -579,3 +579,24 @@ export const TOGGLE_SPORT_STATUS = gql`
     }
   }
 `;
+
+// === 진행도/포인트 관리 GraphQL ===
+// 관리자 권한으로 특정 사용자에게 커스텀 포인트를 지급하는 뮤테이션
+// - amount: 지급 포인트 양 (예: 10)
+// - reason: 지급 사유(선택)
+export const ADMIN_AWARD_USER_POINTS = gql`
+  mutation AdminAwardUserPoints(
+    $userId: String!
+    $amount: Int!
+    $reason: String
+  ) {
+    adminAwardUserPoints(userId: $userId, amount: $amount, reason: $reason) {
+      userId
+      addedPoints
+      totalPoints
+      timestamp
+      isCustom
+      reason
+    }
+  }
+`;

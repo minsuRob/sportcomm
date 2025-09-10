@@ -7,7 +7,7 @@ import {
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
-import { supabase } from "@/lib/supabase/client";
+import { tokenManager } from "@/lib/auth/token-manager";
 import { handleAuthError } from "@/lib/auth/auth-error-handler";
 import { logPlatformInfo, getPlatformType } from "@/lib/platform";
 
@@ -51,13 +51,16 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
  * 인증 링크 (단순화 버전)
  */
 const authLink = setContext(async (_, { headers }) => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  // 최신 세션 확보 (만료/부재 시 refresh 포함)
+  await tokenManager.ensureFreshSession();
+
+  // 유효 토큰 획득 (ensureFreshSession 이후 재확인)
+  const token = await tokenManager.getValidToken();
 
   if (!token) {
-    console.log("Auth Link: No token found.");
+    console.log(
+      "Auth Link: No valid token after ensureFreshSession (anonymous request).",
+    );
   }
 
   return {

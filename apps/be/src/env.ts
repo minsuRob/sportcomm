@@ -14,10 +14,8 @@ function requireEnv(name: string): string {
   return value;
 }
 
-export const GRAPHQL_URL: string = process.env.GRAPHQL_URL || '';
 export const SUPABASE_URL: string = requireEnv('SUPABASE_URL');
 export const SUPABASE_ANON_KEY: string = process.env.SUPABASE_ANON_KEY || '';
 export const SUPABASE_SERVICE_ROLE_KEY: string = requireEnv(
   'SUPABASE_SERVICE_ROLE_KEY',
 );
-export const USE_SUPABASE: string = process.env.USE_SUPABASE || 'true';

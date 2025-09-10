@@ -28,6 +28,7 @@ import { Tag } from './tag.entity';
 import { PostTag } from './post-tag.entity';
 import { PointLottery } from './point-lottery.entity';
 import { LotteryEntry } from './lottery-entry.entity';
+import { Notice } from './notice.entity'; // 공지 엔티티 추가
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -91,6 +92,9 @@ export { Sport } from './sport.entity';
 export { Team } from './team.entity';
 export { UserTeam } from './user-team.entity';
 
+// 공지(Notice) 관련 엔티티
+export { Notice, NoticeCategory, NoticeImportance } from './notice.entity';
+
 /**
  * 모든 엔티티를 배열로 내보내는 상수
  * TypeORM 설정에서 사용됩니다.
@@ -119,6 +123,7 @@ export const entities = [
   PostTag,
   PointLottery,
   LotteryEntry,
+  Notice, // 추가
 ];
 
 /**
@@ -140,6 +145,7 @@ export const tableNames = {
   blocks: 'blocks',
   bookmarks: 'bookmarks',
   feedbacks: 'feedbacks',
+  notices: 'notices',
 } as const;
 
 /**
@@ -190,6 +196,9 @@ export const entityRelations = {
   Feedback: {
     manyToOne: ['submitter', 'responder'],
   },
+  Notice: {
+    manyToOne: ['author'],
+  },
 } as const;
 
 /**
@@ -217,4 +226,5 @@ export const entityIndexes = {
   blocks: ['blockerId', 'blockedUserId', 'createdAt'],
   bookmarks: ['userId', 'postId', 'createdAt'],
   feedbacks: ['submitterId', 'type', 'status', 'priority', 'createdAt'],
+  notices: ['createdAt', 'importance', 'pinned', 'highlightBanner'],
 } as const;

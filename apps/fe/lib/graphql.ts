@@ -575,6 +575,25 @@ export const CREATE_REPORT = gql`
 `;
 
 /**
+ * 피드백 생성 뮤테이션
+ * 서버 스키마와 필드 명이 다를 경우 CreateFeedbackInput 구조/필드 조정 필요
+ * 기본 반환 필드: id, title, content, type, status, priority, createdAt
+ */
+export const CREATE_FEEDBACK = gql`
+  mutation CreateFeedback($input: CreateFeedbackInput!) {
+    createFeedback(input: $input) {
+      id
+      title
+      content
+      type
+      status
+      priority
+      createdAt
+    }
+  }
+`;
+
+/**
  * 사용자 차단 뮤테이션
  */
 export const BLOCK_USER = gql`
@@ -643,41 +662,6 @@ export const UPDATE_POST = gql`
   }
 `;
 
-/**
- * GraphQL 파일 업로드 뮤테이션
- */
-export const UPLOAD_FILES = gql`
-  mutation UploadFiles($files: [Upload!]!) {
-    uploadFiles(files: $files) {
-      id
-      originalName
-      url
-      type
-      fileSize
-      mimeType
-      width
-      height
-    }
-  }
-`;
-
-/**
- * 단일 파일 업로드 뮤테이션
- */
-export const UPLOAD_FILE = gql`
-  mutation UploadFile($file: Upload!) {
-    uploadFile(file: $file) {
-      id
-      originalName
-      url
-      type
-      fileSize
-      mimeType
-      width
-      height
-    }
-  }
-`;
 /**
  * 사용자 프로필 업데이트 뮤테이션
  */

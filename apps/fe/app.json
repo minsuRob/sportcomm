@@ -51,8 +51,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "extra": {
-      "GRAPHQL_URL": "${GRAPHQL_URL}"
-    }
+    "extra": {}
   }
 }

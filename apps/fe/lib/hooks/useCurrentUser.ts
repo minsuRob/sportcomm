@@ -6,6 +6,7 @@ import {
   getValidToken,
   getCurrentSession,
   isTokenValid,
+  ensureFreshSession,
 } from "@/lib/auth/token-manager";
 import { onSessionChange } from "@/lib/auth/user-session-events";
 /**
@@ -89,38 +90,14 @@ export function useCurrentUser() {
             (nextUser as any).isAdmin = true;
           }
 
-          // JWT 토큰 기반 동기화 필요성 판단
-          const currentSession = getCurrentSession();
-          const now = Math.floor(Date.now() / 1000);
-          let shouldSync = forceSync;
+          // JWT 토큰 기반 동기화 필요성 판단 (간소화: TokenManager에 위임)
+          let shouldSync =
+            forceSync ||
+            !userCacheRef.current ||
+            userCacheRef.current.id !== nextUser.id ||
+            !isTokenValid();
 
-          if (currentSession?.expires_at) {
-            const tokenExpiresAt = currentSession.expires_at;
-            const timeUntilExpiry = tokenExpiresAt - now;
-            const tokenChanged = lastTokenExpiryRef.current !== tokenExpiresAt;
-
-            // 다음 조건 중 하나라도 만족하면 동기화
-            shouldSync =
-              shouldSync ||
-              tokenChanged || // 토큰이 갱신됨
-              timeUntilExpiry < 600 || // 토큰이 10분 이내 만료
-              !userCacheRef.current || // 캐시된 사용자 없음
-              userCacheRef.current.id !== nextUser.id; // 다른 사용자
-
-            lastTokenExpiryRef.current = tokenExpiresAt;
-            __globalLastTokenExpiry = tokenExpiresAt;
-          } else {
-            // 토큰 정보가 없으면 항상 동기화
-            shouldSync = true;
-          }
-
-          // 캐시된 사용자와 동일하고 토큰이 유효하면 캐시 사용
-          if (
-            userCacheRef.current &&
-            userCacheRef.current.id === nextUser.id &&
-            !shouldSync &&
-            isTokenValid()
-          ) {
+          if (!shouldSync && userCacheRef.current) {
             setCurrentUser(userCacheRef.current);
             return;
           }
@@ -128,8 +105,21 @@ export function useCurrentUser() {
           if (shouldSync) {
             try {
               // 서버에서 최신 사용자 정보(포인트 포함) 동기화
+              const freshSession = await ensureFreshSession();
               const token = await getValidToken();
-              if (token && mountedRef.current) {
+              // 토큰/세션이 없으면 구버전 사용자 세션을 즉시 정리하여 UX 개선
+              if (!token || !freshSession) {
+                nextUser = null;
+                userCacheRef.current = null;
+                __globalUserCache = null;
+                lastTokenExpiryRef.current = 0;
+                __globalLastTokenExpiry = 0;
+                if (mountedRef.current) {
+                  setCurrentUser(null);
+                }
+                return;
+              }
+              if (mountedRef.current) {
                 const remoteUser =
                   await UserSyncService.getCurrentUserInfo(token);
 
@@ -217,6 +207,8 @@ export function useCurrentUser() {
       if (reason === "logout") {
         lastTokenExpiryRef.current = 0;
         __globalLastTokenExpiry = 0;
+      } else if (reason === "refresh") {
+        setLastSyncTime(Date.now());
       }
     });
     return off;

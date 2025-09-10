@@ -89,7 +89,7 @@ import ShopModal from "@/components/shop/ShopModal";
 import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useChatRooms } from "@/lib/hooks/useChatRooms";
-import { useAdvancedFeed } from "@/lib/hooks/useAdvancedFeed";
+import { useFeedPosts } from "@/lib/hooks/useFeedPosts";
 
 // --- Type Definitions ---
 
@@ -108,25 +108,28 @@ export default function FeedScreen() {
   // (공지 표시 로직은 FeedNotice 내부로 이동)
 
   // (닫기 로직은 FeedNotice 내부로 이동)
-  // 고급 캐시 기반 피드 훅으로 교체 (팀 필터/차단/페이지네이션/TTL)
+  // 레거시 useFeedPosts 훅으로 롤백 (고급 캐시 사용 취소)
+  // useFeedPosts는 고유 분리된 상태명 사용 -> 기존 변수명과의 호환을 위해 매핑 변수 정의
   const {
     posts,
-    loadingInitial,
-    loadingMore,
-    refreshing,
-    hasNext,
-    loadMore,
-    refresh,
-    teamIds,
-    setTeamFilter,
+    fetching, // 기존 loadingInitial || loadingMore 대체
     error,
-  } = useAdvancedFeed({
-    teamIds: null,
-    pageSize: 10,
-    includeBlockedUsers: true,
-    autoLoad: true,
-  });
-  const fetching = loadingInitial || loadingMore;
+    isRefreshing,
+    handleRefresh,
+    handleLoadMore,
+    selectedTeamIds,
+    handleTeamFilterChange,
+  } = useFeedPosts();
+
+  // 기존 코드 호환을 위한 매핑 (필요 최소한)
+  const loadingInitial = fetching;
+  const loadingMore = false; // 구 훅은 별도 loadingMore 구분 없음
+  const refreshing = isRefreshing;
+  const hasNext = true; // 추가 페이지 여부는 내부 handleLoadMore에서 자체 판단
+  const loadMore = handleLoadMore;
+  const refresh = handleRefresh;
+  const teamIds = selectedTeamIds;
+  const setTeamFilter = handleTeamFilterChange;
 
   const {
     chatRooms,
@@ -384,7 +387,7 @@ export default function FeedScreen() {
             })()}
           </View>
 
-          {/* 공지 섹션 (분리된 컴포넌트) */}
+          {/* 공지 섹션 제거: 상단으로 이동 */}
           <FeedNotice />
         </>
       )}
@@ -428,12 +431,14 @@ export default function FeedScreen() {
           fetching={fetching}
           refreshing={refreshing}
           onRefresh={refresh}
-          onEndReached={() => {
-            if (hasNext && !loadingMore) loadMore();
-          }}
+          onEndReached={loadMore}
           ListHeaderComponent={
             currentUser ? (
-              <StorySection teamIds={teamIds} currentUser={currentUser} />
+              <StorySection
+                teamIds={teamIds}
+                currentUser={currentUser}
+                feedPosts={posts}
+              />
             ) : null
           }
           ListFooterComponent={
@@ -577,13 +582,13 @@ const $myTeamText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.teamMain ?? colors.tint,
   fontSize: 15,
   fontWeight: "800",
-  marginRight: -4,
+  // marginRight: -4,
 });
 
 const $myTeamDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   fontSize: 15,
-  fontWeight: "800",
+  fontWeight: "400",
 });
 
 const $myTeamDateUnderline: ThemedStyle<TextStyle> = ({ colors }) => ({

@@ -159,7 +159,7 @@ const $webFlatListContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({
 });
 
 const $webContentContainer: ThemedStyle<ViewStyle> = () => ({
-  paddingVertical: 8, // 상하 여백
+  // paddingVertical: 8, // 상하 여백
 });
 
 const $webItemContainer: ThemedStyle<ViewStyle> = ({ colors }) => ({

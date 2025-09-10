@@ -133,6 +133,10 @@ export class SupabaseJwtStrategy extends PassportStrategy(
         console.log(`🔄 새 사용자 자동 동기화 시작: ${userId}`);
 
         try {
+          // JWT에서 role 추출 (undefined인 경우 기본값 USER 사용)
+          const jwtRole = payload.user_metadata?.role as UserRole;
+          const finalRole = jwtRole || UserRole.USER;
+
           user = await this.userSyncService.syncUser({
             userId,
             // JWT 페이로드에서 기본 정보 추출
@@ -140,11 +144,11 @@ export class SupabaseJwtStrategy extends PassportStrategy(
               payload.user_metadata?.nickname ||
               payload.email?.split('@')[0] ||
               `user_${userId.slice(0, 8)}`,
-            role: payload.user_metadata?.role as UserRole,
+            role: finalRole,
           });
 
           console.log(
-            `✅ 새 사용자 동기화 완료: ${user.nickname} (ID: ${userId})`,
+            `✅ 새 사용자 동기화 완료: ${user.nickname} (ID: ${userId}, Role: ${user.role})`,
           );
         } catch (syncError) {
           console.error(`❌ 사용자 동기화 실패: ${userId}`, syncError);
@@ -155,16 +159,33 @@ export class SupabaseJwtStrategy extends PassportStrategy(
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         if (user.updatedAt < oneHourAgo) {
           try {
+            // 기존 사용자의 role을 보존하면서 동기화
+            const existingRole = user.role;
+            const jwtRole = payload.user_metadata?.role as UserRole;
+            
+            // 관리자 역할 보호: 기존이 ADMIN이고 JWT가 USER인 경우 기존 값 유지
+            let finalRole: UserRole;
+            if (existingRole === UserRole.ADMIN && jwtRole === UserRole.USER) {
+              console.log(`🛡️ 관리자 역할 보호: ${userId}의 ADMIN 역할을 USER로 변경 시도 차단`);
+              finalRole = existingRole; // 기존 ADMIN 역할 유지
+            } else if (jwtRole && jwtRole !== existingRole) {
+              finalRole = jwtRole; // JWT 값 사용
+            } else {
+              finalRole = existingRole; // 기존 값 보존
+            }
+
+            console.log(`🔄 사용자 동기화 - 기존 role: ${existingRole}, JWT role: ${jwtRole}, 최종 role: ${finalRole}`);
+
             user = await this.userSyncService.syncUser({
               userId,
               nickname:
                 payload.user_metadata?.nickname ||
                 payload.email?.split('@')[0] ||
                 `user_${userId.slice(0, 8)}`,
-              role: payload.user_metadata?.role as UserRole,
+              role: finalRole,
             });
             console.log(
-              `🔄 사용자 정보 동기화 완료: ${user.nickname} (ID: ${userId})`,
+              `🔄 사용자 정보 동기화 완료: ${user.nickname} (ID: ${userId}, Role: ${user.role})`,
             );
           } catch (syncError) {
             console.warn(

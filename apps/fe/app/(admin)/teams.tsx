@@ -499,7 +499,9 @@ export default function AdminTeamsScreen() {
         const file = new File([blob], safeName, {
           type: asset.mimeType || "image/jpeg",
         });
-        uploaded = await uploadFilesWeb([file], progress);
+        uploaded = await uploadFilesWeb([file], progress, {
+          category: "teamLogo",
+        });
       } else {
         const safeName = generateSafeFileName(
           asset.fileName || "team_logo.jpg",
@@ -515,6 +517,7 @@ export default function AdminTeamsScreen() {
             },
           ],
           progress,
+          { category: "teamLogo" },
         );
       }
 

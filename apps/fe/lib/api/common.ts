@@ -6,7 +6,15 @@
 
 import { Platform } from "react-native";
 import { ReactNativeFile } from "apollo-upload-client";
-import { SERVER_URL } from "@env";
+// NOTE: 환경 변수 타입 선언이 누락된 경우 빌드 에러 방지를 위한 임시 처리
+// 존재하지 않으면 런타임 fallback 사용
+// @ts-ignore - @env 모듈 타입 정의가 없을 수 있음
+import { SERVER_URL as RAW_SERVER_URL } from "@env";
+// Fallback 우선순위: @env -> Expo Public 환경변수 -> 로컬 기본값
+const SERVER_URL =
+  (RAW_SERVER_URL as string) ||
+  (process.env as any)?.EXPO_PUBLIC_SERVER_URL ||
+  "http://localhost:3000";
 
 // --------------------------
 // 타입 정의
@@ -39,7 +47,7 @@ export interface UploadedMedia {
   width?: number;
   height?: number;
   status: "UPLOADING" | "COMPLETED" | "FAILED";
-  thumbnailUrl?: string;
+
   failureReason?: string; // 실패 원인 추가
 }
 
@@ -190,6 +198,7 @@ export const getUploadEndpoints = () => {
   return {
     upload: `${baseUrl}/api/upload`,
     uploadSingle: `${baseUrl}/api/upload/single`,
+    avatar: `${baseUrl}/api/upload/avatar`,
     graphql: `${baseUrl}/graphql`,
   };
 };

@@ -3,8 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Media } from '../../entities/media.entity';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
-import { MediaResolver } from './media.resolver';
-import { UploadScalar } from '../../common/scalars/upload.scalar';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { MediaOptimizer } from '../../common/media-optimizer.entity';
 import { MediaOptimizerService } from './media-optimizer.service';
@@ -16,7 +14,7 @@ import { MediaOptimizerService } from './media-optimizer.service';
 @Module({
   imports: [TypeOrmModule.forFeature([Media, MediaOptimizer]), SupabaseModule],
   controllers: [MediaController],
-  providers: [MediaService, MediaResolver, UploadScalar, MediaOptimizerService],
+  providers: [MediaService, MediaOptimizerService],
   exports: [MediaService, MediaOptimizerService],
 })
 export class MediaModule {}

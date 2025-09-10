@@ -294,8 +294,8 @@ export default function ProfileScreen() {
           <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
           <View style={themed($infoContainer)}>
             <Text style={themed($username)}>{userProfile.nickname}</Text>
-            {userProfile.comment && (
-              <Text style={themed($userComment)}>{userProfile.comment}</Text>
+            {userProfile.bio && ( //TODO : bio 대신 comment 사용해야할거같은데, 중복된 컬럼
+              <Text style={themed($userComment)}>{userProfile.bio}</Text>
             )}
             {/* 연령대 배지 표시 */}
             {userProfile?.age || currentUser?.age ? (

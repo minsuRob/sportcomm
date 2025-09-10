@@ -102,6 +102,7 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
 
         setBannerNotice(banner ?? null);
         setLatestNotices(Array.isArray(newestList) ? newestList : []);
+        setIndex(0);
       } catch (e) {
         console.warn("[FeedNotice] 공지 조회 실패", e);
         if (active) {
@@ -181,36 +182,45 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
     }
   }, [visible, anim]);
 
-  // 새 공지 감지 시 자동 재활성화: 마지막으로 닫은 noticeKey와 현재 noticeKey 비교
-  const getCurrentNoticeKey = useCallback((): string => {
-    const current = entries[index] ?? null;
-    return current?.id ? `ID:${current.id}` : `DEFAULT:${defaultMessage}`;
-  }, [entries, index, defaultMessage]);
+  // 새 공지 감지 시 자동 재활성화: 최신(가장 위) 공지 키 계산
+  const getCurrentNoticeKey = useCallback((): string | null => {
+    const top = entries[0] ?? null;
+    return top?.id ? `ID:${top.id}` : null;
+  }, [entries]);
 
   useEffect(() => {
-    if (disabled) return;
+    // 비활성/초기 스토리지 체크 중에는 재활성화 로직을 수행하지 않음
+    if (disabled || checking) return;
+
     (async () => {
       try {
-        const currentKey = getCurrentNoticeKey();
+        // 숨김 플래그가 있는 경우에만 재활성화 판단
+        const hiddenFlag = await AsyncStorage.getItem(storageKey);
+        if (!hiddenFlag) return;
+
+        // 최신(가장 위) 공지가 없으면 판단 불가 → 유지
+        if (!entries || entries.length === 0) return;
+
+        const top = entries[0];
         const dismissedKey = await AsyncStorage.getItem(
           `${storageKey}:dismissed_key`,
         );
-        if (dismissedKey && dismissedKey !== currentKey) {
-          await AsyncStorage.removeItem(storageKey);
-          setVisible(true);
+
+        if (!dismissedKey) return;
+
+        // DEFAULT로 닫힌 상태에서는 새 ID 공지가 오기 전까지 재활성화하지 않음
+        if (dismissedKey.startsWith("ID:")) {
+          const lastId = dismissedKey.slice(3);
+          if (top.id && top.id !== lastId) {
+            await AsyncStorage.removeItem(storageKey);
+            setVisible(true);
+          }
         }
       } catch (e) {
         console.warn("[FeedNotice] failed to compare notice keys", e);
       }
     })();
-  }, [
-    entries,
-    index,
-    defaultMessage,
-    storageKey,
-    disabled,
-    getCurrentNoticeKey,
-  ]);
+  }, [disabled, checking, entries, storageKey]);
 
   // 자동 롤링: 여러 공지일 때만
   useEffect(() => {

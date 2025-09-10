@@ -121,7 +121,7 @@ export default function ProfileScreen({
     : [{ key: "posts", title: "게시물" }];
 
   // 팔로우 관련 상태 (타인 프로필일 때만 사용)
-  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [isFollowing, setIsFollowing] = useState<boolean | undefined>(undefined);
 
   // 팀별 경험치/레벨 기능 제거됨 (이관 준비 단계)
   // 추후 재도입 시 primary team 기반 계산 로직을 별도 훅으로 분리 예정.
@@ -166,7 +166,19 @@ export default function ProfileScreen({
   });
 
   // 팔로우 토글 뮤테이션 (타인 프로필일 때만 사용)
-  const [toggleFollow, { loading: followLoading }] = useMutation(TOGGLE_FOLLOW);
+  const [toggleFollow, { loading: followLoading }] = useMutation(TOGGLE_FOLLOW, {
+    update: (cache, { data }) => {
+      if (data?.toggleFollow && targetUserId) {
+        // 팔로우 상태 변경 시 캐시 업데이트
+        cache.modify({
+          id: cache.identify({ __typename: 'User', id: targetUserId }),
+          fields: {
+            isFollowing: () => data.toggleFollow,
+          },
+        });
+      }
+    },
+  });
 
   // DM 생성 뮤테이션 (타인 프로필일 때만 사용)
   const [createOrGetPrivateChat, { loading: createChatLoading }] =
@@ -207,12 +219,13 @@ export default function ProfileScreen({
         setCurrentUser(updatedUser);
       }
 
-      // 타인 프로필일 때는 팔로우 상태 업데이트
+      // 타인 프로필일 때는 팔로우 상태 업데이트 (캐시 업데이트가 아직 적용되지 않은 경우)
       if (!isOwnProfile && profileData.getUserById.isFollowing !== undefined) {
-        setIsFollowing(profileData.getUserById.isFollowing);
+        // 현재 팔로우 상태가 초기값(undefined)인 경우에만 업데이트
+        setIsFollowing(prev => prev === undefined ? profileData.getUserById.isFollowing : prev);
       }
     }
-  }, [profileData?.getUserById, isOwnProfile]);
+  }, [profileData?.getUserById, isOwnProfile, currentUser]);
 
   // 게시물 데이터가 변경되면 상태 업데이트
   useEffect(() => {
@@ -263,12 +276,12 @@ export default function ProfileScreen({
    * 팔로우/언팔로우 핸들러
    */
   const handleFollowToggle = async () => {
-    if (!currentUser?.id || !targetUserId) {
+    if (!currentUser?.id || !targetUserId || isFollowing === undefined) {
       Toast.show({
         type: "error",
-        text1: "로그인 필요",
-        text2: "팔로우하려면 로그인이 필요합니다.",
-        visibilityTime: 3000,
+        text1: "로딩 중",
+        text2: "잠시만 기다려주세요.",
+        visibilityTime: 2000,
       });
       return;
     }
@@ -306,7 +319,7 @@ export default function ProfileScreen({
         visibilityTime: 2000,
       });
 
-      refetchProfile();
+      // 캐시 업데이트로 팔로우 상태가 자동으로 반영되므로 refetch 불필요
     } catch (error) {
       setIsFollowing(previousIsFollowing);
       Toast.show({
@@ -573,13 +586,15 @@ export default function ProfileScreen({
             <TouchableOpacity
               style={themed($saveContactButton)}
               onPress={handleFollowToggle}
-              disabled={followLoading}
+              disabled={followLoading || isFollowing === undefined}
             >
               {followLoading ? (
                 <ActivityIndicator size="small" color={theme.colors.text} />
+              ) : isFollowing === undefined ? (
+                <ActivityIndicator size="small" color={theme.colors.textDim} />
               ) : (
                 <Text style={themed($saveContactButtonText)}>
-                  {isFollowing ? "Following" : "Save contact"}
+                  {isFollowing ? "팔로우 해제" : "팔로우"}
                 </Text>
               )}
             </TouchableOpacity>

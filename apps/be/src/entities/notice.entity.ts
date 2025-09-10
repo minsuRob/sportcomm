@@ -7,6 +7,7 @@ import {
   Index,
   CreateDateColumn,
   UpdateDateColumn,
+  AfterLoad,
 } from 'typeorm';
 import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
 import { User } from './user.entity';
@@ -174,9 +175,7 @@ export class Notice {
   @Field(() => Boolean, {
     description: '활성 (노출 조건 충족) 여부 (파생 필드)',
   })
-  isActive(): boolean {
-    return this.computeIsActive();
-  }
+  isActive: boolean;
 
   /**
    * 생명주기 상태
@@ -185,13 +184,7 @@ export class Notice {
   @Field(() => String, {
     description: '생명주기 상태(draft|scheduled|active|expired) (파생 필드)',
   })
-  lifecycleStatus(): string {
-    if (this.draft) return 'draft';
-    const now = new Date();
-    if (this.startAt && now < this.startAt) return 'scheduled';
-    if (this.endAt && now > this.endAt) return 'expired';
-    return 'active';
-  }
+  lifecycleStatus: string;
 
   /**
    * 활성 여부 계산 (내부 재사용)
@@ -201,6 +194,27 @@ export class Notice {
     if (this.startAt && now < this.startAt) return false;
     if (this.endAt && now > this.endAt) return false;
     return true;
+  }
+
+  /**
+   * 생명주기 상태 계산 (내부 재사용)
+   */
+  private computeLifecycleStatus(
+    now: Date = new Date(),
+  ): 'draft' | 'scheduled' | 'active' | 'expired' {
+    if (this.draft) return 'draft';
+    if (this.startAt && now < this.startAt) return 'scheduled';
+    if (this.endAt && now > this.endAt) return 'expired';
+    return 'active';
+  }
+
+  /**
+   * 엔티티 로드 후 파생 필드 채우기
+   */
+  @AfterLoad()
+  private setComputedFields(): void {
+    (this as any).isActive = this.computeIsActive();
+    (this as any).lifecycleStatus = this.computeLifecycleStatus();
   }
 
   /**
@@ -222,8 +236,8 @@ export class Notice {
       authorId: this.authorId || null,
       createdAt: this.createdAt?.toISOString(),
       updatedAt: this.updatedAt?.toISOString(),
-      isActive: this.isActive,
-      lifecycleStatus: this.lifecycleStatus,
+      isActive: this.computeIsActive(),
+      lifecycleStatus: this.computeLifecycleStatus(),
     };
   }
 
@@ -254,6 +268,8 @@ export class Notice {
     n.startAt = params.startAt || null;
     n.endAt = params.endAt || null;
     n.authorId = params.authorId || null;
+    (n as any).isActive = n.computeIsActive();
+    (n as any).lifecycleStatus = n.computeLifecycleStatus();
     return n;
   }
 }

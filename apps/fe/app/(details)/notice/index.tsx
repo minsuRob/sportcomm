@@ -9,13 +9,20 @@ import {
   ViewStyle,
   TextStyle,
   SafeAreaView,
+  TextInput,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { getSession, User } from "@/lib/auth";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { useQuery } from "@apollo/client";
-import { GET_NOTICES, Notice as NoticeGql } from "@/lib/graphql/notices";
+import { useQuery, useMutation } from "@apollo/client";
+import {
+  GET_NOTICES,
+  Notice as NoticeGql,
+  CREATE_NOTICE,
+} from "@/lib/graphql/notices";
 // 로컬 enum 대신 GraphQL 응답 문자열을 직접 사용 (타입 충돌 제거)
 
 /**
@@ -45,6 +52,33 @@ export default function NoticeListScreen() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ADMIN 전용: 글쓰기 모달/입력 상태 및 현재 사용자
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [nTitle, setNTitle] = useState<string>("");
+  const [nContent, setNContent] = useState<string>("");
+  const [nCategory, setNCategory] = useState<NoticeGql["category"]>("GENERAL");
+  const [submitting, setSubmitting] = useState<boolean>(false);
+
+  // 현재 사용자 세션 로드 → ADMIN 여부 판단
+  useEffect(() => {
+    (async () => {
+      try {
+        const { user } = await getSession();
+        setCurrentUser(user);
+      } catch (e) {
+        console.warn("[notice/index] 세션 조회 실패", e);
+      }
+    })();
+  }, []);
+
+  const isAdmin = !!(
+    currentUser?.role === "ADMIN" || (currentUser as any)?.isAdmin
+  );
+
+  // 공지 생성 Mutation
+  const [createNotice] = useMutation(CREATE_NOTICE);
 
   // GraphQL 공지 목록 Query (1페이지)
   const {
@@ -191,6 +225,33 @@ export default function NoticeListScreen() {
     },
     [fetchMore, refetch, loadingMore],
   );
+
+  // ADMIN: 공지 생성 제출
+  const handleSubmitCreateNotice = useCallback(async () => {
+    if (!nTitle.trim() || !nContent.trim()) return;
+    setSubmitting(true);
+    try {
+      await createNotice({
+        variables: {
+          input: {
+            title: nTitle.trim(),
+            content: nContent.trim(),
+            category: nCategory,
+          },
+        },
+      });
+      // 입력 초기화 및 모달 닫기
+      setNTitle("");
+      setNContent("");
+      setShowCreateModal(false);
+      // 목록 새로고침 (1페이지부터)
+      await loadPage(1, true);
+    } catch (e) {
+      console.error("공지 생성 실패:", e);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [nTitle, nContent, nCategory, createNotice, loadPage]);
 
   /**
    * 초기 로드
@@ -359,7 +420,19 @@ export default function NoticeListScreen() {
           <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>공지사항</Text>
-        <View style={themed($headerRightPlaceholder)} />
+        {isAdmin ? (
+          <TouchableOpacity
+            onPress={() => setShowCreateModal(true)}
+            style={themed($writeButton)}
+            accessibilityLabel="공지 글쓰기"
+            accessibilityRole="button"
+          >
+            <Ionicons name="create" size={16} color={theme.colors.tint} />
+            <Text style={themed($writeButtonText)}>글쓰기</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={themed($headerRightPlaceholder)} />
+        )}
       </View>
 
       {/* 목록 */}
@@ -389,6 +462,92 @@ export default function NoticeListScreen() {
           ) : null
         }
       />
+      {/* ADMIN 전용: 공지 작성 모달 */}
+      <Modal visible={showCreateModal} animationType="slide" transparent>
+        <View style={themed($modalBackdrop)}>
+          <View style={themed($modalSheet)}>
+            <View style={themed($modalHeader)}>
+              <TouchableOpacity
+                onPress={() => setShowCreateModal(false)}
+                style={themed($modalIconButton)}
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+              >
+                <Ionicons name="close" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+              <Text style={themed($modalTitle)}>공지 작성</Text>
+              <TouchableOpacity
+                onPress={handleSubmitCreateNotice}
+                disabled={submitting || !nTitle.trim() || !nContent.trim()}
+                style={[
+                  themed($publishButtonSm),
+                  {
+                    opacity:
+                      submitting || !nTitle.trim() || !nContent.trim()
+                        ? 0.5
+                        : 1,
+                  },
+                ]}
+                accessibilityLabel="공지 게시"
+                accessibilityRole="button"
+              >
+                <Ionicons name="paper-plane" size={16} color="white" />
+                <Text style={themed($publishButtonSmText)}>
+                  {submitting ? "게시 중..." : "게시"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={themed($modalBody)}>
+              <Text style={themed($label)}>카테고리</Text>
+              <View style={themed($categoryRow)}>
+                {(
+                  [
+                    "GENERAL",
+                    "FEATURE",
+                    "EVENT",
+                    "MAINTENANCE",
+                    "POLICY",
+                  ] as const
+                ).map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      themed($categoryPill),
+                      nCategory === cat && themed($categoryPillActive),
+                    ]}
+                    onPress={() => setNCategory(cat)}
+                  >
+                    <Text style={themed($categoryPillText)}>{cat}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={themed($label)}>제목</Text>
+              <TextInput
+                style={themed($input)}
+                placeholder="공지 제목"
+                placeholderTextColor={theme.colors.textDim}
+                value={nTitle}
+                onChangeText={setNTitle}
+                editable={!submitting}
+              />
+
+              <Text style={themed($label)}>내용</Text>
+              <TextInput
+                style={[themed($input), themed($textarea)]}
+                placeholder="공지 내용을 입력하세요"
+                placeholderTextColor={theme.colors.textDim}
+                value={nContent}
+                onChangeText={setNContent}
+                multiline
+                textAlignVertical="top"
+                editable={!submitting}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -427,6 +586,24 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $headerRightPlaceholder: ThemedStyle<ViewStyle> = () => ({
   width: 24,
   height: 24,
+});
+
+const $writeButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderWidth: 1,
+  borderColor: colors.tint,
+  borderRadius: 16,
+  backgroundColor: colors.tint + "10",
+  gap: spacing.xxxs,
+});
+
+const $writeButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  fontWeight: "600",
+  color: colors.tint,
 });
 
 const $listContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -543,6 +720,112 @@ const $footerLoading: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $footerLoadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
   color: colors.textDim,
+});
+
+// --- 모달/입력 스타일 ---
+const $modalBackdrop: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.4)",
+  justifyContent: "flex-end",
+});
+
+const $modalSheet: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.background,
+  borderTopLeftRadius: 16,
+  borderTopRightRadius: 16,
+  paddingBottom: spacing.lg,
+});
+
+const $modalHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: spacing.md,
+  paddingTop: spacing.md,
+  paddingBottom: spacing.sm,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $modalTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  fontWeight: "700",
+  color: colors.text,
+});
+
+const $modalIconButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
+});
+
+const $publishButtonSm: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  gap: spacing.xxxs,
+});
+
+const $publishButtonSmText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 13,
+  fontWeight: "600",
+  marginLeft: 4,
+});
+
+const $modalBody: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.md,
+  gap: spacing.sm,
+});
+
+const $label: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 13,
+  fontWeight: "600",
+  color: colors.textDim,
+});
+
+const $input: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.text,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 8,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  backgroundColor: colors.background,
+});
+
+const $textarea: ThemedStyle<TextStyle> = () => ({
+  minHeight: 140,
+  textAlignVertical: "top",
+});
+
+const $categoryRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: spacing.xs,
+});
+
+const $categoryPill: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 999,
+  backgroundColor: colors.backgroundAlt,
+});
+
+const $categoryPillActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  borderColor: colors.tint,
+  backgroundColor: colors.tint + "15",
+});
+
+const $categoryPillText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  fontWeight: "600",
+  color: colors.text,
 });
 /**
  * 커밋 요약:

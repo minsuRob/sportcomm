@@ -67,9 +67,6 @@ export default function PostActions({
         teamColors?.postActionsBackground && {
           backgroundColor: teamColors.postActionsBackground,
           borderRadius: 8, // 자연스러운 모서리 처리
-          marginHorizontal: -4, // 좌우 여백 확장으로 빈틈 제거
-          // paddingHorizontal: 20, // 확장된 마진에 맞춰 패딩 조정
-          marginBottom: -2, 
         },
       ]}
     >
@@ -82,9 +79,29 @@ export default function PostActions({
         <Ionicons
           name={isLiked ? "heart" : "heart-outline"}
           size={iconSize}
-          color={isLiked ? (teamColors?.actionButtonActive || theme.colors.error) : (teamColors?.actionButtonInactive || theme.colors.textDim)}
+          color={
+            isLiked
+              ? variant === "detail"
+                ? theme.colors.tint
+                : teamColors?.actionButtonActive || theme.colors.error
+              : variant === "detail"
+                ? theme.colors.textDim
+                : teamColors?.actionButtonInactive || theme.colors.textDim
+          }
         />
-        <Text style={[themed($actionCount), { color: teamColors?.actionButtonInactive || theme.colors.textDim }]}>{likeCount}</Text>
+        <Text
+          style={[
+            themed($actionCount),
+            {
+              color:
+                variant === "detail"
+                  ? theme.colors.textDim
+                  : teamColors?.actionButtonInactive || theme.colors.textDim,
+            },
+          ]}
+        >
+          {likeCount}
+        </Text>
       </TouchableOpacity>
 
       {/* 댓글 버튼 */}
@@ -94,7 +111,19 @@ export default function PostActions({
           size={iconSize}
           color={teamColors?.actionButtonInactive || theme.colors.textDim}
         />
-        <Text style={[themed($actionCount), { color: teamColors?.actionButtonInactive || theme.colors.textDim }]}>{commentCount}</Text>
+        <Text
+          style={[
+            themed($actionCount),
+            {
+              color:
+                variant === "detail"
+                  ? theme.colors.textDim
+                  : teamColors?.actionButtonInactive || theme.colors.textDim,
+            },
+          ]}
+        >
+          {commentCount}
+        </Text>
       </TouchableOpacity>
 
       {/* 북마크 버튼 */}
@@ -106,7 +135,15 @@ export default function PostActions({
         <Ionicons
           name={isBookmarked ? "bookmark" : "bookmark-outline"}
           size={iconSize}
-          color={isBookmarked ? (teamColors?.actionButtonActive || theme.colors.tint) : (teamColors?.actionButtonInactive || theme.colors.textDim)}
+          color={
+            isBookmarked
+              ? variant === "detail"
+                ? theme.colors.tint
+                : teamColors?.actionButtonActive || theme.colors.tint
+              : variant === "detail"
+                ? theme.colors.textDim
+                : teamColors?.actionButtonInactive || theme.colors.textDim
+          }
         />
       </TouchableOpacity>
     </View>
@@ -123,11 +160,12 @@ const $feedActionBar: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   zIndex: 10, // TeamDecorationRenderer(zIndex: 5)보다 높게 설정하여 겹침 방지
 });
 
-const $detailActionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $detailActionSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
-  justifyContent: "space-around",
-  paddingVertical: spacing.lg,
-  paddingHorizontal: spacing.md,
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingVertical: spacing.md,
+  paddingHorizontal: spacing.lg,
   zIndex: 10, // TeamDecorationRenderer(zIndex: 5)보다 높게 설정하여 겹침 방지
 });
 
@@ -140,9 +178,10 @@ const $actionButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.xs,
 });
 
-const $actionCount: ThemedStyle<TextStyle> = () => ({
+const $actionCount: ThemedStyle<TextStyle> = ({ spacing }) => ({
   fontSize: 15,
-  fontWeight: "bold",
+  fontWeight: "600",
+  marginTop: 1, // 아이콘과 베이스라인 정렬
 });
 
 const $actionText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({

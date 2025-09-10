@@ -18,7 +18,7 @@ import { usePostDetail } from "@/lib/hooks/usePostDetail";
 import { usePostInteractions } from "../../hooks/usePostInteractions";
 import PostHeader from "@/components/shared/PostHeader";
 import PostMedia from "@/components/shared/PostMedia";
-import PostStats from "@/components/shared/PostStats";
+
 import PostActions from "@/components/shared/PostActions";
 import CommentSection from "@/components/CommentSection";
 import ReportModal from "@/components/ReportModal";
@@ -369,15 +369,9 @@ export function PostDetailContent({
             </View>
           )}
 
-          {/* 통계 (partial 상태에서는 초기값 / fetching 중엔 약간 dim 처리) */}
-          <PostStats
-            likeCount={likeCount}
-            commentCount={post.commentCount}
-            viewCount={post.viewCount}
-            variant="detail"
-          />
+          {/* 통계 바 제거: 카운트는 액션 영역에서 표시 */}
 
-          {/* 액션 버튼 */}
+          {/* 액션 버튼 - 카운트 포함 */}
           <PostActions
             isLiked={isLiked}
             isBookmarked={isBookmarked}
@@ -387,6 +381,8 @@ export function PostDetailContent({
             onLike={handleLike}
             onBookmark={handleBookmark}
             onShare={handleShare}
+            likeCount={likeCount}
+            commentCount={post.commentCount}
             variant="detail"
           />
 
@@ -524,22 +520,27 @@ const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
 
 const $postCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
-  marginHorizontal: spacing.md,
+  marginHorizontal: 0, // 스크롤뷰 contentContainer에 패딩 적용하므로 0으로 설정
   marginTop: spacing.md,
   borderRadius: 12,
-  elevation: 3,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
+  borderWidth: 1,
+  borderColor: colors.border,
   overflow: "hidden",
+});
+/* ================= 새로운 스타일들 (공지 디자인 참고) ================= */
+
+const $scrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.lg,
+  paddingTop: spacing.md,
+  paddingBottom: spacing.xl,
 });
 
 const $postContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
+  // 본문 텍스트 영역 여백: 좌우는 스크롤 패딩과 맞추고, 위/아래 균형 있게 배치
+  paddingHorizontal: spacing.lg,
+  paddingTop: spacing.sm,
   paddingBottom: spacing.md,
 });
-
 const $contentText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 16,
   lineHeight: 24,
@@ -547,12 +548,16 @@ const $contentText: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 const $mediaSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
-  paddingBottom: spacing.md,
+  // 상세 화면 좌우 패딩을 스크롤 콘텐츠/본문과 통일
+  paddingHorizontal: spacing.lg,
+  marginTop: spacing.sm,
+  marginBottom: spacing.md,
 });
 
 const $tagsSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingHorizontal: spacing.md,
+  // 태그 섹션 추가: 좌우 패딩을 상세 레이아웃과 동일하게 맞춤
+  paddingHorizontal: spacing.lg,
+  paddingTop: spacing.xs,
   paddingBottom: spacing.md,
 });
 
@@ -571,14 +576,11 @@ const $tagText: ThemedStyle<TextStyle> = () => ({
 
 const $commentsCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.background,
-  marginHorizontal: spacing.md,
-  marginTop: spacing.md,
-  marginBottom: spacing.lg,
+  marginHorizontal: 0, // 스크롤뷰 contentContainer에 패딩 적용하므로 0으로 설정
+  marginTop: spacing.lg,
+  marginBottom: spacing.xl,
   borderRadius: 12,
-  elevation: 3,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
+  borderWidth: 1,
+  borderColor: colors.border,
   overflow: "hidden",
 });

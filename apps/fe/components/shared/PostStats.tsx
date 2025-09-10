@@ -25,20 +25,36 @@ export default function PostStats({
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
 
-  const iconSize = variant === "detail" ? 16 : 16;
+  const iconSize = variant === "detail" ? 18 : 16;
 
   if (variant === "detail") {
+    // 상세 화면: 아이콘 + 수치 인라인 바
     return (
       <View style={themed($detailStatsSection)}>
-        <Text style={themed($detailStatText)}>
-          좋아요 {likeCount}개
-        </Text>
-        <Text style={themed($detailStatText)}>
-          댓글 {commentCount}개
-        </Text>
-        <Text style={themed($detailStatText)}>
-          조회수 {viewCount}회
-        </Text>
+        <View style={themed($statItem)}>
+          <Ionicons
+            name="heart-outline"
+            size={iconSize}
+            color={theme.colors.textDim}
+          />
+          <Text style={themed($detailStatValue)}>{likeCount}</Text>
+        </View>
+        <View style={themed($statItem)}>
+          <Ionicons
+            name="chatbubble-outline"
+            size={iconSize}
+            color={theme.colors.textDim}
+          />
+          <Text style={themed($detailStatValue)}>{commentCount}</Text>
+        </View>
+        <View style={themed($statItem)}>
+          <Ionicons
+            name="eye-outline"
+            size={iconSize}
+            color={theme.colors.textDim}
+          />
+          <Text style={themed($detailStatValue)}>{viewCount}</Text>
+        </View>
       </View>
     );
   }
@@ -96,18 +112,24 @@ const $feedStatText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $detailStatsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
-  justifyContent: "space-around",
-  paddingVertical: spacing.md,
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingVertical: spacing.sm,
+  paddingHorizontal: spacing.md,
   borderTopWidth: 1,
-  borderBottomWidth: 1,
   borderColor: colors.border,
-  marginHorizontal: spacing.md,
 });
 
 const $detailStatText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.textDim,
   marginBottom: 4,
+});
+
+const $detailStatValue: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  fontWeight: "600",
 });
 
 const $statText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({

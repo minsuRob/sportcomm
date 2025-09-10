@@ -146,7 +146,7 @@ export default function PostMedia({
 const $container: ThemedStyle<ViewStyle> = () => ({
   position: "relative",
   width: "100%",
-  height: 200,
+  // detail 변형에서는 자식 콘텐츠(이미지/그리드)의 높이에 맞춰 자동 확장되도록 height 제거
 });
 
 // 피드용 스타일

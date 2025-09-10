@@ -8,6 +8,8 @@ import {
   TextStyle,
   ImageStyle,
   ActivityIndicator,
+  ScrollView,
+  ImageBackground,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@apollo/client";
@@ -266,54 +268,61 @@ export default function ProfileScreen() {
   const avatarUrl =
     userProfile.profileImageUrl ||
     `https://i.pravatar.cc/150?u=${userProfile.id}`;
-  //
+  const backgroundImageUrl = "https://picsum.photos/seed/picsum/400/200"; // Placeholder
+
   return (
-    <View style={themed($container)}>
-      {/* 헤더 - 전체 너비 사용 */}
-      <View style={themed($header)}>
-        <Text style={themed($headerTitle)}>프로필</Text>
-        <TouchableOpacity onPress={handleSettings}>
-          <Ionicons
-            name="settings-outline"
-            color={theme.colors.text}
-            size={24}
-          />
-        </TouchableOpacity>
-      </View>
+    <ScrollView style={themed($container)} showsVerticalScrollIndicator={false}>
+      <ImageBackground
+        source={{ uri: backgroundImageUrl }}
+        style={themed($backgroundImage)}
+      >
+        {/* 헤더 - 배경 이미지 위에 표시 */}
+        <View style={themed($header)}>
+          <Text style={themed($headerTitle)}>프로필</Text>
+          <TouchableOpacity onPress={handleSettings}>
+            <Ionicons
+              name="settings-outline"
+              color={"#fff"}
+              size={24}
+            />
+          </TouchableOpacity>
+        </View>
+      </ImageBackground>
 
-      {/* 프로필 정보 - 전역 레이아웃 적용됨 */}
-      {/* 프로필 정보 */}
-      <View style={themed($profileSection)}>
-        <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
-        <Text style={themed($username)}>{userProfile.nickname}</Text>
-        {userProfile.comment && (
-          <Text style={themed($userComment)}>{userProfile.comment}</Text>
-        )}
-        {/* 연령대 배지 표시 */}
-        {userProfile?.age || currentUser?.age ? (
-          <View style={themed($ageBadge)}>
-            <Text style={themed($ageBadgeText)}>
-              {(() => {
-                const age = (userProfile?.age || currentUser?.age) as number;
-                if (age >= 40) return `40+ 🟪`;
-                if (age >= 30) return `30-35 🟦`;
-                if (age >= 26) return `26-29 🟩`;
-                if (age >= 21) return `20-25 🟨`;
-                if (age >= 16) return `16-20 🟧`;
-                if (age >= 10) return `10-15 🟥`;
-                return `${age}`;
-              })()}
-            </Text>
+      <View style={themed($mainContent)}>
+        <View style={themed($profileCard)}>
+          <Image source={{ uri: avatarUrl }} style={themed($profileImage)} />
+          <View style={themed($infoContainer)}>
+            <Text style={themed($username)}>{userProfile.nickname}</Text>
+            {userProfile.comment && (
+              <Text style={themed($userComment)}>{userProfile.comment}</Text>
+            )}
+            {/* 연령대 배지 표시 */}
+            {userProfile?.age || currentUser?.age ? (
+              <View style={themed($ageBadge)}>
+                <Text style={themed($ageBadgeText)}>
+                  {(() => {
+                    const age = (userProfile?.age || currentUser?.age) as number;
+                    if (age >= 40) return `40+ 🟪`;
+                    if (age >= 30) return `30-35 🟦`;
+                    if (age >= 26) return `26-29 🟩`;
+                    if (age >= 21) return `20-25 🟨`;
+                    if (age >= 16) return `16-20 🟧`;
+                    if (age >= 10) return `10-15 🟥`;
+                    return `${age}`;
+                  })()}
+                </Text>
+              </View>
+            ) : null}
           </View>
-        ) : null}
-
-        {/* 팀별 경험치 Progress UI 제거됨 */}
+        </View>
 
         {/* 팀 정보 표시 */}
         {userProfile.myTeams && userProfile.myTeams.length > 0 ? (
           <View style={themed($teamsContainer)}>
             {userProfile.myTeams
               .sort((a, b) => a.priority - b.priority)
+              .slice(0, 3)
               .map((userTeam) => (
                 <View key={userTeam.id} style={themed($teamItem)}>
                   <TeamLogo
@@ -345,6 +354,28 @@ export default function ProfileScreen() {
         ) : (
           <Text style={themed($noTeamText)}>아직 선택한 팀이 없습니다</Text>
         )}
+
+        {/* 통계 정보 */}
+        <View style={themed($statsSection)}>
+          <View style={themed($statItem)}>
+            <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
+            <Text style={themed($statLabel)}>게시물</Text>
+          </View>
+          <TouchableOpacity
+            style={themed($statItem)}
+            onPress={handleFollowersPress}
+          >
+            <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
+            <Text style={themed($statLabel)}>팔로워</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={themed($statItem)}
+            onPress={handleFollowingPress}
+          >
+            <Text style={themed($statNumber)}>{userProfile.followingCount}</Text>
+            <Text style={themed($statLabel)}>팔로잉</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* 프로필 편집 및 팀 선택 버튼 */}
         <View style={themed($buttonContainer)}>
@@ -383,119 +414,108 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
         </View>
-      </View>
 
-      {/* 통계 정보 */}
-      <View style={themed($statsSection)}>
-        <View style={themed($statItem)}>
-          <Text style={themed($statNumber)}>{userProfile.postCount}</Text>
-          <Text style={themed($statLabel)}>게시물</Text>
-        </View>
-        <TouchableOpacity
-          style={themed($statItem)}
-          onPress={handleFollowersPress}
-        >
-          <Text style={themed($statNumber)}>{userProfile.followerCount}</Text>
-          <Text style={themed($statLabel)}>팔로워</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={themed($statItem)}
-          onPress={handleFollowingPress}
-        >
-          <Text style={themed($statNumber)}>{userProfile.followingCount}</Text>
-          <Text style={themed($statLabel)}>팔로잉</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={themed($contentContainer)}>
+          {/* 탭 슬라이더 */}
+          <TabSlider
+            tabs={tabs}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
 
-      {/* 탭 슬라이더 */}
-      <TabSlider
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
-
-      {/* 게시물 목록 - FeedList가 직접 스크롤 처리 */}
-      {getCurrentLoading() ? (
-        <View style={themed($loadingContainer)}>
-          <ActivityIndicator size="large" color={theme.colors.tint} />
-        </View>
-      ) : (
-        <FeedList
-          posts={getCurrentPosts()}
-          ListEmptyComponent={
-            <View style={themed($emptyState)}>
-              <Text style={themed($emptyStateText)}>{getEmptyMessage()}</Text>
+          {/* 게시물 목록 */}
+          {getCurrentLoading() ? (
+            <View style={themed($loadingContainer)}>
+              <ActivityIndicator size="large" color={theme.colors.tint} />
             </View>
-          }
-        />
-      )}
-    </View>
+          ) : (
+            <View style={themed($postsContainer)}>
+              <FeedList
+                posts={getCurrentPosts()}
+                ListEmptyComponent={
+                  <View style={themed($emptyState)}>
+                    <Text style={themed($emptyStateText)}>{getEmptyMessage()}</Text>
+                  </View>
+                }
+              />
+            </View>
+          )}
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 // --- 스타일 정의 ---
+
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
   backgroundColor: colors.background,
 });
 
-const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $backgroundImage: ThemedStyle<ImageStyle> = () => ({
+  height: 200,
+  justifyContent: "flex-start",
+  padding: 16,
+});
+
+const $header: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   justifyContent: "space-between",
   alignItems: "center",
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.lg,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.border,
 });
 
-const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $headerTitle: ThemedStyle<TextStyle> = () => ({
   fontSize: 24,
   fontWeight: "bold",
-  color: colors.text,
+  color: "#fff",
 });
 
-const $profileSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "center",
-  padding: spacing.xl,
+const $mainContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingHorizontal: spacing.md,
+  marginTop: -80, // 프로필 카드를 배경 이미지 위로 올림
+  paddingBottom: spacing.xl,
+});
+
+const $profileCard: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flexDirection: "row",
+  alignItems: "flex-end",
+  borderRadius: 16,
+  overflow: "hidden",
 });
 
 const $profileImage: ThemedStyle<ImageStyle> = () => ({
-  width: 100,
-  height: 100,
-  borderRadius: 50,
+  width: 140,
+  height: 140,
+  borderWidth: 4,
+  borderColor: "#fff",
+  borderRadius: 16,
 });
 
-const $username: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+const $infoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  backgroundColor: "#000",
+  padding: spacing.md,
+  minHeight: 120,
+  flex: 1,
+  justifyContent: "center",
+  borderTopRightRadius: 16,
+  borderBottomRightRadius: 16,
+});
+
+const $username: ThemedStyle<TextStyle> = () => ({
+  color: "#fff",
   fontSize: 24,
   fontWeight: "bold",
-  color: colors.text,
-  marginTop: spacing.md,
 });
 
-const $userComment: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+const $userComment: ThemedStyle<TextStyle> = ({ spacing }) => ({
+  color: "#ddd",
   fontSize: 16,
-  color: colors.textDim,
   marginTop: spacing.xs,
   fontStyle: "italic",
-  textAlign: "center",
   lineHeight: 22,
-});
-
-const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  marginTop: spacing.xs,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xxs,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: colors.border,
-  backgroundColor: colors.card,
-});
-
-const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 12,
-  color: colors.text,
-  fontWeight: "600",
 });
 
 // 팀 정보 스타일들
@@ -518,12 +538,15 @@ const $teamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   shadowOpacity: 0.1,
   shadowRadius: 2,
   elevation: 2,
+  minWidth: "80%",
 });
 
-const $teamInfo: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $teamInfo: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
   fontWeight: "600",
   color: colors.text,
+  marginLeft: spacing.sm,
+  flex: 1,
 });
 
 const $teamYear: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -545,9 +568,52 @@ const $noTeamText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontStyle: "italic",
 });
 
+const $ageBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.xs,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xxs,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+  backgroundColor: colors.card,
+  alignSelf: "flex-start",
+});
+
+const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.text,
+  fontWeight: "600",
+});
+
+const $statsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-around",
+  paddingVertical: spacing.lg,
+  marginTop: spacing.md,
+  borderTopWidth: 1,
+  borderBottomWidth: 1,
+  borderColor: colors.border,
+});
+
+const $statItem: ThemedStyle<ViewStyle> = () => ({
+  alignItems: "center",
+});
+
+const $statNumber: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 20,
+  fontWeight: "bold",
+  color: colors.text,
+});
+
+const $statLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  marginTop: spacing.xxxs,
+});
+
 const $buttonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
-  marginTop: spacing.lg,
+  marginTop: spacing.md,
   gap: spacing.sm,
 });
 
@@ -605,29 +671,12 @@ const $adminButtonText: ThemedStyle<TextStyle> = ({ spacing }) => ({
   fontWeight: "600",
 });
 
-const $statsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  justifyContent: "space-around",
-  paddingVertical: spacing.lg,
-  borderTopWidth: 1,
-  borderBottomWidth: 1,
-  borderColor: colors.border,
+const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
 });
 
-const $statItem: ThemedStyle<ViewStyle> = () => ({
-  alignItems: "center",
-});
-
-const $statNumber: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 20,
-  fontWeight: "bold",
-  color: colors.text,
-});
-
-const $statLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 14,
-  color: colors.textDim,
-  marginTop: spacing.xxxs,
+const $postsContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
 });
 
 const $emptyState: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -640,13 +689,15 @@ const $emptyStateText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
 });
 
-const $loadingContainer: ThemedStyle<ViewStyle> = () => ({
+const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
   justifyContent: "center",
   alignItems: "center",
+  paddingVertical: spacing.xl,
 });
 
-const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
   color: colors.textDim,
+  marginTop: spacing.sm,
 });

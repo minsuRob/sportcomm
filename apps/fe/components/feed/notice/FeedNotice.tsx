@@ -13,7 +13,10 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import AppDialog from "@/components/ui/AppDialog";
 import { useRouter } from "expo-router";
 import type { Notice } from "@/lib/notice/types";
-import { fetchLatestActiveBannerNotice } from "@/lib/notice/api";
+import {
+  fetchLatestActiveBannerNotice,
+  fetchNewestNotice,
+} from "@/lib/notice/api";
 
 /**
  * Feed 상단(or 특정 위치)에 표시할 닫기 가능한 공지 컴포넌트
@@ -82,18 +85,29 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
   const [checking, setChecking] = useState<boolean>(true);
   const [visible, setVisible] = useState<boolean>(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
-  // 최신 강조(highlightBanner) 공지 (DB 우선, 실패 시 목업 fallback)
+  // 최신 강조(highlightBanner) 공지 및 '가장 최근' 공지
   const [bannerNotice, setBannerNotice] = useState<Notice | null>(null);
+  const [newestNotice, setNewestNotice] = useState<Notice | null>(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const latest = await fetchLatestActiveBannerNotice({ debug: __DEV__ });
-        if (active) setBannerNotice(latest);
+        // 강조 공지와 가장 최신 공지를 병렬로 조회
+        const [latestBanner, newest] = await Promise.all([
+          fetchLatestActiveBannerNotice({ debug: __DEV__ }),
+          fetchNewestNotice({ debug: __DEV__ }),
+        ]);
+        if (active) {
+          setBannerNotice(latestBanner);
+          setNewestNotice(newest);
+        }
       } catch (e) {
-        console.warn("[FeedNotice] 최신 배너 공지 조회 실패", e);
-        if (active) setBannerNotice(null);
+        console.warn("[FeedNotice] 공지 조회 실패", e);
+        if (active) {
+          setBannerNotice(null);
+          setNewestNotice(null);
+        }
       }
     })();
     return () => {
@@ -176,15 +190,23 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
    */
   const handlePressNotice = useCallback(() => {
     if (!navigateOnPress) return;
-    if (bannerNotice) {
+    const target = bannerNotice ?? newestNotice;
+    if (target) {
       router.push({
         pathname: "/(details)/notice/[noticeId]",
-        params: { noticeId: bannerNotice.id },
+        params: { noticeId: target.id },
       });
     } else {
       router.push("/(details)/notice");
     }
-  }, [navigateOnPress, bannerNotice, router]);
+  }, [navigateOnPress, bannerNotice, newestNotice, router]);
+
+  // 표시 텍스트 결정: 강조 공지 > 최신 공지 > 기본 메시지
+  const displayTitle =
+    (bannerNotice && bannerNotice.title) ||
+    (newestNotice && newestNotice.title) ||
+    defaultMessage ||
+    "[공지] 새로운 소식이 있습니다.";
 
   // 초기 조회 중이거나 표시 조건이 아니면 렌더하지 않음
   if (checking || !visible || disabled) return null;
@@ -208,7 +230,7 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
           numberOfLines={2}
           accessibilityRole="text"
         >
-          {children || (bannerNotice ? bannerNotice.title : defaultMessage)}
+          {children || displayTitle}
         </Text>
         <TouchableOpacity
           onPress={(e: any) => {

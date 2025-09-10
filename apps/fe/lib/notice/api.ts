@@ -108,6 +108,28 @@ function buildBannerQuery(
     .order(col("createdAt", "created_at"), { ascending: false })
     .limit(limit);
 }
+
+/**
+ * 최신 공지(가장 최근 createdAt) 쿼리 빌더
+ * - 드래프트 제외
+ * - 정렬: createdAt DESC
+ */
+function buildNewestQuery(
+  client: any,
+  tableName: string,
+  limit: number,
+  style: "camel" | "snake",
+) {
+  const col = (camel: string, snake: string) =>
+    style === "camel" ? camel : snake;
+
+  return client
+    .from(tableName)
+    .select("*")
+    .eq(col("draft", "draft"), false)
+    .order(col("createdAt", "created_at"), { ascending: false })
+    .limit(limit);
+}
 /**
  * DB에서 활성 배너 공지 목록 조회
  * - highlightBanner = true
@@ -204,6 +226,90 @@ export async function fetchActiveBannerNotices(options?: {
       console.warn("[notice/api] DB 배너 공지 조회 중 예외:", e);
     }
     return [];
+  }
+}
+
+/**
+ * 가장 최근 공지 1건 조회 (생성일 기준)
+ * - draft 제외, 활성(isActive) 여부 검사
+ * - createdAt DESC, limit 1
+ */
+export async function fetchNewestNotice(options?: {
+  tableName?: string;
+  now?: Date;
+  debug?: boolean;
+}): Promise<Notice | null> {
+  const {
+    tableName = DEFAULT_NOTICE_TABLE,
+    now = new Date(),
+    debug = false,
+  } = options ?? {};
+
+  try {
+    const client: any = supabase as any;
+
+    // 1) camelCase 시도
+    let rows: Record<string, any>[] = [];
+    let firstError: any = null;
+    try {
+      const { data, error } = await buildNewestQuery(
+        client,
+        tableName,
+        1,
+        "camel",
+      );
+      if (error) firstError = error;
+      if (Array.isArray(data) && data.length > 0) rows = data;
+    } catch (e) {
+      firstError = e;
+    }
+
+    // 2) 필요 시 snake_case 재시도
+    if (rows.length === 0) {
+      try {
+        const { data, error } = await buildNewestQuery(
+          client,
+          tableName,
+          1,
+          "snake",
+        );
+        if (error && debug) {
+          console.warn("[notice/api] buildNewestQuery snake_case 에러:", error);
+        }
+        if (Array.isArray(data) && data.length > 0) rows = data;
+      } catch (e) {
+        if (debug) {
+          console.warn("[notice/api] buildNewestQuery snake_case 예외:", e);
+        }
+      }
+    }
+
+    if (rows.length === 0) {
+      if (firstError && debug) {
+        console.warn(
+          "[notice/api] buildNewestQuery camelCase 에러:",
+          firstError,
+        );
+      }
+      return null;
+    }
+
+    // 매핑 + 활성 필터
+    const notices = rows.map(mapDbRowToNotice).filter((n) => isActive(n, now));
+    if (notices.length === 0) return null;
+
+    // createdAt DESC 보장이나, 방어적 재정렬
+    const sorted = [...notices].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    return sorted[0] ?? null;
+  } catch (e) {
+    if (debug) {
+      console.warn("[notice/api] fetchNewestNotice 예외:", e);
+    }
+    return null;
   }
 }
 

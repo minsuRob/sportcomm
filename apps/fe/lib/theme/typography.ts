@@ -30,7 +30,7 @@ export const fontFamily = {
   // 커스텀 폰트 - 플랫폼별로 다른 이름 사용
   custom: Platform.select({
     web: "TTTogether", // 웹: 웹 폰트 패밀리 이름
-    default: "TTTogetherA", // iOS/Android: TTF 파일의 PostScript 이름
+    default: "TTTogether", // iOS/Android: expo-font 로드 키 이름과 동일하게 사용
   }),
 };
 
@@ -72,6 +72,12 @@ export const typography = {
   logo: {
     normal: fontFamily.custom, // TTTogether 폰트 사용
     bold: fontFamily.custom, // 필요시 별도 볼드 폰트 설정
+  },
+
+  // 포인트 배지/강조용 폰트 (크로스플랫폼 안전한 외부 폰트 사용)
+  points: {
+    normal: "SpaceGrotesk-SemiBold",
+    bold: "SpaceGrotesk-Bold",
   },
 
   // 기존 호환성 유지

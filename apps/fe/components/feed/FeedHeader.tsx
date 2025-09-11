@@ -190,7 +190,8 @@ const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "900",
   color: colors.teamMain ?? colors.tint,
-  fontFamily: typography.logo.normal,
+  // 웹/네이티브 모두 동일 키(TTTogether) 사용
+  fontFamily: "TTTogether",
 });
 
 const $headerRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -225,6 +226,8 @@ const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontSize: 12,
   fontWeight: "700",
+  // 크로스플랫폼 안전한 외부 폰트 적용 (expo-google-fonts SpaceGrotesk)
+  fontFamily: "SpaceGrotesk-SemiBold",
 });
 
 const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {

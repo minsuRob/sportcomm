@@ -55,6 +55,7 @@
     "graphql": "^16.11.0",
     "i18next": "^25.3.2",
     "nativewind": "^4.1.23",
+    "normalize-url": "^8.1.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-i18next": "^15.6.0",

@@ -448,7 +448,7 @@ export default function FeedScreen() {
 
           {/* FeedList 아래에 AdFit 광고 배너 */}
           <AdFitBanner
-            adUnit="DAN-jaKdyGIgnRkALWCc"
+            adUnit="DAN-HsqnHzDgRAYX6iDy"
             width={320}
             height={50}
           />

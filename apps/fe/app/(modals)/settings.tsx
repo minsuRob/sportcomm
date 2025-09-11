@@ -15,7 +15,7 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { clearSession, getSession, User } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import Toast from "react-native-toast-message";
 
 /**
@@ -37,7 +37,8 @@ export default function SettingsScreen() {
   const { themed, theme, toggleTheme, setAppColor, appColor } = useAppTheme();
   const router = useRouter();
   const { switchLanguage, currentLanguage } = useTranslation();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 전역 AuthContext 사용: 로컬 currentUser 상태 제거
+  const { user: currentUser, signOut } = useAuth();
 
   // 펼쳐진 설정 섹션 상태
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -45,21 +46,14 @@ export default function SettingsScreen() {
   /**
    * 현재 사용자 세션 불러오기
    */
-  useEffect(() => {
-    const fetchUserSession = async () => {
-      const { user } = await getSession();
-      setCurrentUser(user);
-    };
-    fetchUserSession();
-  }, []);
+  // (제거됨) 개별 세션 로드 useEffect: AuthProvider가 이미 부트스트랩 처리
 
   /**
    * 로그아웃 처리
    */
   const handleLogout = async (): Promise<void> => {
     try {
-      await clearSession();
-      setCurrentUser(null);
+      await signOut();
       Toast.show({
         type: "success",
         text1: "로그아웃 성공",

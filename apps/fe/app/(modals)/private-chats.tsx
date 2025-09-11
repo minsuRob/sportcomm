@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { GET_USER_PRIVATE_CHATS } from "@/lib/graphql/user-chat";
 import type { UserChatRoom } from "@/lib/graphql/user-chat";
-import { getSession, User } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 
 dayjs.extend(relativeTime);
@@ -28,15 +28,9 @@ dayjs.locale("ko");
 export default function PrivateChatsModal() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser } = useAuth();
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const { user } = await getSession();
-      setCurrentUser(user);
-    };
-    loadUser();
-  }, []);
+  // 전역 AuthProvider 사용: 개별 getSession 호출 제거
 
   const {
     data,

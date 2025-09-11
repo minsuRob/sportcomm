@@ -16,11 +16,10 @@ import ProfileContextPopover from "@/components/shared/ProfileContextPopover";
 import { useAppTheme } from "@/lib/theme/context";
 import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
-import type { User } from "@/lib/auth";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import TabSlider from "@/components/TabSlider";
 
 interface FeedHeaderProps {
-  currentUser: User | null;
   onNotificationPress: () => void;
   onProfilePress: () => void;
   onShopPress: () => void;
@@ -39,7 +38,6 @@ interface FeedHeaderProps {
  * - 탭 너비는 헤더 전체의 약 25% (최소 가로폭 확보)
  */
 export default function FeedHeader({
-  currentUser,
   onNotificationPress,
   onProfilePress,
   onShopPress,
@@ -53,6 +51,7 @@ export default function FeedHeader({
 }: FeedHeaderProps) {
   const { t } = useTranslation();
   const { themed, theme } = useAppTheme();
+  const { currentUser } = useCurrentUser();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
   const [popoverPosition, setPopoverPosition] = React.useState({
     top: 0,

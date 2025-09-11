@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 import { useLazyQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import {
   SEARCH_USERS_FOR_CHAT,
   CREATE_OR_GET_PRIVATE_CHAT,
@@ -35,7 +35,8 @@ import { showToast } from "@/components/CustomToast";
 export default function StartPrivateChatModal() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 전역 AuthContext 에서 사용자/인증 상태 조회
+  const { user: currentUser, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
 
@@ -96,13 +97,13 @@ export default function StartPrivateChatModal() {
     });
 
   // 사용자 정보 로드
-  useEffect(() => {
-    const loadUser = async () => {
-      const { user } = await getSession();
-      setCurrentUser(user);
-    };
-    loadUser();
-  }, []);
+  // (제거됨) 개별 getSession 호출: AuthProvider 가 전역 부트스트랩 처리
+  // 필요 시 비로그인 사용자 UX 처리 예:
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     showToast({ type: "error", title: "로그인 필요", message: "로그인이 필요합니다.", duration: 2000 });
+  //   }
+  // }, [isAuthenticated]);
 
   // 검색 실행
   const handleSearch = () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { Ionicons } from "@expo/vector-icons";
 import NotificationList from "@/components/notifications/NotificationList";
 import { Notification } from "@/components/notifications/NotificationItem";
-import { getSession, User } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useNotifications } from "@/lib/notifications";
 
 /**
@@ -22,7 +22,7 @@ import { useNotifications } from "@/lib/notifications";
 export default function NotificationsScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser } = useAuth();
 
   // 알림 관리 훅 사용
   const {
@@ -35,17 +35,6 @@ export default function NotificationsScreen() {
     markAsRead,
     markAllAsRead,
   } = useNotifications();
-
-  // 사용자 세션 확인
-  useEffect(() => {
-    const checkSession = async () => {
-      const { user } = await getSession();
-      if (user) {
-        setCurrentUser(user);
-      }
-    };
-    checkSession();
-  }, []);
 
   /**
    * 설정 버튼 클릭 핸들러

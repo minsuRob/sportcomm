@@ -87,7 +87,7 @@ import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
 import ShopModal from "@/components/shop/ShopModal";
 import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
-import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useChatRooms } from "@/lib/hooks/useChatRooms";
 import { useFeedPosts } from "@/lib/hooks/useFeedPosts";
 
@@ -101,7 +101,7 @@ export default function FeedScreen() {
   const [shopModalVisible, setShopModalVisible] = useState(false);
   const [teamFilterOpen, setTeamFilterOpen] = useState(false); // 팀 필터 모달 외부 제어 상태
   const router = useRouter();
-  const { currentUser, reload: reloadCurrentUser } = useCurrentUser();
+  const { user: currentUser, reloadUser: reloadCurrentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("feed");
   // 공지 섹션은 FeedNotice 컴포넌트로 분리 (로컬 상태 제거)
 
@@ -247,7 +247,6 @@ export default function FeedScreen() {
     return (
       <View style={themed($container)}>
         <FeedHeader
-          currentUser={currentUser}
           onNotificationPress={handleNotificationPress}
           onProfilePress={() =>
             currentUser
@@ -298,7 +297,6 @@ export default function FeedScreen() {
 
       {/* 헤더 (탭 슬라이더 포함) */}
       <FeedHeader
-        currentUser={currentUser}
         onNotificationPress={handleNotificationPress}
         onProfilePress={() =>
           currentUser

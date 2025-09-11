@@ -194,6 +194,17 @@ export function useCurrentUser() {
     };
   }, [load]);
 
+  // 로그인 이벤트 감지 시 즉시 사용자 정보 새로고침 (최초 로그인 시 빠른 반영)
+  useEffect(() => {
+    const off = onSessionChange(({ reason }) => {
+      if (reason === "login" && mountedRef.current) {
+        // 로그인 이벤트 발생 시 즉시 로드 (forceSync=true로 캐시 무시)
+        void load(true);
+      }
+    });
+    return off;
+  }, [load]);
+
   /**
    * 세션 변경 이벤트 구독
    * - 로그인/로그아웃/프로필 업데이트 시 즉시 currentUser 반영

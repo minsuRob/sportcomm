@@ -163,7 +163,7 @@ async function bootstrap() {
       // 기본값 설정
       const defaultOrigins = [
         'https://sportcomm.pages.dev',
-        'http://localhost:3000'
+        'http://localhost:8081'
       ];
       
       if (corsOriginEnv) {

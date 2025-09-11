@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Redirect, Slot } from "expo-router";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 
 /**
  * 관리자 레이아웃
@@ -12,23 +12,8 @@ import { User, getSession } from "@/lib/auth";
  */
 export default function AdminLayout() {
   const { themed } = useAppTheme();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAdminPermission = async () => {
-      try {
-        const { user } = await getSession();
-        setCurrentUser(user);
-      } catch (error) {
-        console.error("사용자 정보 로드 실패:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAdminPermission();
-  }, []);
+  // 전역 AuthContext 에서 사용자 및 로딩 상태 참조 (추가 세션 호출 제거)
+  const { user: currentUser, isLoading } = useAuth();
 
   // 로딩 중
   if (isLoading) {

@@ -15,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession, saveSession } from "@/lib/auth";
+import { User } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import {
@@ -102,7 +103,8 @@ export default function ProfileScreen({
   onClose,
 }: ProfileScreenProps) {
   const { themed, theme } = useAppTheme();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 전역 AuthContext 에서 현재 사용자 정보 제공
+  const { user: currentUser, updateUser, reloadUser } = useAuth();
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [bookmarkedPosts, setBookmarkedPosts] = useState<Post[]>([]);
   const [activeTab, setActiveTab] = useState<string>("posts");
@@ -121,7 +123,9 @@ export default function ProfileScreen({
     : [{ key: "posts", title: "게시물" }];
 
   // 팔로우 관련 상태 (타인 프로필일 때만 사용)
-  const [isFollowing, setIsFollowing] = useState<boolean | undefined>(undefined);
+  const [isFollowing, setIsFollowing] = useState<boolean | undefined>(
+    undefined,
+  );
   // comment commit
 
   // 팀별 경험치/레벨 기능 제거됨 (이관 준비 단계)
@@ -167,19 +171,22 @@ export default function ProfileScreen({
   });
 
   // 팔로우 토글 뮤테이션 (타인 프로필일 때만 사용)
-  const [toggleFollow, { loading: followLoading }] = useMutation(TOGGLE_FOLLOW, {
-    update: (cache, { data }) => {
-      if (data?.toggleFollow && targetUserId) {
-        // 팔로우 상태 변경 시 캐시 업데이트
-        cache.modify({
-          id: cache.identify({ __typename: 'User', id: targetUserId }),
-          fields: {
-            isFollowing: () => data.toggleFollow,
-          },
-        });
-      }
+  const [toggleFollow, { loading: followLoading }] = useMutation(
+    TOGGLE_FOLLOW,
+    {
+      update: (cache, { data }) => {
+        if (data?.toggleFollow && targetUserId) {
+          // 팔로우 상태 변경 시 캐시 업데이트
+          cache.modify({
+            id: cache.identify({ __typename: "User", id: targetUserId }),
+            fields: {
+              isFollowing: () => data.toggleFollow,
+            },
+          });
+        }
+      },
     },
-  });
+  );
 
   // DM 생성 뮤테이션 (타인 프로필일 때만 사용)
   const [createOrGetPrivateChat, { loading: createChatLoading }] =
@@ -189,44 +196,95 @@ export default function ProfileScreen({
       ],
     });
 
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      const { user } = await getSession();
+  // 로컬 세션 직접 로드(useEffect + getSession) 제거: AuthProvider 가 부트스트랩 처리
 
-      if (user) setCurrentUser(user);
+  // 사용자 ID 변경 시에만 refetch (중복/과도 호출 방지 + debounce)
+  // prevUserIdRef: 마지막으로 refetch 완료(또는 시도)한 사용자 ID
+  // refetchTimerRef: debounce 타이머 저장
+  const prevUserIdRef = React.useRef<string | null>(null);
+  const refetchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const nextId = currentUser?.id || null;
+
+    // ID 없거나 변경 없음 → 조기 종료
+    if (!nextId || nextId === prevUserIdRef.current) return;
+
+    // 기존 타이머 클리어 (연속 변경 대비)
+    if (refetchTimerRef.current) {
+      clearTimeout(refetchTimerRef.current);
+    }
+
+    refetchTimerRef.current = setTimeout(async () => {
+      if (!nextId) return;
+      try {
+        // 프로필 / 게시물 동시 재조회
+        await Promise.allSettled([refetchProfile(), refetchPosts()]);
+
+        // 본인 프로필일 때만 북마크 재조회
+        if (isOwnProfile) {
+          await refetchBookmarks();
+        }
+      } catch {
+        // 개별 에러는 Apollo 내부에서 처리 → 여기서는 무시
+      } finally {
+        prevUserIdRef.current = nextId;
+      }
+    }, 300); // 300ms debounce (필요 시 조정 가능)
+
+    return () => {
+      if (refetchTimerRef.current) {
+        clearTimeout(refetchTimerRef.current);
+      }
     };
-    loadUserProfile();
-  }, []);
+  }, [
+    currentUser?.id,
+    isOwnProfile,
+    refetchProfile,
+    refetchPosts,
+    refetchBookmarks,
+  ]);
 
-  // 사용자 정보가 변경되면 프로필 및 게시물 쿼리 다시 실행
+  // 프로필 데이터 수신 시 세션/로컬 사용자 동기화 (무한 렌더 방지)
+  // - currentUser 의존성 제거 (새 객체 병합으로 매번 setState 발생하던 문제 해결)
+  // - shallow 필드 비교 후 변경시에만 setState + saveSession
+  // - 타인 프로필: isFollowing 초기 1회만 설정
   useEffect(() => {
-    if (currentUser?.id) {
-      refetchProfile();
-      refetchPosts();
-      refetchBookmarks();
-    }
-  }, [currentUser?.id, refetchProfile, refetchPosts, refetchBookmarks]);
+    // 서버 프로필 데이터 수신 시 전역 사용자와 비교 후 필요한 경우만 updateUser 호출
+    if (!profileData?.getUserById) return;
 
-  // 프로필 데이터가 로드되면 사용자 정보 업데이트
-  useEffect(() => {
-    if (profileData?.getUserById) {
-      // 본인 프로필일 때만 세션 업데이트
-      if (isOwnProfile) {
-        const updatedUser = {
-          ...currentUser,
-          ...profileData.getUserById,
-        };
-        saveSession(updatedUser);
-        setCurrentUser(updatedUser);
+    if (isOwnProfile && currentUser) {
+      const server = profileData.getUserById;
+      const keys: (keyof typeof server)[] = [
+        "nickname",
+        "email",
+        "profileImageUrl",
+        "bio",
+        "age",
+        "role",
+      ];
+      const changed = keys.some(
+        (k) => (currentUser as any)[k] !== (server as any)[k],
+      );
+      if (changed) {
+        void updateUser(server);
       }
-
-      // 타인 프로필일 때는 팔로우 상태 업데이트 (캐시 업데이트가 아직 적용되지 않은 경우)
-      if (!isOwnProfile && profileData.getUserById.isFollowing !== undefined) {
-        // 현재 팔로우 상태가 초기값(undefined)인 경우에만 업데이트
-        setIsFollowing(prev => prev === undefined ? profileData.getUserById.isFollowing : prev);
-      }
+    } else if (
+      !isOwnProfile &&
+      profileData.getUserById.isFollowing !== undefined &&
+      isFollowing === undefined
+    ) {
+      setIsFollowing(profileData.getUserById.isFollowing);
     }
-  }, [profileData?.getUserById, isOwnProfile, currentUser]);
+  }, [
+    profileData?.getUserById,
+    isOwnProfile,
+    isFollowing,
+    currentUser,
+    updateUser,
+  ]);
 
   // 게시물 데이터가 변경되면 상태 업데이트
   useEffect(() => {
@@ -302,7 +360,9 @@ export default function ProfileScreen({
         Toast.show({
           type: "error",
           text1: "팔로우 실패",
-          text2: result.errors?.[0]?.message || "팔로우 처리 중 오류가 발생했습니다.",
+          text2:
+            result.errors?.[0]?.message ||
+            "팔로우 처리 중 오류가 발생했습니다.",
           visibilityTime: 3000,
         });
         return;
@@ -314,9 +374,7 @@ export default function ProfileScreen({
       Toast.show({
         type: "success",
         text1: "성공",
-        text2: newIsFollowing
-          ? "팔로우했습니다"
-          : "언팔로우했습니다",
+        text2: newIsFollowing ? "팔로우했습니다" : "언팔로우했습니다",
         visibilityTime: 2000,
       });
 
@@ -466,11 +524,7 @@ export default function ProfileScreen({
         <View style={themed($header)}>
           {isModal ? (
             <TouchableOpacity onPress={onClose}>
-              <Ionicons
-                name="arrow-back"
-                color={"#fff"}
-                size={24}
-              />
+              <Ionicons name="arrow-back" color={"#fff"} size={24} />
             </TouchableOpacity>
           ) : (
             <View />
@@ -480,11 +534,7 @@ export default function ProfileScreen({
           </Text>
           {!isModal && isOwnProfile ? (
             <TouchableOpacity onPress={handleSettings}>
-              <Ionicons
-                name="settings-outline"
-                color={"#fff"}
-                size={24}
-              />
+              <Ionicons name="settings-outline" color={"#fff"} size={24} />
             </TouchableOpacity>
           ) : (
             <View />
@@ -505,7 +555,8 @@ export default function ProfileScreen({
               <View style={themed($ageBadge)}>
                 <Text style={themed($ageBadgeText)}>
                   {(() => {
-                    const age = (userProfile?.age || currentUser?.age) as number;
+                    const age = (userProfile?.age ||
+                      currentUser?.age) as number;
                     if (age >= 40) return `40+ 🟪`;
                     if (age >= 30) return `30-35 🟦`;
                     if (age >= 26) return `26-29 🟩`;
@@ -575,7 +626,9 @@ export default function ProfileScreen({
             style={themed($statItem)}
             onPress={handleFollowingPress}
           >
-            <Text style={themed($statNumber)}>{userProfile.followingCount}</Text>
+            <Text style={themed($statNumber)}>
+              {userProfile.followingCount}
+            </Text>
             <Text style={themed($statLabel)}>팔로잉</Text>
           </TouchableOpacity>
         </View>
@@ -670,7 +723,9 @@ export default function ProfileScreen({
                 posts={getCurrentPosts()}
                 ListEmptyComponent={
                   <View style={themed($emptyState)}>
-                    <Text style={themed($emptyStateText)}>{getEmptyMessage()}</Text>
+                    <Text style={themed($emptyStateText)}>
+                      {getEmptyMessage()}
+                    </Text>
                   </View>
                 }
               />

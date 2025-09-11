@@ -1,25 +1,24 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
+  FlatList,
+  ScrollView,
+  ActivityIndicator,
+  Dimensions,
   ViewStyle,
   TextStyle,
-  FlatList,
-  Dimensions,
-  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession, saveSession } from "@/lib/auth";
-import { emitSessionChange } from "@/lib/auth/user-session-events";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { showToast } from "@/components/CustomToast";
-import TeamLogo from "@/components/TeamLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import TeamLogo from "@/components/TeamLogo";
 import FavoriteMonthPicker from "@/components/team/FavoriteMonthPicker";
 import TeamSettingsPopover from "@/components/team/TeamSettingsPopover";
 import {
@@ -34,27 +33,36 @@ import {
   type UpdateMyTeamsResult,
 } from "@/lib/graphql/teams";
 
+/**
+ * NOTE (리팩토링 요약)
+ * - AuthContext(useAuth) 기반 전역 사용자/토큰 접근 (getSession 호출 제거)
+ * - 팀 선택 / favoriteDate / favoritePlayer 상태 로컬 관리 → 저장 시 서버 반영
+ * - 저장 성공 후 refetch + updateUser 로 전역 사용자(myTeams) 동기화
+ * - 잘못된 상태로 인해 깨졌던 이전 파일 전체 재작성
+ * - 불필요한 인증 중복 검사 제거 (isAuthenticated / accessToken 바로 활용)
+ */
+
 const { width: screenWidth } = Dimensions.get("window");
 
-/**
- * 팀 선택 모달 화면
- * 사용자가 선호하는 팀을 선택할 수 있습니다.
- */
 export default function TeamSelectionScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const {
+    user: currentUser,
+    isAuthenticated,
+    accessToken,
+    updateUser,
+  } = useAuth();
+
+  // --- 로컬 UI 상태 ---
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [teamFavoriteDates, setTeamFavoriteDates] = useState<
     Record<string, string>
   >({});
-  // 최애 선수 { name, number } 상태 (팀별)
   const [teamFavoritePlayers, setTeamFavoritePlayers] = useState<
     Record<string, { name?: string; number?: number }>
   >({});
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -62,8 +70,9 @@ export default function TeamSelectionScreen() {
     top: number;
     left: number;
   } | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // GraphQL 쿼리 및 뮤테이션
+  // --- GraphQL Queries / Mutations ---
   const {
     data: sportsData,
     loading: sportsLoading,
@@ -83,7 +92,6 @@ export default function TeamSelectionScreen() {
       if (
         error.message.includes("인증") ||
         error.message.includes("token") ||
-        error.message.includes("Cannot read properties of undefined") ||
         error.message.includes("Unauthorized") ||
         error.message.includes("로그인")
       ) {
@@ -92,155 +100,108 @@ export default function TeamSelectionScreen() {
     },
   });
 
-  const [updateMyTeams, { loading: updateLoading, error: updateError }] =
+  const [updateMyTeams, { loading: updateLoading }] =
     useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
 
-  // 전체 로딩 상태
   const isLoading = sportsLoading || myTeamsLoading || updateLoading;
 
-  // 사용자 정보 로드 및 인증 확인
+  // --- 인증 상태 감시 ---
   useEffect(() => {
-    const loadUserAndCheckAuth = async () => {
-      try {
-        const { token, user, isAuthenticated: authStatus } = await getSession();
-        setIsAuthenticated(authStatus);
+    if (isAuthenticated === false) {
+      setAuthError("로그인이 필요한 기능입니다.");
+      showToast({
+        type: "error",
+        title: "인증 필요",
+        message: "로그인이 필요한 기능입니다.",
+        duration: 2000,
+      });
+      setTimeout(() => router.back(), 600);
+    }
+  }, [isAuthenticated, router]);
 
-        if (user) {
-          setCurrentUser(user);
-        } else if (!token) {
-          console.warn("인증되지 않은 사용자가 팀 선택 화면에 접근");
-          setAuthError("로그인이 필요한 기능입니다.");
-          showToast({
-            type: "error",
-            title: "인증 필요",
-            message: "로그인이 필요한 기능입니다.",
-            duration: 2000,
-          });
-          setTimeout(() => router.back(), 500);
+  // --- myTeamsData 로컬 상태 반영 ---
+  useEffect(() => {
+    if (!myTeamsData?.myTeams) return;
+    try {
+      const teamIds: string[] = [];
+      const favoriteDates: Record<string, string> = {};
+      const favoritePlayers: Record<
+        string,
+        { name?: string; number?: number }
+      > = {};
+
+      myTeamsData.myTeams.forEach((ut) => {
+        if (!ut.team) return;
+        teamIds.push(ut.team.id);
+
+        if (ut.favoriteDate) {
+          favoriteDates[ut.team.id] = ut.favoriteDate;
         }
+        if (
+          (ut as any).favoritePlayerName ||
+          (ut as any).favoritePlayerNumber !== undefined
+        ) {
+          // API 설계 상 optional field 이므로 any 캐스팅
+          favoritePlayers[ut.team.id] = {
+            name: (ut as any).favoritePlayerName,
+            number: (ut as any).favoritePlayerNumber,
+          };
+        }
+      });
 
-        console.log("인증 상태:", {
-          isAuthenticated: authStatus,
-          hasToken: !!token,
-          hasUser: !!user,
-          userId: user?.id,
-          tokenLength: token?.length || 0,
-        });
-      } catch (error) {
-        console.error("인증 확인 중 오류 발생:", error);
-        setAuthError("인증 상태를 확인할 수 없습니다.");
-      }
-    };
-    loadUserAndCheckAuth();
-  }, [router]);
-
-  // 사용자가 선택한 팀 목록 로드
-  useEffect(() => {
-    if (myTeamsData?.myTeams) {
-      try {
-        console.log(
-          "MyTeams 데이터 확인:",
-          JSON.stringify(myTeamsData.myTeams, null, 2),
-        );
-
-        const teamIds: string[] = [];
-        const favoriteDates: Record<string, string> = {};
-        const favoritePlayers: Record<
-          string,
-          { name?: string; number?: number }
-        > = {};
-
-        myTeamsData.myTeams.forEach((userTeam) => {
-          console.log("UserTeam 객체:", userTeam);
-
-          if (!userTeam.team) {
-            console.error("UserTeam에 team 객체가 없음:", userTeam);
-            return;
-          }
-
-          teamIds.push(userTeam.team.id);
-
-          // favoriteDate가 있으면 저장
-          if (userTeam.favoriteDate) {
-            favoriteDates[userTeam.team.id] = userTeam.favoriteDate;
-          }
-          if (
-            (userTeam as any).favoritePlayerName ||
-            (userTeam as any).favoritePlayerNumber !== undefined
-          ) {
-            favoritePlayers[userTeam.team.id] = {
-              name: (userTeam as any).favoritePlayerName,
-              number: (userTeam as any).favoritePlayerNumber,
-            };
-          }
-        });
-
-        setSelectedTeams(teamIds);
-        setTeamFavoriteDates(favoriteDates);
-        setTeamFavoritePlayers(favoritePlayers);
-        console.log("사용자가 선택한 팀 목록 로드 성공:", teamIds);
-        console.log("팀별 favoriteDate 로드 성공:", favoriteDates);
-        console.log("팀별 favoritePlayer 로드 성공:", favoritePlayers);
-      } catch (error) {
-        console.error("팀 목록 처리 중 오류 발생:", error);
-      }
+      setSelectedTeams(teamIds);
+      setTeamFavoriteDates(favoriteDates);
+      setTeamFavoritePlayers(favoritePlayers);
+    } catch (e) {
+      console.error("myTeams 처리 오류:", e);
     }
   }, [myTeamsData]);
 
-  // 인증 오류 발생 시 처리
+  // --- myTeams 쿼리 오류 추가 처리 ---
   useEffect(() => {
-    if (myTeamsError) {
-      console.error("myTeams 쿼리 오류:", myTeamsError);
-      if (isAuthenticated === false) {
-        showToast({
-          type: "error",
-          title: "인증 오류",
-          message: "인증 정보가 만료되었습니다. 다시 로그인해주세요.",
-          duration: 3000,
-        });
-      }
+    if (myTeamsError && isAuthenticated) {
+      showToast({
+        type: "error",
+        title: "팀 로드 실패",
+        message: "My Teams 정보를 불러오지 못했습니다.",
+        duration: 3000,
+      });
     }
   }, [myTeamsError, isAuthenticated]);
 
-  /**
-   * 팀 선택/해제 핸들러
-   */
+  // --- 팀 선택/해제 ---
   const handleTeamSelect = (teamId: string) => {
     setSelectedTeams((prev) => {
       if (prev.includes(teamId)) {
-        // 이미 선택된 팀이면 해제
-        setTeamFavoriteDates((prevDates) => {
-          const newDates = { ...prevDates };
-          delete newDates[teamId];
-          return newDates;
+        // 해제 → 관련 날짜 제거
+        setTeamFavoriteDates((p) => {
+          const next = { ...p };
+          // 날짜 제거
+          delete next[teamId];
+          return next;
         });
-        // 팀 설정 버튼 숨김
         setShowSettings(false);
         return prev.filter((id) => id !== teamId);
-      } else {
-        // 선택만 수행. 팀 설정 버튼은 별도 버튼 클릭 시 노출
-        return [...prev, teamId];
       }
+      return [...prev, teamId];
     });
   };
 
-  /**
-   * 팀 설정 버튼 클릭 시 팝오버 오픈
-   */
-  const openTeamSettings = (teamId: string, pageX: number, pageY: number) => {
+  // --- 팀 설정 팝오버 열기 ---
+  const openTeamSettings = (
+    teamId: string,
+    pageX: number = 0,
+    pageY: number = 0,
+  ) => {
     setPendingTeamId(teamId);
     setShowCalendar(false);
     setShowSettings(true);
     setSettingsAnchor({ top: pageY + 8, left: pageX - 110 });
   };
 
-  /**
-   * 팬이 된 날짜 선택 핸들러
-   */
+  // --- 팬이 된 날짜 선택 ---
   const handleFavoriteDateSelect = (favoriteDate: string) => {
     if (pendingTeamId) {
-      // 팀 추가 및 favoriteDate 저장
-      // 팀은 이미 선택되어 있으므로 날짜만 저장
       setTeamFavoriteDates((prev) => ({
         ...prev,
         [pendingTeamId]: favoriteDate,
@@ -250,116 +211,54 @@ export default function TeamSelectionScreen() {
     setShowCalendar(false);
   };
 
-  /**
-   * 캘린더 취소 핸들러
-   */
+  // --- 캘린더 취소 ---
   const handleCalendarCancel = () => {
     setPendingTeamId(null);
     setShowCalendar(false);
   };
 
-  /**
-   * 인증 상태 확인 함수
-   */
-  const checkAuthentication = async () => {
-    try {
-      const { token, user, isAuthenticated: authStatus } = await getSession();
-
-      console.log("인증 상태 확인:", {
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-        hasUser: !!user,
-        isAuthenticated: authStatus,
-      });
-
-      if (!authStatus) {
-        setIsAuthenticated(false);
-        setAuthError("인증 정보가 유효하지 않습니다.");
-        showToast({
-          type: "error",
-          title: "인증 필요",
-          message: "로그인이 필요한 기능입니다.",
-          duration: 3000,
-        });
-        return false;
-      }
-
-      setIsAuthenticated(true);
-      return true;
-    } catch (error) {
-      console.error("인증 확인 중 오류 발생:", error);
-      setAuthError("인증 상태를 확인할 수 없습니다.");
-      return false;
-    }
-  };
-
-  /**
-   * 팀 선택 저장 핸들러
-   */
-  const handleSave = async () => {
-    if (isLoading) return;
-
-    console.log("팀 저장 시도...");
-
-    // 인증 상태 확인
-    const isAuthValid = await checkAuthentication();
-    if (!isAuthValid) {
-      console.error("인증 실패 - 팀 저장 취소");
-      setTimeout(() => router.back(), 1000);
-      return;
-    }
-
-    // 사용자 정보 확인
-    if (!currentUser) {
-      console.error("사용자 정보 없음 - 팀 저장 취소");
+  // --- 인증 유효성 (간단) ---
+  const checkAuthentication = useCallback(() => {
+    if (!isAuthenticated || !currentUser || !accessToken) {
       showToast({
         type: "error",
         title: "인증 필요",
-        message: "팀 선택을 저장하려면 로그인이 필요합니다.",
+        message: "로그인이 만료되었거나 유효하지 않습니다.",
         duration: 3000,
       });
+      return false;
+    }
+    return true;
+  }, [isAuthenticated, currentUser, accessToken]);
+
+  // --- 저장 처리 ---
+  const handleSave = async () => {
+    if (isLoading) return;
+    if (!checkAuthentication()) {
+      setTimeout(() => router.back(), 600);
       return;
     }
-
-    // 토큰 상태 재확인
-    const { token } = await getSession();
-    if (!token) {
-      console.error("토큰 없음 - 팀 저장 취소");
+    if (!currentUser) {
       showToast({
         type: "error",
-        title: "인증 오류",
-        message: "인증 정보가 만료되었습니다. 다시 로그인해주세요.",
-        duration: 3000,
+        title: "인증 필요",
+        message: "사용자 정보를 찾을 수 없습니다.",
+        duration: 2500,
       });
-      setTimeout(() => router.back(), 1000);
       return;
     }
-
     if (selectedTeams.length === 0) {
       showToast({
         type: "warning",
         title: "팀 선택 필요",
         message: "최소 1개 이상의 팀을 선택해주세요.",
-        duration: 3000,
+        duration: 2500,
       });
       return;
     }
 
     try {
-      console.log("팀 선택 저장 요청 시작:", selectedTeams);
-
-      // 세션 정보 가져오기
-      const sessionInfo = await getSession();
-      console.log("저장 요청 전 세션 상태:", {
-        hasToken: !!sessionInfo.token,
-        tokenLength: sessionInfo.token?.length || 0,
-        hasUser: !!sessionInfo.user,
-        userId: sessionInfo.user?.id,
-        isAuthenticated: sessionInfo.isAuthenticated,
-      });
-
-      // GraphQL 뮤테이션으로 팀 선택 업데이트
-      const { data, errors } = await updateMyTeams({
+      const { errors } = await updateMyTeams({
         variables: {
           teams: selectedTeams.map((teamId) => ({
             teamId,
@@ -370,176 +269,70 @@ export default function TeamSelectionScreen() {
         },
         context: {
           headers: {
-            authorization: sessionInfo.token
-              ? `Bearer ${sessionInfo.token}`
-              : "",
+            authorization: accessToken ? `Bearer ${accessToken}` : "",
           },
         },
       });
 
-      if (errors) {
-        console.error("GraphQL 뮤테이션 오류:", errors);
+      if (errors && errors.length > 0) {
         throw new Error(errors[0].message);
       }
 
-      console.log("팀 선택 저장 성공:", data);
-
-      // 사용자 팀 목록 다시 조회 (신규: refetch 결과를 세션 및 전역 이벤트에 반영)
+      // 최신 myTeams 재조회 후 전역 사용자 업데이트
       const refetched = await refetchMyTeams({ fetchPolicy: "network-only" });
-      try {
-        const newMyTeams = refetched?.data?.myTeams || [];
-        // 현재 세션 사용자 불러오기
-        const sessionInfoAfter = await getSession();
-        const sessionUser = sessionInfoAfter.user;
+      const newMyTeams = refetched?.data?.myTeams || [];
+      await updateUser({ myTeams: newMyTeams } as any);
 
-        if (sessionUser) {
-          // 세션 사용자 객체에 최신 myTeams 병합
-          await saveSession({
-            ...sessionUser,
-            myTeams: newMyTeams,
-          } as any);
-
-          // 세션 변경 이벤트 브로드캐스트 (feed 등에서 즉시 반영)
-          emitSessionChange({
-            user: { ...sessionUser, myTeams: newMyTeams } as any,
-            token: sessionInfoAfter.token,
-            reason: "update",
-          });
-          
-        } else {
-          console.warn(
-            "세션 사용자 정보를 찾지 못해 myTeams 세션 반영을 건너뜀",
-          );
-        }
-      } catch (sessionSyncError) {
-        console.warn("MyTeams 세션 반영 중 오류:", sessionSyncError);
-      }
-
-      // My Teams 변경 시 필터를 새로운 My Teams로 재설정
+      // 필터 상태도 로컬 저장 (피드 필터링과 동기화)
       try {
         await AsyncStorage.setItem(
           "selected_team_filter",
           JSON.stringify(selectedTeams),
         );
-        
-      } catch (error) {
-        console.error("필터 재설정 실패:", error);
+      } catch (e) {
+        console.warn("팀 필터 AsyncStorage 저장 실패:", (e as any)?.message);
       }
 
       showToast({
         type: "success",
-        title: "My Teams 저장 완료",
-        message:
-          selectedTeams.length > 0
-            ? `${selectedTeams.length}개 팀이 My Teams로 저장되었습니다!`
-            : "My Teams가 저장되었습니다.",
+        title: "저장 완료",
+        message: `${selectedTeams.length}개 팀이 저장되었습니다.`,
         duration: 2000,
       });
-
       router.back();
-    } catch (error) {
-      console.error("팀 선택 저장 실패:", error);
-
-      // 인증 관련 오류인지 확인
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      if (
-        errorMessage.includes("login") ||
-        errorMessage.includes("로그인") ||
-        errorMessage.includes("인증") ||
-        errorMessage.includes("auth") ||
-        errorMessage.includes("token") ||
-        errorMessage.includes("토큰") ||
-        errorMessage.includes("undefined") ||
-        errorMessage.includes("Unauthorized")
-      ) {
-        console.error("인증 오류 발생:", errorMessage);
-
-        showToast({
-          type: "error",
-          title: "인증 오류",
-          message: "인증에 문제가 발생했습니다. 다시 로그인해주세요.",
-          duration: 3000,
-        });
-
-        setTimeout(() => router.back(), 1000);
-
-        getSession().then(({ token, user }) => {
-          
-        });
-      } else {
-        showToast({
-          type: "error",
-          title: "저장 실패",
-          message: "팀 선택을 저장하는 중 오류가 발생했습니다.",
-          duration: 3000,
-        });
+    } catch (e) {
+      const msg =
+        (e as any)?.message || "팀 선택을 저장하는 중 오류가 발생했습니다.";
+      const isAuth =
+        msg.includes("auth") ||
+        msg.includes("인증") ||
+        msg.includes("token") ||
+        msg.includes("로그인");
+      showToast({
+        type: "error",
+        title: isAuth ? "인증 오류" : "저장 실패",
+        message: msg,
+        duration: 3000,
+      });
+      if (isAuth) {
+        setTimeout(() => router.back(), 800);
       }
     }
   };
 
-  /**
-   * 카테고리 탭 렌더링
-   */
-  const renderCategoryTab = ({
-    item,
-    index,
-  }: {
-    item: Sport;
-    index: number;
-  }) => {
-    const isActive = index === activeCategoryIndex;
-
-    return (
-      <TouchableOpacity
-        style={[
-          themed($categoryTab),
-          {
-            backgroundColor: isActive ? theme.colors.tint : "transparent",
-            borderColor: isActive ? theme.colors.tint : theme.colors.border,
-          },
-        ]}
-        onPress={() => setActiveCategoryIndex(index)}
-      >
-        <Text style={themed($categoryTabIcon)}>{item.icon}</Text>
-        <Text
-          style={[
-            themed($categoryTabText),
-            {
-              color: isActive ? "white" : theme.colors.text,
-            },
-          ]}
-        >
-          {item.name}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  /**
-   * 팀 그리드 렌더링 (여러 개 표시)
-   */
+  // --- 팀별 그리드 구성 ---
   const renderTeamGrid = (teams: Team[]) => {
-    console.log(
-      "렌더링할 팀 목록:",
-      teams.map((t) => ({ id: t.id, name: t.name })),
-    );
-    console.log("현재 선택된 팀 ID 목록:", selectedTeams);
-
-    const rows = [];
-    const teamsPerRow = 3; // 3개씩 표시
+    const teamsPerRow = 3;
+    const rows: React.ReactElement[] = [];
 
     for (let i = 0; i < teams.length; i += teamsPerRow) {
       const rowTeams = teams.slice(i, i + teamsPerRow);
+
       rows.push(
-        <View key={i} style={themed($teamRow)}>
+        <View key={`row-${i}`} style={themed($teamRow)}>
           {rowTeams.map((team) => {
             const teamId = team.id;
             const isSelected = selectedTeams.includes(teamId);
-            console.log(
-              `팀 ${team.name} (ID: ${teamId}): ${isSelected ? "선택됨" : "선택안됨"}`,
-            );
-
             return (
               <View key={teamId} style={themed($teamItemColumn)}>
                 <TouchableOpacity
@@ -550,7 +343,7 @@ export default function TeamSelectionScreen() {
                         ? team.color
                         : theme.colors.border,
                       backgroundColor: isSelected
-                        ? team.color + "20"
+                        ? `${team.color}20`
                         : theme.colors.card,
                     },
                   ]}
@@ -578,11 +371,16 @@ export default function TeamSelectionScreen() {
                           color: isSelected ? team.color : theme.colors.text,
                         },
                       ]}
+                      numberOfLines={1}
                     >
                       {team.name}
                     </Text>
                     {isSelected && teamFavoriteDates[teamId] && (
-                      <Text style={themed($teamCardDate)}>
+                      <Text
+                        style={themed($teamCardDate)}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
                         {new Date(teamFavoriteDates[teamId]).toLocaleDateString(
                           "ko-KR",
                           {
@@ -595,8 +393,6 @@ export default function TeamSelectionScreen() {
                     )}
                   </View>
                 </TouchableOpacity>
-
-                {/* 팀 설정 버튼 (선택된 팀에만 표시). 나머지는 placeholder로 높이 유지 */}
                 {isSelected ? (
                   <TouchableOpacity
                     style={[
@@ -606,11 +402,10 @@ export default function TeamSelectionScreen() {
                     onPress={(e) =>
                       openTeamSettings(
                         teamId,
-                        e.nativeEvent?.pageX || 0,
-                        e.nativeEvent?.pageY || 0,
+                        (e as any)?.nativeEvent?.pageX || 0,
+                        (e as any)?.nativeEvent?.pageY || 0,
                       )
                     }
-                    activeOpacity={0.85}
                   >
                     <Ionicons
                       name="settings-outline"
@@ -629,53 +424,39 @@ export default function TeamSelectionScreen() {
               </View>
             );
           })}
-          {/* 빈 공간 채우기 */}
-          {Array.from({ length: teamsPerRow - rowTeams.length }).map(
-            (_, index) => (
-              <View
-                key={`empty-${index}`}
-                style={[themed($teamCard), { opacity: 0 }]}
-              />
-            ),
-          )}
+          {/* 빈 자리 채우기 */}
+          {Array.from({ length: teamsPerRow - rowTeams.length }).map((_, j) => (
+            <View
+              key={`empty-${i}-${j}`}
+              style={[themed($teamCard), { opacity: 0 }]}
+            />
+          ))}
         </View>,
       );
     }
-
     return rows;
   };
 
-  // 인증 오류 처리
+  // --- 스포츠 목록 / 현재 선택 스포츠 ---
+  const sports = sportsData?.sports || [];
+  const currentSport = sports[activeCategoryIndex];
+
+  // --- 인증 오류 화면 ---
   if (authError) {
-    console.log("인증 오류로 인한 화면 렌더링:", authError);
-
-    getSession().then(({ token, user, isAuthenticated }) => {
-      console.log("인증 오류 화면 - 세션 상태:", {
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-        hasUser: !!user,
-        userId: user?.id,
-        isAuthenticated,
-      });
-    });
-
     return (
       <View style={[themed($container), themed($errorContainer)]}>
         <Text style={themed($errorText)}>{authError}</Text>
         <TouchableOpacity
           style={themed($retryButton)}
-          onPress={() => {
-            
-            router.back();
-          }}
+          onPress={() => router.back()}
         >
-          <Text style={themed($retryButtonText)}>로그인 화면으로</Text>
+          <Text style={themed($retryButtonText)}>닫기</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // 로딩 상태 처리
+  // --- 로딩 ---
   if (sportsLoading || myTeamsLoading) {
     return (
       <View style={[themed($container), themed($loadingContainer)]}>
@@ -685,7 +466,7 @@ export default function TeamSelectionScreen() {
     );
   }
 
-  // 에러 상태 처리
+  // --- 스포츠 데이터 없음 ---
   if (!sportsData) {
     return (
       <View style={[themed($container), themed($errorContainer)]}>
@@ -694,23 +475,14 @@ export default function TeamSelectionScreen() {
         </Text>
         <TouchableOpacity
           style={themed($retryButton)}
-          onPress={() => {
-            refetchSports({ fetchPolicy: "network-only" });
-          }}
+          // 강제 네트워크 리패치
+          onPress={() => refetchSports({ fetchPolicy: "network-only" })}
         >
           <Text style={themed($retryButtonText)}>다시 시도</Text>
         </TouchableOpacity>
       </View>
     );
   }
-
-  const sports = sportsData?.sports || [];
-  const currentSport = sports[activeCategoryIndex];
-
-  // 디버깅을 위한 로그
-  console.log("Sports data:", sports);
-  console.log("Current sport:", currentSport);
-  console.log("Current sport teams:", currentSport?.teams);
 
   return (
     <View style={themed($container)}>
@@ -734,7 +506,7 @@ export default function TeamSelectionScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 설명 */}
+      {/* 안내 섹션 */}
       <View style={themed($descriptionSection)}>
         <Text style={themed($descriptionTitle)}>응원할 팀을 선택하세요</Text>
         <Text style={themed($descriptionText)}>
@@ -748,20 +520,50 @@ export default function TeamSelectionScreen() {
         )}
       </View>
 
-      {/* 카테고리 슬라이더 */}
+      {/* 스포츠 카테고리 슬라이더 */}
       <View style={themed($categorySliderContainer)}>
         <FlatList
           data={sports}
-          renderItem={renderCategoryTab}
           keyExtractor={(item) => item.id}
+          renderItem={({ item, index }) => {
+            const isActive = index === activeCategoryIndex;
+            return (
+              <TouchableOpacity
+                style={[
+                  themed($categoryTab),
+                  {
+                    backgroundColor: isActive
+                      ? theme.colors.tint
+                      : "transparent",
+                    borderColor: isActive
+                      ? theme.colors.tint
+                      : theme.colors.border,
+                  },
+                ]}
+                onPress={() => setActiveCategoryIndex(index)}
+              >
+                <Text style={themed($categoryTabIcon)}>{item.icon}</Text>
+                <Text
+                  style={[
+                    themed($categoryTabText),
+                    {
+                      color: isActive ? "white" : theme.colors.text,
+                    },
+                  ]}
+                >
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={themed($categorySliderContent)}
         />
       </View>
 
+      {/* 팀 목록 */}
       <ScrollView style={themed($scrollContainer)}>
-        {/* 선택된 카테고리의 팀 목록 */}
         {currentSport ? (
           <View style={themed($teamsContainer)}>
             {currentSport.teams && currentSport.teams.length > 0 ? (
@@ -783,29 +585,11 @@ export default function TeamSelectionScreen() {
         )}
       </ScrollView>
 
-      {/* 로딩 중 표시 */}
+      {/* 저장 중 오버레이 */}
       {updateLoading && (
         <View style={themed($loadingOverlay)}>
           <ActivityIndicator size="large" color={theme.colors.tint} />
           <Text style={themed($loadingText)}>데이터 저장 중...</Text>
-        </View>
-      )}
-
-      {/* 인증 오류 메시지 */}
-      {myTeamsError && (
-        <View
-          style={[
-            themed($errorContainer),
-            { position: "absolute", bottom: 20, left: 20, right: 20 },
-          ]}
-        >
-          <Text style={themed($errorText)}>
-            {myTeamsError.message.includes("인증") ||
-            myTeamsError.message.includes("Unauthorized") ||
-            myTeamsError.message.includes("token")
-              ? "인증 정보가 만료되었습니다. 다시 로그인해주세요."
-              : "팀 정보를 불러오는 중 오류가 발생했습니다."}
-          </Text>
         </View>
       )}
 
@@ -828,7 +612,6 @@ export default function TeamSelectionScreen() {
         }}
         teamId={pendingTeamId || undefined}
         onSelectFavoritePlayer={async (player) => {
-          // 최애 선수 로컬 상태 갱신 + 즉시 백엔드 반영
           if (!pendingTeamId) return;
           const updatedPlayers = {
             ...teamFavoritePlayers,
@@ -837,11 +620,9 @@ export default function TeamSelectionScreen() {
               number: player.number,
             },
           };
-          // 1) 로컬 상태 먼저 업데이트 (UI 즉시 반영)
           setTeamFavoritePlayers(updatedPlayers);
-          // 2) 기존 선택된 팀 전체를 그대로 다시 전송 (favoriteDate 로직과 동일한 패턴 유지)
+          // 즉시 서버 반영 (선택 기능: 실패 시 롤백은 생략)
           try {
-            // NOTE: 즉시 저장 - 커스텀 헤더 제거 (CORS: 'x-refresh-session' 차단 이슈 해결)
             await updateMyTeams({
               variables: {
                 teams: selectedTeams.map((teamId) => ({
@@ -851,16 +632,19 @@ export default function TeamSelectionScreen() {
                   favoritePlayerNumber: updatedPlayers[teamId]?.number ?? null,
                 })),
               },
+              context: {
+                headers: {
+                  authorization: accessToken ? `Bearer ${accessToken}` : "",
+                },
+              },
             });
-            // (선택) 추후 성공 토스트 추가 가능
-          } catch (error) {
-            console.error("최애 선수 즉시 저장 실패:", error);
-            // (선택) 실패 시 롤백 로직 또는 사용자 알림 추가 가능
+          } catch (e) {
+            console.warn("최애 선수 즉시 저장 실패:", (e as any)?.message);
           }
         }}
       />
 
-      {/* 팬이 된 날짜 선택 (연/월) */}
+      {/* 팬이 된 날짜 선택 Month Picker */}
       <FavoriteMonthPicker
         visible={showCalendar}
         onClose={handleCalendarCancel}
@@ -871,23 +655,24 @@ export default function TeamSelectionScreen() {
         teamName={
           pendingTeamId && sportsData
             ? sportsData.sports
-                .flatMap((sport) => sport.teams)
-                .find((team) => team.id === pendingTeamId)?.name
+                .flatMap((s) => s.teams)
+                .find((t) => t.id === pendingTeamId)?.name
             : undefined
         }
         teamColor={
           pendingTeamId && sportsData
             ? sportsData.sports
-                .flatMap((sport) => sport.teams)
-                .find((team) => team.id === pendingTeamId)?.color
-            : "#FF0000"
+                .flatMap((s) => s.teams)
+                .find((t) => t.id === pendingTeamId)?.color
+            : theme.colors.tint
         }
       />
     </View>
   );
 }
 
-// --- 스타일 정의 ---
+/* -------------------- Styles -------------------- */
+
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
   backgroundColor: colors.background,
@@ -927,11 +712,11 @@ const $descriptionSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.lg,
 });
 
-const $descriptionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+const $descriptionTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 20,
   fontWeight: "bold",
   color: colors.text,
-  marginBottom: spacing.sm,
+  marginBottom: 4,
 });
 
 const $descriptionText: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -945,10 +730,6 @@ const $selectedCountText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.tint,
   fontWeight: "600",
   marginTop: spacing.sm,
-});
-
-const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
 });
 
 const $categorySliderContainer: ThemedStyle<ViewStyle> = ({
@@ -982,6 +763,10 @@ const $categoryTabIcon: ThemedStyle<TextStyle> = ({ spacing }) => ({
 const $categoryTabText: ThemedStyle<TextStyle> = () => ({
   fontSize: 14,
   fontWeight: "600",
+});
+
+const $scrollContainer: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
 });
 
 const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -1031,6 +816,7 @@ const $selectedIndicator: ThemedStyle<ViewStyle> = ({ colors }) => ({
 
 const $teamCardInfo: ThemedStyle<ViewStyle> = () => ({
   alignItems: "center",
+  maxWidth: screenWidth / 3 - 32,
 });
 
 const $teamCardName: ThemedStyle<TextStyle> = () => ({
@@ -1059,10 +845,9 @@ const $teamSettingsButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.card,
 });
 
-const $teamSettingsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $teamSettingsText: ThemedStyle<TextStyle> = () => ({
   fontSize: 12,
   fontWeight: "600",
-  color: colors.tint,
 });
 
 const $teamSettingsPlaceholder: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -1133,3 +918,5 @@ const $retryButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 16,
   fontWeight: "600",
 });
+
+/* 커밋 메세지: refactor(team-selection): AuthContext 기반 전면 재작성 & 세션 의존 로직 정리 */

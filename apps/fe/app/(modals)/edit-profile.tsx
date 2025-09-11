@@ -17,7 +17,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession, saveSession } from "@/lib/auth";
+import { User, saveSession } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useMutation } from "@apollo/client";
 import { UPDATE_PROFILE } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
@@ -37,7 +38,8 @@ export default function EditProfileScreen() {
   const router = useRouter();
 
   // 상태 관리
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 전역 AuthContext에서 사용자 정보 사용 (로컬 currentUser 상태 제거)
+  const { user: currentUser, updateUser } = useAuth();
   const [profileImage, setProfileImage] = useState<string>("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
@@ -53,21 +55,17 @@ export default function EditProfileScreen() {
   const [updateProfile] = useMutation(UPDATE_PROFILE);
 
   // 사용자 정보 로드
+  // 기존 getSession 기반 초기 로드 → 전역 AuthProvider 부트스트랩으로 대체
+  // currentUser 변경 시만 필드 동기화
   useEffect(() => {
-    const loadUserData = async () => {
-      const { user } = await getSession();
-      if (user) {
-        setCurrentUser(user);
-        setProfileImage(user.profileImageUrl || "");
-        setName(user.nickname || "");
-        setBio(user.bio || "");
-        setTeam(user.team || "");
-        setIsPrivate(user.isPrivate || false);
-        setAge((user as any).age);
-      }
-    };
-    loadUserData();
-  }, []);
+    if (!currentUser) return;
+    setProfileImage(currentUser.profileImageUrl || "");
+    setName(currentUser.nickname || "");
+    setBio(currentUser.bio || "");
+    setTeam(currentUser.team || "");
+    setIsPrivate(currentUser.isPrivate || false);
+    setAge((currentUser as any).age);
+  }, [currentUser]);
 
   /**
    * 프로필 이미지 업로드 처리

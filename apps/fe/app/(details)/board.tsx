@@ -18,7 +18,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { GET_POSTS } from "@/lib/graphql";
-import { User, getSession } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { selectOptimizedImageUrl } from "@/lib/image";
 
 // 날짜 포맷팅 함수 (임시로 여기에 정의)
@@ -77,7 +77,8 @@ export default function BoardScreen() {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 전역 AuthContext에서 현재 사용자 획득 (세션 재호출 제거)
+  const { user: currentUser } = useAuth();
 
   // 게시물 목록 조회
   const {
@@ -93,14 +94,7 @@ export default function BoardScreen() {
     errorPolicy: "all",
   });
 
-  // 사용자 세션 확인
-  useEffect(() => {
-    const checkSession = async () => {
-      const { user } = await getSession();
-      if (user) setCurrentUser(user);
-    };
-    checkSession();
-  }, []);
+  // (세션 확인 useEffect 제거됨 - AuthProvider가 부트스트랩 및 유지)
 
   /**
    * 뒤로가기 버튼 핸들러

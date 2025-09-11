@@ -22,7 +22,8 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 // 게시물은 이제 타입 없이 teamId로만 분류됩니다
-import { User, getSession } from "@/lib/auth";
+import { User } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import {
   createTextOnlyPost,
   createPostWithFiles,
@@ -111,7 +112,8 @@ export default function CreatePostScreen() {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 전역 AuthContext 로부터 현재 사용자/인증 상태 수신
+  const { user: currentUser, isAuthenticated } = useAuth();
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<SelectedVideo[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
@@ -137,29 +139,17 @@ export default function CreatePostScreen() {
     },
   });
 
-  // 사용자 세션 확인
+  // 인증 상태 감시: 비로그인 시 다이얼로그 표시 (전역 AuthProvider 사용)
   React.useEffect(() => {
-    const checkSession = async () => {
-      const { user, token } = await getSession();
-      console.log("세션 확인:", {
-        사용자: user ? "있음" : "없음",
-        토큰: token ? "있음" : "없음",
-      });
-      if (user && token) {
-        setCurrentUser(user);
-      } else {
-        // 로그인되지 않은 경우 피드로 리다이렉트
-        setDialog({
-          visible: true,
-          title: "로그인 필요",
-          description: "게시물을 작성하려면 로그인이 필요합니다.",
-          onConfirm: () => router.back(),
-          showCancel: false,
-        });
-      }
-    };
-    checkSession();
-  }, [router]);
+    if (isAuthenticated || currentUser) return;
+    setDialog({
+      visible: true,
+      title: "로그인 필요",
+      description: "게시물을 작성하려면 로그인이 필요합니다.",
+      onConfirm: () => router.back(),
+      showCancel: false,
+    });
+  }, [currentUser, isAuthenticated, router]);
 
   // 사용자가 선택한 팀들을 옵션으로 변환
   const teamOptions: TeamOption[] = React.useMemo(() => {

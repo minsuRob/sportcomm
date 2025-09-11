@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import ChatList from "@/components/chat/ChatList";
 import ChatInput from "@/components/chat/ChatInput";
 import { showToast } from "@/components/CustomToast";
@@ -83,7 +83,7 @@ export default function ChatRoomScreen() {
     roomName: string;
   }>();
 
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser } = useAuth(); // 전역 AuthContext 사용 (세션 재조회 제거)
   const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const inputRef = useRef<TextInput>(null);
@@ -142,27 +142,18 @@ export default function ChatRoomScreen() {
     };
   }, []);
 
-  // 사용자 정보 로드 및 메시지 데이터 조회
+  // 사용자/방 준비 후 메시지 & 채널 정보 로드 (getSession 제거 - AuthProvider 이용)
   useEffect(() => {
-    const loadUserAndMessages = async () => {
+    if (!roomId || !currentUser) return;
+    (async () => {
       try {
-        const { user } = await getSession();
-        setCurrentUser(user);
-
-        if (roomId && user) {
-          // 실제 메시지 데이터 로드
-          await loadMessages();
-          // 채팅방 정보도 로드
-          await loadChannelInfo();
-        } else {
-          console.warn("roomId 또는 user 정보가 없습니다.");
-        }
+        await loadMessages();
+        await loadChannelInfo();
       } catch (error) {
-        console.error("사용자 정보 및 메시지 로드 실패:", error);
+        console.error("초기 채팅 데이터 로드 실패:", error);
       }
-    };
-    loadUserAndMessages();
-  }, [roomId]);
+    })();
+  }, [roomId, currentUser]);
 
   // 메시지 로딩 상태 관리
   const [messagesLoading, setMessagesLoading] = useState(false);

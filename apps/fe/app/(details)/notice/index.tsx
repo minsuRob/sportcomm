@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getSession, User } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useQuery, useMutation } from "@apollo/client";
@@ -53,25 +53,16 @@ export default function NoticeListScreen() {
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ADMIN 전용: 글쓰기 모달/입력 상태 및 현재 사용자
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // ADMIN 전용: 글쓰기 모달/입력 상태 (사용자: AuthContext 경유)
+  const { user: currentUser } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [nTitle, setNTitle] = useState<string>("");
   const [nContent, setNContent] = useState<string>("");
   const [nCategory, setNCategory] = useState<NoticeGql["category"]>("GENERAL");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // 현재 사용자 세션 로드 → ADMIN 여부 판단
-  useEffect(() => {
-    (async () => {
-      try {
-        const { user } = await getSession();
-        setCurrentUser(user);
-      } catch (e) {
-        console.warn("[notice/index] 세션 조회 실패", e);
-      }
-    })();
-  }, []);
+  // (제거됨) 개별 getSession 호출: AuthProvider 가 전역 부트스트랩 수행
+  // currentUser 는 useAuth() 에서 직접 제공
 
   const isAdmin = !!(
     currentUser?.role === "ADMIN" || (currentUser as any)?.isAdmin

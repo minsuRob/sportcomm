@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { View, ViewStyle } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { GET_USER_PRIVATE_CHATS } from "@/lib/graphql/user-chat";
 import { showToast } from "@/components/CustomToast";
 import ChatRoomList from "@/components/chat/ChatRoomList";
@@ -19,16 +19,9 @@ import { ChatRoom } from "@/lib/chat/chatUtils";
 export default function PrivateChatScreen() {
   const { themed } = useAppTheme();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser } = useAuth(); // 전역 AuthContext에서 사용자 정보 획득
 
-  // 사용자 정보 로드
-  useEffect(() => {
-    const loadUser = async () => {
-      const { user } = await getSession();
-      setCurrentUser(user);
-    };
-    loadUser();
-  }, []);
+  // (제거됨) 개별 getSession 호출 로직: AuthProvider 가 전역에서 세션/사용자 부트스트랩 처리
 
   // 1대1 개인 채팅방 목록 조회
   const { data, loading, error, refetch } = useQuery(GET_USER_PRIVATE_CHATS, {

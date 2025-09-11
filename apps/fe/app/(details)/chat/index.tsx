@@ -14,7 +14,7 @@ import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { GET_USER_CHAT_ROOMS, JOIN_CHAT_ROOM } from "@/lib/graphql/user-chat";
 import { GET_ADMIN_CHAT_ROOMS } from "@/lib/graphql/admin";
 import { showToast } from "@/components/CustomToast";
@@ -60,7 +60,8 @@ interface ChatRoom {
 export default function ChatScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 전역 AuthContext 사용 (로컬 currentUser state 제거)
+  const { user: currentUser } = useAuth();
 
   // 사용자 접근 가능한 채팅방 쿼리 (팀 채팅방 + 공용 채팅방)
   const { data, loading, error, refetch } = useQuery(GET_USER_CHAT_ROOMS, {
@@ -75,14 +76,8 @@ export default function ChatScreen() {
     ],
   });
 
-  // 사용자 정보 로드
-  useEffect(() => {
-    const loadUser = async () => {
-      const { user } = await getSession();
-      setCurrentUser(user);
-    };
-    loadUser();
-  }, []);
+  // (삭제됨) 사용자 정보 로드 useEffect:
+  // AuthProvider 에서 이미 세션/사용자 부트스트랩 완료 → 별도 getSession 호출 불필요
 
   // 에러 처리
   useEffect(() => {

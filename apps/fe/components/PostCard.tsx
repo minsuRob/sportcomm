@@ -39,7 +39,7 @@ import {
 } from "@/lib/image";
 import { getSession } from "@/lib/auth";
 import { GET_USER_PROFILE, GET_USER_POSTS } from "@/lib/graphql";
-import { userProfilePrefetchCache } from "@/lib/state/userProfilePrefetchCache";
+
 import { useResponsive } from "@/lib/hooks/useResponsive";
 import UserAvatar from "@/components/users/UserAvatar";
 import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
@@ -796,47 +796,7 @@ const PostCard = React.memo(function PostCard({
             {/* 프로필 정보 컨테이너 */}
             <View style={themed($profileContainer)}>
               <TouchableOpacity
-                onPress={async () => {
-                  // 1) 피드에서 이미 가진 최소 정보로 basic 캐시 선 주입
-                  userProfilePrefetchCache.primeBasicFromAuthor({
-                    id: post.author.id,
-                    nickname: post.author.nickname,
-                    profileImageUrl: post.author.profileImageUrl,
-                    teams: extractTeams(post.author, 3).map((t) => ({
-                      teamId: t.id,
-                      teamName: t.name,
-                      logoUrl: (t as any).logoUrl,
-                      icon: (t as any).icon,
-                    })),
-                  });
-                  // 2) Apollo Client를 이용해 상세 프로필 & 게시물 선 fetch (에러는 무시: UX 저하 방지)
-                  try {
-                    const apollo = useApolloClient();
-                    void userProfilePrefetchCache.prefetchFullAndPosts(
-                      post.author.id,
-                      {
-                        fetchFullProfile: async () => {
-                          const { data } = await apollo.query({
-                            query: GET_USER_PROFILE,
-                            variables: { userId: post.author.id },
-                            fetchPolicy: "network-only",
-                          });
-                          return data.getUserById;
-                        },
-                        fetchPosts: async () => {
-                          const { data } = await apollo.query({
-                            query: GET_USER_POSTS,
-                            variables: { input: { authorId: post.author.id } },
-                            fetchPolicy: "network-only",
-                          });
-                          return data.posts.posts;
-                        },
-                      },
-                    );
-                  } catch {
-                    // 선요청 실패는 치명 아님 - 모달 내에서 정상 로딩 진행
-                  }
-                  // 3) 네비게이션 진행
+                onPress={() => {
                   router.push(
                     `/(modals)/user-profile?userId=${post.author.id}`,
                   );

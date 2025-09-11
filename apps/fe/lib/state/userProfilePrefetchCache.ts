@@ -420,6 +420,3 @@ export const userProfilePrefetchCache = {
  * 구독:
  * const unsub = userProfilePrefetchCache.subscribe(userId, snap => setState(...))
  */
-
-//
-// commit: feat(cache): add userProfilePrefetchCache for author basic/full profile and posts prefetch

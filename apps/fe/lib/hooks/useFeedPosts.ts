@@ -364,6 +364,39 @@ export function useFeedPosts() {
     };
   }, [filterInitialized, authData?.myTeams, isAuthenticated, authRefetch]);
 
+  useEffect(() => {
+    if (!filterInitialized || !mountedRef.current) return;
+    (async () => {
+      try {
+        const teamKey =
+          selectedTeamIds && selectedTeamIds.length > 0
+            ? selectedTeamIds.slice().sort().join(",")
+            : "ALL";
+        const scope = isAuthenticated ? "auth" : "guest";
+        const key = `feed_snapshot_v1:${scope}:${teamKey}`;
+        const snap = await AsyncStorage.getItem(key);
+        if (snap) {
+          const parsed = JSON.parse(snap) as { posts: GqlPost[]; ts: number };
+          if (parsed?.posts?.length) {
+            setPosts(
+              parsed.posts.map(
+                (p) =>
+                  ({
+                    ...p,
+                    isMock: false,
+                    media: p.media || [],
+                  }) as Post,
+              ),
+            );
+          }
+        }
+      } catch {
+        // 스냅샷 로드 실패는 무시 (네트워크 응답으로 대체됨)
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterInitialized, isAuthenticated, selectedTeamIds]);
+
   // 인증 사용자: 통합 쿼리 차단 사용자 목록 반영
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -428,6 +461,21 @@ export function useFeedPosts() {
 
     if (source.page === 1) {
       setPosts(newPosts);
+      // 첫 페이지 결과는 AsyncStorage에 스냅샷으로 보관하여 초기 페인트 가속화 (stale-while-revalidate)
+      try {
+        const teamKey =
+          selectedTeamIds && selectedTeamIds.length > 0
+            ? selectedTeamIds.slice().sort().join(",")
+            : "ALL";
+        const scope = isAuthenticated ? "auth" : "guest";
+        const key = `feed_snapshot_v1:${scope}:${teamKey}`;
+        void AsyncStorage.setItem(
+          key,
+          JSON.stringify({ posts: source.posts, ts: Date.now() }),
+        );
+      } catch {
+        // 스냅샷 저장 실패는 무시 (기능상 치명적이지 않음)
+      }
     } else {
       setPosts((current) => {
         const map = new Map(current.map((p) => [p.id, p] as const));

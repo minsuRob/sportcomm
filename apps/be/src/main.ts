@@ -155,18 +155,39 @@ async function bootstrap() {
 
     // CORS 설정
     const isDevelopment = configService.get('NODE_ENV') === 'development';
+    
+    // CORS Origin 설정 - 환경변수와 기본값을 합쳐서 사용
+    const getCorsOrigins = (): string[] => {
+      const corsOriginEnv = configService.get<string>('CORS_ORIGIN');
+      
+      // 기본값 설정
+      const defaultOrigins = [
+        'https://sportcomm.pages.dev',
+        'http://localhost:3000'
+      ];
+      
+      if (corsOriginEnv) {
+        // 환경변수에서 쉼표로 구분된 값들을 배열로 변환하고 공백 제거
+        const envOrigins = corsOriginEnv.split(',').map(origin => origin.trim());
+        // 기본값과 환경변수 값을 합치고 중복 제거
+        return [...new Set([...defaultOrigins, ...envOrigins])];
+      }
+      
+      // 환경변수가 없으면 기본값만 사용
+      return defaultOrigins;
+    };
+
+    const corsOrigins = getCorsOrigins();
+    
+    // 개발환경에서는 와일드카드도 추가
+    const finalOrigins = isDevelopment 
+      ? [...corsOrigins, '*']
+      : corsOrigins;
+
+    console.log(`🌐 CORS Origins 설정: ${JSON.stringify(finalOrigins)}`);
+
     app.enableCors({
-      origin: isDevelopment
-        ? [
-            "https://sportcomm.pages.dev",
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'http://localhost:4000',
-            'http://localhost:8081',
-            // 와일드카드 추가로 개발환경에서 모든 출처 허용
-            '*',
-          ]
-        : configService.get<string>('FRONTEND_URL', 'https://sportcomm.com'),
+      origin: finalOrigins,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
       allowedHeaders: [

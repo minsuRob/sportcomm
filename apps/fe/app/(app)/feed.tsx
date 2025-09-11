@@ -247,7 +247,6 @@ export default function FeedScreen() {
     return (
       <View style={themed($container)}>
         <FeedHeader
-          currentUser={currentUser}
           onNotificationPress={handleNotificationPress}
           onProfilePress={() =>
             currentUser
@@ -298,7 +297,6 @@ export default function FeedScreen() {
 
       {/* 헤더 (탭 슬라이더 포함) */}
       <FeedHeader
-        currentUser={currentUser}
         onNotificationPress={handleNotificationPress}
         onProfilePress={() =>
           currentUser

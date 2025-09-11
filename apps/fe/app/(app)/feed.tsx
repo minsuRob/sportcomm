@@ -46,6 +46,7 @@ import FeedNotice from "@/components/feed/notice/FeedNotice";
 import { useRouter } from "expo-router";
 
 import FeedList from "@/components/FeedList";
+import AdFitBanner from "@/components/AdFitBanner";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
@@ -424,25 +425,34 @@ export default function FeedScreen() {
 
       {/* 탭 콘텐츠 (TabSlider 는 FeedHeader 로 이동) */}
       {activeTab === "feed" ? (
-        <FeedList
-          posts={posts}
-          fetching={fetching}
-          refreshing={refreshing}
-          onRefresh={refresh}
-          onEndReached={loadMore}
-          ListHeaderComponent={
-            currentUser ? (
-              <StorySection
-                teamIds={teamIds}
-                currentUser={currentUser}
-                feedPosts={posts}
-              />
-            ) : null
-          }
-          ListFooterComponent={
-            <ListFooter loading={footerLoading} error={error} />
-          }
-        />
+        <>
+          <FeedList
+            posts={posts}
+            fetching={fetching}
+            refreshing={refreshing}
+            onRefresh={refresh}
+            onEndReached={loadMore}
+            ListHeaderComponent={
+              currentUser ? (
+                <StorySection
+                  teamIds={teamIds}
+                  currentUser={currentUser}
+                  feedPosts={posts}
+                />
+              ) : null
+            }
+            ListFooterComponent={
+              <ListFooter loading={footerLoading} error={error} />
+            }
+          />
+
+          {/* FeedList 아래에 AdFit 광고 배너 */}
+          <AdFitBanner
+            adUnit="DAN-jaKdyGIgnRkALWCc"
+            width={320}
+            height={50}
+          />
+        </>
       ) : (
         <ChatRoomList
           currentUser={currentUser}

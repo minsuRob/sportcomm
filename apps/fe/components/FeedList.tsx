@@ -70,9 +70,9 @@ export default function FeedList({
           <Text style={themed($emptyTitle)}>
             {t(TRANSLATION_KEYS.FEED_NO_POSTS)}
           </Text>
-          <Text style={themed($emptySubtitle)}>
+          {/* <Text style={themed($emptySubtitle)}>
             {t(TRANSLATION_KEYS.FEED_PULL_REFRESH)}
-          </Text>
+          </Text> */}
         </View>
       </View>
     ),

@@ -118,6 +118,7 @@ export default function AuthScreen() {
   const { themed, theme } = useAppTheme();
 
   const [isLogin, setIsLogin] = useState(true);
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
@@ -438,6 +439,104 @@ export default function AuthScreen() {
     }
   };
 
+  if (!showEmailForm) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: "로그인",
+            headerStyle: {
+              backgroundColor: theme.colors.background,
+            },
+            headerTintColor: theme.colors.text,
+            headerBackTitle: "뒤로",
+          }}
+        />
+        <ScrollView
+          style={themed($container)}
+          contentContainerStyle={themed($contentContainer)}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={themed($mainContent)}>
+            <Text style={themed($titleText)}>Log into your account</Text>
+
+            <Button
+              variant="outline"
+              size="lg"
+              style={themed($socialButton)}
+              onPress={() => {
+                setIsLogin(true);
+                setShowEmailForm(true);
+              }}
+            >
+              <View style={themed($socialButtonContent)}>
+                <Ionicons
+                  name="mail-outline"
+                  size={18}
+                  color={theme.colors.text}
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={themed($socialButtonText)}>Login with email</Text>
+              </View>
+            </Button>
+
+            <View style={themed($socialButtonsContainer)}>
+              <Button
+                variant="outline"
+                size="lg"
+                style={themed($socialButton)}
+                onPress={() => handleSocialLogin("google")}
+              >
+                <View style={themed($socialButtonContent)}>
+                  <Ionicons
+                    name="logo-google"
+                    size={18}
+                    color={theme.colors.text}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={themed($socialButtonText)}>
+                    Login with Google
+                  </Text>
+                </View>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="lg"
+                style={themed($socialButton)}
+                onPress={() => handleSocialLogin("apple")}
+              >
+                <View style={themed($socialButtonContent)}>
+                  <Ionicons
+                    name="logo-apple"
+                    size={20}
+                    color={theme.colors.text}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={themed($socialButtonText)}>
+                    Login with Apple
+                  </Text>
+                </View>
+              </Button>
+            </View>
+
+            <View style={themed($toggleContainer)}>
+              <Text style={themed($toggleText)}>Don't have an account? </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsLogin(false);
+                  setShowEmailForm(true);
+                }}
+              >
+                <Text style={themed($toggleLinkText)}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </>
+    );
+  }
+
   return (
     <>
       <Stack.Screen
@@ -605,8 +704,6 @@ export default function AuthScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-
-          <SocialLogins onSocialLogin={handleSocialLogin} />
         </View>
       </ScrollView>
       <AppDialog

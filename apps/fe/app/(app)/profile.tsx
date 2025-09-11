@@ -15,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, getSession, saveSession } from "@/lib/auth";
+import { User } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import {
@@ -102,7 +103,8 @@ export default function ProfileScreen({
   onClose,
 }: ProfileScreenProps) {
   const { themed, theme } = useAppTheme();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 전역 AuthContext 에서 현재 사용자 정보 제공
+  const { user: currentUser, updateUser, reloadUser } = useAuth();
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [bookmarkedPosts, setBookmarkedPosts] = useState<Post[]>([]);
   const [activeTab, setActiveTab] = useState<string>("posts");
@@ -194,20 +196,15 @@ export default function ProfileScreen({
       ],
     });
 
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      const { user } = await getSession();
-
-      if (user) setCurrentUser(user);
-    };
-    loadUserProfile();
-  }, []);
+  // 로컬 세션 직접 로드(useEffect + getSession) 제거: AuthProvider 가 부트스트랩 처리
 
   // 사용자 ID 변경 시에만 refetch (중복/과도 호출 방지 + debounce)
   // prevUserIdRef: 마지막으로 refetch 완료(또는 시도)한 사용자 ID
   // refetchTimerRef: debounce 타이머 저장
   const prevUserIdRef = React.useRef<string | null>(null);
-  const refetchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const refetchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   useEffect(() => {
     const nextId = currentUser?.id || null;
@@ -255,37 +252,39 @@ export default function ProfileScreen({
   // - shallow 필드 비교 후 변경시에만 setState + saveSession
   // - 타인 프로필: isFollowing 초기 1회만 설정
   useEffect(() => {
+    // 서버 프로필 데이터 수신 시 전역 사용자와 비교 후 필요한 경우만 updateUser 호출
     if (!profileData?.getUserById) return;
 
-    if (isOwnProfile) {
-      setCurrentUser((prev) => {
-        if (!prev) return prev;
-        const server = profileData.getUserById;
-        const keys: (keyof typeof server)[] = [
-          "nickname",
-          "email",
-          "profileImageUrl",
-          "bio",
-          "age",
-          "role",
-        ];
-        const changed = keys.some(
-          (k) => (prev as any)[k] !== (server as any)[k],
-        );
-        if (!changed) return prev;
-        const merged = { ...prev, ...server };
-        saveSession(merged);
-        return merged;
-      });
-    } else {
-      if (
-        profileData.getUserById.isFollowing !== undefined &&
-        isFollowing === undefined
-      ) {
-        setIsFollowing(profileData.getUserById.isFollowing);
+    if (isOwnProfile && currentUser) {
+      const server = profileData.getUserById;
+      const keys: (keyof typeof server)[] = [
+        "nickname",
+        "email",
+        "profileImageUrl",
+        "bio",
+        "age",
+        "role",
+      ];
+      const changed = keys.some(
+        (k) => (currentUser as any)[k] !== (server as any)[k],
+      );
+      if (changed) {
+        void updateUser(server);
       }
+    } else if (
+      !isOwnProfile &&
+      profileData.getUserById.isFollowing !== undefined &&
+      isFollowing === undefined
+    ) {
+      setIsFollowing(profileData.getUserById.isFollowing);
     }
-  }, [profileData?.getUserById, isOwnProfile, isFollowing]);
+  }, [
+    profileData?.getUserById,
+    isOwnProfile,
+    isFollowing,
+    currentUser,
+    updateUser,
+  ]);
 
   // 게시물 데이터가 변경되면 상태 업데이트
   useEffect(() => {

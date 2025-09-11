@@ -26,6 +26,7 @@ import { client } from "@/lib/api/client";
 import { useRouter } from "expo-router";
 import { handleNotificationResponse } from "@/lib/notifications/foregroundNotificationHandler";
 import { initializeTeamCustomizations } from "@/lib/team-customization";
+import { AuthProvider } from "@/lib/auth/context/AuthContext";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -144,11 +145,14 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ApolloProvider client={client}>
-        <AppThemeProvider>
-          <RootLayoutNav />
-          <CustomToast />
-          <Toast />
-        </AppThemeProvider>
+        {/* 전역 인증 컨텍스트: 세션/사용자 정보 단일 소스 */}
+        <AuthProvider debug>
+          <AppThemeProvider>
+            <RootLayoutNav />
+            <CustomToast />
+            <Toast />
+          </AppThemeProvider>
+        </AuthProvider>
       </ApolloProvider>
     </SafeAreaProvider>
   );

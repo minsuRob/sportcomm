@@ -7,8 +7,7 @@
       "@/hooks/*": ["hooks/*"],
       "@/lib/*": ["lib/*"],
       "@/app/*": ["app/*"]
-    },
-    "types": ["expo", "react", "react-native", "@expo/vector-icons"]
+    }
   },
   "extends": "expo/tsconfig.base",
   "include": [

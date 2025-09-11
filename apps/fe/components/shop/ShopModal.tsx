@@ -116,8 +116,10 @@ export default function ShopModal({
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
 
   // 다이얼로그 상태
-  const [showInsufficientPointsDialog, setShowInsufficientPointsDialog] = useState(false);
-  const [showPurchaseConfirmDialog, setShowPurchaseConfirmDialog] = useState(false);
+  const [showInsufficientPointsDialog, setShowInsufficientPointsDialog] =
+    useState(false);
+  const [showPurchaseConfirmDialog, setShowPurchaseConfirmDialog] =
+    useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
@@ -146,7 +148,9 @@ export default function ShopModal({
       : item.price;
 
     if (userPoints < finalPrice) {
-      setDialogMessage(`이 아이템을 구매하려면 ${finalPrice}P가 필요합니다.\n현재 보유: ${userPoints}P`);
+      setDialogMessage(
+        `이 아이템을 구매하려면 ${finalPrice}P가 필요합니다.\n현재 보유: ${userPoints}P`,
+      );
       setShowInsufficientPointsDialog(true);
       return;
     }
@@ -162,7 +166,7 @@ export default function ShopModal({
 
     setPurchasingItemId(selectedItem.id);
     setShowPurchaseConfirmDialog(false);
-    
+
     try {
       await onPurchase(selectedItem);
       setDialogMessage(`${selectedItem.name}을(를) 성공적으로 구매했습니다!`);
@@ -312,6 +316,7 @@ const $modalOverlay: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
   backgroundColor: "rgba(0, 0, 0, 0.6)",
   justifyContent: "flex-end",
+  alignItems: "center", // 넓은 화면에서 콘텐츠를 가로 중앙 정렬
 });
 
 const $modalContent: ThemedStyle<ViewStyle> = ({ colors }) => ({
@@ -320,6 +325,10 @@ const $modalContent: ThemedStyle<ViewStyle> = ({ colors }) => ({
   borderTopRightRadius: 24,
   maxHeight: "90%",
   minHeight: "70%",
+  // 웹/와이드 화면에서 중앙 정렬 및 최대 너비 제한
+  width: "100%",
+  maxWidth: 640,
+  alignSelf: "center",
 });
 
 const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

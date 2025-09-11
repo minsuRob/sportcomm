@@ -1,15 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { isWeb } from "@/lib/platform";
-
-// SSR 환경에서는 AsyncStorage를 조건부로 import
-let AsyncStorage: any = null;
-if (!isWeb() && typeof window !== "undefined") {
-  try {
-    AsyncStorage = require("@react-native-async-storage/async-storage").default;
-  } catch (error) {
-    console.warn("AsyncStorage를 로드할 수 없습니다:", error);
-  }
-}
+import supabaseStorage from "@/lib/auth/supabaseStorage";
 
 import {
   SUPABASE_URL as ENV_SUPABASE_URL,
@@ -183,9 +173,10 @@ export const supabase = createClient<Database>(
   SUPABASE_ANON_KEY,
   {
     auth: {
-      storage: AsyncStorage || undefined, // SSR 환경에서는 undefined
-      autoRefreshToken: typeof window !== "undefined", // SSR 환경에서는 비활성화
-      persistSession: typeof window !== "undefined", // SSR 환경에서는 비활성화
+      storage: supabaseStorage,
+      storageKey: "sportcomm-auth-session",
+      autoRefreshToken: true,
+      persistSession: true,
       detectSessionInUrl: false,
     },
     // 실시간 연결 설정

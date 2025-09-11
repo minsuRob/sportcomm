@@ -49,7 +49,8 @@ export const saveSession = async (
         user.myTeams = user.userTeams;
         delete user.userTeams;
       }
-      await setItem(TOKEN_KEY, tokenOrUser);
+      // [Deprecated] 토큰은 Supabase 세션으로만 관리합니다. 로컬 중복 저장은 중단합니다.
+      // await setItem(TOKEN_KEY, tokenOrUser);
       // points 기본값 보정
       if (typeof (user as any).points !== "number") {
         (user as any).points = 0;
@@ -129,8 +130,8 @@ export const getSession = async (): Promise<{
 
 export const clearSession = async (): Promise<void> => {
   try {
-    // 로컬 스토리지 정리
-    await removeItem(TOKEN_KEY);
+    // 로컬 스토리지 정리 (사용자 캐시만 삭제)
+    // [Deprecated] TOKEN_KEY는 Supabase 세션으로 대체되므로 별도 삭제하지 않습니다.
     await removeItem(USER_KEY);
 
     // 토큰 매니저를 통한 Supabase 로그아웃

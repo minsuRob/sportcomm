@@ -46,6 +46,8 @@ import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
 import { StrokedText } from "@/lib/utils/StrokedText";
 import { UniformPlaceholder } from "@/lib/team-customization/common/uniform/UniformPlaceholder";
 import { useTeamCustomization } from "@/lib/team-customization";
+import { formatTimeAgo } from "@/lib/utils/dateUtils";
+
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
 let Video: any = null;
@@ -152,28 +154,6 @@ export interface PostCardProps {
 
 // --- 유틸리티 함수 ---
 
-/**
- * 시간 경과를 한국어로 표시하는 함수
- */
-const formatTimeAgo = (createdAt: string): string => {
-  const now = new Date();
-  const postDate = new Date(createdAt);
-  const diffInMs = now.getTime() - postDate.getTime();
-  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  const diffInDays = Math.floor(diffInHours / 24);
-
-  if (diffInMinutes < 1) return "방금 전";
-  if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
-  if (diffInHours < 24) return `${diffInHours}시간 전`;
-  if (diffInDays < 7) return `${diffInDays}일 전`;
-
-  // YYYY.MM.DD 형식 (예: 2025.08.27)
-  const year = postDate.getFullYear();
-  const month = String(postDate.getMonth() + 1).padStart(2, "0");
-  const day = String(postDate.getDate()).padStart(2, "0");
-  return `${year}.${month}.${day}`;
-};
 
 /**
  * 콘텐츠 텍스트 렌더링 함수

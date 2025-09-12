@@ -25,7 +25,10 @@ export async function seedSportsAndTeams(
         {
           name: '토트넘',
           code: 'TOTTENHAM',
-          color: '#132257',
+          mainColor: '#132257',
+          subColor: '#FFFFFF',
+          darkMainColor: '#1a2d5a',
+          darkSubColor: '#f0f0f0',
           icon: '⚽',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/tottenham.webp',
@@ -35,7 +38,10 @@ export async function seedSportsAndTeams(
         {
           name: '뉴캐슬',
           code: 'NEWCASTLE',
-          color: '#241F20',
+          mainColor: '#241F20',
+          subColor: '#FFFFFF',
+          darkMainColor: '#2a2526',
+          darkSubColor: '#f0f0f0',
           icon: '⚽',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/newcastle.webp',
@@ -45,7 +51,10 @@ export async function seedSportsAndTeams(
         {
           name: '아틀레티코',
           code: 'ATLETICO_MADRID',
-          color: '#CE2029',
+          mainColor: '#CE2029',
+          subColor: '#000000',
+          darkMainColor: '#a11920',
+          darkSubColor: '#333333',
           icon: '⚽',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/atletico.webp',
@@ -55,7 +64,10 @@ export async function seedSportsAndTeams(
         {
           name: '맨시티',
           code: 'MANCHESTER_CITY',
-          color: '#6CABDD',
+          mainColor: '#6CABDD',
+          subColor: '#000000',
+          darkMainColor: '#5a9ac7',
+          darkSubColor: '#333333',
           icon: '⚽',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/mancity.webp',
@@ -65,7 +77,10 @@ export async function seedSportsAndTeams(
         {
           name: '리버풀',
           code: 'LIVERPOOL',
-          color: '#C8102E',
+          mainColor: '#C8102E',
+          subColor: '#000000',
+          darkMainColor: '#a20d26',
+          darkSubColor: '#333333',
           icon: '⚽',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/liverpool.webp',
@@ -83,7 +98,10 @@ export async function seedSportsAndTeams(
         {
           name: '두산',
           code: 'DOOSAN_BEARS',
-          color: '#131230',
+          mainColor: '#131230',
+          subColor: '#FFFFFF',
+          darkMainColor: '#1a1a3a',
+          darkSubColor: '#f0f0f0',
           icon: '⚾',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/doosan.webp',
@@ -93,7 +111,10 @@ export async function seedSportsAndTeams(
         {
           name: '한화',
           code: 'HANWHA_EAGLES',
-          color: '#FF6600',
+          mainColor: '#FF6600',
+          subColor: '#000000',
+          darkMainColor: '#cc5200',
+          darkSubColor: '#333333',
           icon: '⚾',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/hanwha.webp',
@@ -103,7 +124,10 @@ export async function seedSportsAndTeams(
         {
           name: 'LG',
           code: 'LG_TWINS',
-          color: '#C30452',
+          mainColor: '#C30452',
+          subColor: '#000000',
+          darkMainColor: '#9d0342',
+          darkSubColor: '#333333',
           icon: '⚾',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/lg.webp',
@@ -113,7 +137,10 @@ export async function seedSportsAndTeams(
         {
           name: '삼성',
           code: 'SAMSUNG_LIONS',
-          color: '#074CA1',
+          mainColor: '#074CA1',
+          subColor: '#FFFFFF',
+          darkMainColor: '#0a5ac7',
+          darkSubColor: '#f0f0f0',
           icon: '⚾',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/samsung.webp',
@@ -123,7 +150,10 @@ export async function seedSportsAndTeams(
         {
           name: 'KIA',
           code: 'KIA_TIGERS',
-          color: '#EA0029',
+          mainColor: '#EA0029',
+          subColor: '#000000',
+          darkMainColor: '#c10022',
+          darkSubColor: '#333333',
           icon: '⚾',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/kia.webp',
@@ -141,7 +171,10 @@ export async function seedSportsAndTeams(
         {
           name: 'T1',
           code: 'T1',
-          color: '#E2012D',
+          mainColor: '#E2012D',
+          subColor: '#000000',
+          darkMainColor: '#b80124',
+          darkSubColor: '#333333',
           icon: '🎮',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/t1.webp',
@@ -151,7 +184,10 @@ export async function seedSportsAndTeams(
         {
           name: 'Gen.G',
           code: 'GENG',
-          color: '#AA8B56',
+          mainColor: '#AA8B56',
+          subColor: '#000000',
+          darkMainColor: '#8f7347',
+          darkSubColor: '#333333',
           icon: '🎮',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/geng.webp',
@@ -161,7 +197,10 @@ export async function seedSportsAndTeams(
         {
           name: 'DRX',
           code: 'DRX',
-          color: '#2E5BFF',
+          mainColor: '#2E5BFF',
+          subColor: '#000000',
+          darkMainColor: '#254ecc',
+          darkSubColor: '#333333',
           icon: '🎮',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/drx.webp',
@@ -171,7 +210,10 @@ export async function seedSportsAndTeams(
         {
           name: 'KT',
           code: 'KT_ROLSTER',
-          color: '#D4002A',
+          mainColor: '#D4002A',
+          subColor: '#000000',
+          darkMainColor: '#aa0022',
+          darkSubColor: '#333333',
           icon: '🎮',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/kt.webp',
@@ -181,7 +223,10 @@ export async function seedSportsAndTeams(
         {
           name: '담원',
           code: 'DAMWON_KIA',
-          color: '#004B9F',
+          mainColor: '#004B9F',
+          subColor: '#FFFFFF',
+          darkMainColor: '#005ac7',
+          darkSubColor: '#f0f0f0',
           icon: '🎮',
           logoUrl:
             'https://iikgupdmnlmhycmtuqzj.supabase.co/storage/v1/object/public/team-logos/damwon.webp',
@@ -225,7 +270,10 @@ export async function seedSportsAndTeams(
         const team = teamRepository.create({
           name: teamData.name,
           code: teamData.code,
-          color: teamData.color,
+          mainColor: teamData.mainColor,
+          subColor: teamData.subColor,
+          darkMainColor: teamData.darkMainColor,
+          darkSubColor: teamData.darkSubColor,
           icon: teamData.icon,
           logoUrl: teamData.logoUrl,
           description: teamData.description,
@@ -239,7 +287,10 @@ export async function seedSportsAndTeams(
         // 기존 팀의 sportId 업데이트 (항상 업데이트)
         existingTeam.sportId = sport.id;
         existingTeam.name = teamData.name;
-        existingTeam.color = teamData.color;
+        existingTeam.mainColor = teamData.mainColor;
+        existingTeam.subColor = teamData.subColor;
+        existingTeam.darkMainColor = teamData.darkMainColor;
+        existingTeam.darkSubColor = teamData.darkSubColor;
         existingTeam.icon = teamData.icon;
         existingTeam.logoUrl = teamData.logoUrl;
         existingTeam.description = teamData.description;

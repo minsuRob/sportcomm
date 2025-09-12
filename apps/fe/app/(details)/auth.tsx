@@ -144,7 +144,6 @@ export default function AuthScreen() {
 
   // 통합 인증 훅 사용
   const { syncAfterSignUp, checkAndSyncAfterSignIn } = useAuth({
-    enableAutoListener: false, // AuthScreen에서는 수동으로 처리
     onSyncSuccess: (user) => {
       console.log("✅ AuthScreen: 사용자 동기화 성공:", user.nickname);
     },

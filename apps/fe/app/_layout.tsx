@@ -20,7 +20,7 @@ import { useLoadFonts } from "@/lib/fonts/useLoadFonts";
 import * as SplashScreen from "expo-splash-screen";
 import { initializeI18n } from "@/lib/i18n";
 import { initializeSupabase, supabase } from "@/lib/supabase/client";
-import { initializeAuthListener } from "@/lib/auth/auth-listener";
+
 import { initExpoNotifications } from "@/lib/notifications/expoNotifications";
 import { client } from "@/lib/api/client";
 import { useRouter } from "expo-router";
@@ -85,21 +85,6 @@ export default function RootLayout() {
             },
           }),
         ]);
-
-        // Auth 이벤트 리스너 초기화
-        initializeAuthListener({
-          enableAutoSync: true,
-          enableDebugLog: true,
-          onSyncSuccess: (user) => {
-            console.log(
-              "✅ [_layout.tsx] 전역 인증 동기화 성공:",
-              user.nickname,
-            );
-          },
-          onError: (error) => {
-            console.warn("⚠️ [_layout.tsx] 전역 인증 에러:", error.message);
-          },
-        });
 
         // --- DEBUG: Supabase 세션 상태 확인 ---
         const {

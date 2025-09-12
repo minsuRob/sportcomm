@@ -8,7 +8,7 @@ import React, {
   useState,
   PropsWithChildren,
 } from "react";
-import type { User } from "@/lib/auth";
+import type { User as LocalUser } from "@/lib/auth";
 import { getSession, saveSession, clearSession } from "@/lib/auth"; // 기존 세션 유틸 (스토리지 + 이벤트 브로드캐스트)
 import {
   getValidToken,
@@ -27,7 +27,7 @@ import {
  */
 export interface AuthContextValue {
   /** 현재 로그인한 사용자 정보 (없으면 null) */
-  user: User | null;
+  user: LocalUser | null;
   /** 인증 여부 */
   isAuthenticated: boolean;
   /** 로딩(부트스트랩/리로드) 상태 */
@@ -37,7 +37,7 @@ export interface AuthContextValue {
   /** 사용자 정보 강제 새로고침 (원격 동기화) */
   reloadUser: (options?: { force?: boolean }) => Promise<void>;
   /** 부분 사용자 정보 업데이트 (로컬 세션 + 브로드캐스트) */
-  updateUser: (partial: Partial<User>) => Promise<void>;
+  updateUser: (partial: Partial<LocalUser>) => Promise<void>;
   /** 로그아웃 */
   signOut: () => Promise<void>;
   /** 마지막으로 사용자 정보를 성공적으로 동기화한 시각 */
@@ -79,7 +79,7 @@ export function AuthProvider({
   minBootstrapDelayMs = 0,
   debug = false,
 }: PropsWithChildren<AuthProviderProps>) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
@@ -119,7 +119,7 @@ export function AuthProvider({
       const { token, user: storedUser, isAuthenticated } = await getSession();
 
       if (storedUser) {
-        setUser(storedUser);
+        setUser(storedUser as LocalUser);
       }
       if (token) {
         setAccessToken(token);
@@ -146,7 +146,7 @@ export function AuthProvider({
             setLastSyncedAt(new Date());
             log("원격 사용자 정보 부트스트랩 성공");
             // bootstrap 이벤트 (초기 사용자 정보 브로드캐스트)
-            bootstrapSession(remoteUser, latestToken);
+            bootstrapSession(remoteUser as any, latestToken);
           } catch (e) {
             log(
               "원격 사용자 정보 조회 실패 (비로그인 or 신규):",
@@ -156,7 +156,7 @@ export function AuthProvider({
         }
       } else {
         // 저장된 사용자 정보를 bootstrap 이벤트로 알림
-        bootstrapSession(storedUser, token);
+        bootstrapSession(storedUser as any, token);
       }
     } catch (e) {
       log("부트스트랩 중 오류 발생:", (e as any)?.message);
@@ -263,10 +263,10 @@ export function AuthProvider({
    * - 로컬 세션 + 이벤트 브로드캐스트 (saveSession 내부)
    */
   const updateUser = useCallback(
-    async (partial: Partial<User>) => {
+    async (partial: Partial<LocalUser>) => {
       if (!user) return;
-      const merged: User = { ...user, ...partial };
-      await saveSession(merged);
+      const merged: LocalUser = { ...user, ...partial };
+      await saveSession(merged as any);
       setUser(merged);
       // saveSession 이 'update' reason 으로 emit 하므로 별도 emit 불필요
       log("사용자 로컬 업데이트 완료");
@@ -339,7 +339,7 @@ export function useAuth(): AuthContextValue {
 /**
  * 선택: 사용자 객체만 간단히 가져오는 경량 훅
  */
-export function useAuthUser(): User | null {
+export function useAuthUser(): LocalUser | null {
   return useAuth().user;
 }
 

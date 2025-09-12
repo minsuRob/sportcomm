@@ -182,7 +182,7 @@ export default function PostContextMenu({
   const confirmDelete = async () => {
     try {
       const { data } = await deletePost({ variables: { id: post.id } });
-      if (data?.deletePost) {
+      if (data?.removePost) {
         showToast({
           type: "success",
           title: "삭제 완료",

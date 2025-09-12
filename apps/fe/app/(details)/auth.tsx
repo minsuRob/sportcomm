@@ -556,7 +556,7 @@ export default function AuthScreen() {
       >
         <View style={themed($mainContent)}>
           <Text style={themed($titleText)}>
-            {isLogin ? "다시 오신 걸 환영합니다" : "계정 만들기"}
+            {isLogin ? "Sportalk 환영합니다" : "계정 만들기"}
           </Text>
 
           {/* 이메일 입력 필드 */}

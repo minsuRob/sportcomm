@@ -24,6 +24,7 @@ interface TagInputProps {
 
 /**
  * 태그 입력 컴포넌트
+ * --> 주제로 변경, 1개만 허용.
  *
  * 사용자가 게시물에 태그를 추가하고 관리할 수 있는 컴포넌트입니다.
  * 자동완성, 추천 태그, 태그 제거 기능을 제공합니다.
@@ -31,7 +32,7 @@ interface TagInputProps {
 export default function TagInput({
   tags,
   onTagsChange,
-  placeholder = "태그를 입력하세요 (예: 전술분석, 이적소식)",
+  placeholder = "주제를 입력하세요 (예: 전술분석, 이적소식)",
   maxTags = 10,
   disabled = false,
   suggestedTags = [],

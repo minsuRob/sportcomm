@@ -50,11 +50,6 @@ export default function AdminDashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 다이얼로그 상태
-  const [showStopLotteryDialog, setShowStopLotteryDialog] = useState<boolean>(false);
-  const [showErrorDialog, setShowErrorDialog] = useState<boolean>(false);
-  const [dialogMessage, setDialogMessage] = useState<string>("");
-
   // 대시보드 데이터 로드
   const loadDashboardData = async (showRefreshIndicator = false) => {
     try {
@@ -506,6 +501,11 @@ function LotteryManagementSection() {
   const [totalPrize, setTotalPrize] = useState("1000");
   const [winnerCount, setWinnerCount] = useState("5");
   const [durationMinutes, setDurationMinutes] = useState("50");
+  // 다이얼로그 상태
+  const [showStopLotteryDialog, setShowStopLotteryDialog] =
+    useState<boolean>(false);
+  const [showErrorDialog, setShowErrorDialog] = useState<boolean>(false);
+  const [dialogMessage, setDialogMessage] = useState<string>("");
 
   // GraphQL 쿼리 및 뮤테이션
   const { data: lotteryData, refetch: refetchLottery } = useQuery(
@@ -857,6 +857,27 @@ function LotteryManagementSection() {
           </View>
         </View>
       </Modal>
+
+      {/* 추첨 중단 확인 다이얼로그 */}
+      <AppDialog
+        visible={showStopLotteryDialog}
+        onClose={() => setShowStopLotteryDialog(false)}
+        title="추첨 중단 확인"
+        description="진행 중인 추첨을 중단하시겠습니까?\n이 작업은 되돌릴 수 없습니다."
+        confirmText="중단"
+        cancelText="취소"
+        onConfirm={confirmStopLottery}
+      />
+
+      {/* 에러 다이얼로그 */}
+      <AppDialog
+        visible={showErrorDialog}
+        onClose={() => setShowErrorDialog(false)}
+        title="입력 오류"
+        description={dialogMessage}
+        confirmText="확인"
+        onConfirm={() => setShowErrorDialog(false)}
+      />
     </>
   );
 }
@@ -1256,27 +1277,6 @@ function TestManagementSection() {
           </>
         )}
       </View>
-
-      {/* 추첨 중단 확인 다이얼로그 */}
-      <AppDialog
-        visible={showStopLotteryDialog}
-        onClose={() => setShowStopLotteryDialog(false)}
-        title="추첨 중단 확인"
-        description="진행 중인 추첨을 중단하시겠습니까?\n이 작업은 되돌릴 수 없습니다."
-        confirmText="중단"
-        cancelText="취소"
-        onConfirm={confirmStopLottery}
-      />
-
-      {/* 에러 다이얼로그 */}
-      <AppDialog
-        visible={showErrorDialog}
-        onClose={() => setShowErrorDialog(false)}
-        title="입력 오류"
-        description={dialogMessage}
-        confirmText="확인"
-        onConfirm={() => setShowErrorDialog(false)}
-      />
     </>
   );
 }

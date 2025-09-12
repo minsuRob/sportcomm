@@ -147,6 +147,7 @@ export interface Post {
 export interface PostCardProps {
   post: Post;
   onPostUpdated?: (post: Post) => void;
+  onRefresh?: () => void;
 }
 
 // --- 유틸리티 함수 ---
@@ -213,6 +214,7 @@ const renderContentText = ({
 const PostCard = React.memo(function PostCard({
   post,
   onPostUpdated,
+  onRefresh,
 }: PostCardProps) {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
@@ -1090,6 +1092,7 @@ const PostCard = React.memo(function PostCard({
         currentUserId={currentUser?.id}
         onPostUpdated={onPostUpdated}
         isBookmarked={isBookmarked}
+        onRefresh={onRefresh}
       />
       {/* 게시물 상세 하단 모달 */}
       <PostDetailModal

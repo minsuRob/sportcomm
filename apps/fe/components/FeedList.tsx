@@ -17,6 +17,7 @@ interface FeedListProps {
   ListEmptyComponent?: React.ComponentType<any> | React.ReactElement | null;
   onEndReached?: () => void;
   onPostUpdated?: (updatedPost: any) => void;
+  onFeedRefresh?: () => void;
 }
 
 /**
@@ -33,6 +34,7 @@ export default function FeedList({
   ListEmptyComponent,
   onEndReached,
   onPostUpdated,
+  onFeedRefresh,
 }: FeedListProps) {
   const { themed } = useAppTheme();
   const { t } = useTranslation();
@@ -50,10 +52,10 @@ export default function FeedList({
   const renderItem = useCallback(
     ({ item }: { item: Post }) => (
       <View style={isWeb() ? themed($webItemContainer) : undefined}>
-        <PostCard post={item} onPostUpdated={onPostUpdated} />
+        <PostCard post={item} onPostUpdated={onPostUpdated} onRefresh={onFeedRefresh} />
       </View>
     ),
-    [themed, onPostUpdated],
+    [themed, onPostUpdated, onFeedRefresh],
   );
 
   const keyExtractor = useCallback((item: Post) => item.id, []);

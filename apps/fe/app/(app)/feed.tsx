@@ -432,6 +432,7 @@ export default function FeedScreen() {
             refreshing={refreshing}
             onRefresh={refresh}
             onEndReached={loadMore}
+            onFeedRefresh={refresh}
             ListHeaderComponent={
               currentUser ? (
                 <StorySection

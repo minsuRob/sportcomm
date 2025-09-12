@@ -62,6 +62,7 @@ interface PostContextMenuProps {
   onPostUpdated?: (updatedPost: any) => void;
   isBookmarked?: boolean;
   onBlockUser?: (blockedUserId: string) => void;
+  onRefresh?: () => void;
 }
 
 /**
@@ -78,6 +79,7 @@ export default function PostContextMenu({
   onPostUpdated,
   isBookmarked = false,
   onBlockUser,
+  onRefresh,
 }: PostContextMenuProps) {
   const { theme } = useAppTheme();
   const [showEditModal, setShowEditModal] = useState(false);
@@ -190,6 +192,10 @@ export default function PostContextMenu({
           duration: 2500,
         });
         onPostUpdated?.({ id: post.id, deleted: true });
+
+        // 피드 재갱신
+        onRefresh?.();
+
         onClose();
       }
     } catch (error) {

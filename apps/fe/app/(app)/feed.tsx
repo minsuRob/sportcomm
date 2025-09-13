@@ -57,7 +57,7 @@ import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
  * @returns 년, 월, 총 일수 객체
  */
 const formatFanDuration = (
-  favoriteDate: string,
+  favoriteDate: string
 ): { years: number; months: number; totalDays: number } => {
   const startDate = new Date(favoriteDate);
   const endDate = new Date();
@@ -71,7 +71,7 @@ const formatFanDuration = (
   }
 
   const totalDays = Math.floor(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
   );
 
   return { years, months, totalDays };
@@ -320,7 +320,7 @@ export default function FeedScreen() {
             {(() => {
               const selectedTeam = teamColorTeamId
                 ? currentUser.myTeams.find(
-                    (ut) => ut.team.id === teamColorTeamId,
+                    (ut) => ut.team.id === teamColorTeamId
                   )
                 : undefined;
 
@@ -448,11 +448,7 @@ export default function FeedScreen() {
           />
 
           {/* FeedList 아래에 AdFit 광고 배너 */}
-          <AdFitBanner
-            adUnit="DAN-HsqnHzDgRAYX6iDy"
-            width={320}
-            height={50}
-          />
+          <AdFitBanner adUnit="DAN-HsqnHzDgRAYX6iDy" width={320} height={50} />
         </>
       ) : (
         <ChatRoomList

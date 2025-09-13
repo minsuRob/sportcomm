@@ -19,8 +19,8 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { User } from "@/lib/auth";
 import { useAuth } from "@/lib/auth/context/AuthContext";
-import { useMutation } from "@apollo/client";
-import { UPDATE_PROFILE } from "@/lib/graphql";
+import { useMutation, useLazyQuery } from "@apollo/client";
+import { UPDATE_PROFILE, CHECK_NICKNAME_AVAILABILITY } from "@/lib/graphql";
 import { showToast } from "@/components/CustomToast";
 import { uploadFilesWeb } from "@/lib/api/webUpload";
 import { uploadFilesMobile } from "@/lib/api/mobileUpload";
@@ -50,9 +50,15 @@ export default function EditProfileScreen() {
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [nicknameCheckResult, setNicknameCheckResult] = useState<{
+    available: boolean | null;
+    message: string;
+  }>({ available: null, message: "" });
+  const [isCheckingNickname, setIsCheckingNickname] = useState(false);
 
-  // GraphQL 뮤테이션 (프로필 정보 업데이트용)
+  // GraphQL 뮤테이션 및 쿼리
   const [updateProfile] = useMutation(UPDATE_PROFILE);
+  const [checkNicknameAvailability] = useLazyQuery(CHECK_NICKNAME_AVAILABILITY);
 
   // 사용자 정보 로드
   // 기존 getSession 기반 초기 로드 → 전역 AuthProvider 부트스트랩으로 대체
@@ -65,6 +71,8 @@ export default function EditProfileScreen() {
     setTeam(currentUser.team || "");
     setIsPrivate(currentUser.isPrivate || false);
     setAge((currentUser as any).age);
+    // 닉네임이 변경되면 중복 확인 결과 초기화
+    setNicknameCheckResult({ available: null, message: "" });
   }, [currentUser]);
 
   /**
@@ -333,6 +341,34 @@ export default function EditProfileScreen() {
       return;
     }
 
+    // 닉네임이 변경되었는데 중복 확인을 하지 않은 경우
+    if (
+      name.trim() !== currentUser.nickname &&
+      nicknameCheckResult.available === null
+    ) {
+      showToast({
+        type: "error",
+        title: "중복 확인 필요",
+        message: "닉네임 변경 시 중복 확인을 먼저 해주세요.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    // 닉네임이 사용 불가능한 경우
+    if (
+      name.trim() !== currentUser.nickname &&
+      nicknameCheckResult.available === false
+    ) {
+      showToast({
+        type: "error",
+        title: "닉네임 사용 불가",
+        message: "다른 닉네임을 선택해주세요.",
+        duration: 3000,
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -406,6 +442,71 @@ export default function EditProfileScreen() {
     }
     const num = Math.max(1, Math.min(120, parseInt(onlyDigits, 10)));
     setAge(num);
+  };
+
+  /**
+   * 닉네임 중복 확인
+   */
+  const handleCheckNickname = async () => {
+    if (!name.trim()) {
+      showToast({
+        type: "error",
+        title: "입력 오류",
+        message: "닉네임을 입력해주세요.",
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsCheckingNickname(true);
+    try {
+      const { data } = await checkNicknameAvailability({
+        variables: {
+          nickname: name.trim(),
+          excludeUserId: currentUser?.id,
+        },
+      });
+
+      if (data?.checkNicknameAvailability) {
+        const result = data.checkNicknameAvailability;
+        setNicknameCheckResult({
+          available: result.available,
+          message: result.message,
+        });
+
+        showToast({
+          type: result.available ? "success" : "error",
+          title: result.available ? "사용 가능" : "사용 불가",
+          message: result.message,
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error("닉네임 중복 확인 오류:", error);
+      setNicknameCheckResult({
+        available: false,
+        message: "닉네임 확인 중 오류가 발생했습니다.",
+      });
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "닉네임 확인 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    } finally {
+      setIsCheckingNickname(false);
+    }
+  };
+
+  /**
+   * 닉네임 입력 시 중복 확인 결과 초기화
+   */
+  const handleNameChange = (text: string) => {
+    setName(text);
+    // 닉네임이 변경되면 중복 확인 결과 초기화
+    if (text !== currentUser?.nickname) {
+      setNicknameCheckResult({ available: null, message: "" });
+    }
   };
 
   /**
@@ -524,21 +625,68 @@ export default function EditProfileScreen() {
         {/* 이름 섹션 */}
         <View style={themed($section)}>
           <Text style={themed($sectionTitle)}>이름</Text>
-          <View style={themed($inputContainer)}>
-            <Ionicons
-              name="lock-closed"
-              size={16}
-              color={theme.colors.textDim}
-            />
-            <TextInput
-              style={themed($textInput)}
-              value={name}
-              onChangeText={setName}
-              placeholder="이름을 입력하세요"
-              placeholderTextColor={theme.colors.textDim}
-              maxLength={30}
-            />
+          <View style={themed($nameInputContainer)}>
+            <View style={themed($inputContainer)}>
+              <Ionicons
+                name="lock-closed"
+                size={16}
+                color={theme.colors.textDim}
+              />
+              <TextInput
+                style={themed($textInput)}
+                value={name}
+                onChangeText={handleNameChange}
+                placeholder="이름을 입력하세요"
+                placeholderTextColor={theme.colors.textDim}
+                maxLength={30}
+              />
+            </View>
+            <TouchableOpacity
+              style={themed($checkButton)}
+              onPress={handleCheckNickname}
+              disabled={isCheckingNickname || !name.trim()}
+            >
+              <Text
+                style={[
+                  themed($checkButtonText),
+                  (isCheckingNickname || !name.trim()) &&
+                    themed($disabledCheckText),
+                ]}
+              >
+                {isCheckingNickname ? "확인 중..." : "중복 확인"}
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {/* 닉네임 중복 확인 결과 표시 */}
+          {nicknameCheckResult.message && (
+            <View style={themed($nicknameCheckResult)}>
+              <Ionicons
+                name={
+                  nicknameCheckResult.available
+                    ? "checkmark-circle"
+                    : "close-circle"
+                }
+                size={16}
+                color={
+                  nicknameCheckResult.available
+                    ? theme.colors.tint
+                    : theme.colors.error
+                }
+              />
+              <Text
+                style={[
+                  themed($nicknameCheckText),
+                  nicknameCheckResult.available
+                    ? themed($availableText)
+                    : themed($unavailableText),
+                ]}
+              >
+                {nicknameCheckResult.message}
+              </Text>
+            </View>
+          )}
+
           <Text style={themed($inputHelper)}>
             이름은 14일에 두 번만 변경할 수 있습니다.
           </Text>
@@ -825,4 +973,50 @@ const $privateDescription: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.textDim,
   marginTop: spacing.xs,
   lineHeight: 20,
+});
+
+// --- 닉네임 중복 확인 관련 스타일 ---
+const $nameInputContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $checkButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  backgroundColor: colors.tint,
+  borderRadius: 6,
+  minWidth: 80,
+  alignItems: "center",
+});
+
+const $checkButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "600",
+  color: colors.background,
+});
+
+const $disabledCheckText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+});
+
+const $nicknameCheckResult: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: spacing.xs,
+  gap: spacing.xs,
+});
+
+const $nicknameCheckText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  flex: 1,
+});
+
+const $availableText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+});
+
+const $unavailableText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.error,
 });

@@ -6,6 +6,8 @@ import {
   ResolveField,
   Query,
   Parent,
+  ObjectType,
+  Field,
 } from '@nestjs/graphql';
 import { Follow } from '../../entities/follow.entity';
 import { UserTeam } from '../../entities/user-team.entity';
@@ -16,6 +18,18 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
 import { User } from '../../entities/user.entity';
+
+/**
+ * 닉네임 중복 확인 결과 타입
+ */
+@ObjectType()
+export class NicknameAvailabilityResult {
+  @Field(() => Boolean, { description: '닉네임 사용 가능 여부' })
+  available: boolean;
+
+  @Field(() => String, { description: '결과 메시지' })
+  message: string;
+}
 
 @Resolver(() => User)
 export class UsersResolver {
@@ -135,5 +149,21 @@ export class UsersResolver {
   })
   async myTeams(@Parent() user: User): Promise<UserTeam[]> {
     return this.usersService.getUserTeams(user.id);
+  }
+
+  /**
+   * 닉네임 중복 확인 쿼리
+   * @param nickname 확인할 닉네임
+   * @param excludeUserId 제외할 사용자 ID (프로필 수정 시 본인 제외)
+   * @returns 닉네임 사용 가능 여부와 메시지
+   */
+  @Query(() => NicknameAvailabilityResult, {
+    description: '닉네임 중복 확인',
+  })
+  async checkNicknameAvailability(
+    @Args('nickname') nickname: string,
+    @Args('excludeUserId', { nullable: true }) excludeUserId?: string,
+  ): Promise<NicknameAvailabilityResult> {
+    return this.usersService.checkNicknameAvailability(nickname, excludeUserId);
   }
 }

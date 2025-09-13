@@ -481,7 +481,7 @@ export default function FeedScreen() {
           onPress={() => router.push("/(modals)/create-post")}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={28} color="white" />
+          <Ionicons name="create" size={28} color="white" />
         </TouchableOpacity>
       )}
     </View>

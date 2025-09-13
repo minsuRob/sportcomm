@@ -11,7 +11,9 @@
     "retry": "Retry",
     "back": "Back",
     "close": "Close",
-    "send": "Send"
+    "send": "Send",
+    "success": "Success",
+    "errorShort": "Error"
   },
   "navigation": {
     "feed": "Feed",
@@ -77,7 +79,16 @@
     "editProfile": "Edit Profile",
     "settings": "Settings",
     "noPosts": "No posts",
-    "loadingProfile": "Loading profile..."
+    "loadingProfile": "Loading profile...",
+    "myPosts": "My Posts",
+    "bookmarks": "Bookmarks",
+    "posts": "Posts",
+    "followSuccess": "Followed successfully",
+    "unfollowSuccess": "Unfollowed successfully",
+    "chatStartError": "Cannot start chat.",
+    "followUnfollow": "Unfollow",
+    "follow": "Follow",
+    "userProfile": "{{nickname}}'s Profile"
   },
   "search": {
     "title": "Search",
@@ -93,5 +104,19 @@
     "cacheHit": "Cache hit",
     "networkSaved": "Network saved",
     "loadingTime": "Loading time"
+  },
+  "profilePopover": {
+    "privateMessages": "Private Messages",
+    "openProfile": "My Profile",
+    "notifications": "Notifications",
+    "teamFilter": "Team Filter",
+    "board": "Detailed Board",
+    "lottery": "Events / Lottery",
+    "shop": "Point Shop",
+    "teamColorFilter": "App Color Filter (Based on My Team)",
+    "switchToLight": "Switch to Light",
+    "switchToDark": "Switch to Dark",
+    "switchToEnglish": "Switch to English",
+    "switchToKorean": "Switch to Korean"
   }
 }

@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
-import { User, saveSession } from "@/lib/auth";
+import { User } from "@/lib/auth";
 import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useMutation } from "@apollo/client";
 import { UPDATE_PROFILE } from "@/lib/graphql";
@@ -72,7 +72,7 @@ export default function EditProfileScreen() {
    * 세분화된 에러 처리와 함께 구현
    */
   const uploadProfileImage = async (
-    file: File | { uri: string; name: string; type: string },
+    file: File | { uri: string; name: string; type: string }
   ): Promise<string | null> => {
     try {
       setIsImageUploading(true);
@@ -100,14 +100,14 @@ export default function EditProfileScreen() {
         uploadedFiles = await uploadFilesMobile(
           [file as { uri: string; name: string; type: string }],
           progressCallback,
-          { category: "avatar" },
+          { category: "avatar" }
         );
       }
 
       // 업로드 결과 검증
       if (!uploadedFiles || uploadedFiles.length === 0) {
         throw new Error(
-          "업로드 응답이 비어있습니다. 서버 연결을 확인해주세요.",
+          "업로드 응답이 비어있습니다. 서버 연결을 확인해주세요."
         );
       }
 
@@ -124,7 +124,7 @@ export default function EditProfileScreen() {
       // URL 유효성 검증
       if (!uploadedMedia.url || uploadedMedia.url.trim() === "") {
         throw new Error(
-          "업로드는 완료되었지만 이미지 URL을 받지 못했습니다. 잠시 후 다시 시도해주세요.",
+          "업로드는 완료되었지만 이미지 URL을 받지 못했습니다. 잠시 후 다시 시도해주세요."
         );
       }
 
@@ -231,7 +231,7 @@ export default function EditProfileScreen() {
             // 한글 파일명 문제 해결: 안전한 파일명 생성
             const safeFileName = generateAvatarFileName(
               selectedAsset.fileName || "avatar.jpg",
-              currentUser?.id || "user",
+              currentUser?.id || "user"
             );
 
             uploadFile = new File([blob], safeFileName, {
@@ -241,7 +241,7 @@ export default function EditProfileScreen() {
             // 모바일 환경 - 한글 파일명 문제 해결
             const safeFileName = generateAvatarFileName(
               selectedAsset.fileName || "avatar.jpg",
-              currentUser?.id || "user",
+              currentUser?.id || "user"
             );
 
             uploadFile = {
@@ -349,15 +349,29 @@ export default function EditProfileScreen() {
       });
 
       if (result.data?.updateProfile) {
-        // 세션 업데이트
-        const updatedUser = {
-          ...currentUser,
+        // AuthContext를 통한 사용자 정보 업데이트 (권장)
+        console.log("프로필 업데이트 - 기존 값:", {
+          nickname: currentUser?.nickname,
+          bio: currentUser?.bio,
+          profileImageUrl: currentUser?.profileImageUrl,
+          age: (currentUser as any)?.age,
+        });
+
+        console.log("프로필 업데이트 - 새 값:", {
           nickname: name.trim(),
           bio: bio.trim(),
           profileImageUrl: profileImage,
-          age, // 백엔드에서도 age 필드를 지원하므로 함께 저장
-        };
-        await saveSession(updatedUser);
+          age,
+        });
+
+        await updateUser({
+          nickname: name.trim(),
+          bio: bio.trim(),
+          profileImageUrl: profileImage,
+          age, // 나이 필드도 업데이트
+        });
+
+        console.log("프로필 업데이트 완료");
 
         showToast({
           type: "success",

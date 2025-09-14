@@ -57,7 +57,7 @@ import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
  * @returns 년, 월, 총 일수 객체
  */
 const formatFanDuration = (
-  favoriteDate: string
+  favoriteDate: string,
 ): { years: number; months: number; totalDays: number } => {
   const startDate = new Date(favoriteDate);
   const endDate = new Date();
@@ -71,7 +71,7 @@ const formatFanDuration = (
   }
 
   const totalDays = Math.floor(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   return { years, months, totalDays };
@@ -86,7 +86,7 @@ import PostCardSkeleton from "@/components/PostCardSkeleton";
 import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
-import ShopModal from "@/components/shop/ShopModal";
+
 import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
 import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useChatRooms } from "@/lib/hooks/useChatRooms";
@@ -99,7 +99,7 @@ export default function FeedScreen() {
   const { t } = useTranslation();
   // 목록/로딩 상태는 전담 훅에서 관리
   const [authModalVisible, setAuthModalVisible] = useState(false);
-  const [shopModalVisible, setShopModalVisible] = useState(false);
+
   const [teamFilterOpen, setTeamFilterOpen] = useState(false); // 팀 필터 모달 외부 제어 상태
   const router = useRouter();
   const { user: currentUser, reloadUser: reloadCurrentUser } = useAuth();
@@ -169,7 +169,7 @@ export default function FeedScreen() {
       setAuthModalVisible(true);
       return;
     }
-    setShopModalVisible(true);
+    router.push("/(details)/shop");
   };
 
   /**
@@ -320,7 +320,7 @@ export default function FeedScreen() {
             {(() => {
               const selectedTeam = teamColorTeamId
                 ? currentUser.myTeams.find(
-                    (ut) => ut.team.id === teamColorTeamId
+                    (ut) => ut.team.id === teamColorTeamId,
                   )
                 : undefined;
 
@@ -391,13 +391,6 @@ export default function FeedScreen() {
         </>
       )}
 
-      {/* 상점 모달 */}
-      <ShopModal
-        visible={shopModalVisible}
-        onClose={() => setShopModalVisible(false)}
-        currentUser={currentUser}
-        onPurchase={handleShopPurchase}
-      />
       {/* 팀 필터 선택 모달 */}
       <TeamFilterSelector
         onTeamSelect={setTeamFilter}

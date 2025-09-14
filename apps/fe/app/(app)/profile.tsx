@@ -310,6 +310,11 @@ export default function ProfileScreen({
     router.push("/(modals)/settings");
   };
 
+  // 팀 센터 접근 버튼 핸들러
+  const handleOpenTeamCenter = (): void => {
+    router.push("/(details)/team-center");
+  };
+
   const handleFollowersPress = () => {
     if (currentUser?.id) {
       router.push(`/(details)/followers?userId=${currentUser.id}`);
@@ -376,7 +381,9 @@ export default function ProfileScreen({
       Toast.show({
         type: "success",
         text1: t("common.success"),
-        text2: newIsFollowing ? t("profile.followSuccess") : t("profile.unfollowSuccess"),
+        text2: newIsFollowing
+          ? t("profile.followSuccess")
+          : t("profile.unfollowSuccess"),
         visibilityTime: 2000,
       });
 
@@ -532,12 +539,28 @@ export default function ProfileScreen({
             <View />
           )}
           <Text style={themed($headerTitle)}>
-            {isOwnProfile ? t("profile.title") : t("profile.userProfile", { nickname: userProfile.nickname })}
+            {isOwnProfile
+              ? t("profile.title")
+              : t("profile.userProfile", { nickname: userProfile.nickname })}
           </Text>
           {!isModal && isOwnProfile ? (
-            <TouchableOpacity onPress={handleSettings}>
-              <Ionicons name="settings-outline" color={"#fff"} size={24} />
-            </TouchableOpacity>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+            >
+              <TouchableOpacity
+                onPress={handleOpenTeamCenter}
+                accessibilityLabel="팀 센터 열기"
+              >
+                <Ionicons name="trophy-outline" color={"#fff"} size={24} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSettings}
+                accessibilityLabel="설정 열기"
+                style={{ marginLeft: 8 }}
+              >
+                <Ionicons name="settings-outline" color={"#fff"} size={24} />
+              </TouchableOpacity>
+            </View>
           ) : (
             <View />
           )}
@@ -650,7 +673,9 @@ export default function ProfileScreen({
                 <ActivityIndicator size="small" color={theme.colors.textDim} />
               ) : (
                 <Text style={themed($saveContactButtonText)}>
-                  {isFollowing ? t("profile.followUnfollow") : t("profile.follow")}
+                  {isFollowing
+                    ? t("profile.followUnfollow")
+                    : t("profile.follow")}
                 </Text>
               )}
             </TouchableOpacity>

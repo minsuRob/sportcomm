@@ -23,6 +23,17 @@ export class AppController {
   }
 
   /**
+   * 간단한 헬스체크 엔드포인트
+   * Render.com 유휴 상태 방지를 위한 간단한 헬스체크
+   *
+   * @returns 간단한 상태 응답
+   */
+  @Get('healthcheck')
+  healthCheck() {
+    return { status: 'ok' };
+  }
+
+  /**
    * 헬스체크 엔드포인트
    * 서버와 데이터베이스 연결 상태를 확인합니다.
    *

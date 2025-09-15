@@ -934,3 +934,15 @@ export const GET_STORY_POSTS = gql`
     }
   }
 `;
+
+/**
+ * 닉네임 중복 확인 쿼리
+ */
+export const CHECK_NICKNAME_AVAILABILITY = gql`
+  query CheckNicknameAvailability(\$nickname: String!, \$excludeUserId: String) {
+    checkNicknameAvailability(nickname: \$nickname, excludeUserId: \$excludeUserId) {
+      available
+      message
+    }
+  }
+`;

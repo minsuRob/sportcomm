@@ -86,7 +86,7 @@ import PostCardSkeleton from "@/components/PostCardSkeleton";
 import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
-import ShopModal from "@/components/shop/ShopModal";
+
 import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
 import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useChatRooms } from "@/lib/hooks/useChatRooms";
@@ -99,7 +99,7 @@ export default function FeedScreen() {
   const { t } = useTranslation();
   // 목록/로딩 상태는 전담 훅에서 관리
   const [authModalVisible, setAuthModalVisible] = useState(false);
-  const [shopModalVisible, setShopModalVisible] = useState(false);
+
   const [teamFilterOpen, setTeamFilterOpen] = useState(false); // 팀 필터 모달 외부 제어 상태
   const router = useRouter();
   const { user: currentUser, reloadUser: reloadCurrentUser } = useAuth();
@@ -169,7 +169,7 @@ export default function FeedScreen() {
       setAuthModalVisible(true);
       return;
     }
-    setShopModalVisible(true);
+    router.push("/(app)/shop");
   };
 
   /**
@@ -391,13 +391,6 @@ export default function FeedScreen() {
         </>
       )}
 
-      {/* 상점 모달 */}
-      <ShopModal
-        visible={shopModalVisible}
-        onClose={() => setShopModalVisible(false)}
-        currentUser={currentUser}
-        onPurchase={handleShopPurchase}
-      />
       {/* 팀 필터 선택 모달 */}
       <TeamFilterSelector
         onTeamSelect={setTeamFilter}
@@ -447,12 +440,8 @@ export default function FeedScreen() {
             }
           />
 
-          {/* FeedList 아래에 AdFit 광고 배너 */}
-          <AdFitBanner
-            adUnit="DAN-HsqnHzDgRAYX6iDy"
-            width={320}
-            height={50}
-          />
+          {/* FeedList 아래에 AdFit 광고 배너 (adUnit은 env 또는 기본값 사용) */}
+          <AdFitBanner width={320} height={50} />
         </>
       ) : (
         <ChatRoomList
@@ -485,7 +474,7 @@ export default function FeedScreen() {
           onPress={() => router.push("/(modals)/create-post")}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={28} color="white" />
+          <Ionicons name="create" size={28} color="white" />
         </TouchableOpacity>
       )}
     </View>

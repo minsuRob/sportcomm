@@ -11,7 +11,9 @@
     "retry": "다시 시도",
     "back": "뒤로",
     "close": "닫기",
-    "send": "전송"
+    "send": "전송",
+    "success": "성공",
+    "errorShort": "오류"
   },
   "navigation": {
     "feed": "피드",
@@ -77,7 +79,16 @@
     "editProfile": "프로필 편집",
     "settings": "설정",
     "noPosts": "게시물이 없습니다",
-    "loadingProfile": "프로필을 불러오는 중..."
+    "loadingProfile": "프로필을 불러오는 중...",
+    "myPosts": "내 게시물",
+    "bookmarks": "북마크",
+    "posts": "게시물",
+    "followSuccess": "팔로우했습니다",
+    "unfollowSuccess": "언팔로우했습니다",
+    "chatStartError": "채팅을 시작할 수 없습니다.",
+    "followUnfollow": "팔로우 해제",
+    "follow": "팔로우",
+    "userProfile": "{{nickname}}님의 프로필"
   },
   "search": {
     "title": "검색",
@@ -93,5 +104,19 @@
     "cacheHit": "캐시 적중",
     "networkSaved": "네트워크 절약",
     "loadingTime": "로딩 시간"
+  },
+  "profilePopover": {
+    "privateMessages": "개인 메시지",
+    "openProfile": "내 프로필",
+    "notifications": "알림",
+    "teamFilter": "팀 필터",
+    "board": "상세 게시판",
+    "lottery": "이벤트 / 추첨",
+    "shop": "포인트 상점",
+    "teamColorFilter": "앱 색상 필터 (내 팀 기반)",
+    "switchToLight": "라이트 테마로",
+    "switchToDark": "다크 테마로",
+    "switchToEnglish": "English로 전환",
+    "switchToKorean": "한국어로 전환"
   }
 }

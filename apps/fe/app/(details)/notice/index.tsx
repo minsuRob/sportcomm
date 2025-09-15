@@ -22,7 +22,9 @@ import {
   GET_NOTICES,
   Notice as NoticeGql,
   CREATE_NOTICE,
+  DELETE_NOTICE,
 } from "@/lib/graphql/notices";
+import AppDialog from "@/components/ui/AppDialog";
 // 로컬 enum 대신 GraphQL 응답 문자열을 직접 사용 (타입 충돌 제거)
 
 /**
@@ -61,6 +63,12 @@ export default function NoticeListScreen() {
   const [nCategory, setNCategory] = useState<NoticeGql["category"]>("GENERAL");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
+  // 삭제 관련 상태
+  const [deleteDialogVisible, setDeleteDialogVisible] =
+    useState<boolean>(false);
+  const [noticeToDelete, setNoticeToDelete] = useState<NoticeGql | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
+
   // (제거됨) 개별 getSession 호출: AuthProvider 가 전역 부트스트랩 수행
   // currentUser 는 useAuth() 에서 직접 제공
 
@@ -70,6 +78,9 @@ export default function NoticeListScreen() {
 
   // 공지 생성 Mutation
   const [createNotice] = useMutation(CREATE_NOTICE);
+
+  // 공지 삭제 Mutation
+  const [deleteNotice] = useMutation(DELETE_NOTICE);
 
   // GraphQL 공지 목록 Query (1페이지)
   const {
@@ -244,6 +255,42 @@ export default function NoticeListScreen() {
     }
   }, [nTitle, nContent, nCategory, createNotice, loadPage]);
 
+  // ADMIN: 공지 삭제 처리
+  const handleDeleteNotice = useCallback((notice: NoticeGql) => {
+    setNoticeToDelete(notice);
+    setDeleteDialogVisible(true);
+  }, []);
+
+  // 삭제 확인 처리
+  const handleConfirmDelete = useCallback(async () => {
+    if (!noticeToDelete) return;
+
+    setDeleting(true);
+    try {
+      await deleteNotice({
+        variables: { id: noticeToDelete.id },
+      });
+
+      // 목록에서 삭제된 항목 제거
+      setItems((prev) => prev.filter((item) => item.id !== noticeToDelete.id));
+
+      // 다이얼로그 닫기
+      setDeleteDialogVisible(false);
+      setNoticeToDelete(null);
+    } catch (e) {
+      console.error("공지 삭제 실패:", e);
+    } finally {
+      setDeleting(false);
+    }
+  }, [noticeToDelete, deleteNotice]);
+
+  // 삭제 다이얼로그 닫기
+  const handleCloseDeleteDialog = useCallback(() => {
+    if (deleting) return; // 삭제 중일 때는 닫기 방지
+    setDeleteDialogVisible(false);
+    setNoticeToDelete(null);
+  }, [deleting]);
+
   /**
    * 초기 로드
    */
@@ -303,66 +350,84 @@ export default function NoticeListScreen() {
   const renderItem = ({ item }: { item: NoticeGql }) => {
     const impMeta = getImportanceMeta(item.importance);
     return (
-      <TouchableOpacity
-        style={themed($itemContainer)}
-        activeOpacity={0.75}
-        onPress={() => handlePressItem(item)}
-        accessibilityRole="button"
-        accessibilityLabel={`공지 ${item.title}`}
-      >
-        <View style={themed($itemLeft)}>
-          <View
-            style={[
-              themed($importanceBadge),
-              {
-                backgroundColor: impMeta.color + "22",
-                borderColor: impMeta.color,
-              },
-            ]}
-          >
-            <Text
-              style={[themed($importanceText), { color: impMeta.color }]}
-              numberOfLines={1}
+      <View style={themed($itemContainer)}>
+        <TouchableOpacity
+          style={themed($itemContent)}
+          activeOpacity={0.75}
+          onPress={() => handlePressItem(item)}
+          accessibilityRole="button"
+          accessibilityLabel={`공지 ${item.title}`}
+        >
+          <View style={themed($itemLeft)}>
+            <View
+              style={[
+                themed($importanceBadge),
+                {
+                  backgroundColor: impMeta.color + "22",
+                  borderColor: impMeta.color,
+                },
+              ]}
             >
-              {impMeta.label}
+              <Text
+                style={[themed($importanceText), { color: impMeta.color }]}
+                numberOfLines={1}
+              >
+                {impMeta.label}
+              </Text>
+            </View>
+
+            <Text style={themed($itemTitle)} numberOfLines={1}>
+              {item.title}
             </Text>
+
+            {item.pinned && (
+              <Ionicons
+                name="pin"
+                size={14}
+                color={theme.colors.tint}
+                style={{ marginLeft: 4 }}
+              />
+            )}
+
+            {item.highlightBanner && (
+              <Ionicons
+                name="megaphone-outline"
+                size={14}
+                color={theme.colors.tint}
+                style={{ marginLeft: 2 }}
+              />
+            )}
           </View>
 
-          <Text style={themed($itemTitle)} numberOfLines={1}>
-            {item.title}
+          <View style={themed($itemMetaRow)}>
+            <Text style={themed($metaCategory)}>
+              {categoryLabel(item.category)}
+            </Text>
+            <Text style={themed($metaDot)}>•</Text>
+            <Text style={themed($metaDate)}>{formatDate(item.createdAt)}</Text>
+          </View>
+
+          <Text style={themed($itemPreview)} numberOfLines={2}>
+            {item.content.replace(/\s+/g, " ").trim().slice(0, 110)}
           </Text>
+        </TouchableOpacity>
 
-          {item.pinned && (
+        {/* ADMIN 전용 삭제 버튼 */}
+        {isAdmin && (
+          <TouchableOpacity
+            style={themed($deleteButton)}
+            onPress={() => handleDeleteNotice(item)}
+            accessibilityRole="button"
+            accessibilityLabel={`공지 ${item.title} 삭제`}
+          >
             <Ionicons
-              name="pin"
-              size={14}
-              color={theme.colors.tint}
-              style={{ marginLeft: 4 }}
+              name="trash-outline"
+              size={16}
+              color={theme.colors.error}
             />
-          )}
-
-          {item.highlightBanner && (
-            <Ionicons
-              name="megaphone-outline"
-              size={14}
-              color={theme.colors.tint}
-              style={{ marginLeft: 2 }}
-            />
-          )}
-        </View>
-
-        <View style={themed($itemMetaRow)}>
-          <Text style={themed($metaCategory)}>
-            {categoryLabel(item.category)}
-          </Text>
-          <Text style={themed($metaDot)}>•</Text>
-          <Text style={themed($metaDate)}>{formatDate(item.createdAt)}</Text>
-        </View>
-
-        <Text style={themed($itemPreview)} numberOfLines={2}>
-          {item.content.replace(/\s+/g, " ").trim().slice(0, 110)}
-        </Text>
-      </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+      </View>
     );
   };
 
@@ -539,6 +604,19 @@ export default function NoticeListScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AppDialog
+        visible={deleteDialogVisible}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={handleConfirmDelete}
+        title="공지사항 삭제"
+        description={`"${noticeToDelete?.title || ""}"을(를) 정말 삭제하시겠습니까?\n\n삭제된 공지사항은 복구할 수 없습니다.`}
+        confirmText={deleting ? "삭제 중..." : "삭제"}
+        cancelText="취소"
+        confirmDisabled={deleting}
+        dismissOnBackdrop={!deleting}
+      />
     </SafeAreaView>
   );
 }
@@ -603,10 +681,25 @@ const $listContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $itemContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "flex-start",
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.sm,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
+});
+
+const $itemContent: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $deleteButton: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+  padding: spacing.sm,
+  marginLeft: spacing.xs,
+  borderRadius: 8,
+  backgroundColor: colors.error + "10",
+  borderWidth: 1,
+  borderColor: colors.error + "30",
 });
 
 const $itemLeft: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -818,11 +911,63 @@ const $categoryPillText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "600",
   color: colors.text,
 });
+// Helper 함수들
+function getImportanceMeta(importance: string) {
+  switch (importance) {
+    case "HIGH":
+      return { label: "높음", color: "#FF4444" };
+    case "MEDIUM":
+      return { label: "보통", color: "#FF8800" };
+    case "LOW":
+      return { label: "낮음", color: "#00AA00" };
+    default:
+      return { label: "일반", color: "#666666" };
+  }
+}
+
+function categoryLabel(category: string) {
+  switch (category) {
+    case "GENERAL":
+      return "일반";
+    case "FEATURE":
+      return "기능";
+    case "EVENT":
+      return "이벤트";
+    case "MAINTENANCE":
+      return "점검";
+    case "POLICY":
+      return "정책";
+    default:
+      return category;
+  }
+}
+
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return "오늘";
+  } else if (diffDays === 1) {
+    return "어제";
+  } else if (diffDays < 7) {
+    return `${diffDays}일 전`;
+  } else {
+    return date.toLocaleDateString("ko-KR", {
+      month: "short",
+      day: "numeric",
+    });
+  }
+}
+
 /**
  * 커밋 요약:
  * - 공지 목록 페이지(목업 데이터 기반) 추가
  * - 페이지네이션/새로고침/중요도/카테고리 UI 구성
  * - 상세 페이지 이동 라우팅 준비
+ * - ADMIN 권한 사용자용 삭제 버튼 및 AppDialog 확인 팝업 추가
  *
- * commit: feat(notice): 공지 목록 페이지 추가 및 목업 페이지네이션 구현
+ * commit: feat(notice): 공지 목록 페이지 추가 및 ADMIN 삭제 기능 구현
  */

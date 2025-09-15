@@ -42,14 +42,14 @@ export default function ProfileContextPopover({
   anchorStyle,
 }: ProfileContextPopoverProps) {
   const { theme, toggleTheme, themed } = useAppTheme();
-  const { currentLanguage, switchLanguage } = useTranslation();
+  const { currentLanguage, switchLanguage, t } = useTranslation();
   const router = useRouter();
 
   const items = useMemo(
     () => [
       {
         key: "privateMessages",
-        label: "개인 메시지",
+        label: t("profilePopover.privateMessages"),
         icon: (
           <Ionicons
             name="chatbubbles-outline"
@@ -64,7 +64,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "openProfile",
-        label: "내 프로필",
+        label: t("profilePopover.openProfile"),
         icon: (
           <Ionicons
             name="person-circle-outline"
@@ -79,7 +79,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "notifications",
-        label: "알림",
+        label: t("profilePopover.notifications"),
         icon: (
           <Ionicons
             name="notifications-outline"
@@ -94,7 +94,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "teamFilter",
-        label: "팀 필터",
+        label: t("profilePopover.teamFilter"),
         icon: (
           <Ionicons name="funnel-outline" size={18} color={theme.colors.text} />
         ),
@@ -106,7 +106,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "board",
-        label: "상세 게시판",
+        label: t("profilePopover.board"),
         icon: (
           <Ionicons name="list-outline" size={18} color={theme.colors.text} />
         ),
@@ -117,7 +117,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "lottery",
-        label: "이벤트 / 추첨",
+        label: t("profilePopover.lottery"),
         icon: (
           <Ionicons name="ticket-outline" size={18} color={theme.colors.text} />
         ),
@@ -128,7 +128,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "shop",
-        label: "포인트 상점",
+        label: t("profilePopover.shop"),
         icon: (
           <Ionicons
             name="storefront-outline"
@@ -143,7 +143,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "teamColorFilter",
-        label: "앱 색상 필터 (내 팀 기반)",
+        label: t("profilePopover.teamColorFilter"),
         icon: (
           <Ionicons
             name="color-filter-outline"
@@ -158,7 +158,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "toggleTheme",
-        label: theme.isDark ? "라이트 테마로" : "다크 테마로",
+        label: theme.isDark ? t("profilePopover.switchToLight") : t("profilePopover.switchToDark"),
         icon: (
           <Ionicons
             name={theme.isDark ? "sunny-outline" : "moon-outline"}
@@ -173,7 +173,7 @@ export default function ProfileContextPopover({
       },
       {
         key: "toggleLanguage",
-        label: currentLanguage === "ko" ? "English로 전환" : "한국어로 전환",
+        label: currentLanguage === "ko" ? t("profilePopover.switchToEnglish") : t("profilePopover.switchToKorean"),
         icon: (
           <Ionicons name="globe-outline" size={18} color={theme.colors.text} />
         ),
@@ -188,6 +188,7 @@ export default function ProfileContextPopover({
       toggleTheme,
       currentLanguage,
       switchLanguage,
+      t,
       onOpenProfile,
       onClose,
       router,

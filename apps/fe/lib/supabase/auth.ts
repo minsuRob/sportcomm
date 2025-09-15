@@ -63,6 +63,58 @@ export interface UserProfile {
  */
 export class SupabaseAuthService {
   /**
+   * Google OAuth 로그인 시작
+   * - 웹: redirectTo로 돌아온 뒤 URL에서 세션을 감지하여 자동 로그인됩니다
+   * - 네이티브(Expo): 커스텀 스킴(myapp://)으로 돌아오도록 설정해야 합니다
+   * @param redirectTo OAuth 완료 후 돌아올 URL (미지정 시 현재 origin 또는 스킴 사용)
+   */
+  static async signInWithGoogle(
+    redirectTo?: string,
+  ): Promise<{ error: AuthError | null }> {
+    try {
+      // 플랫폼에 따라 기본 redirectTo 결정
+      const fallbackRedirect =
+        typeof window !== "undefined" && window.location?.origin
+          ? window.location.origin
+          : "myapp://auth-callback";
+
+      const targetRedirect = redirectTo || fallbackRedirect;
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: targetRedirect,
+          // Google 권한 동의 화면 강제 표시 및 오프라인 액세스 토큰 요청
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+
+      if (error) {
+        console.error("❌ Google OAuth 시작 실패:", error);
+        return { error };
+      }
+
+      // 웹 환경에선 즉시 리다이렉트됩니다. data.url은 리디렉션될 URL입니다.
+      console.log("🔗 Google OAuth redirect URL:", data?.url);
+      return { error: null };
+    } catch (error) {
+      console.error("❌ Google OAuth 중 예외 발생:", error);
+      return {
+        error: {
+          message:
+            error instanceof Error
+              ? error.message
+              : "Google 로그인 중 오류가 발생했습니다.",
+          name: "UnknownError",
+          status: 500,
+        } as AuthError,
+      };
+    }
+  }
+  /**
    * 회원가입
    * @param input 회원가입 정보
    * @returns 인증 결과

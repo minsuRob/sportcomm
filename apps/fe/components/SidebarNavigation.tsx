@@ -32,6 +32,18 @@ const navigationItems: NavigationItem[] = [
     route: "/(app)/search",
   },
   {
+    name: "team-center",
+    label: "팀",
+    icon: (props) => <Ionicons name="trophy-outline" {...props} />,
+    route: "/(app)/team-center",
+  },
+  {
+    name: "shop",
+    label: "상점",
+    icon: (props) => <Ionicons name="bag-handle-outline" {...props} />,
+    route: "/(app)/shop",
+  },
+  {
     name: "profile",
     label: "프로필",
     icon: (props) => <Ionicons name="person" {...props} />,

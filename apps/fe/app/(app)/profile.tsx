@@ -18,6 +18,7 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { User } from "@/lib/auth";
 import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useRouter } from "expo-router";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import Toast from "react-native-toast-message";
 import {
   GET_USER_PROFILE,
@@ -103,6 +104,7 @@ export default function ProfileScreen({
   onClose,
 }: ProfileScreenProps) {
   const { themed, theme } = useAppTheme();
+  const { t } = useTranslation();
   // 전역 AuthContext 에서 현재 사용자 정보 제공
   const { user: currentUser, updateUser, reloadUser } = useAuth();
   const [userPosts, setUserPosts] = useState<Post[]>([]);
@@ -117,10 +119,10 @@ export default function ProfileScreen({
   // 탭 설정 (본인/타인에 따라 다름)
   const tabs = isOwnProfile
     ? [
-        { key: "posts", title: "내 게시물" },
-        { key: "bookmarks", title: "북마크" },
+        { key: "posts", title: t("profile.myPosts") },
+        { key: "bookmarks", title: t("profile.bookmarks") },
       ]
-    : [{ key: "posts", title: "게시물" }];
+    : [{ key: "posts", title: t("profile.posts") }];
 
   // 팔로우 관련 상태 (타인 프로필일 때만 사용)
   const [isFollowing, setIsFollowing] = useState<boolean | undefined>(
@@ -308,6 +310,11 @@ export default function ProfileScreen({
     router.push("/(modals)/settings");
   };
 
+  // 팀 센터 접근 버튼 핸들러
+  const handleOpenTeamCenter = (): void => {
+    router.push("/(details)/team-center");
+  };
+
   const handleFollowersPress = () => {
     if (currentUser?.id) {
       router.push(`/(details)/followers?userId=${currentUser.id}`);
@@ -373,8 +380,10 @@ export default function ProfileScreen({
 
       Toast.show({
         type: "success",
-        text1: "성공",
-        text2: newIsFollowing ? "팔로우했습니다" : "언팔로우했습니다",
+        text1: t("common.success"),
+        text2: newIsFollowing
+          ? t("profile.followSuccess")
+          : t("profile.unfollowSuccess"),
         visibilityTime: 2000,
       });
 
@@ -431,8 +440,8 @@ export default function ProfileScreen({
     } catch (error) {
       Toast.show({
         type: "error",
-        text1: "오류",
-        text2: "채팅을 시작할 수 없습니다.",
+        text1: t("common.errorShort"),
+        text2: t("profile.chatStartError"),
         visibilityTime: 3000,
       });
     }
@@ -530,12 +539,28 @@ export default function ProfileScreen({
             <View />
           )}
           <Text style={themed($headerTitle)}>
-            {isOwnProfile ? "프로필" : `${userProfile.nickname}님의 프로필`}
+            {isOwnProfile
+              ? t("profile.title")
+              : t("profile.userProfile", { nickname: userProfile.nickname })}
           </Text>
           {!isModal && isOwnProfile ? (
-            <TouchableOpacity onPress={handleSettings}>
-              <Ionicons name="settings-outline" color={"#fff"} size={24} />
-            </TouchableOpacity>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+            >
+              <TouchableOpacity
+                onPress={handleOpenTeamCenter}
+                accessibilityLabel="팀 센터 열기"
+              >
+                <Ionicons name="trophy-outline" color={"#fff"} size={24} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSettings}
+                accessibilityLabel="설정 열기"
+                style={{ marginLeft: 8 }}
+              >
+                <Ionicons name="settings-outline" color={"#fff"} size={24} />
+              </TouchableOpacity>
+            </View>
           ) : (
             <View />
           )}
@@ -574,7 +599,7 @@ export default function ProfileScreen({
         {/* 팀 정보 표시 */}
         {userProfile.myTeams && userProfile.myTeams.length > 0 ? (
           <View style={themed($teamsContainer)}>
-            {userProfile.myTeams
+            {[...userProfile.myTeams]
               .sort((a, b) => a.priority - b.priority)
               .slice(0, 3)
               .map((userTeam) => (
@@ -648,7 +673,9 @@ export default function ProfileScreen({
                 <ActivityIndicator size="small" color={theme.colors.textDim} />
               ) : (
                 <Text style={themed($saveContactButtonText)}>
-                  {isFollowing ? "팔로우 해제" : "팔로우"}
+                  {isFollowing
+                    ? t("profile.followUnfollow")
+                    : t("profile.follow")}
                 </Text>
               )}
             </TouchableOpacity>

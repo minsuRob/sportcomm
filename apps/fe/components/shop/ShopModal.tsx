@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Modal,
   ScrollView,
   TouchableOpacity,
   ViewStyle,
@@ -36,7 +35,7 @@ interface ShopModalProps {
 }
 
 // 상점 아이템 목록 (실제로는 API에서 가져올 데이터)
-const SHOP_ITEMS: ShopItemData[] = [
+export const SHOP_ITEMS: ShopItemData[] = [
   {
     id: "profile_frame_gold",
     name: "골드 프로필 테두리",
@@ -102,8 +101,9 @@ const SHOP_ITEMS: ShopItemData[] = [
 ];
 
 /**
- * 상점 모달 컴포넌트
- * 사용자가 포인트로 다양한 아이템을 구매할 수 있는 상점 UI
+ * 상점 페이지 컴포넌트
+ * - 기존 모달 형태에서 페이지 형태로 동작하도록 변경
+ * - visible이 false면 렌더링하지 않도록 하여 기존 사용처와의 호환 유지
  */
 export default function ShopModal({
   visible,
@@ -179,8 +179,11 @@ export default function ShopModal({
     }
   };
 
+  // 페이지 형태로 동작: visible이 아니면 렌더링하지 않음(호환성 유지)
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <>
       <View style={themed($modalOverlay)}>
         <View style={themed($modalContent)}>
           {/* 헤더 */}
@@ -307,27 +310,25 @@ export default function ShopModal({
         confirmText="확인"
         onConfirm={() => setShowErrorDialog(false)}
       />
-    </Modal>
+    </>
   );
 }
 
 // 스타일 정의
-const $modalOverlay: ThemedStyle<ViewStyle> = () => ({
+// 페이지 형태로 동작하도록 스타일 조정
+const $modalOverlay: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
-  backgroundColor: "rgba(0, 0, 0, 0.6)",
-  justifyContent: "flex-end",
-  alignItems: "center", // 넓은 화면에서 콘텐츠를 가로 중앙 정렬
+  backgroundColor: colors.background,
+  justifyContent: "flex-start",
+  alignItems: "center", // 와이드 화면에서 중앙 정렬
 });
 
 const $modalContent: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
-  borderTopLeftRadius: 24,
-  borderTopRightRadius: 24,
-  maxHeight: "90%",
-  minHeight: "70%",
-  // 웹/와이드 화면에서 중앙 정렬 및 최대 너비 제한
+  // 페이지 전체를 사용
+  flex: 1,
   width: "100%",
-  maxWidth: 640,
+  maxWidth: 640, // 웹일 때 가독성 유지
   alignSelf: "center",
 });
 
@@ -391,16 +392,12 @@ const $balanceAmount: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.tint,
 });
 
-const $categoryTabs: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
-  // 가로 스크롤 바 컨테이너 - 불필요한 세로 확장 방지
+const $categoryTabs: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.lg,
   marginBottom: spacing.md,
   flexGrow: 0,
   flexShrink: 0,
-  // 웹 환경에서 height 늘어나는 케이스 대응 (auto 비슷한 효과)
   alignSelf: "flex-start",
-  // 배경 추가시 카드처럼 보이도록 할 수도 있으나 현재는 투명 유지
-  // backgroundColor: colors.backgroundAlt,
 });
 
 const $categoryTabsContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -419,7 +416,7 @@ const $categoryTab: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderRadius: 20,
   backgroundColor: colors.backgroundAlt,
   gap: spacing.xs,
-  alignSelf: "flex-start", // 세로 방향으로 늘어나지 않도록 고정
+  alignSelf: "flex-start",
 });
 
 const $categoryTabActive: ThemedStyle<ViewStyle> = ({ colors }) => ({

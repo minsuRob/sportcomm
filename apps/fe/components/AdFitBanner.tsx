@@ -6,13 +6,17 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { View, ViewStyle, Text, ActivityIndicator } from "react-native";
+import { View, ViewStyle, Text, ActivityIndicator, TextStyle } from "react-native";
 import { isWeb } from "@/lib/platform";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { AD_FIT_AD_UNIT as ENV_AD_FIT_AD_UNIT } from "@env";
 
 interface AdFitBannerProps {
-  adUnit: string;
+  /**
+   * 광고 유닛 ID. 전달하지 않으면 환경변수 또는 기본값을 사용합니다.
+   */
+  adUnit?: string;
   width: number;
   height: number;
   style?: ViewStyle;
@@ -34,6 +38,14 @@ export default function AdFitBanner({
   const [adStatus, setAdStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [adError, setAdError] = useState<string | null>(null);
 
+  // 환경변수 혹은 EXPO_PUBLIC 값, 마지막으로 하드코딩 기본값 순서로 결합
+  const DEFAULT_AD_UNIT: string = "DAN-jaKdyGIgnRkALWCc";
+  const CONFIG_AD_UNIT: string =
+    (ENV_AD_FIT_AD_UNIT as unknown as string) ||
+    ((process.env as any)?.EXPO_PUBLIC_AD_FIT_AD_UNIT as string) ||
+    DEFAULT_AD_UNIT;
+  const effectiveAdUnit: string = adUnit ?? CONFIG_AD_UNIT;
+
   useEffect(() => {
     // 웹 환경에서만 광고 스크립트 로드
     if (isWeb() && typeof window !== "undefined" && adContainerRef.current) {
@@ -48,7 +60,8 @@ export default function AdFitBanner({
         const adElement = document.createElement('ins');
         adElement.className = 'kakao_ad_area';
         adElement.style.display = 'none';
-        adElement.setAttribute('data-ad-unit', adUnit);
+        // 환경/기본값을 고려한 최종 광고 유닛 사용
+        adElement.setAttribute('data-ad-unit', effectiveAdUnit);
         adElement.setAttribute('data-ad-width', width.toString());
         adElement.setAttribute('data-ad-height', height.toString());
 
@@ -100,7 +113,7 @@ export default function AdFitBanner({
         setAdError('광고 초기화 실패');
       }
     }
-  }, [adUnit, width, height]);
+  }, [effectiveAdUnit, width, height]);
 
   // 웹 환경에서만 광고 컨테이너 렌더링
   if (!isWeb()) {

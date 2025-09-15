@@ -216,4 +216,75 @@ export class UsersService {
       },
     });
   }
+
+  /**
+   * 닉네임의 사용 가능 여부를 확인합니다.
+   * @param nickname 확인할 닉네임
+   * @param excludeUserId 제외할 사용자 ID (프로필 수정 시 본인 제외)
+   * @returns 사용 가능 여부와 메시지
+   */
+  async checkNicknameAvailability(
+    nickname: string,
+    excludeUserId?: string,
+  ): Promise<{ available: boolean; message: string }> {
+    try {
+      // 닉네임 유효성 검증
+      if (!nickname || nickname.trim().length < 2) {
+        return {
+          available: false,
+          message: '닉네임은 최소 2자 이상이어야 합니다.',
+        };
+      }
+
+      if (nickname.length > 30) {
+        return {
+          available: false,
+          message: '닉네임은 최대 30자까지 가능합니다.',
+        };
+      }
+
+      // 닉네임 패턴 검증 (한글, 영문, 숫자, 언더스코어만 허용)
+      const nicknameRegex = /^[a-zA-Z0-9가-힣_]+$/;
+      if (!nicknameRegex.test(nickname)) {
+        return {
+          available: false,
+          message:
+            '닉네임은 한글, 영문, 숫자, 언더스코어만 사용할 수 있습니다.',
+        };
+      }
+
+      // 데이터베이스에서 중복 확인
+      const existingUser = await this.usersRepository.findOne({
+        where: { nickname: nickname.trim() },
+      });
+
+      // 제외할 사용자 ID가 있고, 그 사용자의 닉네임인 경우 사용 가능
+      if (excludeUserId && existingUser?.id === excludeUserId) {
+        return {
+          available: true,
+          message: '현재 사용 중인 닉네임입니다.',
+        };
+      }
+
+      // 다른 사용자가 사용 중인 경우
+      if (existingUser) {
+        return {
+          available: false,
+          message: '이미 사용 중인 닉네임입니다.',
+        };
+      }
+
+      // 사용 가능한 닉네임
+      return {
+        available: true,
+        message: '사용 가능한 닉네임입니다.',
+      };
+    } catch (error) {
+      console.error('닉네임 중복 확인 중 오류 발생:', error);
+      return {
+        available: false,
+        message: '닉네임 확인 중 오류가 발생했습니다.',
+      };
+    }
+  }
 }

@@ -22,6 +22,7 @@ export default function ModalsLayout() {
           backgroundColor: theme.colors.background,
         },
       }}
-    />
+    >
+    </Stack>
   );
 }

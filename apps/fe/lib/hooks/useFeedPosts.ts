@@ -54,6 +54,7 @@ interface GqlPost {
   team: {
     id: string;
     name: string;
+    logoUrl?: string;
     mainColor?: string;
     subColor?: string;
     darkMainColor?: string;
@@ -135,6 +136,7 @@ const GET_POSTS = gql`
         team {
           id
           name
+          logoUrl
           mainColor
           subColor
           darkMainColor

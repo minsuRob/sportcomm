@@ -114,6 +114,7 @@ export interface Post {
   team: {
     id: string;
     name: string;
+    logoUrl?: string;
     // 팀 팔레트 컬러 (DB에서 로드)
     mainColor?: string;
     subColor?: string;

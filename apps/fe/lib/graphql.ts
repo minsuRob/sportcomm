@@ -29,6 +29,7 @@ export const GET_FEED_DATA = gql`
         team {
           id
           name
+          logoUrl
           code
           color
           mainColor

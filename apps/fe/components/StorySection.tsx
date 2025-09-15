@@ -188,7 +188,7 @@ const StoryItemComponent = ({
           style={themed($storyImage)}
           resizeMode="cover"
           onError={() =>
-            console.warn(`Failed to load story image: ${thumbnailUrl}`)
+            console.warn(`StorySection: 이미지 로드 실패 - ${story.title} ${story.thumbnailUrl}`)
           }
           fadeDuration={200}
           loadingIndicatorSource={{
@@ -269,6 +269,7 @@ export default function StorySection({
       try {
         // 피드에서 최신 posts 가져와 StoryItem으로 변환
         const sourcePosts = snap.posts.slice(0, maxItems);
+
         const derived: StoryItem[] = sourcePosts.map((p) => {
           const isMyTeam = !!currentUser?.myTeams?.some(
             (mt: any) => mt.team.id === p.teamId,
@@ -322,6 +323,7 @@ export default function StorySection({
             },
           } as StoryItem;
         });
+
         setStories(derived);
         setHasMore(false); // 별도 페이지네이션 미사용
         setLoading(false);
@@ -339,6 +341,7 @@ export default function StorySection({
     // 캐시 구독에서 이미 stories 가 구성되었다면 폴백 불필요
     if (stories.length > 0) return;
     // feedPosts 기반 파생 스토리 생성 (상위  maxItems )
+
     try {
       const derived = feedPosts.slice(0, maxItems).map((p) => {
         const media = (p.media || []).map((m: any) => ({
@@ -389,6 +392,7 @@ export default function StorySection({
         } as StoryItem;
       });
       if (derived.length > 0) {
+
         setStories(derived);
         setLoading(false);
       }

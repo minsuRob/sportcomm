@@ -140,16 +140,21 @@ export default function CreatePostScreen() {
   });
 
   // 인증 상태 감시: 비로그인 시 다이얼로그 표시 (전역 AuthProvider 사용)
-  React.useEffect(() => {
-    if (isAuthenticated || currentUser) return;
-    setDialog({
-      visible: true,
-      title: "로그인 필요",
-      description: "게시물을 작성하려면 로그인이 필요합니다.",
-      onConfirm: () => router.back(),
-      showCancel: false,
-    });
-  }, [currentUser, isAuthenticated, router]);
+  
+  // TODO : 다 로드 되고 검증해야할듯.
+    
+  // React.useEffect(() => {
+  //   console.log("isAuthenticated", isAuthenticated);
+  //   console.log("currentUser", currentUser);
+  //   if (isAuthenticated || currentUser) return;
+  //   setDialog({
+  //     visible: true,
+  //     title: "로그인 필요",
+  //     description: "게시물을 작성하려면 로그인이 필요합니다.",
+  //     onConfirm: () => router.back(),
+  //     showCancel: false,
+  //   });
+  // }, [currentUser, isAuthenticated, router]);
 
   // 사용자가 선택한 팀들을 옵션으로 변환
   const teamOptions: TeamOption[] = React.useMemo(() => {

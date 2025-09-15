@@ -83,6 +83,32 @@ registerEnumType(UserRole, {
   },
 });
 
+/**
+ * 인증 제공자 열거형
+ * EMAIL: 이메일/비밀번호, GOOGLE: 구글 OAuth, APPLE: 애플, KAKAO: 카카오, UNKNOWN: 미확인
+ * 향후 로그인 제공자 확장을 위해 enum만 추가하면 됩니다.
+ */
+export enum AuthProvider {
+  EMAIL = 'EMAIL',
+  GOOGLE = 'GOOGLE',
+  APPLE = 'APPLE',
+  KAKAO = 'KAKAO',
+  UNKNOWN = 'UNKNOWN',
+}
+
+// GraphQL 스키마에 AuthProvider enum 등록
+registerEnumType(AuthProvider, {
+  name: 'AuthProvider',
+  description: '인증 제공자',
+  valuesMap: {
+    EMAIL: { description: '이메일/비밀번호' },
+    GOOGLE: { description: '구글 OAuth' },
+    APPLE: { description: '애플 로그인' },
+    KAKAO: { description: '카카오 로그인' },
+    UNKNOWN: { description: '미확인' },
+  },
+});
+
 // GraphQL 스키마에 GenderCode enum 등록
 registerEnumType(GenderCode, {
   name: 'GenderCode',
@@ -180,6 +206,23 @@ export class User {
   @IsEmail({}, { message: '올바른 이메일 형식을 입력해주세요.' })
   @MaxLength(100, { message: '이메일은 최대 100자까지 가능합니다.' })
   email: string;
+
+  /**
+   * 인증 제공자
+   * Supabase Auth app_metadata.provider를 표준화하여 저장
+   */
+  @Field(() => AuthProvider, {
+    description: '인증 제공자',
+    defaultValue: AuthProvider.UNKNOWN,
+  })
+  @Column({
+    type: 'enum',
+    enum: AuthProvider,
+    default: AuthProvider.UNKNOWN,
+    comment: '인증 제공자',
+  })
+  @IsEnum(AuthProvider, { message: '올바른 인증 제공자를 선택해주세요.' })
+  provider: AuthProvider;
 
   /**
    * 사용자 포인트

@@ -2,7 +2,7 @@ import { Resolver, Mutation, Args, Query } from '@nestjs/graphql';
 import { UseGuards, Logger } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
-import { User } from '../../entities/user.entity';
+import { User, AuthProvider } from '../../entities/user.entity';
 import { UserSyncService } from './user-sync.service';
 import { SyncUserInput, UpdateUserProfileInput } from './dto/sync-user.input';
 
@@ -50,6 +50,8 @@ export class AuthSyncResolver {
       this.logger.log(
         `사용자 동기화 성공: ${user.id} -> ${syncedUser.nickname}`,
       );
+      // 주의: syncedUser는 User 엔티티이며, provider(AuthProvider enum) 값이 UserSyncService에서 동기화되어 포함됩니다.
+      // (구글/애플/카카오 확장 시에도 동일 경로로 자동 반영)
       return syncedUser;
     } catch (error) {
       this.logger.error(`사용자 동기화 실패: ${user.id}`, error.stack);
@@ -125,6 +127,13 @@ export class AuthSyncResolver {
       currentUser.nickname = combinedInfo.nickname;
       currentUser.email = combinedInfo.email || '';
       currentUser.role = combinedInfo.role;
+      // provider 동기화: CombinedUserInfo.provider(string) -> AuthProvider(enum)로 표준화
+      if ((combinedInfo as any).provider) {
+        const p = String((combinedInfo as any).provider).toUpperCase();
+        currentUser.provider = (AuthProvider as any)[p] ?? AuthProvider.UNKNOWN;
+      } else {
+        currentUser.provider = AuthProvider.UNKNOWN;
+      }
       currentUser.profileImageUrl = combinedInfo.profileImageUrl;
       currentUser.bio = combinedInfo.bio;
       currentUser.isActive = combinedInfo.isActive;

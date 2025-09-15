@@ -119,7 +119,7 @@ const SocialLogins = ({
  */
 export default function AuthScreen() {
   const router = useRouter();
-  const { themed, theme } = useAppTheme();
+  const { themed, theme, toggleTheme } = useAppTheme();
 
   const [isLogin, setIsLogin] = useState(true);
   const [showEmailForm, setShowEmailForm] = useState(false);
@@ -473,13 +473,19 @@ export default function AuthScreen() {
       <>
         {/* 헤더 */}
         <View style={themed($header)}>
-          <TouchableOpacity onPress={() => router.back()} style={themed($headerButton)}>
-            <Text style={themed($cancelText)}>취소</Text>
+          <TouchableOpacity onPress={() => router.back()} style={themed($backButton)}>
+            <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
 
           <Text style={themed($headerTitle)}>로그인</Text>
 
-          <View style={themed($headerButton)} />
+          <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
+            <Ionicons
+              name={theme.isDark ? "sunny-outline" : "moon-outline"}
+              size={24}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
         </View>
         <ScrollView
           style={themed($container)}
@@ -578,26 +584,36 @@ export default function AuthScreen() {
     <>
       {/* 헤더 */}
       <View style={themed($header)}>
-        <TouchableOpacity onPress={() => setShowEmailForm(false)} style={themed($headerButton)}>
-          <Text style={themed($cancelText)}>취소</Text>
+        <TouchableOpacity onPress={() => setShowEmailForm(false)} style={themed($backButton)}>
+          <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
 
         <Text style={themed($headerTitle)}>{isLogin ? "로그인" : "회원가입"}</Text>
 
-        <TouchableOpacity
-          onPress={handleContinue}
-          style={themed($headerButton)}
-          disabled={loginLoading || registerLoading}
-        >
-          <Text
-            style={[
-              themed($saveText),
-              (loginLoading || registerLoading) && themed($disabledText),
-            ]}
+        <View style={themed($headerRight)}>
+          <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
+            <Ionicons
+              name={theme.isDark ? "sunny-outline" : "moon-outline"}
+              size={20}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleContinue}
+            style={themed($headerButton)}
+            disabled={loginLoading || registerLoading}
           >
-            {loginLoading || registerLoading ? "처리 중..." : "완료"}
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                themed($saveText),
+                (loginLoading || registerLoading) && themed($disabledText),
+              ]}
+            >
+              {loginLoading || registerLoading ? "처리 중..." : "완료"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -942,6 +958,20 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingVertical: spacing.md,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
+});
+
+const $backButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
+});
+
+const $themeToggleButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
+  marginRight: spacing.sm,
+});
+
+const $headerRight: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
 });
 
 const $headerButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({

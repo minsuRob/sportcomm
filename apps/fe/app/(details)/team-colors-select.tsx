@@ -106,23 +106,28 @@ export default function TeamColorsDetailsScreen() {
 
   /**
    * 팀 선택 핸들러
-   * - teamId 는 선택 체크 표시에 사용
-   * - teamSlug(deriveTeamSlug) 를 ThemeProvider 에 전달하여 색상 매칭
+   * - 이제는 UI 미리보기만 변경(로컬 상태)
+   * - 실제 적용은 저장 버튼으로 수행
    */
-  const handleSelectTeam = async (teamId: string | null): Promise<void> => {
+  const handleSelectTeam = (teamId: string | null): void => {
+    const nextId = selectedTeamId === teamId ? null : teamId;
+    setSelectedTeamId(nextId);
+  };
+
+  /**
+   * 저장 핸들러
+   * - 현재 선택된 팀 기준으로 slug 유추 후 setTeamColorOverride 적용
+   */
+  const handleSave = async (): Promise<void> => {
     try {
-      const nextId = selectedTeamId === teamId ? null : teamId;
       let slug: string | null = null;
-      if (nextId) {
-        const team = teamMap.get(nextId);
+      if (selectedTeamId) {
+        const team = teamMap.get(selectedTeamId);
         slug = deriveTeamSlug(team?.name);
       }
-      // 새로운 통합 세터 (teamId + slug) 사용
-      await setTeamColorOverride(nextId, slug);
-
-      setSelectedTeamId(nextId);
+      await setTeamColorOverride(selectedTeamId, slug);
     } catch (error) {
-      console.error("팀 색상 적용 실패:", error);
+      console.error("팀 색상 저장 실패:", error);
     }
   };
 
@@ -164,14 +169,8 @@ export default function TeamColorsDetailsScreen() {
 
         <Text style={themed($title)}>앱 색상 설정 (내 팀 기반)</Text>
 
-        <TouchableOpacity
-          onPress={async () => {
-            // 초기화: 팀 기반 오버라이드 제거
-            await handleSelectTeam(null);
-          }}
-          style={themed($resetButton)}
-        >
-          <Text style={themed($resetButtonText)}>기본으로 되돌리기</Text>
+        <TouchableOpacity onPress={handleSave} style={themed($resetButton)}>
+          <Text style={themed($resetButtonText)}>저장</Text>
         </TouchableOpacity>
       </View>
 

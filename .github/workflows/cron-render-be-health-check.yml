@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Call Render Server
         run: |
-          curl -s -o /dev/null -w "%{http_code}" "$RENDER_BE_URL/health"
+          curl -v "$RENDER_BE_URL/health"

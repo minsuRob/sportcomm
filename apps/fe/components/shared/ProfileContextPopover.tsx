@@ -47,21 +47,21 @@ export default function ProfileContextPopover({
 
   const items = useMemo(
     () => [
-      {
-        key: "privateMessages",
-        label: t("profilePopover.privateMessages"),
-        icon: (
-          <Ionicons
-            name="chatbubbles-outline"
-            size={18}
-            color={theme.colors.text}
-          />
-        ),
-        onPress: () => {
-          onClose();
-          router.push("/(modals)/private-chats");
-        },
-      },
+      // {
+      //   key: "privateMessages",
+      //   label: t("profilePopover.privateMessages"),
+      //   icon: (
+      //     <Ionicons
+      //       name="chatbubbles-outline"
+      //       size={18}
+      //       color={theme.colors.text}
+      //     />
+      //   ),
+      //   onPress: () => {
+      //     onClose();
+      //     router.push("/(modals)/private-chats");
+      //   },
+      // },
       {
         key: "openProfile",
         label: t("profilePopover.openProfile"),

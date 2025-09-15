@@ -84,7 +84,7 @@ export default function FeedHeader({
           <Text style={themed($logoText)}>{t("SportCom")}</Text>
         </View>
 
-        {tabs && tabs.length > 0 && (
+        {/* {tabs && tabs.length > 0 && (
           <View style={themed($tabCenterOverlay)} pointerEvents="box-none">
             <View style={themed($tabInlineCenter)} pointerEvents="auto">
               <TabSlider
@@ -96,7 +96,7 @@ export default function FeedHeader({
               />
             </View>
           </View>
-        )}
+        )} */}
 
         <View style={themed($headerRight)}>
           <TouchableOpacity

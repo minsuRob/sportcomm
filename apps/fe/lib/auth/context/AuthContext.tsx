@@ -112,7 +112,7 @@ export function AuthProvider({
 
     const start = Date.now();
     setIsLoading(true);
-    log("부트스트랩 시작");
+    // log("부트스트랩 시작");
 
     try {
       // 1) 로컬 세션 조회 (토큰은 token-manager 경유 → supabase 세션)

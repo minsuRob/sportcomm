@@ -301,7 +301,12 @@ export default function PostSignupProfileScreen(): React.ReactElement {
    * 저장 및 팀 선택 화면으로 이동
    * - 나이/성별을 빠르게 업데이트 → 추천인 코드 적용 → 성공 시 team-selection 으로 이동
    */
-  const handleSaveAndGoTeamSelection = async (): Promise<void> => {
+  /**
+   * 저장만 수행 (팀 선택 이동은 별도 섹션에서 처리)
+   * - 나이/성별을 빠르게 업데이트 → 추천인 코드 적용 → 성공 시 완료 토스트
+   * - 내비게이션은 수행하지 않음
+   */
+  const handleSave = async (): Promise<void> => {
     if (saving || isApplyingReferral) return;
     if (!isAuthenticated) {
       showToast({
@@ -330,13 +335,18 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       if (ageNumber !== null) payload.age = ageNumber;
       if (gender) payload.gender = gender;
 
-      // 아무 것도 입력하지 않은 경우 바로 팀 선택으로 이동 (선택적 UX)
+      // 아무 것도 입력하지 않은 경우 안내만 표시하고 종료
       if (
         !("age" in payload) &&
         !("gender" in payload) &&
         !referralCode.trim()
       ) {
-        router.replace("/(modals)/team-selection");
+        showToast({
+          type: "info",
+          title: "안내",
+          message: "저장할 변경사항이 없습니다.",
+          duration: 2000,
+        });
         return;
       }
 
@@ -366,20 +376,15 @@ export default function PostSignupProfileScreen(): React.ReactElement {
         }
       }
 
+      // post-signup: 프로필 단계 완료 플래그 저장
+      await markPostSignupStepDone(PostSignupStep.Profile);
+
       showToast({
         type: "success",
         title: "저장 완료",
         message: "기본 프로필 정보가 저장되었습니다.",
         duration: 2000,
       });
-
-      // post-signup: 프로필 단계 완료 플래그 저장
-      // - 나이/성별을 저장 완료한 시점에 로컬 플래그를 마킹하여
-      //   다음 로그인/재접속 시 동일 단계가 다시 나타나지 않도록 처리합니다.
-      await markPostSignupStepDone(PostSignupStep.Profile);
-
-      // 다음 단계: My 팀 설정
-      router.replace("/(modals)/team-selection");
     } catch (e: any) {
       showToast({
         type: "error",
@@ -396,7 +401,15 @@ export default function PostSignupProfileScreen(): React.ReactElement {
    * 팀 선택 화면으로 바로 이동 (건너뛰기)
    */
   const handleSkip = (): void => {
-    router.replace("/(modals)/team-selection");
+    router.push("/(modals)/team-selection?origin=profile");
+  };
+
+  /**
+   * 팀 선택 섹션 버튼 핸들러
+   * - 별도 섹션에서 팀 선택 모달로 이동
+   */
+  const handleGoTeamSelection = (): void => {
+    router.push("/(modals)/team-selection?origin=profile");
   };
 
   // 성별 버튼 공통 뷰
@@ -441,13 +454,13 @@ export default function PostSignupProfileScreen(): React.ReactElement {
     <View style={themed($container)}>
       {/* 헤더 */}
       <View style={themed($header)}>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           accessibilityRole="button"
           onPress={() => router.back()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="close" size={22} color={theme.colors.text} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <Text style={themed($headerTitle)}>기본 프로필 설정</Text>
         <TouchableOpacity
           onPress={handleSkip}
@@ -588,13 +601,32 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           </Text>
         </View>
 
-        {/* 안내 및 액션 */}
-        <View style={themed($footer)}>
+        {/* 팀 선택 */}
+        <View style={themed($section)}>
+          <Text style={themed($label)}>팀 선택</Text>
+          <Text style={themed($helper)}>
+            관심 팀을 선택하면 피드가 더 맞춤화됩니다.
+          </Text>
           <TouchableOpacity
-            onPress={handleSaveAndGoTeamSelection}
+            onPress={handleGoTeamSelection}
+            style={themed($teamSelectButton)}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="people-outline"
+              size={16}
+              color={theme.colors.background}
+            />
+            <Text style={themed($teamSelectButtonText)}>팀 선택하기</Text>
+          </TouchableOpacity>
+
+          {/* 팀 선택하기 아래에 저장하기 버튼 배치 */}
+          <TouchableOpacity
+            onPress={handleSave}
             disabled={saving}
             style={[
               themed($primaryButton),
+              { marginTop: 8 },
               saving ? { opacity: 0.6 } : undefined,
             ]}
             accessibilityRole="button"
@@ -607,13 +639,14 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             ) : (
               <>
                 <Ionicons name="save-outline" size={16} color="#fff" />
-                <Text style={themed($primaryButtonText)}>
-                  저장하고 팀 선택하기
-                </Text>
+                <Text style={themed($primaryButtonText)}>저장하기</Text>
               </>
             )}
           </TouchableOpacity>
+        </View>
 
+        {/* 안내 및 액션 */}
+        <View style={themed($footer)}>
           <TouchableOpacity
             onPress={handleSkip}
             disabled={saving}
@@ -813,6 +846,24 @@ const $validText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $invalidText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.error,
+});
+
+// === 팀 선택 섹션 스타일 ===
+const $teamSelectButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.md,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: spacing.xs,
+  backgroundColor: colors.tint,
+  paddingVertical: spacing.sm,
+  borderRadius: 8,
+});
+
+const $teamSelectButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.background,
+  fontSize: 14,
+  fontWeight: "700",
 });
 
 /**

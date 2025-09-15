@@ -11,7 +11,7 @@ import {
   TextStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -48,6 +48,7 @@ const { width: screenWidth } = Dimensions.get("window");
 export default function TeamSelectionScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
+  const { origin } = useLocalSearchParams<{ origin?: string }>();
   const {
     user: currentUser,
     isAuthenticated,
@@ -494,7 +495,17 @@ export default function TeamSelectionScreen() {
     <View style={themed($container)}>
       {/* 헤더 */}
       <View style={themed($header)}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => {
+            if (origin === "profile") {
+              router.replace("/(modals)/post-signup-profile");
+            } else if (origin === "team-center") {
+              router.replace("/(details)/team-center");
+            } else {
+              router.back();
+            }
+          }}
+        >
           <Ionicons name="close" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>My Team 선택</Text>

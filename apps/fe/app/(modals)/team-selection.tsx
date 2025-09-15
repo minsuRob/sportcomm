@@ -42,6 +42,7 @@ import {
  * - 불필요한 인증 중복 검사 제거 (isAuthenticated / accessToken 바로 활용)
  */
 
+import { markPostSignupStepDone, PostSignupStep } from "@/lib/auth/post-signup";
 const { width: screenWidth } = Dimensions.get("window");
 
 export default function TeamSelectionScreen() {
@@ -101,7 +102,12 @@ export default function TeamSelectionScreen() {
   });
 
   const [updateMyTeams, { loading: updateLoading }] =
-    useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
+    useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS, {
+      onCompleted: async () => {
+        // post-signup: 팀 선택 단계 완료 플래그 마킹
+        await markPostSignupStepDone(PostSignupStep.Teams);
+      },
+    });
 
   const isLoading = sportsLoading || myTeamsLoading || updateLoading;
 

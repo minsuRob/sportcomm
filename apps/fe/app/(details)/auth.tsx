@@ -18,6 +18,10 @@ import { useAppTheme } from "@/lib/theme/context";
 import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
 import AppDialog from "@/components/ui/AppDialog";
+import {
+  shouldRunPostSignup,
+  getNextPostSignupRoute,
+} from "@/lib/auth/post-signup";
 
 /**
  * 소셜 로그인 컴포넌트
@@ -168,13 +172,30 @@ export default function AuthScreen() {
    * 인증 성공 시 처리 함수
    * 로그인/회원가입 성공 후 메인 화면으로 이동합니다
    */
-  const handleLoginSuccess = (user: User) => {
+  const handleLoginSuccess = async (user: User) => {
     console.log(
-      "✅ AuthScreen: 로그인 성공, 메인 화면으로 이동:",
+      "✅ AuthScreen: 로그인 성공, 후속 온보딩 판단 및 라우팅:",
       user.nickname,
     );
-    // 메인 앱으로 이동 (스택을 초기화하여 뒤로가기 방지)
-    router.replace("/(app)/feed");
+    // post-signup 플로우 필요 시 해당 모달로 이동, 아니면 피드로 이동
+    try {
+      const need = await shouldRunPostSignup(user as any);
+      if (need) {
+        const nextRoute = await getNextPostSignupRoute(user as any);
+        if (nextRoute) {
+          router.replace(nextRoute as any);
+          return;
+        }
+      }
+      // 기본: 메인 앱으로 이동 (스택 초기화하여 뒤로가기 방지)
+      router.replace("/(app)/feed");
+    } catch (e) {
+      console.warn(
+        "⚠️ post-signup 판단 중 오류, 기본 피드로 이동:",
+        (e as any)?.message,
+      );
+      router.replace("/(app)/feed");
+    }
   };
 
   /**
@@ -328,7 +349,22 @@ export default function AuthScreen() {
         if (isLoginAction) {
           handleLoginSuccess(user);
         } else {
-          router.replace("/(modals)/post-signup-profile");
+          try {
+            const need = await shouldRunPostSignup(user as any);
+            if (need) {
+              const nextRoute = await getNextPostSignupRoute(user as any);
+              if (nextRoute) {
+                router.replace(nextRoute as any);
+              } else {
+                router.replace("/(app)/feed");
+              }
+            } else {
+              router.replace("/(app)/feed");
+            }
+          } catch (e: any) {
+            console.warn("⚠️ post-signup 판단 중 오류:", e?.message);
+            router.replace("/(app)/feed");
+          }
         }
       }
     } catch (error: any) {
@@ -389,7 +425,9 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error(`${provider} 로그인 실패:`, error);
-      setGeneralError(error.message || `${provider} 로그인 중 오류가 발생했습니다.`);
+      setGeneralError(
+        error.message || `${provider} 로그인 중 오류가 발생했습니다.`,
+      );
     }
   };
 

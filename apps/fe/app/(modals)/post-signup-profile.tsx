@@ -21,6 +21,7 @@ import {
   sanitizeAge,
   normalizeGender,
 } from "@/lib/supabase/quick-update";
+import { markPostSignupStepDone, PostSignupStep } from "@/lib/auth/post-signup";
 
 /**
  * 회원가입 직후 경량 프로필 설정 모달
@@ -28,7 +29,7 @@ import {
  * - 구현: Supabase PostgREST 기반의 경량 업데이트(quick-update) 사용
  * - 비고: GraphQL 경로를 우회하여 빠른 UX 제공
  */
-export default function PostSignupProfileScreen(): JSX.Element {
+export default function PostSignupProfileScreen(): React.ReactElement {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
@@ -132,6 +133,11 @@ export default function PostSignupProfileScreen(): JSX.Element {
         duration: 2000,
       });
 
+      // post-signup: 프로필 단계 완료 플래그 저장
+      // - 나이/성별을 저장 완료한 시점에 로컬 플래그를 마킹하여
+      //   다음 로그인/재접속 시 동일 단계가 다시 나타나지 않도록 처리합니다.
+      await markPostSignupStepDone(PostSignupStep.Profile);
+
       // 다음 단계: My 팀 설정
       router.replace("/(modals)/team-selection");
     } catch (e: any) {
@@ -158,7 +164,7 @@ export default function PostSignupProfileScreen(): JSX.Element {
     code: GenderCode,
     label: string,
     icon: keyof typeof Ionicons.glyphMap,
-  ): JSX.Element => {
+  ): React.ReactElement => {
     const active = gender === code;
     return (
       <TouchableOpacity
@@ -166,7 +172,9 @@ export default function PostSignupProfileScreen(): JSX.Element {
           themed($genderButton),
           {
             borderColor: active ? theme.colors.tint : theme.colors.border,
-            backgroundColor: active ? theme.colors.tint + "15" : theme.colors.card,
+            backgroundColor: active
+              ? theme.colors.tint + "15"
+              : theme.colors.card,
           },
         ]}
         onPress={() => handleGenderSelect(code)}
@@ -225,7 +233,11 @@ export default function PostSignupProfileScreen(): JSX.Element {
         <View style={themed($section)}>
           <Text style={themed($label)}>나이</Text>
           <View style={themed($inputContainer)}>
-            <Ionicons name="calendar-outline" size={16} color={theme.colors.textDim} />
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={theme.colors.textDim}
+            />
             <TextInput
               style={themed($textInput)}
               value={ageText}
@@ -271,7 +283,9 @@ export default function PostSignupProfileScreen(): JSX.Element {
             ) : (
               <>
                 <Ionicons name="save-outline" size={16} color="#fff" />
-                <Text style={themed($primaryButtonText)}>저장하고 팀 선택하기</Text>
+                <Text style={themed($primaryButtonText)}>
+                  저장하고 팀 선택하기
+                </Text>
               </>
             )}
           </TouchableOpacity>

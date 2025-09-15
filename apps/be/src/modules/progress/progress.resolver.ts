@@ -15,6 +15,27 @@ import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { UserProgressAction } from '../../entities/user.entity';
 
 /**
+ * 포인트 차감 GraphQL 타입
+ */
+@ObjectType('DeductResult')
+export class DeductResultGraphQL {
+  @Field(() => Boolean, { description: '차감 성공 여부' })
+  success!: boolean;
+
+  @Field(() => String, { description: '결과 메시지' })
+  message!: string;
+
+  @Field(() => Int, { description: '차감 후 잔여 포인트' })
+  remainingPoints!: number;
+
+  @Field(() => String, { nullable: true, description: '차감 사유' })
+  reason?: string;
+
+  @Field(() => GraphQLISODateTime, { description: '차감 시각' })
+  timestamp!: Date;
+}
+
+/**
  * GraphQL에서 사용할 진행도 액션 열거형 등록
  * - 이미 다른 곳에서 등록되어 있다면 중복 등록되어도 문제는 없지만
  *   가능하면 한 곳에서만 등록되도록 유지하세요.
@@ -124,6 +145,43 @@ export class ProgressResolver {
       timestamp: result.timestamp,
       isCustom: result.isCustom,
       reason: result.reason,
+    };
+  }
+
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => DeductResultGraphQL, {
+    name: 'deductUserPoints',
+    description: '사용자의 포인트를 차감합니다 (상점 구매 등).',
+  })
+  async deductUserPoints(
+    @Args('userId', { type: () => String }) userId: string,
+    @Args('amount', { type: () => Int }) amount: number,
+    @Args('reason', { type: () => String, nullable: true }) reason?: string,
+  ): Promise<DeductResultGraphQL> {
+    // 빠른 검증: 1 미만 금액 거부
+    if (amount <= 0) {
+      throw new BadRequestException('차감 포인트는 1 이상이어야 합니다.');
+    }
+
+    // 서비스 호출
+    const result = await this.progressService.deductPoints(
+      userId,
+      amount,
+      reason,
+    );
+
+    if (!result.success) {
+      throw new BadRequestException(result.message);
+    }
+
+    // GraphQL 타입에 맞춰 반환
+    return {
+      success: result.success,
+      message: result.message,
+      remainingPoints: result.remainingPoints,
+      reason,
+      timestamp: new Date(),
     };
   }
 }

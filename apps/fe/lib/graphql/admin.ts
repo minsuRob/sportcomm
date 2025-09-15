@@ -601,6 +601,23 @@ export const ADMIN_AWARD_USER_POINTS = gql`
   }
 `;
 
+// === 포인트 차감 GraphQL ===
+export const DEDUCT_USER_POINTS = gql`
+  mutation DeductUserPoints(
+    $userId: String!
+    $amount: Int!
+    $reason: String
+  ) {
+    deductUserPoints(userId: $userId, amount: $amount, reason: $reason) {
+      success
+      message
+      remainingPoints
+      reason
+      timestamp
+    }
+  }
+`;
+
 // === 추천인 코드 GraphQL ===
 
 // 추천인 코드 검증 쿼리

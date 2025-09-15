@@ -70,7 +70,8 @@ export default function EditProfileScreen() {
       createdAt: Date;
     }>;
   } | null>(null);
-  const [isLoadingReferralStats, setIsLoadingReferralStats] = useState(false);
+  const [isLoadingReferralStats, setIsLoadingReferralStats] = useState(true);
+  const [userPoints, setUserPoints] = useState<number>(0);
 
   // --- 추천인 코드 입력 상태 ---
   const [referralCode, setReferralCode] = useState<string>("");
@@ -98,8 +99,16 @@ export default function EditProfileScreen() {
     setTeam(currentUser.team || "");
     setIsPrivate(currentUser.isPrivate || false);
     setAge((currentUser as any).age);
+    setUserPoints((currentUser as any).points || 0);
     // 닉네임이 변경되면 중복 확인 결과 초기화
     setNicknameCheckResult({ available: null, message: "" });
+  }, [currentUser]);
+
+  // 추천인 통계 자동 로드
+  useEffect(() => {
+    if (currentUser) {
+      loadReferralStats();
+    }
   }, [currentUser]);
 
   /**
@@ -684,9 +693,13 @@ export default function EditProfileScreen() {
             message: `${result.pointsAwarded || 50} 포인트가 지급되었습니다!`,
             duration: 3000,
           });
-          // 추천인 코드 입력 초기화
+          // 추천인 코드 입력 초기화 및 통계 새로고침
           setReferralCode("");
           setReferralCodeValidation({ isValid: null, message: "" });
+          // 포인트 업데이트 (50포인트 추가)
+          setUserPoints(prev => prev + (result.pointsAwarded || 50));
+          // 추천인 통계 새로고침
+          loadReferralStats();
           return true;
         } else {
           showToast({
@@ -998,53 +1011,85 @@ export default function EditProfileScreen() {
 
         {/* 추천인 코드 섹션 */}
         <View style={themed($section)}>
-          <Text style={themed($sectionTitle)}>나의 추천인 코드</Text>
-
-          {/* 내 추천인 코드 표시 */}
-          {referralStats && (
-            <View style={themed($referralCodeContainer)}>
-              <View style={themed($referralCodeBox)}>
-                <Text style={themed($referralCodeText)}>
-                  {referralStats.referralCode}
-                </Text>
-              </View>
-              <View style={themed($referralStats)}>
-                <Text style={themed($referralStatsText)}>
-                  추천한 사람: {referralStats.totalReferrals}명
-                </Text>
-                <Text style={themed($referralStatsText)}>
-                  남은 슬롯: {referralStats.availableSlots}개
-                </Text>
-              </View>
+          <View style={themed($referralHeader)}>
+            <Text style={themed($sectionTitle)}>나의 추천인 코드</Text>
+            <View style={themed($pointsDisplay)}>
+              <Ionicons name="diamond" size={16} color={theme.colors.tint} />
+              <Text style={themed($pointsText)}>{userPoints.toLocaleString()}P</Text>
             </View>
-          )}
-
-          <View style={themed($referralRow)}>
-            <View style={themed($referralInfo)}>
-              <Text style={themed($referralDescription)}>
-                친구들에게 공유하여 함께 혜택을 누려보세요.
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={themed($referralButton)}
-              onPress={referralStats ? copyReferralCode : loadReferralStats}
-              disabled={isLoadingReferralStats}
-            >
-              <Ionicons
-                name={referralStats ? "copy-outline" : "eye-outline"}
-                size={16}
-                color={isLoadingReferralStats ? theme.colors.textDim : theme.colors.tint}
-              />
-              <Text
-                style={[
-                  themed($referralButtonText),
-                  isLoadingReferralStats && { color: theme.colors.textDim },
-                ]}
-              >
-                {isLoadingReferralStats ? "로딩 중..." : referralStats ? "코드 복사" : "코드 보기"}
-              </Text>
-            </TouchableOpacity>
           </View>
+
+          {/* 로딩 중 표시 */}
+          {isLoadingReferralStats ? (
+            <View style={themed($loadingContainer)}>
+              <ActivityIndicator size="small" color={theme.colors.tint} />
+              <Text style={themed($loadingText)}>추천인 정보를 불러오는 중...</Text>
+            </View>
+          ) : (
+            <>
+              {/* 내 추천인 코드 표시 */}
+              {referralStats && (
+                <View style={themed($referralCodeContainer)}>
+                  <View style={themed($referralCodeBox)}>
+                    <Text style={themed($referralCodeText)}>
+                      {referralStats.referralCode}
+                    </Text>
+                  </View>
+
+                  {/* 추천 슬롯 시각화 */}
+                  <View style={themed($slotsContainer)}>
+                    <Text style={themed($slotsTitle)}>추천 슬롯</Text>
+                    <View style={themed($slotsRow)}>
+                      {[1, 2, 3].map((slot) => {
+                        const isUsed = slot <= referralStats.totalReferrals;
+                        return (
+                          <View
+                            key={slot}
+                            style={[
+                              themed($slot),
+                              isUsed ? themed($slotUsed) : themed($slotAvailable),
+                            ]}
+                          >
+                            {isUsed && (
+                              <Ionicons
+                                name="checkmark-circle"
+                                size={14}
+                                color="#fff"
+                              />
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                    <Text style={themed($slotsText)}>
+                      {referralStats.availableSlots}개 남음
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={themed($referralRow)}>
+                <View style={themed($referralInfo)}>
+                  <Text style={themed($referralDescription)}>
+                    친구들에게 공유하여 함께 혜택을 누려보세요.
+                  </Text>
+                </View>
+                {referralStats && (
+                  <TouchableOpacity
+                    style={themed($referralButton)}
+                    onPress={copyReferralCode}
+                  >
+                    <Ionicons
+                      name="copy-outline"
+                      size={16}
+                      color={theme.colors.tint}
+                    />
+                    <Text style={themed($referralButtonText)}>코드 복사</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </>
+          )}
 
           <Text style={themed($inputHelper)}>
             추천인 코드를 공유하면 친구가 가입할 때 서로 50 포인트씩 받을 수 있습니다.
@@ -1400,6 +1445,87 @@ const $unavailableText: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 // === 추천인 코드 관련 스타일 ===
+
+const $referralHeader: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 12,
+});
+
+const $pointsDisplay: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.card,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+});
+
+const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+  fontSize: 14,
+  fontWeight: "600",
+  marginLeft: 4,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: spacing.lg,
+  gap: 8,
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 14,
+});
+
+const $slotsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
+  alignItems: "center",
+});
+
+const $slotsTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  marginBottom: spacing.xs,
+  fontWeight: "600",
+});
+
+const $slotsRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  gap: spacing.sm,
+  marginBottom: spacing.xs,
+});
+
+const $slot: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  borderWidth: 2,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $slotUsed: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.tint,
+  borderColor: colors.tint,
+});
+
+const $slotAvailable: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.background,
+  borderColor: colors.border,
+});
+
+const $slotsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  fontWeight: "500",
+});
 
 const $referralRow: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",

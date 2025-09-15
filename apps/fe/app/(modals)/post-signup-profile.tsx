@@ -411,7 +411,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
    * 팀 선택 화면으로 바로 이동 (건너뛰기)
    */
   const handleSkip = (): void => {
-    router.push("/(modals)/team-selection?origin=profile");
+    router.push("/feed");
   };
 
   /**
@@ -689,18 +689,6 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           </TouchableOpacity>
         </View>
       </KeyboardAwareScrollView>
-
-      {/* 안내 및 액션 */}
-      <View style={themed($footer)}>
-        <TouchableOpacity
-          onPress={handleSkip}
-          disabled={saving}
-          style={themed($ghostButton)}
-          accessibilityRole="button"
-        >
-          <Text style={themed($ghostButtonText)}>나중에 할게요</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -726,6 +714,7 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "700",
   color: colors.text,
+
 });
 
 const $skipText: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -829,18 +818,6 @@ const $primaryButtonText: ThemedStyle<TextStyle> = () => ({
   color: "#fff",
   fontSize: 16,
   fontWeight: "700",
-});
-
-const $ghostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  paddingVertical: spacing.md,
-  alignItems: "center",
-  justifyContent: "center",
-});
-
-const $ghostButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 14,
-  color: colors.textDim,
-  fontWeight: "600",
 });
 
 // === 추천인 코드 관련 스타일 ===

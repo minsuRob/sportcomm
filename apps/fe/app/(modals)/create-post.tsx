@@ -252,20 +252,20 @@ export default function CreatePostScreen() {
       });
 
       if (!result.canceled && result.assets) {
-        console.log(`📱 미디어 선택 완료: ${result.assets.length}개`);
+        //console.log(`📱 미디어 선택 완료: ${result.assets.length}개`);
 
         const newImages: SelectedImage[] = [];
         const newVideos: SelectedVideo[] = [];
 
         for (const [index, asset] of result.assets.entries()) {
-          console.log(`📱 Asset ${index}:`, {
-            uri: asset.uri?.substring(0, 50) + "...",
-            width: asset.width,
-            height: asset.height,
-            type: asset.type,
-            fileSize: asset.fileSize,
-            duration: asset.duration,
-          });
+          //console.log(`📱 Asset ${index}:`, {
+          //   uri: asset.uri?.substring(0, 50) + "...",
+          //   width: asset.width,
+          //   height: asset.height,
+          //   type: asset.type,
+          //   fileSize: asset.fileSize,
+          //   duration: asset.duration,
+          // });
 
           try {
             if (asset.type === "video") {
@@ -487,12 +487,12 @@ export default function CreatePostScreen() {
         isPublic: true,
       };
 
-      console.log("게시물 생성 시작:", {
-        title: postInput.title,
-        teamId: postInput.teamId,
-        hasImages: selectedImages.length > 0,
-        imageCount: selectedImages.length,
-      });
+      //console.log("게시물 생성 시작:", {
+        // title: postInput.title,
+        // teamId: postInput.teamId,
+        // hasImages: selectedImages.length > 0,
+        // imageCount: selectedImages.length,
+      // });
 
       let createdPost;
 
@@ -579,7 +579,7 @@ export default function CreatePostScreen() {
         createdPost = await createTextOnlyPost(postInput);
       }
 
-      console.log("게시물 생성 완료:", createdPost);
+      //console.log("게시물 생성 완료:", createdPost);
 
       // 성공 메시지
       const totalMediaCount = selectedImages.length + selectedVideos.length;

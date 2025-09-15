@@ -21,7 +21,7 @@ export async function triggerLikeNotification(
       "❤️ 새로운 좋아요",
       `${senderName}님이 회원님의 게시물을 좋아합니다.`,
     );
-    console.log("✅ 좋아요 알림 트리거됨:", senderName);
+    //console.log("✅ 좋아요 알림 트리거됨:", senderName);
   } catch (error) {
     console.error("❌ 좋아요 알림 트리거 실패:", error);
   }
@@ -44,7 +44,7 @@ export async function triggerCommentNotification(
       "💬 새로운 댓글",
       `${senderName}님이 댓글을 남겼습니다: "${preview}"`,
     );
-    console.log("✅ 댓글 알림 트리거됨:", senderName);
+    //console.log("✅ 댓글 알림 트리거됨:", senderName);
   } catch (error) {
     console.error("❌ 댓글 알림 트리거 실패:", error);
   }
@@ -64,7 +64,7 @@ export async function triggerFollowNotification(
       "👥 새로운 팔로워",
       `${senderName}님이 회원님을 팔로우하기 시작했습니다.`,
     );
-    console.log("✅ 팔로우 알림 트리거됨:", senderName);
+    //console.log("✅ 팔로우 알림 트리거됨:", senderName);
   } catch (error) {
     console.error("❌ 팔로우 알림 트리거 실패:", error);
   }

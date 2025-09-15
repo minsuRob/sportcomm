@@ -21,15 +21,15 @@ export default function PostHeaderTest() {
   };
 
   const handleFollowToggle = async () => {
-    console.log("팔로우 토글 테스트");
+    //console.log("팔로우 토글 테스트");
   };
 
   const handlePress = () => {
-    console.log("게시물 클릭 테스트");
+    //console.log("게시물 클릭 테스트");
   };
 
   const handlePostUpdated = (updatedPost: any) => {
-    console.log("게시물 수정됨:", updatedPost);
+    //console.log("게시물 수정됨:", updatedPost);
   };
 
   return (

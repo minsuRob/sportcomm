@@ -77,7 +77,7 @@ export default function SettingsScreen() {
    */
   const handleHelp = (): void => {
     // TODO: 도움말 화면 이동
-    console.log("도움말 진입 예정");
+    //console.log("도움말 진입 예정");
   };
 
   /**

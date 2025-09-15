@@ -96,7 +96,7 @@ export default function AuthForm({
   // 통합 인증 훅 사용
   const { syncAfterSignUp, checkAndSyncAfterSignIn } = useAuth({
     onSyncSuccess: (user) => {
-      console.log("✅ AuthForm: 사용자 동기화 성공:", user.nickname);
+      //console.log("✅ AuthForm: 사용자 동기화 성공:", user.nickname);
     },
     onError: (error) => {
       console.warn("⚠️ AuthForm: 동기화 에러:", error.message);
@@ -158,11 +158,11 @@ export default function AuthForm({
 
       if (isLoginAction) {
         // Supabase 로그인
-        console.log("🔄 Supabase 로그인 시작:", { email });
+        //console.log("🔄 Supabase 로그인 시작:", { email });
         result = await signIn({ email, password });
       } else {
         // Supabase 회원가입
-        console.log("🔄 Supabase 회원가입 시작:", { email, nickname });
+        //console.log("🔄 Supabase 회원가입 시작:", { email, nickname });
         result = await signUp({ email, password, nickname });
       }
 
@@ -205,7 +205,7 @@ export default function AuthForm({
       }
 
       if (result.user && result.session) {
-        console.log(`✅ ${isLoginAction ? "로그인" : "회원가입"} 성공:`, {
+        //console.log(`✅ ${isLoginAction ? "로그인" : "회원가입"} 성공:`, {
           사용자ID: result.user.id,
           닉네임: result.user.nickname,
           이메일: result.user.email,
@@ -228,7 +228,7 @@ export default function AuthForm({
 
         // 저장된 세션 확인
         const { token: savedToken, user: savedUser } = await getSession();
-        console.log("저장된 세션 확인:", {
+        //console.log("저장된 세션 확인:", {
           토큰저장됨: !!savedToken,
           사용자정보: savedUser,
           역할: savedUser?.role,
@@ -238,24 +238,24 @@ export default function AuthForm({
         try {
           if (isLoginAction) {
             // 로그인 시: 사용자 정보 확인 및 동기화
-            console.log("🔄 로그인 후 사용자 정보 동기화 확인...");
+            //console.log("🔄 로그인 후 사용자 정보 동기화 확인...");
             const syncResult = await checkAndSyncAfterSignIn();
 
             if (syncResult.success && syncResult.user) {
-              console.log("✅ 사용자 정보 동기화 확인 완료:", syncResult.user);
+              //console.log("✅ 사용자 정보 동기화 확인 완료:", syncResult.user);
             } else {
-              console.log(
+              //console.log(
                 "⚠️ 백엔드에 사용자 정보가 없습니다:",
                 syncResult.error,
               );
             }
           } else {
             // 회원가입 시: 사용자 정보 자동 동기화
-            console.log("🔄 회원가입 후 사용자 정보 동기화...");
+            //console.log("🔄 회원가입 후 사용자 정보 동기화...");
             const syncResult = await syncAfterSignUp(result.user);
 
             if (syncResult.success && syncResult.user) {
-              console.log(
+              //console.log(
                 "✅ 회원가입 후 사용자 정보 동기화 완료:",
                 syncResult.user,
               );
@@ -321,7 +321,7 @@ export default function AuthForm({
   // 소셜 로그인 핸들러
   const handleSocialLogin = async (provider: string) => {
     try {
-      console.log(`🔄 ${provider} 소셜 로그인 시작`);
+      //console.log(`🔄 ${provider} 소셜 로그인 시작`);
 
       // TODO: Supabase OAuth 구현
       // const { data, error } = await supabase.auth.signInWithOAuth({
@@ -350,7 +350,7 @@ export default function AuthForm({
     }
 
     try {
-      console.log("🔄 비밀번호 재설정 이메일 전송:", email);
+      //console.log("🔄 비밀번호 재설정 이메일 전송:", email);
 
       // TODO: Supabase 비밀번호 재설정 구현
       // const { error } = await supabase.auth.resetPasswordForEmail(email);

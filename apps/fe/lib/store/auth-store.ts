@@ -72,7 +72,7 @@ export class AuthStore {
       isSynced: true, // 동기화 완료로 표시
     });
 
-    console.log("✅ 인증 상태 업데이트:", {
+    //console.log("✅ 인증 상태 업데이트:", {
       userId: user.id,
       nickname: user.nickname,
     });
@@ -90,7 +90,7 @@ export class AuthStore {
       accessToken: null,
     });
 
-    console.log("✅ 로그아웃 상태로 변경");
+    //console.log("✅ 로그아웃 상태로 변경");
   }
 
   /**
@@ -125,7 +125,7 @@ export class AuthStore {
       user,
     });
 
-    console.log("✅ 사용자 정보 업데이트:", {
+    //console.log("✅ 사용자 정보 업데이트:", {
       userId: user.id,
       nickname: user.nickname,
     });
@@ -153,7 +153,7 @@ export class AuthStore {
       isSynced,
     });
 
-    console.log(`✅ 동기화 상태 변경: ${isSynced ? "완료" : "미완료"}`);
+    //console.log(`✅ 동기화 상태 변경: ${isSynced ? "완료" : "미완료"}`);
   }
 
   /**
@@ -169,7 +169,7 @@ export class AuthStore {
       accessToken,
     });
 
-    console.log("✅ 액세스 토큰 업데이트");
+    //console.log("✅ 액세스 토큰 업데이트");
   }
 
   /**
@@ -177,7 +177,7 @@ export class AuthStore {
    */
   static reset(): void {
     authStateVar(initialAuthState);
-    console.log("✅ 인증 상태 초기화");
+    //console.log("✅ 인증 상태 초기화");
   }
 }
 

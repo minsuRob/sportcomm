@@ -196,7 +196,7 @@ export class UserSyncService {
     accessToken: string,
   ): Promise<User> {
     try {
-      console.log("🔄 사용자 정보 동기화 시작:", input);
+      //console.log("🔄 사용자 정보 동기화 시작:", input);
 
       const { data } = await apolloClient.mutate({
         mutation: SYNC_USER_MUTATION,
@@ -212,7 +212,7 @@ export class UserSyncService {
         throw new Error("사용자 동기화 응답이 없습니다.");
       }
 
-      console.log("✅ 사용자 정보 동기화 성공:", data.syncUser);
+      //console.log("✅ 사용자 정보 동기화 성공:", data.syncUser);
       return data.syncUser;
     } catch (error: any) {
       console.error("❌ 사용자 정보 동기화 실패:", error);
@@ -239,7 +239,7 @@ export class UserSyncService {
     accessToken: string,
   ): Promise<User> {
     try {
-      console.log("🔄 사용자 프로필 업데이트 시작:", input);
+      //console.log("🔄 사용자 프로필 업데이트 시작:", input);
 
       const { data } = await apolloClient.mutate({
         mutation: UPDATE_USER_PROFILE_MUTATION,
@@ -255,7 +255,7 @@ export class UserSyncService {
         throw new Error("사용자 프로필 업데이트 응답이 없습니다.");
       }
 
-      console.log("✅ 사용자 프로필 업데이트 성공:", data.updateUserProfile);
+      //console.log("✅ 사용자 프로필 업데이트 성공:", data.updateUserProfile);
       return data.updateUserProfile;
     } catch (error: any) {
       console.error("❌ 사용자 프로필 업데이트 실패:", error);
@@ -316,7 +316,7 @@ export class UserSyncService {
     accessToken: string,
   ): Promise<boolean> {
     try {
-      console.log("🔄 닉네임 중복 확인 시작:", nickname);
+      //console.log("🔄 닉네임 중복 확인 시작:", nickname);
 
       const { data } = await apolloClient.query({
         query: CHECK_NICKNAME_TAKEN_QUERY,
@@ -331,9 +331,9 @@ export class UserSyncService {
 
       const isTaken = data?.checkNicknameTaken ?? false;
 
-      console.log(
-        `✅ 닉네임 중복 확인 완료: ${nickname} -> ${isTaken ? "사용 불가" : "사용 가능"}`,
-      );
+      //console.log(
+      //   `✅ 닉네임 중복 확인 완료: ${nickname} -> ${isTaken ? "사용 불가" : "사용 가능"}`,
+      // );
       return isTaken;
     } catch (error: any) {
       console.error("❌ 닉네임 중복 확인 실패:", error);
@@ -361,7 +361,7 @@ export async function syncUserAfterSignUp(
   accessToken: string,
 ): Promise<User> {
   try {
-    console.log("🔄 회원가입 후 자동 사용자 동기화 시작:", userProfile);
+    //console.log("🔄 회원가입 후 자동 사용자 동기화 시작:", userProfile);
 
     const syncInput: SyncUserInput = {
       nickname: userProfile.nickname,
@@ -370,7 +370,7 @@ export async function syncUserAfterSignUp(
 
     const userInfo = await UserSyncService.syncUser(syncInput, accessToken);
 
-    console.log("✅ 회원가입 후 자동 사용자 동기화 완료:", userInfo);
+    //console.log("✅ 회원가입 후 자동 사용자 동기화 완료:", userInfo);
     return userInfo;
   } catch (error) {
     console.error("❌ 회원가입 후 자동 사용자 동기화 실패:", error);
@@ -388,12 +388,12 @@ export async function checkAndSyncUserAfterSignIn(
   accessToken: string,
 ): Promise<User | null> {
   try {
-    console.log("🔄 로그인 후 사용자 정보 확인 시작");
+    //console.log("🔄 로그인 후 사용자 정보 확인 시작");
 
     // 먼저 현재 사용자 정보 조회 시도
     const userInfo = await UserSyncService.getCurrentUserInfo(accessToken);
 
-    console.log("✅ 로그인 후 사용자 정보 확인 완료:", userInfo);
+    //console.log("✅ 로그인 후 사용자 정보 확인 완료:", userInfo);
     return userInfo;
   } catch (error) {
     console.warn(

@@ -413,7 +413,7 @@ export default function StorySection({
         // 스토리 타입에 따른 기본 동작
         if (story.type === "news" && "url" in story) {
           // 뉴스 기사는 외부 링크로 이동 (웹뷰 또는 브라우저)
-          console.log("뉴스 기사 열기:", story.url);
+          //console.log("뉴스 기사 열기:", story.url);
           // TODO: 웹뷰 모달 또는 외부 브라우저로 열기
         } else {
           // 게시물은 상세 페이지로 이동
@@ -431,7 +431,7 @@ export default function StorySection({
   const handleScrollEnd = useCallback(() => {
     if (hasMore && !loading) {
       // TODO: 추가 로드 구현
-      console.log("더 많은 스토리 로드");
+      //console.log("더 많은 스토리 로드");
     }
   }, [hasMore, loading]);
 

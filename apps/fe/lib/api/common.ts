@@ -120,7 +120,7 @@ export function getMimeTypeFromUri(uri: string): string {
     case "3gp":
       return "video/3gpp";
     default:
-      console.log(`알 수 없는 파일 확장자 '${extension}' - 기본값 사용`);
+      //console.log(`알 수 없는 파일 확장자 '${extension}' - 기본값 사용`);
       // 확장자로 동영상인지 이미지인지 추측
       const videoExtensions = [
         "mp4",
@@ -208,7 +208,7 @@ export const getUploadEndpoints = () => {
  * @param formData 검사할 FormData 객체
  */
 export function debugFormData(formData: FormData): void {
-  console.log("===== FormData 디버깅 =====");
+  //console.log("===== FormData 디버깅 =====");
 
   // FormData 항목 순회 (지원되는 브라우저에서만)
   const hasEntries =
@@ -221,23 +221,23 @@ export function debugFormData(formData: FormData): void {
         const value = pair[1];
 
         if (value instanceof File) {
-          console.log(
-            `${key}: File(이름: ${value.name}, 타입: ${value.type}, 크기: ${value.size} bytes)`,
-          );
+          //console.log(
+          //   `${key}: File(이름: ${value.name}, 타입: ${value.type}, 크기: ${value.size} bytes)`,
+          // );
         } else if (typeof value === "object" && value !== null) {
-          console.log(`${key}: 객체`, value);
+          //console.log(`${key}: 객체`, value);
         } else {
-          console.log(`${key}:`, value);
+          //console.log(`${key}:`, value);
         }
       }
     } catch (error) {
       console.error("FormData 항목 로깅 중 오류 발생:", error);
     }
   } else {
-    console.log(
+    console.warn(
       "FormData 항목을 나열할 수 없습니다 (entries 메서드 지원 안 함)",
     );
   }
 
-  console.log("===========================");
+  //console.log("===========================");
 }

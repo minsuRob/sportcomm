@@ -95,7 +95,7 @@ export function AuthProvider({
     (...args: any[]) => {
       if (debug) {
         // eslint-disable-next-line no-console
-        console.log("[AuthProvider]", ...args);
+        //console.log("[AuthProvider]", ...args);
       }
     },
     [debug],

@@ -40,7 +40,7 @@ export default function PostMedia({
   const imageCount = imageMedia.length;
 
   if (imageCount === 0) {
-    console.log("이미지가 없어서 null 반환");
+    //console.log("이미지가 없어서 null 반환");
     return null;
   }
 
@@ -58,7 +58,7 @@ export default function PostMedia({
    */
   const renderFeedMediaGrid = () => {
     const imageUrl = transformImageUrl(imageMedia[0].url);
-    console.log("렌더링할 이미지 URL:", imageUrl);
+    //console.log("렌더링할 이미지 URL:", imageUrl);
 
     // 피드에서는 항상 첫 번째 이미지만 표시
     return (
@@ -66,9 +66,9 @@ export default function PostMedia({
         source={{ uri: imageUrl }}
         style={themed($feedMediaImage)}
         resizeMode="cover"
-        onLoad={() => console.log("이미지 로드 성공:", imageUrl)}
+        onLoad={() => {}} //console.log("이미지 로드 성공:", imageUrl)}
         onError={(error) =>
-          console.log("이미지 로드 실패:", error.nativeEvent.error)
+          console.error("이미지 로드 실패:", error.nativeEvent.error)
         }
       />
     );

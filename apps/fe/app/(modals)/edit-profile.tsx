@@ -86,15 +86,15 @@ export default function EditProfileScreen() {
       setIsImageUploading(true);
       setUploadProgress(0);
 
-      console.log("프로필 이미지 업로드 시작:", {
-        isWeb: isWeb(),
-        fileInfo: isWeb() ? (file as File).name : (file as any).name,
-      });
+      // console.log("프로필 이미지 업로드 시작:", {
+      //   isWeb: isWeb(),
+      //   fileInfo: isWeb() ? (file as File).name : (file as any).name,
+      // });
 
       // 진행률 콜백 함수
       const progressCallback: ProgressCallback = (progress) => {
         setUploadProgress(progress.percentage);
-        console.log(`업로드 진행률: ${progress.percentage}%`);
+        //console.log(`업로드 진행률: ${progress.percentage}%`);
       };
 
       let uploadedFiles: UploadedMedia[];
@@ -120,7 +120,7 @@ export default function EditProfileScreen() {
       }
 
       const uploadedMedia = uploadedFiles[0];
-      console.log("프로필 이미지 업로드 응답:", uploadedMedia);
+      //console.log("프로필 이미지 업로드 응답:", uploadedMedia);
 
       // 업로드 상태별 처리
       if (uploadedMedia.status === "FAILED") {
@@ -147,11 +147,11 @@ export default function EditProfileScreen() {
         // URL 검증 실패해도 계속 진행 (네트워크 문제일 수 있음)
       }
 
-      console.log("프로필 이미지 업로드 성공:", {
-        id: uploadedMedia.id,
-        url: uploadedMedia.url,
-        status: uploadedMedia.status,
-      });
+      //console.log("프로필 이미지 업로드 성공:", {
+      //   id: uploadedMedia.id,
+      //   url: uploadedMedia.url,
+      //   status: uploadedMedia.status,
+      // });
 
       return uploadedMedia.url;
     } catch (error) {

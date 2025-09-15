@@ -143,7 +143,7 @@ export default function AuthScreen() {
   // 통합 인증 훅 사용
   const { syncAfterSignUp, checkAndSyncAfterSignIn } = useAuth({
     onSyncSuccess: (user) => {
-      console.log("✅ AuthScreen: 사용자 동기화 성공:", user.nickname);
+      //console.log("✅ AuthScreen: 사용자 동기화 성공:", user.nickname);
     },
     onError: (error) => {
       console.warn("⚠️ AuthScreen: 동기화 에러:", error.message);
@@ -173,10 +173,10 @@ export default function AuthScreen() {
    * 로그인/회원가입 성공 후 메인 화면으로 이동합니다
    */
   const handleLoginSuccess = async (user: User) => {
-    console.log(
-      "✅ AuthScreen: 로그인 성공, 후속 온보딩 판단 및 라우팅:",
-      user.nickname,
-    );
+    //console.log(
+    //   "✅ AuthScreen: 로그인 성공, 후속 온보딩 판단 및 라우팅:",
+    //   user.nickname,
+    // );
     // post-signup 플로우 필요 시 해당 모달로 이동, 아니면 피드로 이동
     try {
       const need = await shouldRunPostSignup(user as any);
@@ -219,11 +219,11 @@ export default function AuthScreen() {
 
       if (isLoginAction) {
         // Supabase 로그인
-        console.log("🔄 Supabase 로그인 시작:", { email });
+        //console.log("🔄 Supabase 로그인 시작:", { email });
         result = await signIn({ email, password });
       } else {
         // Supabase 회원가입
-        console.log("🔄 Supabase 회원가입 시작:", { email, nickname });
+        //console.log("🔄 Supabase 회원가입 시작:", { email, nickname });
         result = await signUp({ email, password, nickname });
       }
 
@@ -266,12 +266,12 @@ export default function AuthScreen() {
       }
 
       if (result.user && result.session) {
-        console.log(`✅ ${isLoginAction ? "로그인" : "회원가입"} 성공:`, {
-          사용자ID: result.user.id,
-          닉네임: result.user.nickname,
-          이메일: result.user.email,
-          역할: result.user.role,
-        });
+        //console.log(`✅ ${isLoginAction ? "로그인" : "회원가입"} 성공:`, {
+          // 사용자ID: result.user.id,
+        //   닉네임: result.user.nickname,
+        //   이메일: result.user.email,
+        //   역할: result.user.role,
+        // });
 
         // 세션 토큰 저장 (기존 auth.ts와 호환성을 위해)
         const token = result.session.access_token;
@@ -288,37 +288,37 @@ export default function AuthScreen() {
 
         // 저장된 세션 확인
         const { token: savedToken, user: savedUser } = await getSession();
-        console.log("저장된 세션 확인:", {
-          토큰저장됨: !!savedToken,
-          사용자정보: savedUser,
-          역할: savedUser?.role,
-        });
+        //console.log("저장된 세션 확인:", {
+        //   토큰저장됨: !!savedToken,
+        //   사용자정보: savedUser,
+        //   역할: savedUser?.role,
+        // });
 
         // 백엔드와 사용자 정보 동기화
         try {
           if (isLoginAction) {
             // 로그인 시: 사용자 정보 확인 및 동기화
-            console.log("🔄 로그인 후 사용자 정보 동기화 확인...");
+            //console.log("🔄 로그인 후 사용자 정보 동기화 확인...");
             const syncResult = await checkAndSyncAfterSignIn();
 
             if (syncResult.success && syncResult.user) {
-              console.log("✅ 사용자 정보 동기화 확인 완료:", syncResult.user);
+              //console.log("✅ 사용자 정보 동기화 확인 완료:", syncResult.user);
             } else {
-              console.log(
-                "⚠️ 백엔드에 사용자 정보가 없습니다:",
-                syncResult.error,
-              );
+              //console.log(
+              //   "⚠️ 백엔드에 사용자 정보가 없습니다:",
+              //   syncResult.error,
+              // );
             }
           } else {
             // 회원가입 시: 사용자 정보 자동 동기화
-            console.log("🔄 회원가입 후 사용자 정보 동기화...");
+            //console.log("🔄 회원가입 후 사용자 정보 동기화...");
             const syncResult = await syncAfterSignUp(result.user);
 
             if (syncResult.success && syncResult.user) {
-              console.log(
-                "✅ 회원가입 후 사용자 정보 동기화 완료:",
-                syncResult.user,
-              );
+              //console.log(
+              //   "✅ 회원가입 후 사용자 정보 동기화 완료:",
+              //   syncResult.user,
+              // );
             } else {
               console.warn("⚠️ 회원가입 후 동기화 실패:", syncResult.error);
             }
@@ -403,7 +403,7 @@ export default function AuthScreen() {
    */
   const handleSocialLogin = async (provider: string) => {
     try {
-      console.log(`🔄 ${provider} 소셜 로그인 시작`);
+      //console.log(`🔄 ${provider} 소셜 로그인 시작`);
       if (provider !== "google") {
         setDialog({
           visible: true,
@@ -442,7 +442,7 @@ export default function AuthScreen() {
     }
 
     try {
-      console.log("🔄 비밀번호 재설정 이메일 전송:", email);
+      //console.log("🔄 비밀번호 재설정 이메일 전송:", email);
 
       // TODO: Supabase 비밀번호 재설정 구현
       // const { error } = await supabase.auth.resetPasswordForEmail(email);

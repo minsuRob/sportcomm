@@ -23,7 +23,7 @@ export async function testForegroundNotification(): Promise<void> {
       },
       trigger: null, // 즉시 표시
     });
-    console.log("✅ 포그라운드 테스트 알림이 전송되었습니다");
+    //console.log("✅ 포그라운드 테스트 알림이 전송되었습니다");
   } catch (error) {
     console.error("❌ 포그라운드 테스트 알림 전송 실패:", error);
   }
@@ -49,7 +49,7 @@ export async function testDelayedNotification(): Promise<void> {
         seconds: 5,
       },
     });
-    console.log("✅ 5초 지연 테스트 알림이 예약되었습니다");
+    //console.log("✅ 5초 지연 테스트 알림이 예약되었습니다");
   } catch (error) {
     console.error("❌ 지연 테스트 알림 예약 실패:", error);
   }
@@ -96,7 +96,7 @@ export async function testVariousNotifications(): Promise<void> {
         },
       });
     }
-    console.log("✅ 다양한 테스트 알림들이 예약되었습니다 (3초 간격)");
+    //console.log("✅ 다양한 테스트 알림들이 예약되었습니다 (3초 간격)");
   } catch (error) {
     console.error("❌ 테스트 알림들 예약 실패:", error);
   }
@@ -108,7 +108,7 @@ export async function testVariousNotifications(): Promise<void> {
 export async function cancelAllScheduledNotifications(): Promise<void> {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log("✅ 모든 예약된 알림이 취소되었습니다");
+    //console.log("✅ 모든 예약된 알림이 취소되었습니다");
   } catch (error) {
     console.error("❌ 알림 취소 실패:", error);
   }
@@ -120,11 +120,11 @@ export async function cancelAllScheduledNotifications(): Promise<void> {
 export async function listScheduledNotifications(): Promise<void> {
   try {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    console.log("📋 예약된 알림 목록:", scheduled.length, "개");
+    //console.log("📋 예약된 알림 목록:", scheduled.length, "개");
     scheduled.forEach((notification, index) => {
-      console.log(
-        `${index + 1}. ${notification.content.title} - ${notification.trigger}`,
-      );
+      //console.log(
+      //   `${index + 1}. ${notification.content.title} - ${notification.trigger}`,
+      // );
     });
   } catch (error) {
     console.error("❌ 예약된 알림 목록 조회 실패:", error);
@@ -137,11 +137,11 @@ export async function listScheduledNotifications(): Promise<void> {
 export async function checkNotificationPermissions(): Promise<void> {
   try {
     const permissions = await Notifications.getPermissionsAsync();
-    console.log("🔐 알림 권한 상태:", {
-      status: permissions.status,
-      canAskAgain: permissions.canAskAgain,
-      granted: permissions.granted,
-    });
+    //console.log("🔐 알림 권한 상태:", {
+    //   status: permissions.status,
+    //   canAskAgain: permissions.canAskAgain,
+    //   granted: permissions.granted,
+    // });
   } catch (error) {
     console.error("❌ 알림 권한 확인 실패:", error);
   }

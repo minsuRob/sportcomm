@@ -28,14 +28,14 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, ({ data, error, executionIn
     return;
   }
   if (data) {
-    console.log('📨 백그라운드 알림 수신됨:', (data as any).notification);
+    //console.log('📨 백그라운드 알림 수신됨:', (data as any).notification);
   }
 });
 
 export async function registerBackgroundNotificationTask() {
   try {
     await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
-    console.log('✅ 백그라운드 알림 태스크가 등록되었습니다.');
+    //console.log('✅ 백그라운드 알림 태스크가 등록되었습니다.');
   } catch (error) {
     console.error('❌ 백그라운드 알림 태스크 등록 실패:', error);
   }

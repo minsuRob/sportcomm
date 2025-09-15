@@ -100,7 +100,7 @@ export async function uploadFilesMobile(
       throw new UploadError("최대 4개의 파일만 업로드할 수 있습니다.", 400);
     }
 
-    console.log(`모바일 환경에서 ${validFiles.length}개 파일 업로드 시작`);
+    //console.log(`모바일 환경에서 ${validFiles.length}개 파일 업로드 시작`);
 
     // 인증 토큰 가져오기
     const { token } = await getSession();
@@ -150,15 +150,15 @@ export async function uploadFilesMobile(
         type: file.type || "image/jpeg",
       };
 
-      console.log(`모바일 환경 - 파일 추가: ${JSON.stringify(fileObj)}`);
+      //console.log(`모바일 환경 - 파일 추가: ${JSON.stringify(fileObj)}`);
 
       // @ts-ignore: React Native의 FormData는 객체 형식 지원
       const fieldName = options?.category === "avatar" ? "file" : "files";
       // React Native FormData 타입 제한을 우회하기 위해 any 캐스팅
       formData.append(fieldName, fileObj as any);
-      console.log(
-        `React Native (${Platform.OS}) - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
-      );
+      //console.log(
+      //   `React Native (${Platform.OS}) - 파일 추가: ${fileName}, URI: ${uri.substring(0, 30)}...`,
+      // );
     });
 
     const endpoints = getUploadEndpoints();
@@ -189,11 +189,11 @@ export async function uploadFilesMobile(
               xhr.responseText,
             ) as MobileUploadResponse;
             if (response.success) {
-              console.log(
-                "모바일 파일 업로드 성공:",
-                response.data.totalCount,
-                "개 파일",
-              );
+              //console.log(
+              //   "모바일 파일 업로드 성공:",
+              //   response.data.totalCount,
+              //   "개 파일",
+              // );
               resolve(response.data.files);
             } else {
               reject(
@@ -325,7 +325,7 @@ export async function uploadFileMobile(
               xhr.responseText,
             ) as MobileSingleUploadResponse;
             if (response.success) {
-              console.log("모바일 단일 파일 업로드 성공:", response.data.id);
+              //console.log("모바일 단일 파일 업로드 성공:", response.data.id);
               resolve(response.data);
             } else {
               reject(
@@ -405,7 +405,7 @@ export async function compressImageMobile(
   const { maxWidth = 1920, maxHeight = 1080, quality = 0.8 } = options;
 
   try {
-    console.log(`모바일 이미지 압축 시작: ${uri.substring(0, 50)}...`);
+    //console.log(`모바일 이미지 압축 시작: ${uri.substring(0, 50)}...`);
 
     // 파일 확장자로 GIF 여부 확인
     const fileExtension = uri.split(".").pop()?.toLowerCase();
@@ -416,9 +416,9 @@ export async function compressImageMobile(
     try {
       const fileInfo = await FileSystem.getInfoAsync(uri);
       originalFileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
-      console.log(
-        `원본 이미지 크기: ${originalFileSize} bytes (${(originalFileSize / (1024 * 1024)).toFixed(2)}MB)`,
-      );
+      //console.log(
+      //   `원본 이미지 크기: ${originalFileSize} bytes (${(originalFileSize / (1024 * 1024)).toFixed(2)}MB)`,
+      // );
 
       if (originalFileSize <= 0) {
         throw new Error("이미지 파일이 손상되었습니다");
@@ -429,7 +429,7 @@ export async function compressImageMobile(
 
     // GIF 파일인 경우 원본 그대로 반환
     if (isGif) {
-      console.log("GIF 파일 감지 - 원본 유지");
+      //console.log("GIF 파일 감지 - 원본 유지");
 
       // 이미지 크기 정보만 가져오기 (압축하지 않음)
       let imageWidth = 0;
@@ -482,9 +482,9 @@ export async function compressImageMobile(
       targetHeight = Math.round(originalHeight * ratio);
     }
 
-    console.log(
-      `압축 목표 크기: ${targetWidth}x${targetHeight} (비율: ${(targetWidth / targetHeight).toFixed(2)})`,
-    );
+    //console.log(
+    //   `압축 목표 크기: ${targetWidth}x${targetHeight} (비율: ${(targetWidth / targetHeight).toFixed(2)})`,
+    // );
 
     // 비율을 유지하면서 압축 수행
     const manipulatedImage = await ImageManipulator.manipulateAsync(
@@ -503,11 +503,11 @@ export async function compressImageMobile(
       },
     );
 
-    console.log(`이미지 압축 완료:`, {
-      uri: manipulatedImage.uri?.substring(0, 50) + "...",
-      width: manipulatedImage.width,
-      height: manipulatedImage.height,
-    });
+    //console.log(`이미지 압축 완료:`, {
+    //   uri: manipulatedImage.uri?.substring(0, 50) + "...",
+    //   width: manipulatedImage.width,
+    //   height: manipulatedImage.height,
+    // });
 
     // 압축 후 파일 크기 확인
     let compressedSize = 0;
@@ -518,9 +518,9 @@ export async function compressImageMobile(
       compressedSize = compressedFileInfo.exists
         ? compressedFileInfo.size || 0
         : 0;
-      console.log(
-        `압축된 이미지 크기: ${compressedSize} bytes (${(compressedSize / (1024 * 1024)).toFixed(2)}MB)`,
-      );
+      //console.log(
+      //   `압축된 이미지 크기: ${compressedSize} bytes (${(compressedSize / (1024 * 1024)).toFixed(2)}MB)`,
+      // );
 
       // 압축된 파일이 0바이트이면 원본 사용
       if (compressedSize <= 0) {
@@ -567,12 +567,12 @@ export async function prepareImageForUploadMobile(
     throw new Error("이 함수는 모바일 환경에서만 사용할 수 있습니다.");
   }
 
-  console.log(`모바일 이미지 ${index} 준비 중:`, {
-    uri: image.uri?.substring(0, 50) + "...",
-    name: image.name || `image_${index}.jpg`,
-    type: image.mimeType,
-    size: image.fileSize,
-  });
+  //console.log(`모바일 이미지 ${index} 준비 중:`, {
+  //   uri: image.uri?.substring(0, 50) + "...",
+  //   name: image.name || `image_${index}.jpg`,
+  //   type: image.mimeType,
+  //   size: image.fileSize,
+  // });
 
   // URI 유효성 검사
   if (!image.uri) {
@@ -584,9 +584,9 @@ export async function prepareImageForUploadMobile(
     const fileInfo = await FileSystem.getInfoAsync(image.uri);
     const actualFileSize = fileInfo.exists ? fileInfo.size || 0 : 0;
 
-    console.log(
-      `실제 파일 크기 확인: ${actualFileSize} bytes (${(actualFileSize / 1024).toFixed(2)}KB)`,
-    );
+    //console.log(
+    //   `실제 파일 크기 확인: ${actualFileSize} bytes (${(actualFileSize / 1024).toFixed(2)}KB)`,
+    // );
 
     if (!fileInfo.exists) {
       throw new Error(`이미지 ${index}를 찾을 수 없습니다: ${image.uri}`);
@@ -617,12 +617,12 @@ export async function prepareImageForUploadMobile(
     fileSize: image.fileSize,
   };
 
-  console.log(`createReactNativeFile 호출:`, {
-    uri: fileData.uri?.substring(0, 50) + "...",
-    name: fileData.name,
-    mimeType: fileData.mimeType,
-    fileSize: fileData.fileSize,
-  });
+  //console.log(`createReactNativeFile 호출:`, {
+    // uri: fileData.uri?.substring(0, 50) + "...",
+  //   name: fileData.name,
+  //   mimeType: fileData.mimeType,
+  //   fileSize: fileData.fileSize,
+  // });
 
   const result = createReactNativeFile(fileData, index);
 

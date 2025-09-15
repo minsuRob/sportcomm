@@ -48,11 +48,11 @@ export async function showForegroundNotification(
       notificationData,
     );
 
-    console.log("✅ 포그라운드 알림 표시됨:", {
-      title: enhancedTitle,
-      body,
-      type: type,
-    });
+    //console.log("✅ 포그라운드 알림 표시됨:", {
+    //   title: enhancedTitle,
+    //   body,
+    //   type: type,
+    // });
   } catch (error) {
     console.error("❌ 포그라운드 알림 표시 실패:", error);
   }
@@ -93,7 +93,7 @@ export function handleNotificationResponse(
     const data = response.notification.request.content
       .data as unknown as ForegroundNotificationData;
 
-    console.log("🔔 알림 탭됨:", data);
+    //console.log("🔔 알림 탭됨:", data);
 
     // 알림 타입에 따른 네비게이션
     if (data.postId) {

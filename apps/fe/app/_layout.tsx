@@ -91,12 +91,12 @@ export default function RootLayout() {
           data: { session },
         } = await supabase.auth.getSession();
         if (session) {
-          console.log("✅ [_layout.tsx] Supabase session found:", {
-            userId: session.user.id,
-            tokenExists: !!session.access_token,
-          });
+          // console.log("✅ [_layout.tsx] Supabase session found:", {
+          //   userId: session.user.id,
+          //   tokenExists: !!session.access_token,
+          // });
         } else {
-          console.log("❌ [_layout.tsx] No Supabase session found.");
+          console.warn("❌ [_layout.tsx] No Supabase session found.");
         }
         // --- END DEBUG ---
       } catch (error) {

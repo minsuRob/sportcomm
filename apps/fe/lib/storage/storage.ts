@@ -26,7 +26,7 @@ export const setItem = async (key: string, value: string): Promise<void> => {
   } else {
     try {
       await AsyncStorage.setItem(key, value);
-      console.log(`AsyncStorage에 저장 완료: ${key}`);
+      //console.log(`AsyncStorage에 저장 완료: ${key}`);
     } catch (e) {
       console.error("Error saving to AsyncStorage", e);
     }
@@ -56,9 +56,9 @@ export const getItem = async (key: string): Promise<string | null> => {
   } else {
     try {
       const value = await AsyncStorage.getItem(key);
-      console.log(
-        `AsyncStorage에서 조회: [키: ${key}], [결과: ${value ? "값 있음" : "값 없음"}]`,
-      );
+      //console.log(
+      //   `AsyncStorage에서 조회: [키: ${key}], [결과: ${value ? "값 있음" : "값 없음"}]`,
+      // );
       return value;
     } catch (e) {
       console.error("Error getting from AsyncStorage", e);
@@ -72,7 +72,7 @@ export const getItem = async (key: string): Promise<string | null> => {
  * @param key - 삭제할 데이터의 키
  */
 export const removeItem = async (key: string): Promise<void> => {
-  console.log(`스토리지에서 삭제: [키: ${key}]`);
+  //console.log(`스토리지에서 삭제: [키: ${key}]`);
   if (Platform.OS === "web") {
     try {
       // SSR 환경에서는 localStorage가 없을 수 있음
@@ -81,14 +81,14 @@ export const removeItem = async (key: string): Promise<void> => {
         return;
       }
       localStorage.removeItem(key);
-      console.log(`웹 스토리지에서 삭제 완료: ${key}`);
+      //console.log(`웹 스토리지에서 삭제 완료: ${key}`);
     } catch (e) {
       console.error("Error removing from localStorage", e);
     }
   } else {
     try {
       await AsyncStorage.removeItem(key);
-      console.log(`AsyncStorage에서 삭제 완료: ${key}`);
+      //console.log(`AsyncStorage에서 삭제 완료: ${key}`);
     } catch (e) {
       console.error("Error removing from AsyncStorage", e);
     }

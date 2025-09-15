@@ -14,10 +14,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     "Supabase URL and Anon Key must be provided in environment variables.",
   );
 }
-console.log("환경변수로 바꾸세요!! Supabase 클라이언트 초기화:", {
-  url: SUPABASE_URL,
-  keyLength: SUPABASE_ANON_KEY.length,
-});
+//console.log("환경변수로 바꾸세요!! Supabase 클라이언트 초기화:", {
+  // url: SUPABASE_URL,
+  // keyLength: SUPABASE_ANON_KEY.length,
+// });
 
 // Supabase 데이터베이스 타입 정의
 export interface Database {
@@ -211,7 +211,7 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
       return false;
     }
 
-    console.log("Supabase 연결 성공");
+    //console.log("Supabase 연결 성공");
     return true;
   } catch (error) {
     console.error("Supabase 연결 확인 실패:", error);
@@ -284,14 +284,14 @@ export const handleSupabaseError = (error: any, context: string = "") => {
  */
 export const initializeSupabase = async (): Promise<void> => {
   try {
-    console.log("Supabase 클라이언트 초기화 중...");
-    console.log("URL:", SUPABASE_URL);
-    console.log("Key 존재 여부:", !!SUPABASE_ANON_KEY);
+    //console.log("Supabase 클라이언트 초기화 중...");
+    //console.log("URL:", SUPABASE_URL);
+    //console.log("Key 존재 여부:", !!SUPABASE_ANON_KEY);
 
     const isConnected = await checkSupabaseConnection();
 
     if (isConnected) {
-      console.log("✅ Supabase 연결 성공");
+      //console.log("✅ Supabase 연결 성공");
     } else {
       console.warn("⚠️ Supabase 연결 실패 - 오프라인 모드로 동작");
     }
@@ -311,12 +311,12 @@ export const debugSupabaseStatus = async (): Promise<void> => {
       const session = await getCurrentSession();
       const isConnected = await checkSupabaseConnection();
 
-      console.log("🔍 Supabase 디버그 정보:", {
-        연결상태: isConnected ? "연결됨" : "연결안됨",
-        URL: SUPABASE_URL,
-        세션존재: !!session.data.session,
-        사용자ID: session.data.session?.user?.id || "없음",
-      });
+      //console.log("🔍 Supabase 디버그 정보:", {
+        // 연결상태: isConnected ? "연결됨" : "연결안됨",
+        // URL: SUPABASE_URL,
+        // 세션존재: !!session.data.session,
+        // 사용자ID: session.data.session?.user?.id || "없음",
+      // });
     } catch (error) {
       console.error("디버그 정보 수집 실패:", error);
     }

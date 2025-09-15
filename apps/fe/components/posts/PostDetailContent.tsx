@@ -174,7 +174,7 @@ export function PostDetailContent({
         await onPostUpdated();
       }
     } catch (e) {
-      console.log("댓글 추가 후 재조회 실패:", e);
+      //console.log("댓글 추가 후 재조회 실패:", e);
     }
   }, [refetch, onPostUpdated]);
 
@@ -193,7 +193,7 @@ export function PostDetailContent({
    * - 현재는 로그 출력만
    */
   const handleShare = useCallback(() => {
-    console.log("공유 - postId:", postId);
+    //console.log("공유 - postId:", postId);
   }, [postId]);
 
   /**
@@ -209,7 +209,7 @@ export function PostDetailContent({
     try {
       router.back();
     } catch (e) {
-      console.log("뒤로가기 실패:", e);
+      //console.log("뒤로가기 실패:", e);
     }
   }, [onClose, router]);
 

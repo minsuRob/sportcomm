@@ -338,7 +338,7 @@ const PostCard = React.memo(function PostCard({
   useEffect(() => {
     if (__DEV__) {
       // 게시물 디버깅 로그를 한 줄로 통합
-      console.log("post", post);
+      //console.log("post", post);
     }
   }, [post.id]);
 
@@ -367,7 +367,7 @@ const PostCard = React.memo(function PostCard({
           if (videoRef.current) {
             videoRef.current
               .play()
-              .catch((err) => console.log("비디오 자동 재생 실패:", err));
+              .catch((err) => console.error("비디오 자동 재생 실패:", err));
           }
         } else {
           if (videoRef.current && !videoRef.current.paused) {
@@ -468,14 +468,14 @@ const PostCard = React.memo(function PostCard({
   const teamName = deriveTeamName();
 
   // 디버깅을 위한 로그 (개발 환경에서만)
-  if (__DEV__) {
-    console.log("PostCard 팀 정보:", {
-      teamId: post.teamId,
-      teamName,
-      postTeamName: (post as any)?.team?.name,
-      postTeamNameField: (post as any)?.teamName,
-    });
-  }
+  // if (__DEV__) {
+  //   console.log("PostCard 팀 정보:", {
+  //     teamId: post.teamId,
+  //     teamName,
+  //     postTeamName: (post as any)?.team?.name,
+  //     postTeamNameField: (post as any)?.teamName,
+  //   });
+  // }
 
   // --- 팀 팔레트 유틸 사용: DB 확장 컬러(main/sub/dark) 기반 ---
   // 동적 import (정적 import 추가 수정 없이 교체, Metro/Web 번들 모두 호환)

@@ -54,7 +54,7 @@ export function AuthStatusDisplay({
   // 수동 동기화 테스트
   const handleManualSync = async () => {
     if (!user) {
-      console.log("❌ 사용자 정보가 없어 수동 동기화 불가");
+      //console.log("❌ 사용자 정보가 없어 수동 동기화 불가");
       return;
     }
 
@@ -66,13 +66,13 @@ export function AuthStatusDisplay({
       true,
     ); // 강제 동기화
 
-    console.log("🔄 수동 동기화 결과:", result);
+    //console.log("🔄 수동 동기화 결과:", result);
   };
 
   // 프로필 업데이트 테스트
   const handleProfileUpdate = async () => {
     if (!user) {
-      console.log("❌ 사용자 정보가 없어 프로필 업데이트 불가");
+      //console.log("❌ 사용자 정보가 없어 프로필 업데이트 불가");
       return;
     }
 
@@ -80,7 +80,7 @@ export function AuthStatusDisplay({
       bio: `업데이트된 자기소개 - ${new Date().toLocaleTimeString()}`,
     });
 
-    console.log("🔄 프로필 업데이트 결과:", result);
+    //console.log("🔄 프로필 업데이트 결과:", result);
   };
 
   return (
@@ -202,7 +202,7 @@ export function AuthStatusDisplay({
           <TouchableOpacity
             onPress={async () => {
               const result = await checkAndSyncAfterSignIn();
-              console.log("🔄 재동기화 결과:", result);
+              //console.log("🔄 재동기화 결과:", result);
             }}
             disabled={!isAuthenticated || isLoading}
             className={`flex-1 p-2 rounded-md ${

@@ -412,7 +412,7 @@ export default function PostContextMenu({
   const options: ActionSheetOption[] = [
     {
       text: "공유하기",
-      onPress: () => console.log("공유 기능 - TODO"),
+      onPress: () => {},//console.log("공유 기능 - TODO"),
       icon: (
         <Ionicons name="share-outline" color={theme.colors.text} size={20} />
       ),

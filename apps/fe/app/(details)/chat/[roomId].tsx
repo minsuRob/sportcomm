@@ -112,7 +112,7 @@ export default function ChatRoomScreen() {
       (e) => {
         setKeyboardHeight(e.endCoordinates.height);
         setIsKeyboardVisible(true);
-        console.log("키보드 표시:", e.endCoordinates.height);
+        //console.log("키보드 표시:", e.endCoordinates.height);
       },
     );
 
@@ -121,7 +121,7 @@ export default function ChatRoomScreen() {
       () => {
         setKeyboardHeight(0);
         setIsKeyboardVisible(false);
-        console.log("키보드 숨김");
+        //console.log("키보드 숨김");
       },
     );
 
@@ -172,9 +172,9 @@ export default function ChatRoomScreen() {
     try {
       const loadedMessages = await chatService.getChatMessages(roomId);
       setMessages(loadedMessages);
-      console.log(
-        `채팅방 ${roomId}의 메시지 ${loadedMessages.length}개 로드 완료`,
-      );
+      //console.log(
+      //   `채팅방 ${roomId}의 메시지 ${loadedMessages.length}개 로드 완료`,
+      // );
     } catch (error) {
       console.error("메시지 로드 실패:", error);
       setMessagesError(error);
@@ -216,7 +216,7 @@ export default function ChatRoomScreen() {
         );
         setChatRoomTitle(displayName);
 
-        console.log(`채팅방 정보 로드 완료: ${displayName}`);
+        //console.log(`채팅방 정보 로드 완료: ${displayName}`);
       }
     } catch (error) {
       console.error("채팅방 정보 로드 실패:", error);
@@ -275,13 +275,13 @@ export default function ChatRoomScreen() {
   useEffect(() => {
     if (!roomId || !currentUser) return;
 
-    console.log(`실시간 구독 시작: 채팅방 ${roomId}`);
+    //console.log(`실시간 구독 시작: 채팅방 ${roomId}`);
 
     // 실시간 메시지 구독
     const unsubscribe = chatService.subscribeToMessages(
       roomId,
       (newMessage: Message) => {
-        console.log("새 메시지 수신:", newMessage);
+        //console.log("새 메시지 수신:", newMessage);
 
         // 자신이 보낸 메시지가 아닌 경우에만 추가
         // (자신이 보낸 메시지는 sendMessage에서 이미 추가됨)
@@ -293,7 +293,7 @@ export default function ChatRoomScreen() {
 
     // 컴포넌트 언마운트 시 구독 해제
     return () => {
-      console.log(`실시간 구독 해제: 채팅방 ${roomId}`);
+      //console.log(`실시간 구독 해제: 채팅방 ${roomId}`);
       unsubscribe();
     };
   }, [roomId, currentUser]);
@@ -305,7 +305,7 @@ export default function ChatRoomScreen() {
     const markAsRead = async () => {
       try {
         await chatService.markChannelAsRead(roomId);
-        console.log(`채팅방 ${roomId} 읽음 처리 완료`);
+        //console.log(`채팅방 ${roomId} 읽음 처리 완료`);
       } catch (error) {
         console.error("읽음 처리 실패:", error);
       }
@@ -331,13 +331,13 @@ export default function ChatRoomScreen() {
 
   // 메시지 새로고침 핸들러
   const handleRefresh = async () => {
-    console.log("채팅 메시지 새로고침 시작");
+    //console.log("채팅 메시지 새로고침 시작");
     await refetchMessages();
   };
 
   // 메시지 길게 누르기 핸들러
   const handleLongPressMessage = (message: Message) => {
-    console.log("메시지 길게 누르기:", message.id);
+    //console.log("메시지 길게 누르기:", message.id);
     // TODO: 메시지 옵션 (답장, 복사, 신고 등) 구현
     showToast({
       type: "info",
@@ -370,7 +370,7 @@ export default function ChatRoomScreen() {
         hasMoreMessages={false}
         onLoadMore={() => {
           // TODO: 이전 메시지 로드 구현
-          console.log("이전 메시지 로드 요청");
+          //console.log("이전 메시지 로드 요청");
         }}
         isKeyboardVisible={isKeyboardVisible}
         keyboardHeight={keyboardHeight}
@@ -388,7 +388,7 @@ export default function ChatRoomScreen() {
               : "메시지를 입력하세요..."
         }
         onEmoji={() => {
-          console.log("이모지 버튼 클릭");
+          //console.log("이모지 버튼 클릭");
           showToast({
             type: "info",
             title: "이모지",
@@ -397,7 +397,7 @@ export default function ChatRoomScreen() {
           });
         }}
         onAddOption={() => {
-          console.log("추가 옵션 버튼 클릭");
+          //console.log("추가 옵션 버튼 클릭");
           showToast({
             type: "info",
             title: "추가 옵션",

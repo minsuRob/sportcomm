@@ -155,7 +155,7 @@ export function useCurrentUser() {
                 (e as any)?.message?.includes("refresh_token_not_found") ||
                 (e as any)?.message?.includes("invalid_grant")
               ) {
-                console.log("JWT 토큰 만료, 사용자 정보 초기화");
+                //console.log("JWT 토큰 만료, 사용자 정보 초기화");
                 nextUser = null;
                 userCacheRef.current = null;
               }

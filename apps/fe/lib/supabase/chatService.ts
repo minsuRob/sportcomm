@@ -85,10 +85,10 @@ export class SupabaseChatService {
         data: { session },
       } = await supabase.auth.getSession();
       this.isConnected = !!session;
-      console.log(
-        "Supabase 채팅 서비스 초기화:",
-        this.isConnected ? "성공" : "미인증 상태",
-      );
+      //console.log(
+      //   "Supabase 채팅 서비스 초기화:",
+      //   this.isConnected ? "성공" : "미인증 상태",
+      // );
     } catch (error) {
       console.error("Supabase 연결 초기화 실패:", error);
       this.isConnected = false;
@@ -109,7 +109,7 @@ export class SupabaseChatService {
 
       if (error) throw error;
       this.isConnected = true;
-      console.log("Supabase 세션 설정 완료");
+      //console.log("Supabase 세션 설정 완료");
     } catch (error) {
       handleSupabaseError(error, "세션 설정");
     }
@@ -281,10 +281,10 @@ export class SupabaseChatService {
       if (error) throw error;
 
       // 디버깅을 위한 로깅
-      console.log(
-        "Supabase 메시지 데이터:",
-        JSON.stringify(messages?.[0], null, 2),
-      );
+      //console.log(
+      //   "Supabase 메시지 데이터:",
+      //   JSON.stringify(messages?.[0], null, 2),
+      // );
 
       return this.transformMessagesToGraphQL(messages || []);
     } catch (error) {
@@ -475,7 +475,7 @@ export class SupabaseChatService {
     try {
       // 현재 구현에서는 chat_room_participants 테이블에 lastReadAt 필드가 없으므로
       // 이 기능은 나중에 구현할 수 있습니다.
-      console.log("채팅방 읽음 처리:", channelId);
+      //console.log("채팅방 읽음 처리:", channelId);
       return true;
     } catch (error) {
       handleSupabaseError(error, "채팅방 읽음 처리");

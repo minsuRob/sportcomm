@@ -41,7 +41,7 @@ export default function NotificationsScreen() {
    */
   const handleSettingsPress = () => {
     // TODO: 알림 설정 화면으로 이동
-    console.log("알림 설정 화면으로 이동");
+    //console.log("알림 설정 화면으로 이동");
   };
 
   /**

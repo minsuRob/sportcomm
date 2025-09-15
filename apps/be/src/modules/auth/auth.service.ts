@@ -311,7 +311,7 @@ export class AuthService {
    */
   async updateProfile(
     userId: string,
-    updateData: Partial<Pick<User, 'nickname' | 'bio' | 'profileImageUrl'>>,
+    updateData: Partial<Pick<User, 'nickname' | 'bio' | 'profileImageUrl' | 'age'>>,
   ): Promise<User> {
     // 닉네임 변경 시 중복 확인
     if (updateData.nickname) {

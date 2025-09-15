@@ -25,7 +25,6 @@ import {
   markPostSignupStepDone,
   PostSignupStep,
   shouldRunPostSignup,
-  getNextPostSignupStep,
 } from "@/lib/auth/post-signup";
 import { useMutation, useLazyQuery } from "@apollo/client";
 import {
@@ -86,31 +85,29 @@ export default function PostSignupProfileScreen(): React.ReactElement {
   }, [user]);
 
   // --- 접근 가드: 최초 회원가입(이메일/소셜) 직후 플로우에서만 노출, 일반 로그인 시 피드로 이동 ---
-  useEffect(() => {
-    const run = async (): Promise<void> => {
-      // 비인증 상태이거나, post-signup이 필요하지 않으면 접근 불가 → 피드로
-      if (!isAuthenticated) {
-        router.replace("/(app)/feed");
-        return;
-      }
-      try {
-        const need = await shouldRunPostSignup(user as any);
-        if (!need) {
-          router.replace("/(app)/feed");
-          return;
-        }
-        // 다음 단계가 프로필 단계가 아니면 접근 불가 → 피드로
-        const step = await getNextPostSignupStep(user as any);
-        if (step !== PostSignupStep.Profile) {
-          router.replace("/(app)/feed");
-        }
-      } catch {
-        // 판단 중 오류가 발생해도 보수적으로 피드로 이동
-        router.replace("/(app)/feed");
-      }
-    };
-    run();
-  }, [isAuthenticated, user]);
+  // useEffect(() => {
+  //   const run = async (): Promise<void> => {
+  //     // 비인증 상태이거나, post-signup이 필요하지 않으면 접근 불가 → 피드로
+  //     console.log("isAuthenticated", isAuthenticated);
+      
+  //     if (!isAuthenticated) {
+  //       router.replace("/(app)/feed");
+  //       return;
+  //     }
+  //     try {
+  //       // const need = await shouldRunPostSignup(user as any);
+  //       // if (!need) {
+  //       //   router.replace("/(app)/feed");
+  //       //   return;
+  //       // }
+  //       // 프로필 단계 여부와 무관하게, post-signup 진행 중이면 접근 허용
+  //     } catch {
+  //       // 판단 중 오류가 발생해도 보수적으로 피드로 이동
+  //       router.replace("/(app)/feed");
+  //     }
+  //   };
+  //   run();
+  // }, [isAuthenticated, user]);
 
   /**
    * 나이 입력 처리 (숫자만 허용, 1~120 범위로 클램프)

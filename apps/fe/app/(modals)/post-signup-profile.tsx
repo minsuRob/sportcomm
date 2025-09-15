@@ -340,7 +340,8 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       });
       return;
     }
-ㄹ
+
+    const ageNumber = sanitizeAge(ageText);
     if (ageText && ageNumber === null) {
       showToast({
         type: "error",
@@ -579,7 +580,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
         <View style={themed($section)}>
           <Text style={themed($label)}>추천인 코드</Text>
           <View style={themed($referralContainer)}>
-            <View style={themed($inputContainer)}>
+            <View style={[themed($inputContainer), { flex: 2 }]}>
               <Ionicons
                 name="gift-outline"
                 size={16}
@@ -839,15 +840,18 @@ const $referralContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   gap: spacing.sm,
+  height: 48, // Match height of $inputContainer and $teamSelectButton
 });
 
 const $validateButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.sm,
   backgroundColor: colors.tint,
-  borderRadius: 6,
+  borderRadius: 8, // Match borderRadius of $inputContainer and $teamSelectButton
   minWidth: 80,
   alignItems: "center",
+  height: 48, // Match height of $inputContainer and $teamSelectButton
+  justifyContent: "center",
 });
 
 const $validateButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({

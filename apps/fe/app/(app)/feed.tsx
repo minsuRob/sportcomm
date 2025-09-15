@@ -81,7 +81,6 @@ import StorySection from "@/components/StorySection";
 import ChatRoomList from "@/components/chat/ChatRoomList";
 import { NotificationToast } from "@/components/notifications";
 import { showToast } from "@/components/CustomToast";
-import PostCardSkeleton from "@/components/PostCardSkeleton";
 
 import FeedHeader from "@/components/feed/FeedHeader";
 import AuthModal from "@/components/feed/AuthModal";
@@ -244,32 +243,6 @@ export default function FeedScreen() {
     { key: "chat", title: t(TRANSLATION_KEYS.FEED_CHAT) },
   ];
 
-  if (fetching && posts.length === 0 && !refreshing) {
-    return (
-      <View style={themed($container)}>
-        <FeedHeader
-          onNotificationPress={handleNotificationPress}
-          onProfilePress={() =>
-            currentUser
-              ? router.push("/(app)/profile")
-              : setAuthModalVisible(true)
-          }
-          onShopPress={handleShopPress}
-          onLotteryPress={handleLotteryPress}
-          onBoardPress={handleBoardPress}
-          onTeamFilterPress={() => setTeamFilterOpen(true)}
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-        <View>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <PostCardSkeleton key={index} />
-          ))}
-        </View>
-      </View>
-    );
-  }
 
   if (error && posts.length === 0) {
     return (
@@ -422,6 +395,7 @@ export default function FeedScreen() {
           <FeedList
             posts={posts}
             fetching={fetching}
+            loadingText="피드를 불러오는 중..."
             refreshing={refreshing}
             onRefresh={refresh}
             onEndReached={loadMore}

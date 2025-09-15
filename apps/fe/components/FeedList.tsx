@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { FlatList, View, Text, ViewStyle, TextStyle } from "react-native";
+import { FlatList, View, Text, ViewStyle, TextStyle, ActivityIndicator } from "react-native";
 import PostCard, { Post } from "./PostCard"; // Import PostCard and the Post type from it
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
@@ -10,6 +10,7 @@ import { getFlatListOptimizationProps } from "@/lib/platform/optimization";
 interface FeedListProps {
   posts: Post[];
   fetching?: boolean;
+  loadingText?: string;
   onRefresh?: () => void;
   refreshing?: boolean;
   ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
@@ -27,6 +28,8 @@ interface FeedListProps {
  */
 export default function FeedList({
   posts,
+  fetching,
+  loadingText,
   onRefresh,
   refreshing,
   ListHeaderComponent,
@@ -36,7 +39,7 @@ export default function FeedList({
   onPostUpdated,
   onFeedRefresh,
 }: FeedListProps) {
-  const { themed } = useAppTheme();
+  const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
 
   // 디버깅: 웹 환경 확인
@@ -81,6 +84,9 @@ export default function FeedList({
     [themed, t],
   );
 
+  // 로딩 상태 확인 (fetching 중이고 posts가 비어있는 경우)
+  const isLoading = fetching && posts.length === 0;
+
   // 플랫폼별 성능 최적화 설정
   const optimizationProps = useMemo(() => getFlatListOptimizationProps(), []);
 
@@ -117,6 +123,18 @@ export default function FeedList({
     ],
   );
 
+  // 로딩 상태일 때 로딩 컴포넌트 표시
+  if (isLoading) {
+    return (
+      <View style={themed($loadingContainer)}>
+        <ActivityIndicator size="large" color={theme.colors.tint} />
+        <Text style={themed($loadingText)}>
+          {loadingText || "피드를 불러오는 중..."}
+        </Text>
+      </View>
+    );
+  }
+
   if (isWeb()) {
     // 웹 환경에서는 외부 컨테이너로 감싸서 중앙 정렬
     return (
@@ -144,6 +162,20 @@ export default function FeedList({
 // --- Styles ---
 const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
+});
+
+// 로딩 관련 스타일 (profile.tsx에서 가져옴)
+const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: spacing.xl,
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+  marginTop: spacing.sm,
 });
 
 // 웹 전용 스타일들

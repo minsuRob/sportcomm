@@ -593,21 +593,21 @@ export default function CreatePostScreen() {
         mediaMessage = ` (${parts.join(", ")} 포함)`;
       }
 
-      showToast({
-        type: "success",
-        title: "게시물 작성 완료",
-        message: `게시물이 성공적으로 작성되었습니다!${mediaMessage}`,
-        duration: 3000,
-      });
+      // showToast({
+      //   type: "success",
+      //   title: "게시물 작성 완료",
+      //   message: `게시물이 성공적으로 작성되었습니다!${mediaMessage}`,
+      //   duration: 3000,
+      // });
 
       // 포인트 지급을 위해 사용자 정보 새로고침
       try {
         await reloadUser({ force: true });
         showToast({
           type: "success",
-          title: "포인트 지급 완료",
-          message: "게시물 작성으로 5포인트를 받았습니다!",
-          duration: 2000,
+          title: "게시글 작성 완료",
+          message: "게시글 작성으로 10포인트를 받았습니다!",
+          duration: 3000,
         });
       } catch (reloadError) {
         console.warn("사용자 정보 새로고침 실패:", reloadError);

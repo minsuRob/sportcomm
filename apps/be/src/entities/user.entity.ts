@@ -48,8 +48,8 @@ export enum UserProgressAction {
  * 구조를 객체 형태로 확장 가능 (예: { points: 5, exp: 10 }).
  */
 export const USER_PROGRESS_REWARD: Record<UserProgressAction, number> = {
-  [UserProgressAction.CHAT_MESSAGE]: 5,
-  [UserProgressAction.POST_CREATE]: 5,
+  [UserProgressAction.CHAT_MESSAGE]: 3,
+  [UserProgressAction.POST_CREATE]: 10,
   [UserProgressAction.DAILY_ATTENDANCE]: 20,
 };
 

@@ -471,16 +471,16 @@ export default function AuthScreen() {
   if (!showEmailForm) {
     return (
       <>
-        <Stack.Screen
-          options={{
-            title: "로그인",
-            headerStyle: {
-              backgroundColor: theme.colors.background,
-            },
-            headerTintColor: theme.colors.text,
-            headerBackTitle: "뒤로",
-          }}
-        />
+        {/* 헤더 */}
+        <View style={themed($header)}>
+          <TouchableOpacity onPress={() => router.back()} style={themed($headerButton)}>
+            <Text style={themed($cancelText)}>취소</Text>
+          </TouchableOpacity>
+
+          <Text style={themed($headerTitle)}>로그인</Text>
+
+          <View style={themed($headerButton)} />
+        </View>
         <ScrollView
           style={themed($container)}
           contentContainerStyle={themed($contentContainer)}
@@ -576,17 +576,29 @@ export default function AuthScreen() {
 
   return (
     <>
-      <Stack.Screen
-        // options={{
-        //   title: isLogin ? "로그인" : "회원가입",
-        //   headerStyle: {
-        //     backgroundColor: theme.colors.background,
-        //   },
-        //   headerTintColor: theme.colors.text,
-        //   headerTitleAlign: 'center',
-        //   headerBackTitle: "뒤로",
-        // }}
-      />
+      {/* 헤더 */}
+      <View style={themed($header)}>
+        <TouchableOpacity onPress={() => setShowEmailForm(false)} style={themed($headerButton)}>
+          <Text style={themed($cancelText)}>취소</Text>
+        </TouchableOpacity>
+
+        <Text style={themed($headerTitle)}>{isLogin ? "로그인" : "회원가입"}</Text>
+
+        <TouchableOpacity
+          onPress={handleContinue}
+          style={themed($headerButton)}
+          disabled={loginLoading || registerLoading}
+        >
+          <Text
+            style={[
+              themed($saveText),
+              (loginLoading || registerLoading) && themed($disabledText),
+            ]}
+          >
+            {loginLoading || registerLoading ? "처리 중..." : "완료"}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         style={themed($container)}
@@ -919,4 +931,41 @@ const $socialButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontSize: 15,
   fontWeight: "500",
+});
+
+// === 헤더 관련 스타일 ===
+const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $headerButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingVertical: spacing.xs,
+  paddingHorizontal: spacing.sm,
+});
+
+const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "600",
+  color: colors.text,
+});
+
+const $cancelText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+});
+
+const $saveText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: colors.tint,
+});
+
+const $disabledText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
 });

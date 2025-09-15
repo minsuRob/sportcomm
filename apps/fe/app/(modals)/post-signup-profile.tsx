@@ -318,6 +318,19 @@ export default function PostSignupProfileScreen(): React.ReactElement {
    */
   const handleSave = async (): Promise<void> => {
     if (saving || isApplyingReferral) return;
+
+    // 팀 선택 필수 검증
+    if (selectedTeams.length === 0) {
+      showToast({
+        type: "error",
+        title: "팀 선택 필요",
+        message: "(필수) 최소 1개 이상의 팀을 선택해 주세요.",
+        duration: 2500,
+      });
+      // handleGoTeamSelection();
+      return;
+    }
+
     if (!isAuthenticated) {
       showToast({
         type: "error",
@@ -345,22 +358,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       if (ageNumber !== null) payload.age = ageNumber;
       if (gender) payload.gender = gender;
 
-      // 아무 것도 입력하지 않은 경우 안내만 표시하고 종료
-      if (
-        !("age" in payload) &&
-        !("gender" in payload) &&
-        !referralCode.trim()
-      ) {
-        showToast({
-          type: "info",
-          title: "안내",
-          message: "저장할 변경사항이 없습니다.",
-          duration: 2000,
-        });
-        return;
-      }
-
-      // 나이/성별 저장
+      // 나이/성별은 선택사항이므로 존재할 때만 저장
       if ("age" in payload || "gender" in payload) {
         const result = await quickUpdateAgeAndGender(payload, {
           updateLocal: true,
@@ -391,10 +389,13 @@ export default function PostSignupProfileScreen(): React.ReactElement {
 
       showToast({
         type: "success",
-        title: "저장 완료",
-        message: "기본 프로필 정보가 저장되었습니다.",
-        duration: 2000,
+        title: "완료",
+        message: "설정이 완료되었습니다. 피드로 이동합니다.",
+        duration: 1200,
       });
+
+      // 완료 시 피드로 이동
+      router.replace("/feed");
     } catch (e: any) {
       showToast({
         type: "error",
@@ -405,13 +406,6 @@ export default function PostSignupProfileScreen(): React.ReactElement {
     } finally {
       setSaving(false);
     }
-  };
-
-  /**
-   * 팀 선택 화면으로 바로 이동 (건너뛰기)
-   */
-  const handleSkip = (): void => {
-    router.push("/feed");
   };
 
   /**
@@ -471,9 +465,9 @@ export default function PostSignupProfileScreen(): React.ReactElement {
         >
           <Ionicons name="close" size={22} color={theme.colors.text} />
         </TouchableOpacity> */}
-        <Text style={themed($headerTitle)}>기본 프로필 설정</Text>
+        <Text style={themed($headerTitle)}>내 프로필 설정</Text>
         <TouchableOpacity
-          onPress={handleSkip}
+          onPress={handleSave}
           disabled={saving}
           accessibilityRole="button"
         >
@@ -483,7 +477,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               saving ? { color: theme.colors.textDim } : undefined,
             ]}
           >
-            건너뛰기
+            완료
           </Text>
         </TouchableOpacity>
       </View>
@@ -502,9 +496,10 @@ export default function PostSignupProfileScreen(): React.ReactElement {
 
         {/* 팀 선택 */}
         <View style={themed($section)}>
-          <Text style={themed($label)}>팀 선택</Text>
+          <Text style={themed($label)}>팀 선택 (필수)</Text>
           <Text style={themed($helper)}>
-            관심 팀을 선택하면 피드가 더 맞춤화됩니다.
+            관심 팀을 최소 1개 이상 선택해야 합니다. 선택하면 피드가 더
+            맞춤화됩니다.
           </Text>
 
           {/* 선택된 팀 정보 표시 */}
@@ -516,9 +511,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               <View style={themed($selectedTeamsList)}>
                 {selectedTeams.map((team) => (
                   <View key={team.id} style={themed($selectedTeamItem)}>
-                    <Text style={themed($selectedTeamName)}>
-                      {team.name}
-                    </Text>
+                    <Text style={themed($selectedTeamName)}>{team.name}</Text>
                     <Ionicons
                       name="checkmark-circle"
                       size={16}
@@ -683,7 +676,11 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               </>
             ) : (
               <>
-                <Ionicons name="save-outline" size={16} color={theme.colors.text} />
+                <Ionicons
+                  name="checkmark-done-outline"
+                  size={16}
+                  color={theme.colors.text}
+                />
                 <Text style={themed($primaryButtonText)}>완료</Text>
               </>
             )}
@@ -715,7 +712,6 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "700",
   color: colors.text,
-
 });
 
 const $skipText: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -903,7 +899,10 @@ const $teamSelectButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 // === 선택된 팀 표시 스타일 ===
-const $selectedTeamsContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $selectedTeamsContainer: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
   marginTop: spacing.md,
   padding: spacing.sm,
   backgroundColor: colors.card,

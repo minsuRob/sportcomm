@@ -608,7 +608,7 @@ export default function AuthScreen() {
       >
         <View style={themed($mainContent)}>
           <Text style={themed($logoText)}>
-            {isLogin ? "Sportalk 환영합니다" : "계정 만들기"}
+            {isLogin ? "로그인" : "계정 만들기"}
           </Text>
 
           {/* 이메일 입력 필드 */}
@@ -725,6 +725,8 @@ export default function AuthScreen() {
             </View>
           ) : null}
 
+          {/* 
+          // TODO : 기능 테스트 필요.
           {isLogin && (
             <TouchableOpacity
               style={themed($forgotPasswordButton)}
@@ -734,7 +736,7 @@ export default function AuthScreen() {
                 비밀번호를 잊으셨나요?
               </Text>
             </TouchableOpacity>
-          )}
+          )} */}
 
           <Button
             size="lg"
@@ -877,13 +879,12 @@ const $socialButtonContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
 });
 
-const $continueButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $continueButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
   // 메인 액션: 검은색(또는 텍스트 컬러) 배경의 두꺼운 필 버튼
   backgroundColor: colors.text,
-  borderRadius: 30,
-  height: 56,
+  borderRadius: 28,
+  height: 52,
   justifyContent: "center",
-  marginTop: spacing.sm,
 });
 
 const $continueButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({

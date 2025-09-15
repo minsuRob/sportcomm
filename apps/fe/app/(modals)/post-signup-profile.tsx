@@ -755,7 +755,8 @@ const $label: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
 });
 
 const $requiredText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.tint,
+  color: colors.text,
+  textDecorationLine: "underline",
   fontWeight: "700",
   fontSize: 16,
 });

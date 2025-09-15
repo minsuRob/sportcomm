@@ -126,15 +126,18 @@ export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   // 에러 상태 관리
   const [emailError, setEmailError] = useState("");
   const [nicknameError, setNicknameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
   const nicknameInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
 
   // 로딩 상태 관리
   const [loginLoading, setLoginLoading] = useState(false);
@@ -165,6 +168,7 @@ export default function AuthScreen() {
     setEmailError("");
     setNicknameError("");
     setPasswordError("");
+    setConfirmPasswordError("");
     setGeneralError("");
   };
 
@@ -439,6 +443,35 @@ export default function AuthScreen() {
   };
 
   /**
+   * 비밀번호 일치 검증
+   * 회원가입 시에만 수행됩니다
+   */
+  const validatePasswordMatch = () => {
+    if (!isLogin && password && confirmPassword && password !== confirmPassword) {
+      setConfirmPasswordError("비밀번호가 일치하지 않습니다.");
+      return false;
+    }
+    setConfirmPasswordError("");
+    return true;
+  };
+
+  /**
+   * 회원가입 버튼 활성화 조건 확인
+   */
+  const isRegisterButtonEnabled = () => {
+    if (isLogin) return true; // 로그인일 때는 항상 활성화
+
+    // 회원가입 시 필수 조건들
+    const hasEmail = email.trim().length > 0;
+    const hasNickname = nickname.trim().length > 0;
+    const hasPassword = password.trim().length > 0;
+    const hasConfirmPassword = confirmPassword.trim().length > 0;
+    const passwordsMatch = password === confirmPassword;
+
+    return hasEmail && hasNickname && hasPassword && hasConfirmPassword && passwordsMatch;
+  };
+
+  /**
    * 계속하기 버튼 핸들러
    * 입력 검증 후 로그인/회원가입을 진행합니다
    */
@@ -458,6 +491,11 @@ export default function AuthScreen() {
 
     if (!isLogin && !nickname.trim()) {
       setNicknameError("닉네임을 입력해주세요.");
+      return;
+    }
+
+    // 회원가입 시 비밀번호 일치 검증
+    if (!isLogin && !validatePasswordMatch()) {
       return;
     }
 
@@ -608,7 +646,7 @@ export default function AuthScreen() {
       >
         <View style={themed($mainContent)}>
           <Text style={themed($logoText)}>
-            {isLogin ? "로그인" : "계정 만들기"}
+            {isLogin ? "Sportalk Login" : "회원가입"}
           </Text>
 
           {/* 이메일 입력 필드 */}
@@ -717,6 +755,58 @@ export default function AuthScreen() {
             ) : null}
           </View>
 
+          {/* 비밀번호 확인 입력 필드 (회원가입 시에만) */}
+          {!isLogin && (
+            <View style={themed($inputContainer)}>
+              <View style={themed($passwordContainer)}>
+                <TextInput
+                  ref={confirmPasswordInputRef}
+                  style={[
+                    themed($inputField),
+                    themed($passwordInput),
+                    confirmPasswordError && themed($inputFieldError),
+                  ]}
+                  placeholder="비밀번호 확인"
+                  placeholderTextColor={theme.colors.textDim}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (confirmPasswordError) setConfirmPasswordError(""); // 입력 시 에러 초기화
+                    // 실시간 검증: 비밀번호가 일치하는지 확인
+                    if (password && text && password !== text) {
+                      setConfirmPasswordError("비밀번호가 일치하지 않습니다.");
+                    } else if (password && text && password === text) {
+                      setConfirmPasswordError("");
+                    }
+                  }}
+                  secureTextEntry={!isPasswordVisible}
+                  returnKeyType="done"
+                  onSubmitEditing={handleContinue}
+                />
+                <TouchableOpacity
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                  style={themed($eyeButton)}
+                >
+                  {isPasswordVisible ? (
+                    <Ionicons
+                      name="eye-off"
+                      color={theme.colors.textDim}
+                      size={20}
+                    />
+                  ) : (
+                    <Ionicons name="eye" color={theme.colors.textDim} size={20} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {confirmPasswordError ? (
+                <View style={themed($errorContainer)}>
+                  <Ionicons name="alert-circle" color="#ef4444" size={16} />
+                  <Text style={themed($errorText)}>{confirmPasswordError}</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+
           {/* 일반 에러 메시지 */}
           {generalError ? (
             <View style={themed($errorContainer)}>
@@ -742,7 +832,7 @@ export default function AuthScreen() {
             size="lg"
             style={themed($continueButton)}
             onPress={handleContinue}
-            disabled={loginLoading || registerLoading}
+            disabled={loginLoading || registerLoading || !isRegisterButtonEnabled()}
           >
             <Text style={themed($continueButtonText)}>계속</Text>
           </Button>
@@ -790,11 +880,12 @@ const $mainContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 30, // typography.fontSize["3xl"] 대신 직접 값 사용
-  fontWeight: "900",
+  fontFamily: "TTTogether",
+  fontWeight: "500",
   textAlign: "center",
   color: colors.teamMain ?? colors.tint,
   // 웹/네이티브 모두 동일 키(TTTogether) 사용
-  fontFamily: "TTTogether",
+  // fontFamily: "TTTogether",
   marginBottom: 32,
 });
 
@@ -903,11 +994,13 @@ const $toggleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $toggleText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim, // colors.textSecondary 대신 colors.textDim 사용
+  
 });
 
 const $toggleLinkText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.tint, // colors.primary 대신 colors.tint 사용
   fontWeight: "600",
+  
 });
 
 const $dividerContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

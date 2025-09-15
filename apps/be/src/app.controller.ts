@@ -28,7 +28,7 @@ export class AppController {
    *
    * @returns 간단한 상태 응답
    */
-  @Get('healthcheck')
+  @Get('health')
   healthCheck() {
     return { status: 'ok' };
   }

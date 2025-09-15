@@ -22,7 +22,7 @@ import {
   normalizeGender,
 } from "@/lib/supabase/quick-update";
 import { markPostSignupStepDone, PostSignupStep } from "@/lib/auth/post-signup";
-import { useMutation } from "@apollo/client";
+import { useMutation, useLazyQuery } from "@apollo/client";
 import {
   VALIDATE_REFERRAL_CODE,
   APPLY_REFERRAL_CODE,
@@ -50,11 +50,10 @@ export default function PostSignupProfileScreen(): React.ReactElement {
     isValid: boolean | null;
     message: string;
   }>({ isValid: null, message: "" });
-  const [isValidatingReferral, setIsValidatingReferral] = useState<boolean>(false);
   const [isApplyingReferral, setIsApplyingReferral] = useState<boolean>(false);
 
-  // --- GraphQL 뮤테이션 ---
-  const [validateReferralCode] = useMutation(VALIDATE_REFERRAL_CODE);
+  // --- GraphQL 쿼리 및 뮤테이션 ---
+  const [validateReferralCode, { data: validationData, loading: validationLoading, error: validationError }] = useLazyQuery(VALIDATE_REFERRAL_CODE);
   const [applyReferralCode] = useMutation(APPLY_REFERRAL_CODE);
 
   // --- 안내 문구 계산 ---
@@ -109,7 +108,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
   /**
    * 추천인 코드 검증 처리
    */
-  const handleValidateReferralCode = async (): Promise<void> => {
+  const handleValidateReferralCode = (): void => {
     if (!referralCode.trim()) {
       showToast({
         type: "error",
@@ -130,28 +129,30 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       return;
     }
 
-    setIsValidatingReferral(true);
-    try {
-      const { data } = await validateReferralCode({
-        variables: { referralCode },
+    validateReferralCode({
+      variables: { referralCode },
+    });
+  };
+
+  // 추천인 코드 검증 결과 처리
+  useEffect(() => {
+    if (validationData?.validateReferralCode && !validationLoading) {
+      const result = validationData.validateReferralCode;
+      setReferralCodeValidation({
+        isValid: result.isValid,
+        message: result.message,
       });
 
-      if (data?.validateReferralCode) {
-        const result = data.validateReferralCode;
-        setReferralCodeValidation({
-          isValid: result.isValid,
-          message: result.message,
-        });
+      showToast({
+        type: result.isValid ? "success" : "error",
+        title: result.isValid ? "사용 가능" : "사용 불가",
+        message: result.message,
+        duration: 3000,
+      });
+    }
 
-        showToast({
-          type: result.isValid ? "success" : "error",
-          title: result.isValid ? "사용 가능" : "사용 불가",
-          message: result.message,
-          duration: 3000,
-        });
-      }
-    } catch (error: any) {
-      console.error("추천인 코드 검증 오류:", error);
+    if (validationError && !validationLoading) {
+      console.error("추천인 코드 검증 오류:", validationError);
       setReferralCodeValidation({
         isValid: false,
         message: "추천인 코드 검증 중 오류가 발생했습니다.",
@@ -162,10 +163,8 @@ export default function PostSignupProfileScreen(): React.ReactElement {
         message: "추천인 코드 검증 중 오류가 발생했습니다.",
         duration: 3000,
       });
-    } finally {
-      setIsValidatingReferral(false);
     }
-  };
+  }, [validationData, validationError, validationLoading]);
 
   /**
    * 추천인 코드 적용 처리
@@ -477,18 +476,18 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             <TouchableOpacity
               style={[
                 themed($validateButton),
-                (isValidatingReferral || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateButton),
+                (validationLoading || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateButton),
               ]}
               onPress={handleValidateReferralCode}
-              disabled={isValidatingReferral || !referralCode.trim() || referralCode.length !== 8}
+              disabled={validationLoading || !referralCode.trim() || referralCode.length !== 8}
             >
               <Text
                 style={[
                   themed($validateButtonText),
-                  (isValidatingReferral || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateText),
+                  (validationLoading || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateText),
                 ]}
               >
-                {isValidatingReferral ? "확인 중..." : "코드 확인"}
+                {validationLoading ? "확인 중..." : "코드 확인"}
               </Text>
             </TouchableOpacity>
           </View>

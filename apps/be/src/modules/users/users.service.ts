@@ -254,7 +254,7 @@ export class UsersService {
    * @returns 추천인 통계
    */
   async getReferralStats(userId: string): Promise<{
-    referralCode: string;
+    referralCode?: string;
     totalReferrals: number;
     availableSlots: number;
     referredUsers: Array<{

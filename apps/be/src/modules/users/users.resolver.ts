@@ -78,8 +78,8 @@ export class ReferredUserInfo {
  */
 @ObjectType()
 export class ReferralStats {
-  @Field(() => String, { description: '내 추천인 코드' })
-  referralCode: string;
+  @Field(() => String, { nullable: true, description: '내 추천인 코드' })
+  referralCode?: string;
 
   @Field(() => Number, { description: '총 추천 수' })
   totalReferrals: number;

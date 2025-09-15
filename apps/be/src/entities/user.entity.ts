@@ -368,11 +368,12 @@ export class User {
     type: 'varchar',
     length: 8,
     unique: true,
-    nullable: false,
+    nullable: true,
     comment: '사용자 추천인 코드 (8글자 대문자 UUID)',
   })
+  @IsOptional()
   @IsString({ message: '추천인 코드는 문자열이어야 합니다.' })
-  referralCode: string;
+  referralCode?: string;
 
   /**
    * 추천인 코드 (나를 초대한 사람)
@@ -601,7 +602,7 @@ export interface CombinedUserInfo {
   /** 최근 출석 보상 수령 일시 */
   lastAttendanceAt?: Date;
   /** 사용자 추천인 코드 */
-  referralCode: string;
+  referralCode?: string;
   /** 추천인 코드 (나를 초대한 사람) */
   referredBy?: string;
   // 공통 정보

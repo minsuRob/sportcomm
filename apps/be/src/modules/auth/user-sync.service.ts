@@ -549,6 +549,8 @@ export class UserSyncService {
       profileImageUrl: user.profileImageUrl,
       bio: user.bio,
       isActive: user.isActive,
+      ...(user.referralCode && { referralCode: user.referralCode }),
+      referredBy: user.referredBy,
       // 포인트 / 경험치 / 출석 관련 (백엔드 엔티티 필드)
       // CombinedUserInfo 타입 확장 없이 안전하게 캐스팅해서 전달
       ...(typeof (user as any).points === 'number'

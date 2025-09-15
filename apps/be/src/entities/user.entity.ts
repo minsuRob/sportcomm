@@ -363,7 +363,7 @@ export class User {
    * 회원가입 시 자동 생성되는 고유한 추천인 코드입니다.
    * 8글자 대문자 UUID 형식으로 생성됩니다.
    */
-  @Field(() => String, { description: '사용자 추천인 코드' })
+  @Field(() => String, { description: '사용자 추천인 코드', nullable: true })
   @Column({
     type: 'varchar',
     length: 8,

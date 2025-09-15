@@ -246,6 +246,8 @@ export class PostsService {
         'author.provider',
         'author."createdAt"',
         'author."updatedAt"',
+        'author."referralCode"',
+        'author."referredBy"',
         'media.*',
       ])
       // team 은 선택 컬럼만 addSelect

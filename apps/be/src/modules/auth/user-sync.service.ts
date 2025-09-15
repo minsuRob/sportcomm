@@ -185,6 +185,10 @@ export class UserSyncService {
         // 기존 사용자 정보 업데이트 (변경사항이 있을 때만)
         let hasChanges = false;
 
+        // 추천인 데이터 보호: 기존 값이 있으면 절대 덮어쓰지 않음
+        const existingReferralCode = user.referralCode;
+        const existingReferredBy = user.referredBy;
+
         if (user.nickname !== finalNickname) {
           user.nickname = finalNickname;
           hasChanges = true;
@@ -227,13 +231,34 @@ export class UserSyncService {
           (user as any).provider = detectedProvider as any;
           hasChanges = true;
         }
+
+        // 추천인 코드가 없는 경우에만 새로 생성 (기존 데이터 보호)
+        if (!existingReferralCode) {
+          const referralCode =
+            await this.usersService.createUniqueReferralCode();
+          user.referralCode = referralCode;
+          hasChanges = true;
+          this.logger.log(`새 추천인 코드 생성: ${userId} -> ${referralCode}`);
+        }
+
         if (hasChanges) {
-          this.logger.log(`기존 사용자 정보 업데이트: ${userId}`);
+          this.logger.log(
+            `기존 사용자 정보 업데이트: ${userId} (추천인 데이터 보호됨)`,
+          );
           user.updatedAt = new Date();
           user = await this.userRepository.save(user);
         } else {
           this.logger.log(
             `기존 사용자 정보 변경사항 없음: ${userId} (${user.nickname})`,
+          );
+        }
+
+        // 세션 복원 시 추천인 데이터 검증 및 복구
+        const validationResult =
+          await this.usersService.validateAndRepairReferralData(userId);
+        if (validationResult.repaired) {
+          this.logger.log(
+            `추천인 데이터 복구 완료: ${userId} - ${validationResult.message}`,
           );
         }
       } else {

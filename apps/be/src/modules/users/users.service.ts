@@ -528,4 +528,74 @@ export class UsersService {
       };
     }
   }
+
+  /**
+   * 추천인 데이터 일관성 검증 및 복구
+   * 세션 복원 시 데이터 무결성을 보장합니다.
+   * @param userId 사용자 ID
+   * @returns 검증 결과
+   */
+  async validateAndRepairReferralData(userId: string): Promise<{
+    isValid: boolean;
+    repaired: boolean;
+    message: string;
+  }> {
+    try {
+      const user = await this.usersRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return {
+          isValid: false,
+          repaired: false,
+          message: '사용자를 찾을 수 없습니다.',
+        };
+      }
+
+      let hasChanges = false;
+
+      // 1. referralCode 검증 및 복구
+      if (!user.referralCode) {
+        const referralCode = await this.createUniqueReferralCode();
+        user.referralCode = referralCode;
+        hasChanges = true;
+        console.log(`[데이터 복구] 사용자 ${userId}의 추천인 코드 생성: ${referralCode}`);
+      }
+
+      // 2. referredBy 유효성 검증 (존재한다면)
+      if (user.referredBy) {
+        const referrer = await this.usersRepository.findOne({
+          where: { referralCode: user.referredBy },
+        });
+
+        if (!referrer) {
+          console.warn(
+            `[데이터 검증] 사용자 ${userId}의 추천인 코드 ${user.referredBy}가 유효하지 않음`,
+          );
+          user.referredBy = undefined;
+          hasChanges = true;
+        }
+      }
+
+      // 변경사항이 있으면 저장
+      if (hasChanges) {
+        user.updatedAt = new Date();
+        await this.usersRepository.save(user);
+      }
+
+      return {
+        isValid: true,
+        repaired: hasChanges,
+        message: hasChanges ? '추천인 데이터가 복구되었습니다.' : '추천인 데이터가 유효합니다.',
+      };
+    } catch (error) {
+      console.error('추천인 데이터 검증 중 오류 발생:', error);
+      return {
+        isValid: false,
+        repaired: false,
+        message: '추천인 데이터 검증 중 오류가 발생했습니다.',
+      };
+    }
+  }
 }

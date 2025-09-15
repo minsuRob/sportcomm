@@ -1,15 +1,20 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * users 테이블에 추천인 코드 관련 컬럼들 추가
+ * users 테이블에 추천인 코드 관련 컬럼들 추가 및 데이터 보호
  *
  * 추가되는 컬럼들:
- * - referralCode: varchar(8), unique, not null - 사용자의 추천인 코드 (8글자 대문자 UUID)
+ * - referralCode: varchar(8), unique, nullable - 사용자의 추천인 코드 (8글자 대문자 UUID)
  * - referredBy: varchar(8), nullable - 추천인 코드 (나를 초대한 사람의 추천인 코드)
+ *
+ * 변경사항:
+ * - 기존 NOT NULL 제약조건을 제거하여 데이터 호환성 확보
+ * - 기존 사용자들의 추천인 코드를 안전하게 보존
+ * - 세션 복원 시 데이터 무결성 검증 로직 추가
  *
  * 참고:
  * - 기존 사용자들에게는 마이그레이션 시점에 고유한 추천인 코드를 생성하여 할당합니다.
- * - referralCode는 UNIQUE 제약조건이 있으므로 중복되지 않도록 생성해야 합니다.
+ * - referralCode는 UNIQUE 제약조건이 있지만 NULL 값은 허용하여 기존 데이터 보호
  */
 export class AddReferralCode1705130000001 implements MigrationInterface {
   name = 'AddReferralCode1705130000001';
@@ -44,11 +49,16 @@ export class AddReferralCode1705130000001 implements MigrationInterface {
       );
     `);
 
-    // 5. 이제 NOT NULL 제약조건과 UNIQUE 제약조건 추가
+    // 5. UNIQUE 제약조건 추가 (NOT NULL은 유지하지 않음 - 기존 데이터 호환성)
     await queryRunner.query(`
       ALTER TABLE "users"
-      ALTER COLUMN "referralCode" SET NOT NULL,
       ADD CONSTRAINT "UQ_users_referralCode" UNIQUE ("referralCode");
+    `);
+
+    // 6. NOT NULL 제약조건 제거 (기존 데이터 호환성을 위해)
+    await queryRunner.query(`
+      ALTER TABLE "users"
+      ALTER COLUMN "referralCode" DROP NOT NULL;
     `);
 
     // 컬럼 주석 추가

@@ -500,6 +500,52 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       >
         <Text style={themed($subtitle)}>{subtitle}</Text>
 
+        {/* 팀 선택 */}
+        <View style={themed($section)}>
+          <Text style={themed($label)}>팀 선택</Text>
+          <Text style={themed($helper)}>
+            관심 팀을 선택하면 피드가 더 맞춤화됩니다.
+          </Text>
+
+          {/* 선택된 팀 정보 표시 */}
+          {selectedTeams.length > 0 && (
+            <View style={themed($selectedTeamsContainer)}>
+              <Text style={themed($selectedTeamsLabel)}>
+                선택된 팀 ({selectedTeams.length})
+              </Text>
+              <View style={themed($selectedTeamsList)}>
+                {selectedTeams.map((team) => (
+                  <View key={team.id} style={themed($selectedTeamItem)}>
+                    <Text style={themed($selectedTeamName)}>
+                      {team.name}
+                    </Text>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color={theme.colors.tint}
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={handleGoTeamSelection}
+            style={themed($teamSelectButton)}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="people-outline"
+              size={16}
+              color={theme.colors.text}
+            />
+            <Text style={themed($teamSelectButtonText)}>
+              {selectedTeams.length > 0 ? "팀 변경하기" : "팀 선택하기"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* 나이 입력 */}
         <View style={themed($section)}>
           <Text style={themed($label)}>나이</Text>
@@ -619,58 +665,13 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           </Text>
         </View>
 
-        {/* 팀 선택 */}
-        <View style={themed($section)}>
-          <Text style={themed($label)}>팀 선택</Text>
-          <Text style={themed($helper)}>
-            관심 팀을 선택하면 피드가 더 맞춤화됩니다.
-          </Text>
-
-          {/* 선택된 팀 정보 표시 */}
-          {selectedTeams.length > 0 && (
-            <View style={themed($selectedTeamsContainer)}>
-              <Text style={themed($selectedTeamsLabel)}>
-                선택된 팀 ({selectedTeams.length})
-              </Text>
-              <View style={themed($selectedTeamsList)}>
-                {selectedTeams.map((team) => (
-                  <View key={team.id} style={themed($selectedTeamItem)}>
-                    <Text style={themed($selectedTeamName)}>
-                      {team.name}
-                    </Text>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={16}
-                      color={theme.colors.tint}
-                    />
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          <TouchableOpacity
-            onPress={handleGoTeamSelection}
-            style={themed($teamSelectButton)}
-            accessibilityRole="button"
-          >
-            <Ionicons
-              name="people-outline"
-              size={16}
-              color={theme.colors.text}
-            />
-            <Text style={themed($teamSelectButtonText)}>
-              {selectedTeams.length > 0 ? "팀 변경하기" : "팀 선택하기"}
-            </Text>
-          </TouchableOpacity>
-
-          {/* 팀 선택하기 아래에 저장하기 버튼 배치 */}
+        {/* 저장하기 버튼 - 맨 밑에 별도 배치 */}
+        <View style={themed($saveButtonContainer)}>
           <TouchableOpacity
             onPress={handleSave}
             disabled={saving}
             style={[
               themed($primaryButton),
-              { marginTop: 8 },
               saving ? { opacity: 0.6 } : undefined,
             ]}
             accessibilityRole="button"
@@ -821,6 +822,11 @@ const $primaryButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontSize: 16,
   fontWeight: "700",
+});
+
+const $saveButtonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.xl,
+  marginBottom: spacing.lg,
 });
 
 // === 추천인 코드 관련 스타일 ===

@@ -31,6 +31,66 @@ export class NicknameAvailabilityResult {
   message: string;
 }
 
+/**
+ * 추천인 코드 검증 결과 타입
+ */
+@ObjectType()
+export class ReferralCodeValidationResult {
+  @Field(() => Boolean, { description: '추천인 코드 유효 여부' })
+  isValid: boolean;
+
+  @Field(() => String, { description: '결과 메시지' })
+  message: string;
+}
+
+/**
+ * 추천인 코드 적용 결과 타입
+ */
+@ObjectType()
+export class ReferralCodeApplicationResult {
+  @Field(() => Boolean, { description: '적용 성공 여부' })
+  success: boolean;
+
+  @Field(() => String, { description: '결과 메시지' })
+  message: string;
+
+  @Field(() => Number, { nullable: true, description: '지급된 포인트' })
+  pointsAwarded?: number;
+}
+
+/**
+ * 추천받은 사용자 정보 타입
+ */
+@ObjectType()
+export class ReferredUserInfo {
+  @Field(() => String, { description: '사용자 ID' })
+  id: string;
+
+  @Field(() => String, { description: '닉네임' })
+  nickname: string;
+
+  @Field(() => Date, { description: '가입 일시' })
+  createdAt: Date;
+}
+
+/**
+ * 추천인 통계 타입
+ */
+@ObjectType()
+export class ReferralStats {
+  @Field(() => String, { description: '내 추천인 코드' })
+  referralCode: string;
+
+  @Field(() => Number, { description: '총 추천 수' })
+  totalReferrals: number;
+
+  @Field(() => Number, { description: '남은 추천 가능 횟수' })
+  availableSlots: number;
+
+  @Field(() => [ReferredUserInfo], { description: '추천받은 사용자 목록' })
+  referredUsers: ReferredUserInfo[];
+}
+
 @Resolver(() => User)
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
@@ -165,5 +225,61 @@ export class UsersResolver {
     @Args('excludeUserId', { nullable: true }) excludeUserId?: string,
   ): Promise<NicknameAvailabilityResult> {
     return this.usersService.checkNicknameAvailability(nickname, excludeUserId);
+  }
+
+  /**
+   * 추천인 코드 검증 쿼리
+   * @param referralCode 검증할 추천인 코드
+   * @param currentUserId 현재 사용자 ID
+   * @returns 추천인 코드 유효성 검증 결과
+   */
+  @UseGuards(GqlAuthGuard)
+  @Query(() => ReferralCodeValidationResult, {
+    description: '추천인 코드 유효성 검증',
+  })
+  async validateReferralCode(
+    @Args('referralCode') referralCode: string,
+    @CurrentUserId() currentUserId: string,
+  ): Promise<ReferralCodeValidationResult> {
+    const result = await this.usersService.validateReferralCode(
+      referralCode,
+      currentUserId,
+    );
+    return {
+      isValid: result.isValid,
+      message: result.message,
+    };
+  }
+
+  /**
+   * 추천인 코드 적용 뮤테이션
+   * @param referralCode 적용할 추천인 코드
+   * @param currentUserId 현재 사용자 ID
+   * @returns 추천인 코드 적용 결과
+   */
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => ReferralCodeApplicationResult, {
+    description: '추천인 코드 적용 및 포인트 지급',
+  })
+  async applyReferralCode(
+    @Args('referralCode') referralCode: string,
+    @CurrentUserId() currentUserId: string,
+  ): Promise<ReferralCodeApplicationResult> {
+    return this.usersService.applyReferralCode(currentUserId, referralCode);
+  }
+
+  /**
+   * 추천인 통계 조회 쿼리
+   * @param currentUserId 현재 사용자 ID
+   * @returns 추천인 통계 정보
+   */
+  @UseGuards(GqlAuthGuard)
+  @Query(() => ReferralStats, {
+    description: '추천인 통계 및 추천받은 사용자 목록 조회',
+  })
+  async getReferralStats(
+    @CurrentUserId() currentUserId: string,
+  ): Promise<ReferralStats> {
+    return this.usersService.getReferralStats(currentUserId);
   }
 }

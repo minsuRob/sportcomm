@@ -22,6 +22,11 @@ import {
   normalizeGender,
 } from "@/lib/supabase/quick-update";
 import { markPostSignupStepDone, PostSignupStep } from "@/lib/auth/post-signup";
+import { useMutation } from "@apollo/client";
+import {
+  VALIDATE_REFERRAL_CODE,
+  APPLY_REFERRAL_CODE,
+} from "@/lib/graphql/admin";
 
 /**
  * 회원가입 직후 경량 프로필 설정 모달
@@ -38,6 +43,19 @@ export default function PostSignupProfileScreen(): React.ReactElement {
   const [ageText, setAgeText] = useState<string>("");
   const [gender, setGender] = useState<GenderCode | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
+
+  // --- 추천인 코드 상태 ---
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [referralCodeValidation, setReferralCodeValidation] = useState<{
+    isValid: boolean | null;
+    message: string;
+  }>({ isValid: null, message: "" });
+  const [isValidatingReferral, setIsValidatingReferral] = useState<boolean>(false);
+  const [isApplyingReferral, setIsApplyingReferral] = useState<boolean>(false);
+
+  // --- GraphQL 뮤테이션 ---
+  const [validateReferralCode] = useMutation(VALIDATE_REFERRAL_CODE);
+  const [applyReferralCode] = useMutation(APPLY_REFERRAL_CODE);
 
   // --- 안내 문구 계산 ---
   const subtitle = useMemo<string>(() => {
@@ -74,11 +92,170 @@ export default function PostSignupProfileScreen(): React.ReactElement {
   };
 
   /**
+   * 추천인 코드 입력 처리
+   * @param text 입력된 추천인 코드
+   */
+  const handleReferralCodeChange = (text: string): void => {
+    // 대문자로 변환하고 특수문자 제거
+    const cleanCode = text.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    setReferralCode(cleanCode);
+
+    // 입력이 변경되면 검증 상태 초기화
+    if (cleanCode !== text) {
+      setReferralCodeValidation({ isValid: null, message: "" });
+    }
+  };
+
+  /**
+   * 추천인 코드 검증 처리
+   */
+  const handleValidateReferralCode = async (): Promise<void> => {
+    if (!referralCode.trim()) {
+      showToast({
+        type: "error",
+        title: "입력 오류",
+        message: "추천인 코드를 입력해주세요.",
+        duration: 2500,
+      });
+      return;
+    }
+
+    if (referralCode.length !== 8) {
+      showToast({
+        type: "error",
+        title: "형식 오류",
+        message: "추천인 코드는 8글자여야 합니다.",
+        duration: 2500,
+      });
+      return;
+    }
+
+    setIsValidatingReferral(true);
+    try {
+      const { data } = await validateReferralCode({
+        variables: { referralCode },
+      });
+
+      if (data?.validateReferralCode) {
+        const result = data.validateReferralCode;
+        setReferralCodeValidation({
+          isValid: result.isValid,
+          message: result.message,
+        });
+
+        showToast({
+          type: result.isValid ? "success" : "error",
+          title: result.isValid ? "사용 가능" : "사용 불가",
+          message: result.message,
+          duration: 3000,
+        });
+      }
+    } catch (error: any) {
+      console.error("추천인 코드 검증 오류:", error);
+      setReferralCodeValidation({
+        isValid: false,
+        message: "추천인 코드 검증 중 오류가 발생했습니다.",
+      });
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "추천인 코드 검증 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    } finally {
+      setIsValidatingReferral(false);
+    }
+  };
+
+  /**
+   * 추천인 코드 적용 처리
+   */
+  const applyReferralIfValid = async (): Promise<boolean> => {
+    // 추천인 코드가 입력되지 않은 경우
+    if (!referralCode.trim()) {
+      return true; // 건너뛰기
+    }
+
+    // 추천인 코드가 8글자가 아닌 경우
+    if (referralCode.length !== 8) {
+      showToast({
+        type: "error",
+        title: "추천인 코드 오류",
+        message: "추천인 코드는 8글자여야 합니다.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    // 추천인 코드가 검증되지 않은 경우
+    if (referralCodeValidation.isValid === null) {
+      showToast({
+        type: "error",
+        title: "검증 필요",
+        message: "추천인 코드를 먼저 검증해주세요.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    // 추천인 코드가 유효하지 않은 경우
+    if (!referralCodeValidation.isValid) {
+      showToast({
+        type: "error",
+        title: "유효하지 않은 코드",
+        message: "유효하지 않은 추천인 코드입니다.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    setIsApplyingReferral(true);
+    try {
+      const { data } = await applyReferralCode({
+        variables: { referralCode },
+      });
+
+      if (data?.applyReferralCode) {
+        const result = data.applyReferralCode;
+        if (result.success) {
+          showToast({
+            type: "success",
+            title: "추천인 적용 완료",
+            message: `${result.pointsAwarded || 50} 포인트가 지급되었습니다!`,
+            duration: 3000,
+          });
+          return true;
+        } else {
+          showToast({
+            type: "error",
+            title: "추천인 적용 실패",
+            message: result.message,
+            duration: 3000,
+          });
+          return false;
+        }
+      }
+      return false;
+    } catch (error: any) {
+      console.error("추천인 코드 적용 오류:", error);
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "추천인 코드 적용 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+      return false;
+    } finally {
+      setIsApplyingReferral(false);
+    }
+  };
+
+  /**
    * 저장 및 팀 선택 화면으로 이동
-   * - 나이/성별을 빠르게 업데이트 → 성공 시 team-selection 으로 이동
+   * - 나이/성별을 빠르게 업데이트 → 추천인 코드 적용 → 성공 시 team-selection 으로 이동
    */
   const handleSaveAndGoTeamSelection = async (): Promise<void> => {
-    if (saving) return;
+    if (saving || isApplyingReferral) return;
     if (!isAuthenticated) {
       showToast({
         type: "error",
@@ -107,23 +284,35 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       if (gender) payload.gender = gender;
 
       // 아무 것도 입력하지 않은 경우 바로 팀 선택으로 이동 (선택적 UX)
-      if (!("age" in payload) && !("gender" in payload)) {
+      if (!("age" in payload) && !("gender" in payload) && !referralCode.trim()) {
         router.replace("/(modals)/team-selection");
         return;
       }
 
-      const result = await quickUpdateAgeAndGender(payload, {
-        updateLocal: true,
-      });
-
-      if (!result.success) {
-        showToast({
-          type: "error",
-          title: "저장 실패",
-          message: result.error || "정보 저장에 실패했습니다.",
-          duration: 2500,
+      // 나이/성별 저장
+      if ("age" in payload || "gender" in payload) {
+        const result = await quickUpdateAgeAndGender(payload, {
+          updateLocal: true,
         });
-        return;
+
+        if (!result.success) {
+          showToast({
+            type: "error",
+            title: "저장 실패",
+            message: result.error || "정보 저장에 실패했습니다.",
+            duration: 2500,
+          });
+          return;
+        }
+      }
+
+      // 추천인 코드 적용 (입력된 경우에만)
+      if (referralCode.trim()) {
+        const referralSuccess = await applyReferralIfValid();
+        if (!referralSuccess) {
+          // 추천인 코드 적용 실패 시에도 계속 진행
+          console.warn("추천인 코드 적용 실패했지만 프로필 저장은 계속 진행");
+        }
       }
 
       showToast({
@@ -261,6 +450,80 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           </View>
           <Text style={themed($helper)}>
             선택은 선택사항이며, 언제든지 변경할 수 있습니다.
+          </Text>
+        </View>
+
+        {/* 추천인 코드 입력 */}
+        <View style={themed($section)}>
+          <Text style={themed($label)}>추천인 코드</Text>
+          <View style={themed($referralContainer)}>
+            <View style={themed($inputContainer)}>
+              <Ionicons
+                name="gift-outline"
+                size={16}
+                color={theme.colors.textDim}
+              />
+              <TextInput
+                style={themed($textInput)}
+                value={referralCode}
+                onChangeText={handleReferralCodeChange}
+                placeholder="친구의 추천인 코드를 입력하세요"
+                placeholderTextColor={theme.colors.textDim}
+                maxLength={8}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
+            <TouchableOpacity
+              style={[
+                themed($validateButton),
+                (isValidatingReferral || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateButton),
+              ]}
+              onPress={handleValidateReferralCode}
+              disabled={isValidatingReferral || !referralCode.trim() || referralCode.length !== 8}
+            >
+              <Text
+                style={[
+                  themed($validateButtonText),
+                  (isValidatingReferral || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateText),
+                ]}
+              >
+                {isValidatingReferral ? "확인 중..." : "코드 확인"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 추천인 코드 검증 결과 표시 */}
+          {referralCodeValidation.message && (
+            <View style={themed($validationResult)}>
+              <Ionicons
+                name={
+                  referralCodeValidation.isValid
+                    ? "checkmark-circle"
+                    : "close-circle"
+                }
+                size={16}
+                color={
+                  referralCodeValidation.isValid
+                    ? theme.colors.tint
+                    : theme.colors.error
+                }
+              />
+              <Text
+                style={[
+                  themed($validationText),
+                  referralCodeValidation.isValid
+                    ? themed($validText)
+                    : themed($invalidText),
+                ]}
+              >
+                {referralCodeValidation.message}
+              </Text>
+            </View>
+          )}
+
+          <Text style={themed($helper)}>
+            추천인 코드를 입력하면 서로에게 50 포인트가 지급됩니다.
           </Text>
         </View>
 
@@ -436,6 +699,59 @@ const $ghostButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.textDim,
   fontWeight: "600",
+});
+
+// === 추천인 코드 관련 스타일 ===
+
+const $referralContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $validateButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  backgroundColor: colors.tint,
+  borderRadius: 6,
+  minWidth: 80,
+  alignItems: "center",
+});
+
+const $validateButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "600",
+  color: colors.background,
+});
+
+const $disabledValidateButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $disabledValidateText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+});
+
+const $validationResult: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: spacing.xs,
+  gap: spacing.xs,
+});
+
+const $validationText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  flex: 1,
+});
+
+const $validText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+});
+
+const $invalidText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.error,
 });
 
 /**

@@ -600,3 +600,42 @@ export const ADMIN_AWARD_USER_POINTS = gql`
     }
   }
 `;
+
+// === 추천인 코드 GraphQL ===
+
+// 추천인 코드 검증 쿼리
+export const VALIDATE_REFERRAL_CODE = gql`
+  query ValidateReferralCode($referralCode: String!) {
+    validateReferralCode(referralCode: $referralCode) {
+      isValid
+      message
+    }
+  }
+`;
+
+// 추천인 코드 적용 뮤테이션
+export const APPLY_REFERRAL_CODE = gql`
+  mutation ApplyReferralCode($referralCode: String!) {
+    applyReferralCode(referralCode: $referralCode) {
+      success
+      message
+      pointsAwarded
+    }
+  }
+`;
+
+// 추천인 통계 조회 쿼리
+export const GET_REFERRAL_STATS = gql`
+  query GetReferralStats {
+    getReferralStats {
+      referralCode
+      totalReferrals
+      availableSlots
+      referredUsers {
+        id
+        nickname
+        createdAt
+      }
+    }
+  }
+`;

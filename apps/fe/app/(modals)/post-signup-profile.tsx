@@ -11,6 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import TeamLogo from "@/components/TeamLogo";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useAuth } from "@/lib/auth/context/AuthContext";
@@ -513,12 +514,13 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               <View style={themed($selectedTeamsList)}>
                 {selectedTeams.map((team) => (
                   <View key={team.id} style={themed($selectedTeamItem)}>
-                    <Text style={themed($selectedTeamName)}>{team.name}</Text>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={16}
-                      color={theme.colors.tint}
+                    <TeamLogo
+                      logoUrl={team.logoUrl}
+                      fallbackIcon={team.icon}
+                      teamName={team.name}
+                      size={24}
                     />
+                    <Text style={themed($selectedTeamName)}>{team.name}</Text>
                   </View>
                 ))}
               </View>

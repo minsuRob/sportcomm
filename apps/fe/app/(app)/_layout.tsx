@@ -15,7 +15,7 @@ import { isWeb } from "@/lib/platform";
  */
 function MobileTabLayout() {
   const { theme } = useAppTheme();
-  
+
   // 팀 메인 컬러 (fallback 처리)
   const teamMain = theme.colors.teamMain ?? theme.colors.tint;
 
@@ -23,11 +23,16 @@ function MobileTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarActiveTintColor: teamMain, // 활성 탭 색상을 팀 메인 컬러로 설정
+        tabBarInactiveTintColor: theme.colors.textDim,
         tabBarStyle: {
-          paddingBottom: 2,
-          // paddingTop: 2,
-          height: 55,
+          height: 60,
+          paddingTop: 6,
+          paddingBottom: 8,
+          backgroundColor: theme.colors.card,
+          borderTopColor: theme.colors.border,
+          borderTopWidth: 0.5,
         },
       }}
     >
@@ -36,7 +41,7 @@ function MobileTabLayout() {
         options={{
           title: "피드",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={24} color={color} />
+            <Ionicons name="home" size={26} color={color} />
           ),
         }}
       />
@@ -45,7 +50,25 @@ function MobileTabLayout() {
         options={{
           title: "검색",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="search" size={24} color={color} />
+            <Ionicons name="search" size={26} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="team-center"
+        options={{
+          title: "팀",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="trophy-outline" size={26} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: "상점",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="bag-handle-outline" size={26} color={color} />
           ),
         }}
       />
@@ -54,7 +77,7 @@ function MobileTabLayout() {
         options={{
           title: "프로필",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="person" size={24} color={color} />
+            <Ionicons name="person" size={26} color={color} />
           ),
         }}
       />

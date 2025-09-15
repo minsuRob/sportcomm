@@ -169,7 +169,7 @@ export default function FeedScreen() {
       setAuthModalVisible(true);
       return;
     }
-    router.push("/(details)/shop");
+    router.push("/(app)/shop");
   };
 
   /**

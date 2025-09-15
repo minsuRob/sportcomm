@@ -21,7 +21,12 @@ import {
   sanitizeAge,
   normalizeGender,
 } from "@/lib/supabase/quick-update";
-import { markPostSignupStepDone, PostSignupStep } from "@/lib/auth/post-signup";
+import {
+  markPostSignupStepDone,
+  PostSignupStep,
+  shouldRunPostSignup,
+  getNextPostSignupStep,
+} from "@/lib/auth/post-signup";
 import { useMutation, useLazyQuery } from "@apollo/client";
 import {
   VALIDATE_REFERRAL_CODE,
@@ -53,7 +58,14 @@ export default function PostSignupProfileScreen(): React.ReactElement {
   const [isApplyingReferral, setIsApplyingReferral] = useState<boolean>(false);
 
   // --- GraphQL 쿼리 및 뮤테이션 ---
-  const [validateReferralCode, { data: validationData, loading: validationLoading, error: validationError }] = useLazyQuery(VALIDATE_REFERRAL_CODE);
+  const [
+    validateReferralCode,
+    {
+      data: validationData,
+      loading: validationLoading,
+      error: validationError,
+    },
+  ] = useLazyQuery(VALIDATE_REFERRAL_CODE);
   const [applyReferralCode] = useMutation(APPLY_REFERRAL_CODE);
 
   // --- 안내 문구 계산 ---
@@ -72,6 +84,33 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       setGender(((user as any).gender as string).toUpperCase() as GenderCode);
     }
   }, [user]);
+
+  // --- 접근 가드: 최초 회원가입(이메일/소셜) 직후 플로우에서만 노출, 일반 로그인 시 피드로 이동 ---
+  useEffect(() => {
+    const run = async (): Promise<void> => {
+      // 비인증 상태이거나, post-signup이 필요하지 않으면 접근 불가 → 피드로
+      if (!isAuthenticated) {
+        router.replace("/(app)/feed");
+        return;
+      }
+      try {
+        const need = await shouldRunPostSignup(user as any);
+        if (!need) {
+          router.replace("/(app)/feed");
+          return;
+        }
+        // 다음 단계가 프로필 단계가 아니면 접근 불가 → 피드로
+        const step = await getNextPostSignupStep(user as any);
+        if (step !== PostSignupStep.Profile) {
+          router.replace("/(app)/feed");
+        }
+      } catch {
+        // 판단 중 오류가 발생해도 보수적으로 피드로 이동
+        router.replace("/(app)/feed");
+      }
+    };
+    run();
+  }, [isAuthenticated, user]);
 
   /**
    * 나이 입력 처리 (숫자만 허용, 1~120 범위로 클램프)
@@ -96,7 +135,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
    */
   const handleReferralCodeChange = (text: string): void => {
     // 대문자로 변환하고 특수문자 제거
-    const cleanCode = text.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    const cleanCode = text.replace(/[^A-Z0-9]/gi, "").toUpperCase();
     setReferralCode(cleanCode);
 
     // 입력이 변경되면 검증 상태 초기화
@@ -283,7 +322,11 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       if (gender) payload.gender = gender;
 
       // 아무 것도 입력하지 않은 경우 바로 팀 선택으로 이동 (선택적 UX)
-      if (!("age" in payload) && !("gender" in payload) && !referralCode.trim()) {
+      if (
+        !("age" in payload) &&
+        !("gender" in payload) &&
+        !referralCode.trim()
+      ) {
         router.replace("/(modals)/team-selection");
         return;
       }
@@ -476,15 +519,25 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             <TouchableOpacity
               style={[
                 themed($validateButton),
-                (validationLoading || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateButton),
+                (validationLoading ||
+                  !referralCode.trim() ||
+                  referralCode.length !== 8) &&
+                  themed($disabledValidateButton),
               ]}
               onPress={handleValidateReferralCode}
-              disabled={validationLoading || !referralCode.trim() || referralCode.length !== 8}
+              disabled={
+                validationLoading ||
+                !referralCode.trim() ||
+                referralCode.length !== 8
+              }
             >
               <Text
                 style={[
                   themed($validateButtonText),
-                  (validationLoading || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateText),
+                  (validationLoading ||
+                    !referralCode.trim() ||
+                    referralCode.length !== 8) &&
+                    themed($disabledValidateText),
                 ]}
               >
                 {validationLoading ? "확인 중..." : "코드 확인"}

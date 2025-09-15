@@ -173,29 +173,8 @@ export default function AuthScreen() {
    * 로그인/회원가입 성공 후 메인 화면으로 이동합니다
    */
   const handleLoginSuccess = async (user: User) => {
-    //console.log(
-    //   "✅ AuthScreen: 로그인 성공, 후속 온보딩 판단 및 라우팅:",
-    //   user.nickname,
-    // );
-    // post-signup 플로우 필요 시 해당 모달로 이동, 아니면 피드로 이동
-    try {
-      const need = await shouldRunPostSignup(user as any);
-      if (need) {
-        const nextRoute = await getNextPostSignupRoute(user as any);
-        if (nextRoute) {
-          router.replace(nextRoute as any);
-          return;
-        }
-      }
-      // 기본: 메인 앱으로 이동 (스택 초기화하여 뒤로가기 방지)
-      router.replace("/(app)/feed");
-    } catch (e) {
-      console.warn(
-        "⚠️ post-signup 판단 중 오류, 기본 피드로 이동:",
-        (e as any)?.message,
-      );
-      router.replace("/(app)/feed");
-    }
+    // 일반 로그인: 바로 피드로 이동 (post-signup은 회원가입 직후에만 실행)
+    router.replace("/(app)/feed");
   };
 
   /**
@@ -267,7 +246,7 @@ export default function AuthScreen() {
 
       if (result.user && result.session) {
         //console.log(`✅ ${isLoginAction ? "로그인" : "회원가입"} 성공:`, {
-          // 사용자ID: result.user.id,
+        // 사용자ID: result.user.id,
         //   닉네임: result.user.nickname,
         //   이메일: result.user.email,
         //   역할: result.user.role,

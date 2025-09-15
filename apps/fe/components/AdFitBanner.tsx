@@ -61,7 +61,7 @@ export default function AdFitBanner({
         adElement.className = 'kakao_ad_area';
         adElement.style.display = 'none';
         // 환경/기본값을 고려한 최종 광고 유닛 사용
-        adElement.setAttribute('data-ad-unit', effectiveAdUnit);
+        adElement.setAttribute('data-ad-unit', "DAN-jaKdyGIgnRkALWCc");
         adElement.setAttribute('data-ad-width', width.toString());
         adElement.setAttribute('data-ad-height', height.toString());
 

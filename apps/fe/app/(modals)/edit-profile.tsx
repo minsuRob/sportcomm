@@ -386,28 +386,12 @@ export default function EditProfileScreen() {
 
       if (result.data?.updateProfile) {
         // AuthContext를 통한 사용자 정보 업데이트 (권장)
-        console.log("프로필 업데이트 - 기존 값:", {
-          nickname: currentUser?.nickname,
-          bio: currentUser?.bio,
-          profileImageUrl: currentUser?.profileImageUrl,
-          age: (currentUser as any)?.age,
-        });
-
-        console.log("프로필 업데이트 - 새 값:", {
-          nickname: name.trim(),
-          bio: bio.trim(),
-          profileImageUrl: profileImage,
-          age,
-        });
-
         await updateUser({
           nickname: name.trim(),
           bio: bio.trim(),
           profileImageUrl: profileImage,
           age, // 나이 필드도 업데이트
         });
-
-        console.log("프로필 업데이트 완료");
 
         showToast({
           type: "success",

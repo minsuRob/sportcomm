@@ -231,10 +231,23 @@ export class PostsService {
 
     // 쿼리 빌더 생성
     // 성능 최적화: team 전체 컬럼 로딩 대신 필요한 팔레트 컬럼만 선택
+    // author 엔티티도 선택적 로딩하여 데이터베이스 스키마 문제 방지
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
-      .leftJoinAndSelect('post.author', 'author')
-      .leftJoinAndSelect('post.media', 'media')
+      .leftJoin('post.author', 'author')
+      .leftJoin('post.media', 'media')
+      // author 엔티티의 필요한 컬럼만 선택 (실제 데이터베이스 컬럼과 일치하도록)
+      .addSelect([
+        'post.*',
+        'author.id',
+        'author.email',
+        'author.nickname',
+        'author.points',
+        'author.provider',
+        'author."createdAt"',
+        'author."updatedAt"',
+        'media.*',
+      ])
       // team 은 선택 컬럼만 addSelect
       .leftJoin('post.team', 'team')
       .addSelect([

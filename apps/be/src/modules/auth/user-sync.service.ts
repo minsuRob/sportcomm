@@ -8,6 +8,7 @@ import {
   CombinedUserInfo,
 } from '../../entities/user.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
+import { UsersService } from '../../modules/users/users.service';
 
 /**
  * 사용자 동기화 입력 인터페이스
@@ -54,6 +55,7 @@ export class UserSyncService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly supabaseService: SupabaseService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -100,6 +102,9 @@ export class UserSyncService {
         this.logger.log(`기본 정보로 새 사용자 생성: ${userId}`);
         const defaultNickname = nickname || `user_${userId.slice(0, 8)}`;
 
+        // OAuth 사용자도 고유한 추천인 코드 생성
+        const referralCode = await this.usersService.createUniqueReferralCode();
+
         const newUser = this.userRepository.create({
           id: userId,
           nickname: defaultNickname,
@@ -107,6 +112,7 @@ export class UserSyncService {
           email: '',
           profileImageUrl,
           bio,
+          referralCode,
           isEmailVerified: false,
           isActive: true,
           points: 0,
@@ -234,6 +240,9 @@ export class UserSyncService {
         // 새 사용자 정보 생성
         this.logger.log(`새 사용자 정보 생성: ${userId}`);
 
+        // OAuth 사용자도 고유한 추천인 코드 생성
+        const referralCode = await this.usersService.createUniqueReferralCode();
+
         user = this.userRepository.create({
           id: userId,
           nickname: finalNickname,
@@ -241,6 +250,7 @@ export class UserSyncService {
           email: supabaseUser.email || '',
           profileImageUrl,
           bio,
+          referralCode,
           isEmailVerified: !!supabaseUser.email_confirmed_at,
           isActive: true,
           points: 0,

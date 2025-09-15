@@ -562,7 +562,7 @@ const $postCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   marginHorizontal: 0, // 스크롤뷰 contentContainer에 패딩 적용하므로 0으로 설정
   marginTop: spacing.md,
   borderRadius: 12,
-  borderWidth: 1,
+  // borderWidth: 1,
   borderColor: colors.border,
   overflow: "hidden",
 });
@@ -619,7 +619,7 @@ const $commentsCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   marginTop: spacing.lg,
   marginBottom: spacing.xl,
   borderRadius: 12,
-  borderWidth: 1,
+  // borderWidth: 1,
   borderColor: colors.border,
   overflow: "hidden",
 });

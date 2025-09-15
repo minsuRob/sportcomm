@@ -493,8 +493,9 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={themed($mainContent)}>
-            <Text style={themed($titleText)}>Log into your account</Text>
+            <Text style={themed($logoText)}>Sportalk</Text>
 
+            <View style={themed($socialButtonsContainer)}>
             <Button
               variant="outline"
               size="lg"
@@ -514,8 +515,6 @@ export default function AuthScreen() {
                 <Text style={themed($socialButtonText)}>Login with email</Text>
               </View>
             </Button>
-
-            <View style={themed($socialButtonsContainer)}>
               <Button
                 variant="outline"
                 size="lg"
@@ -599,20 +598,6 @@ export default function AuthScreen() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleContinue}
-            style={themed($headerButton)}
-            disabled={loginLoading || registerLoading}
-          >
-            <Text
-              style={[
-                themed($saveText),
-                (loginLoading || registerLoading) && themed($disabledText),
-              ]}
-            >
-              {loginLoading || registerLoading ? "처리 중..." : "완료"}
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -622,7 +607,7 @@ export default function AuthScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={themed($mainContent)}>
-          <Text style={themed($titleText)}>
+          <Text style={themed($logoText)}>
             {isLogin ? "Sportalk 환영합니다" : "계정 만들기"}
           </Text>
 
@@ -801,11 +786,13 @@ const $mainContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.xl,
 });
 
-const $titleText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 30, // typography.fontSize["3xl"] 대신 직접 값 사용
-  fontWeight: "bold",
+  fontWeight: "900",
   textAlign: "center",
-  color: colors.text,
+  color: colors.teamMain ?? colors.tint,
+  // 웹/네이티브 모두 동일 키(TTTogether) 사용
+  fontFamily: "TTTogether",
   marginBottom: 32,
 });
 
@@ -940,7 +927,7 @@ const $dividerText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
 
 const $socialButtonsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.sm,
-  marginTop: spacing.md,
+  // marginTop: spacing.md,
 });
 
 const $socialButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({

@@ -679,12 +679,12 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             {saving ? (
               <>
                 <ActivityIndicator size="small" color={theme.colors.text} />
-                <Text style={themed($primaryButtonText)}>저장 중...</Text>
+                <Text style={themed($primaryButtonText)}>완료 중...</Text>
               </>
             ) : (
               <>
                 <Ionicons name="save-outline" size={16} color={theme.colors.text} />
-                <Text style={themed($primaryButtonText)}>저장하기</Text>
+                <Text style={themed($primaryButtonText)}>완료</Text>
               </>
             )}
           </TouchableOpacity>

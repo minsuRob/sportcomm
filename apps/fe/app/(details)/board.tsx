@@ -121,10 +121,10 @@ export default function BoardScreen() {
    * 게시물 아이템 렌더링
    */
   const renderPostItem = ({ item }: { item: BoardPost }) => {
-    const imageMedia = item.media.find(
+    const imageMedia = (item.media || []).find(
       (media) => media.type === "image" || media.type === "IMAGE",
     );
-    const videoMedia = item.media.find(
+    const videoMedia = (item.media || []).find(
       (media) => media.type === "video" || media.type === "VIDEO",
     );
 

@@ -577,14 +577,15 @@ export default function AuthScreen() {
   return (
     <>
       <Stack.Screen
-        options={{
-          title: isLogin ? "로그인" : "회원가입",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.text,
-          headerBackTitle: "뒤로",
-        }}
+        // options={{
+        //   title: isLogin ? "로그인" : "회원가입",
+        //   headerStyle: {
+        //     backgroundColor: theme.colors.background,
+        //   },
+        //   headerTintColor: theme.colors.text,
+        //   headerTitleAlign: 'center',
+        //   headerBackTitle: "뒤로",
+        // }}
       />
 
       <ScrollView

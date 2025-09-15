@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useTeamColorSelection } from "@/lib/hooks/useTeamColorSelection";
 import {
   View,
   Text,
@@ -59,6 +60,26 @@ export default function TeamColorsDetailsScreen() {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
     teamColorTeamId ?? null,
   );
+
+  // 팀 색상 선택 로직 (공유 hook 사용)
+  const {
+    getDefaultTeamByPriority,
+    applyTeamColorByPriority,
+    getPriorityBasedSelection,
+  } = useTeamColorSelection({
+    myTeamsData,
+    teamColorTeamId,
+    selectedTeamId,
+    setTeamColorOverride,
+  });
+
+  // 사용자가 선택하지 않은 경우 priority 기반으로 자동 선택
+  useEffect(() => {
+    const defaultTeamId = getDefaultTeamByPriority();
+    if (!selectedTeamId && !teamColorTeamId && defaultTeamId) {
+      setSelectedTeamId(defaultTeamId);
+    }
+  }, [selectedTeamId, teamColorTeamId, getDefaultTeamByPriority]);
 
   // teamMap 캐시 (성능 최적화)
   const teamMap = useMemo(() => {
@@ -144,13 +165,25 @@ export default function TeamColorsDetailsScreen() {
     }
     const team = teamMap.get(teamId);
     const colors = getTeamColors(teamId, theme.isDark, team?.name);
+
+    // 사용자가 직접 선택했는지 priority 기반 자동 선택인지 구분
+    const isUserSelected = teamColorTeamId === teamId;
+    const isPriorityBased = !teamColorTeamId && selectedTeamId === teamId && getDefaultTeamByPriority() === teamId;
+
+    let label = team?.name ?? "선택된 팀";
+    if (isPriorityBased) {
+      label += " (주 팀)";
+    } else if (isUserSelected) {
+      label += " (직접 선택)";
+    }
+
     return {
       mainColor: (colors as any).mainColor ?? theme.colors.tint,
       subColor:
         (colors as any).subColor ??
         theme.colors.accent ??
         theme.colors.backgroundAlt,
-      label: team?.name ?? "선택된 팀",
+      label,
     };
   };
 
@@ -168,6 +201,17 @@ export default function TeamColorsDetailsScreen() {
         </TouchableOpacity>
 
         <Text style={themed($title)}>앱 색상 설정 (내 팀 기반)</Text>
+
+        {/* 선택 상태 설명 */}
+        <View style={themed($statusInfo)}>
+          {teamColorTeamId ? (
+            <Text style={themed($statusText)}>직접 선택한 팀 색상 적용 중</Text>
+          ) : selectedTeamId ? (
+            <Text style={themed($statusText)}>주 팀 색상 자동 적용 중</Text>
+          ) : (
+            <Text style={themed($statusText)}>팀을 선택하여 색상을 설정하세요</Text>
+          )}
+        </View>
 
         <TouchableOpacity onPress={handleSave} style={themed($resetButton)}>
           <Text
@@ -236,6 +280,10 @@ export default function TeamColorsDetailsScreen() {
           myTeamsData.myTeams.map((userTeam) => {
             const team = userTeam.team;
             const isActive = selectedTeamId === team.id;
+            const isPrimaryTeam = userTeam.priority === 0; // 주 팀 여부
+            const isUserSelected = teamColorTeamId === team.id; // 사용자가 직접 선택했는지
+            const isAutoSelected = !teamColorTeamId && selectedTeamId === team.id && getDefaultTeamByPriority() === team.id; // priority 기반 자동 선택
+
             const teamColors = getTeamColors(
               team.id,
               theme.isDark,
@@ -271,6 +319,9 @@ export default function TeamColorsDetailsScreen() {
                 <View style={themed($teamMeta)}>
                   <Text style={themed($teamName)} numberOfLines={1}>
                     {team.name}
+                    {isPrimaryTeam && " ⭐"}
+                    {isUserSelected && " ✓"}
+                    {isAutoSelected && " 🤖"}
                   </Text>
                   <View style={themed($colorPreviewRow)}>
                     <View
@@ -447,6 +498,24 @@ const $colorDot: ThemedStyle<ViewStyle> = () => ({
   borderColor: "rgba(0,0,0,0.06)",
 });
 
+const $statusInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  top: 60,
+  left: spacing.md,
+  right: spacing.md,
+  backgroundColor: "rgba(0,0,0,0.7)",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 6,
+});
+
+const $statusText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 12,
+  fontWeight: "500",
+  textAlign: "center",
+});
+
 /*
-커밋 메시지 (git): feat(details): 팀 기반 앱 색상 설정 페이지 추가
+커밋 메시지 (git): refactor(team-colors-select): useTeamColorSelection hook 도입하여 코드 중복 제거
 */

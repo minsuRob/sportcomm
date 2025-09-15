@@ -737,7 +737,7 @@ const $subtitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.textDim,
   fontSize: 14,
   lineHeight: 20,
-  marginBottom: spacing.lg,
+  marginBottom: spacing.md,
 });
 
 const $section: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -782,7 +782,7 @@ const $genderRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   gap: spacing.sm,
-  marginTop: spacing.md,
+  // marginTop: spacing.md,
 });
 
 const $genderButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({

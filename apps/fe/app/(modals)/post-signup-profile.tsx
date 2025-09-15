@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useAuth } from "@/lib/auth/context/AuthContext";
@@ -31,6 +32,7 @@ import {
   VALIDATE_REFERRAL_CODE,
   APPLY_REFERRAL_CODE,
 } from "@/lib/graphql/admin";
+import { useTeams } from "@/hooks/useTeams";
 
 /**
  * 회원가입 직후 경량 프로필 설정 모달
@@ -66,6 +68,17 @@ export default function PostSignupProfileScreen(): React.ReactElement {
     },
   ] = useLazyQuery(VALIDATE_REFERRAL_CODE);
   const [applyReferralCode] = useMutation(APPLY_REFERRAL_CODE);
+
+  // --- 팀 정보 ---
+  const { teams, getTeamById } = useTeams();
+
+  // --- 선택된 팀 정보 계산 ---
+  const selectedTeams = useMemo(() => {
+    if (!user?.myTeams?.length || !getTeamById) return [];
+    return user.myTeams
+      .map((userTeam: any) => getTeamById(userTeam.teamId || userTeam))
+      .filter((team) => team !== undefined);
+  }, [user?.myTeams, getTeamById]);
 
   // --- 안내 문구 계산 ---
   const subtitle = useMemo<string>(() => {
@@ -476,7 +489,15 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       </View>
 
       {/* 본문 */}
-      <View style={themed($content)}>
+      <KeyboardAwareScrollView
+        style={themed($content)}
+        contentContainerStyle={themed($scrollContent)}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        enableOnAndroid={true}
+        extraHeight={100}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={themed($subtitle)}>{subtitle}</Text>
 
         {/* 나이 입력 */}
@@ -604,6 +625,30 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           <Text style={themed($helper)}>
             관심 팀을 선택하면 피드가 더 맞춤화됩니다.
           </Text>
+
+          {/* 선택된 팀 정보 표시 */}
+          {selectedTeams.length > 0 && (
+            <View style={themed($selectedTeamsContainer)}>
+              <Text style={themed($selectedTeamsLabel)}>
+                선택된 팀 ({selectedTeams.length})
+              </Text>
+              <View style={themed($selectedTeamsList)}>
+                {selectedTeams.map((team) => (
+                  <View key={team.id} style={themed($selectedTeamItem)}>
+                    <Text style={themed($selectedTeamName)}>
+                      {team.name}
+                    </Text>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color={theme.colors.tint}
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           <TouchableOpacity
             onPress={handleGoTeamSelection}
             style={themed($teamSelectButton)}
@@ -614,7 +659,9 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               size={16}
               color={theme.colors.background}
             />
-            <Text style={themed($teamSelectButtonText)}>팀 선택하기</Text>
+            <Text style={themed($teamSelectButtonText)}>
+              {selectedTeams.length > 0 ? "팀 변경하기" : "팀 선택하기"}
+            </Text>
           </TouchableOpacity>
 
           {/* 팀 선택하기 아래에 저장하기 버튼 배치 */}
@@ -641,18 +688,18 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             )}
           </TouchableOpacity>
         </View>
+      </KeyboardAwareScrollView>
 
-        {/* 안내 및 액션 */}
-        <View style={themed($footer)}>
-          <TouchableOpacity
-            onPress={handleSkip}
-            disabled={saving}
-            style={themed($ghostButton)}
-            accessibilityRole="button"
-          >
-            <Text style={themed($ghostButtonText)}>나중에 할게요</Text>
-          </TouchableOpacity>
-        </View>
+      {/* 안내 및 액션 */}
+      <View style={themed($footer)}>
+        <TouchableOpacity
+          onPress={handleSkip}
+          disabled={saving}
+          style={themed($ghostButton)}
+          accessibilityRole="button"
+        >
+          <Text style={themed($ghostButtonText)}>나중에 할게요</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -687,10 +734,14 @@ const $skipText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "600",
 });
 
-const $content: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $content: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
+});
+
+const $scrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
   paddingTop: spacing.lg,
+  paddingBottom: spacing.xl,
 });
 
 const $subtitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
@@ -861,6 +912,47 @@ const $teamSelectButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.background,
   fontSize: 14,
   fontWeight: "700",
+});
+
+// === 선택된 팀 표시 스타일 ===
+const $selectedTeamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
+  padding: spacing.sm,
+  backgroundColor: "#f8f9fa",
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: "#e9ecef",
+});
+
+const $selectedTeamsLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "600",
+  marginBottom: spacing.xs,
+});
+
+const $selectedTeamsList: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: spacing.xs,
+});
+
+const $selectedTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#ffffff",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: "#dee2e6",
+  gap: spacing.xs,
+});
+
+const $selectedTeamName: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "500",
 });
 
 /**

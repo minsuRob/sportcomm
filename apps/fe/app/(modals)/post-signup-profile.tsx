@@ -340,8 +340,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       });
       return;
     }
-
-    const ageNumber = ageText ? sanitizeAge(ageText) : null;
+ㄹ
     if (ageText && ageNumber === null) {
       showToast({
         type: "error",
@@ -473,7 +472,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
         >
           <Text
             style={[
-              themed($skipText),
+              themed($saveText),
               saving ? { color: theme.colors.textDim } : undefined,
             ]}
           >
@@ -496,7 +495,9 @@ export default function PostSignupProfileScreen(): React.ReactElement {
 
         {/* 팀 선택 */}
         <View style={themed($section)}>
-          <Text style={themed($label)}>팀 선택 (필수)</Text>
+          <Text style={themed($label)}>
+            팀 선택 <Text style={themed($requiredText)}>(필수)</Text>
+          </Text>
           <Text style={themed($helper)}>
             관심 팀을 최소 1개 이상 선택해야 합니다. 선택하면 피드가 더
             맞춤화됩니다.
@@ -679,7 +680,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
                 <Ionicons
                   name="checkmark-done-outline"
                   size={16}
-                  color={theme.colors.text}
+                  color={theme.colors.tint}
                 />
                 <Text style={themed($primaryButtonText)}>완료</Text>
               </>
@@ -711,10 +712,10 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "700",
-  color: colors.text,
+  color: colors.tint,
 });
 
-const $skipText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $saveText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.tint,
   fontWeight: "600",
@@ -744,10 +745,16 @@ const $section: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $label: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  color: colors.text,
+  color: colors.tint,
   fontWeight: "700",
   fontSize: 16,
   marginBottom: spacing.xs,
+});
+
+const $requiredText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+  fontWeight: "700",
+  fontSize: 16,
 });
 
 const $inputContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -815,7 +822,7 @@ const $primaryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $primaryButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
+  color: colors.tint,
   fontSize: 16,
   fontWeight: "700",
 });
@@ -823,6 +830,7 @@ const $primaryButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $saveButtonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginTop: spacing.xl,
   marginBottom: spacing.lg,
+
 });
 
 // === 추천인 코드 관련 스타일 ===
@@ -893,7 +901,7 @@ const $teamSelectButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $teamSelectButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
+  color: colors.tint,
   fontSize: 14,
   fontWeight: "700",
 });

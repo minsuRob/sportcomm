@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
 import { useRouter, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
+import { useAuth } from "@/lib/auth/context/AuthContext";
+import AppDialog from "@/components/ui/AppDialog";
 import type { ThemedStyle } from "@/lib/theme/types";
 
 interface NavigationItem {
@@ -59,13 +61,35 @@ export default function SidebarNavigation() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const { user: currentUser } = useAuth();
+
+  // 로그인 필요 다이얼로그 상태
+  const [loginDialogVisible, setLoginDialogVisible] = useState(false);
 
   // 팀 메인/서브 컬러 (오버라이드 없으면 tint/accent 사용)
   const teamMain = theme.colors.teamMain ?? theme.colors.tint;
   const teamSub = theme.colors.teamSub ?? theme.colors.accent;
 
-  const handleNavigation = (route: string) => {
+  const handleNavigation = (route: string, name: string) => {
+    // 팀, 상점, 프로필 버튼이고 로그인이 안 되어있는 경우
+    if ((name === "team-center" || name === "shop" || name === "profile") && !currentUser) {
+      setLoginDialogVisible(true);
+      return;
+    }
+
+    // 일반 네비게이션
     router.push(route as any);
+  };
+
+  // 로그인 다이얼로그 핸들러
+  const handleLoginDialogConfirm = () => {
+    setLoginDialogVisible(false);
+    router.push("/(details)/auth");
+  };
+
+  const handleLoginDialogCancel = () => {
+    setLoginDialogVisible(false);
+    // router.push("/(app)/feed");
   };
 
   return (
@@ -85,7 +109,7 @@ export default function SidebarNavigation() {
             <TouchableOpacity
               key={item.name}
               style={[themed($menuItem), isActive && themed($activeMenuItem)]}
-              onPress={() => handleNavigation(item.route)}
+              onPress={() => handleNavigation(item.route, item.name)}
             >
               <IconComponent
                 color={isActive ? teamMain : theme.colors.textDim}
@@ -100,6 +124,18 @@ export default function SidebarNavigation() {
           );
         })}
       </View>
+
+      {/* 로그인 필요 다이얼로그 */}
+      <AppDialog
+        visible={loginDialogVisible}
+        onClose={handleLoginDialogCancel}
+        onConfirm={handleLoginDialogConfirm}
+        title="로그인이 필요한 기능입니다"
+        description="이 기능을 이용하려면 로그인이 필요합니다."
+        confirmText="예"
+        cancelText="아니오"
+        dismissOnBackdrop={false}
+      />
     </View>
   );
 }

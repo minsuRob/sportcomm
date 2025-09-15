@@ -83,7 +83,7 @@ export default function ChatRoomScreen() {
     roomName: string;
   }>();
 
-  const { user: currentUser } = useAuth(); // 전역 AuthContext 사용 (세션 재조회 제거)
+  const { user: currentUser, reloadUser } = useAuth(); // 전역 AuthContext 사용
   const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const inputRef = useRef<TextInput>(null);
@@ -248,6 +248,14 @@ export default function ChatRoomScreen() {
       if (newMessage) {
         // 새 메시지를 즉시 UI에 반영
         setMessages((prev) => [...prev, newMessage]);
+
+        // 포인트 지급을 위해 사용자 정보 새로고침
+        try {
+          await reloadUser({ force: true });
+        } catch (reloadError) {
+          console.warn("사용자 정보 새로고침 실패:", reloadError);
+          // 새로고침 실패해도 메시지 전송은 성공했으므로 계속 진행
+        }
 
         showToast({
           type: "success",

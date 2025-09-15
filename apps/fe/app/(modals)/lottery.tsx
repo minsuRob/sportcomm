@@ -22,7 +22,7 @@ import {
   GET_LOTTERY_HISTORY,
   GET_LOTTERY_WINNERS,
 } from "@/lib/graphql/lottery";
-import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 import { showToast } from "@/components/CustomToast";
 import AppDialog from "@/components/ui/AppDialog";
 
@@ -55,7 +55,7 @@ interface LotteryData {
 export default function LotteryScreen() {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const { currentUser, reload: reloadCurrentUser } = useCurrentUser();
+  const { user: currentUser, reloadUser } = useAuth();
   const [timeLeft, setTimeLeft] = useState(0);
   const [isEntering, setIsEntering] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -91,7 +91,7 @@ export default function LotteryScreen() {
       setDialogMessage("포인트 추첨에 성공적으로 응모했습니다!\n결과는 추첨 종료 후 확인할 수 있습니다.");
       setShowSuccessDialog(true);
       await refetch();
-      await reloadCurrentUser(); // 포인트 업데이트
+      await reloadUser({ force: true }); // 포인트 업데이트
       showToast({
         type: "success",
         title: "응모 완료",
@@ -134,15 +134,29 @@ export default function LotteryScreen() {
         (w: any) => w.user?.id === currentUser.id,
       );
       if (isWinner) {
-        // 강제 동기화 (true 플래그는 내부 구현에서 즉시 원격 재조회 유도 용도라고 가정)
-        reloadCurrentUser(true);
+        // 당첨 시 포인트 지급을 위해 사용자 정보 새로고침
+        const handleWinnerRefresh = async () => {
+          try {
+            await reloadUser({ force: true });
+            showToast({
+              type: "success",
+              title: "축하합니다! 🎉",
+              message: "추첨에 당첨되어 포인트를 받았습니다!",
+              duration: 3000,
+            });
+          } catch (reloadError) {
+            console.warn("사용자 정보 새로고침 실패:", reloadError);
+            // 새로고침 실패해도 당첨 사실은 변함 없음
+          }
+        };
+        handleWinnerRefresh();
       }
     }
   }, [
     lotteryData?.currentPhase,
     winnersData?.lotteryWinners,
     currentUser?.id,
-    reloadCurrentUser,
+    reloadUser,
   ]);
 
   // 새로고침 처리

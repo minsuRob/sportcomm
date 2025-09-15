@@ -42,7 +42,7 @@ export default function EditProfileScreen() {
 
   // 상태 관리
   // 전역 AuthContext에서 사용자 정보 사용 (로컬 currentUser 상태 제거)
-  const { user: currentUser, updateUser } = useAuth();
+  const { user: currentUser, updateUser, reloadUser } = useAuth();
   const [profileImage, setProfileImage] = useState<string>("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
@@ -693,6 +693,15 @@ export default function EditProfileScreen() {
             message: `${result.pointsAwarded || 50} 포인트가 지급되었습니다!`,
             duration: 3000,
           });
+
+          // 포인트 지급을 위해 사용자 정보 새로고침
+          try {
+            await reloadUser({ force: true });
+          } catch (reloadError) {
+            console.warn("사용자 정보 새로고침 실패:", reloadError);
+            // 새로고침 실패해도 추천인 적용은 성공했으므로 계속 진행
+          }
+
           // 추천인 코드 입력 초기화 및 통계 새로고침
           setReferralCode("");
           setReferralCodeValidation({ isValid: null, message: "" });

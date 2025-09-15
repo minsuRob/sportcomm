@@ -113,7 +113,7 @@ export default function CreatePostScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // 전역 AuthContext 로부터 현재 사용자/인증 상태 수신
-  const { user: currentUser, isAuthenticated } = useAuth();
+  const { user: currentUser, isAuthenticated, reloadUser } = useAuth();
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<SelectedVideo[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
@@ -599,6 +599,20 @@ export default function CreatePostScreen() {
         message: `게시물이 성공적으로 작성되었습니다!${mediaMessage}`,
         duration: 3000,
       });
+
+      // 포인트 지급을 위해 사용자 정보 새로고침
+      try {
+        await reloadUser({ force: true });
+        showToast({
+          type: "success",
+          title: "포인트 지급 완료",
+          message: "게시물 작성으로 5포인트를 받았습니다!",
+          duration: 2000,
+        });
+      } catch (reloadError) {
+        console.warn("사용자 정보 새로고침 실패:", reloadError);
+        // 사용자 정보 새로고침 실패해도 게시물 작성이 성공했으므로 계속 진행
+      }
 
       // 피드로 돌아가기
       router.back();

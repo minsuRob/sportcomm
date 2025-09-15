@@ -42,7 +42,7 @@ import {
 export default function PostSignupProfileScreen(): React.ReactElement {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, reloadUser } = useAuth();
 
   // --- UI 상태 ---
   const [ageText, setAgeText] = useState<string>("");
@@ -262,6 +262,15 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             message: `${result.pointsAwarded || 50} 포인트가 지급되었습니다!`,
             duration: 3000,
           });
+
+          // 포인트 지급을 위해 사용자 정보 새로고침
+          try {
+            await reloadUser({ force: true });
+          } catch (reloadError) {
+            console.warn("사용자 정보 새로고침 실패:", reloadError);
+            // 새로고침 실패해도 추천인 적용은 성공했으므로 계속 진행
+          }
+
           return true;
         } else {
           showToast({

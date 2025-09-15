@@ -148,10 +148,11 @@ const StoryItemComponent = ({
 }) => {
   const { themed } = useAppTheme();
 
-  // 썸네일 이미지 URL
+  // 썸네일 이미지 URL (우선순위: 본문 이미지 > 프로필 이미지 > 팀 로고)
   const thumbnailUrl =
     story.thumbnailUrl ||
     story.author.profileImageUrl ||
+    story.metadata?.teamLogoUrl ||
     "https://via.placeholder.com/200";
 
   // 표시할 정보
@@ -278,7 +279,10 @@ export default function StorySection({
                   m.type === "IMAGE" ||
                   m.type === "image" ||
                   m.type === "IMAGE",
-              )?.url || p.author?.profileImageUrl,
+              )?.url ||
+              p.author?.profileImageUrl ||
+              (p as any).team?.logoUrl ||
+              (p as any).team?.icon,
             author: {
               id: p.author.id,
               nickname: p.author.nickname,
@@ -289,6 +293,7 @@ export default function StorySection({
               commentCount: p.commentCount,
               viewCount: p.viewCount,
               teamName: p.team?.name,
+              teamLogoUrl: (p as any).team?.logoUrl || (p as any).team?.icon,
               isPopular: (p.likeCount || 0) > 10,
             },
           } as StoryItem;
@@ -331,7 +336,10 @@ export default function StorySection({
             media.find(
               (m) =>
                 m.type === "IMAGE" || m.type === "image" || m.type === "IMAGE",
-            )?.url || p.author?.profileImageUrl,
+            )?.url ||
+            p.author?.profileImageUrl ||
+            (p as any).team?.logoUrl ||
+            (p as any).team?.icon,
           author: {
             id: p.author.id,
             nickname: p.author.nickname,
@@ -342,6 +350,7 @@ export default function StorySection({
             commentCount: (p as any).commentCount,
             viewCount: (p as any).viewCount,
             teamName: (p as any).team?.name,
+            teamLogoUrl: (p as any).team?.logoUrl || (p as any).team?.icon,
             isPopular: ((p as any).likeCount || 0) > 10,
           },
         } as StoryItem;

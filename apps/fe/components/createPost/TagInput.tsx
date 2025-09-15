@@ -187,13 +187,13 @@ export default function TagInput({
         <Text style={themed($tagCount)}>
           {tags.length}/{maxTags}
         </Text>
-        <Text style={themed($helpText)}>엔터, 스페이스, 쉼표로 태그 추가</Text>
+        <Text style={themed($helpText)}>엔터로 주제 추가</Text>
       </View>
 
       {/* 추천 태그 */}
       {showSuggestions && filteredSuggestions.length > 0 && (
         <View style={themed($suggestionsContainer)}>
-          <Text style={themed($suggestionsTitle)}>추천 태그</Text>
+          <Text style={themed($suggestionsTitle)}>추천 주제</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -217,7 +217,7 @@ export default function TagInput({
         inputValue.length === 0 &&
         suggestedTags.length > 0 && (
           <View style={themed($popularTagsContainer)}>
-            <Text style={themed($popularTagsTitle)}>인기 태그</Text>
+            <Text style={themed($popularTagsTitle)}>인기 주제</Text>
             <View style={themed($popularTagsGrid)}>
               {suggestedTags.slice(0, 6).map((tag, index) => (
                 <TouchableOpacity

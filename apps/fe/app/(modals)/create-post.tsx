@@ -142,7 +142,7 @@ export default function CreatePostScreen() {
   // 인증 상태 감시: 비로그인 시 다이얼로그 표시 (전역 AuthProvider 사용)
   
   // TODO : 다 로드 되고 검증해야할듯.
-    
+
   // React.useEffect(() => {
   //   console.log("isAuthenticated", isAuthenticated);
   //   console.log("currentUser", currentUser);
@@ -907,7 +907,7 @@ export default function CreatePostScreen() {
         {/* 태그 입력 영역 (모던) */}
         {
           <View style={themed($tagSection)}>
-            <Text style={themed($sectionTitle)}>태그</Text>
+            <Text style={themed($sectionTitle)}>주제(선택)</Text>
             <TagInput
               tags={tags}
               onTagsChange={setTags}

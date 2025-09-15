@@ -657,7 +657,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             <Ionicons
               name="people-outline"
               size={16}
-              color={theme.colors.background}
+              color={theme.colors.text}
             />
             <Text style={themed($teamSelectButtonText)}>
               {selectedTeams.length > 0 ? "팀 변경하기" : "팀 선택하기"}
@@ -677,12 +677,12 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           >
             {saving ? (
               <>
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={theme.colors.text} />
                 <Text style={themed($primaryButtonText)}>저장 중...</Text>
               </>
             ) : (
               <>
-                <Ionicons name="save-outline" size={16} color="#fff" />
+                <Ionicons name="save-outline" size={16} color={theme.colors.text} />
                 <Text style={themed($primaryButtonText)}>저장하기</Text>
               </>
             )}
@@ -750,12 +750,13 @@ const $label: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.text,
   fontWeight: "700",
   fontSize: 16,
+  marginBottom: spacing.xs,
 });
 
 const $inputContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  marginTop: spacing.md,
+  // marginTop: spacing.md,
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.sm,
   backgroundColor: colors.card,
@@ -809,13 +810,15 @@ const $primaryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   alignItems: "center",
   justifyContent: "center",
   gap: spacing.xs,
-  backgroundColor: colors.tint,
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
   paddingVertical: spacing.md,
   borderRadius: 10,
 });
 
-const $primaryButtonText: ThemedStyle<TextStyle> = () => ({
-  color: "#fff",
+const $primaryButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
   fontSize: 16,
   fontWeight: "700",
 });
@@ -880,25 +883,27 @@ const $teamSelectButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   alignItems: "center",
   justifyContent: "center",
   gap: spacing.xs,
-  backgroundColor: colors.tint,
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
   paddingVertical: spacing.sm,
   borderRadius: 8,
 });
 
 const $teamSelectButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.background,
+  color: colors.text,
   fontSize: 14,
   fontWeight: "700",
 });
 
 // === 선택된 팀 표시 스타일 ===
-const $selectedTeamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $selectedTeamsContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   marginTop: spacing.md,
   padding: spacing.sm,
-  backgroundColor: "#f8f9fa",
+  backgroundColor: colors.card,
   borderRadius: 8,
   borderWidth: 1,
-  borderColor: "#e9ecef",
+  borderColor: colors.border,
 });
 
 const $selectedTeamsLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
@@ -914,15 +919,15 @@ const $selectedTeamsList: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.xs,
 });
 
-const $selectedTeamItem: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $selectedTeamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  backgroundColor: "#ffffff",
+  backgroundColor: colors.background,
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.xs,
   borderRadius: 16,
   borderWidth: 1,
-  borderColor: "#dee2e6",
+  borderColor: colors.border,
   gap: spacing.xs,
 });
 

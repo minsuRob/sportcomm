@@ -170,7 +170,14 @@ export default function TeamColorsDetailsScreen() {
         <Text style={themed($title)}>앱 색상 설정 (내 팀 기반)</Text>
 
         <TouchableOpacity onPress={handleSave} style={themed($resetButton)}>
-          <Text style={themed($resetButtonText)}>저장</Text>
+          <Text
+            style={[
+              themed($resetButtonText),
+              { color: activePreview.mainColor },
+            ]}
+          >
+            저장
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -203,7 +210,7 @@ export default function TeamColorsDetailsScreen() {
       >
         {myTeamsLoading ? (
           <View style={themed($loadingContainer)}>
-            <ActivityIndicator size="large" color={theme.colors.tint} />
+            <ActivityIndicator size="large" color={activePreview.mainColor} />
             <Text style={themed($loadingText)}>내 팀을 불러오는 중...</Text>
           </View>
         ) : myTeamsError ? (
@@ -213,7 +220,10 @@ export default function TeamColorsDetailsScreen() {
             </Text>
             <TouchableOpacity
               onPress={() => refetch()}
-              style={themed($retryButton)}
+              style={[
+                themed($retryButton),
+                { backgroundColor: activePreview.mainColor },
+              ]}
             >
               <Text style={themed($retryButtonText)}>다시 시도</Text>
             </TouchableOpacity>
@@ -243,6 +253,12 @@ export default function TeamColorsDetailsScreen() {
                 style={[
                   themed($teamRow),
                   isActive ? themed($teamRowActive) : null,
+                  isActive
+                    ? {
+                        borderColor: activePreview.mainColor,
+                        backgroundColor: activePreview.mainColor + "12",
+                      }
+                    : null,
                 ]}
                 onPress={() => handleSelectTeam(team.id)}
               >
@@ -270,7 +286,7 @@ export default function TeamColorsDetailsScreen() {
                   <Ionicons
                     name="checkmark-circle"
                     size={20}
-                    color={theme.colors.tint}
+                    color={activePreview.mainColor}
                   />
                 ) : (
                   <Ionicons

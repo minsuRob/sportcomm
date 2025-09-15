@@ -22,6 +22,16 @@ import { Bookmark } from './bookmark.entity';
 import { UserTeam } from './user-team.entity';
 
 /**
+ * 사용자 성별 열거형
+ * M: 남성, F: 여성, O: 기타
+ */
+export enum GenderCode {
+  M = 'M',
+  F = 'F',
+  O = 'O',
+}
+
+/**
  * 경험치/포인트 적립 액션 (확장 가능)
  * 새로운 적립 이벤트가 필요할 때 enum과 매핑 객체만 확장하면 됩니다.
  */
@@ -69,6 +79,23 @@ registerEnumType(UserRole, {
     },
     ADMIN: {
       description: '관리자',
+    },
+  },
+});
+
+// GraphQL 스키마에 GenderCode enum 등록
+registerEnumType(GenderCode, {
+  name: 'GenderCode',
+  description: '사용자 성별',
+  valuesMap: {
+    M: {
+      description: '남성',
+    },
+    F: {
+      description: '여성',
+    },
+    O: {
+      description: '기타',
     },
   },
 });
@@ -274,6 +301,21 @@ export class User {
   age?: number;
 
   /**
+   * 사용자 성별
+   * 선택적 필드입니다. M: 남성, F: 여성, O: 기타
+   */
+  @Field(() => GenderCode, { nullable: true, description: '사용자 성별' })
+  @Column({
+    type: 'enum',
+    enum: GenderCode,
+    nullable: true,
+    comment: '사용자 성별 (M: 남성, F: 여성, O: 기타)',
+  })
+  @IsOptional()
+  @IsEnum(GenderCode, { message: '올바른 성별을 선택해주세요.' })
+  gender?: GenderCode;
+
+  /**
    * 이메일 인증 여부
    * 회원가입 시 이메일 인증을 완료했는지 나타냅니다.
    */
@@ -477,6 +519,7 @@ export interface CombinedUserInfo {
   profileImageUrl?: string;
   bio?: string;
   age?: number;
+  gender?: GenderCode;
   isActive: boolean;
   /** 사용자 포인트 (가상 자산) */
   points?: number;

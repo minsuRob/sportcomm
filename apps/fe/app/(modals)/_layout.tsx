@@ -22,6 +22,15 @@ export default function ModalsLayout() {
           backgroundColor: theme.colors.background,
         },
       }}
-    />
+    >
+      {/* 회원가입 후 기본 프로필 설정 모달 */}
+      <Stack.Screen
+        name="post-signup-profile"
+        options={{
+          headerShown: true,
+          title: "기본 프로필 설정",
+        }}
+      />
+    </Stack>
   );
 }

@@ -1,6 +1,6 @@
-import React from "react";
-import { View, ViewStyle, useWindowDimensions, Text } from "react-native";
-import { Tabs } from "expo-router";
+import React, { useState } from "react";
+import { View, ViewStyle, useWindowDimensions, Text, TouchableOpacity } from "react-native";
+import { Tabs, useRouter } from "expo-router";
 import { Slot } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useResponsive } from "@/lib/hooks/useResponsive";
@@ -9,6 +9,8 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import SidebarNavigation from "@/components/SidebarNavigation";
 import { isWeb } from "@/lib/platform";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
+import { useAuth } from "@/lib/auth/context/AuthContext";
+import AppDialog from "@/components/ui/AppDialog";
 
 /**
  * 모바일용 탭 레이아웃 컴포넌트
@@ -17,29 +19,75 @@ import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 function MobileTabLayout() {
   const { theme } = useAppTheme();
   const { currentUser } = useCurrentUser();
+  const { user: currentAuthUser } = useAuth();
+  const router = useRouter();
 
   // 팀 메인 컬러 (fallback 처리)
   const teamMain = theme.colors.teamMain ?? theme.colors.tint;
   const points: number = currentUser?.points ?? 0;
   const pointsLabel: string = `${points.toLocaleString()}P`;
 
+  // 로그인 필요 다이얼로그 상태
+  const [loginDialogVisible, setLoginDialogVisible] = useState(false);
+
+  // 로그인 다이얼로그 핸들러
+  const handleLoginDialogConfirm = () => {
+    setLoginDialogVisible(false);
+    router.push("/(details)/auth");
+  };
+
+  const handleLoginDialogCancel = () => {
+    setLoginDialogVisible(false);
+  };
+
+  // 탭 클릭 핸들러
+  const handleTabPress = (routeName: string, defaultNavigation: () => void, event?: any) => {
+    // 팀, 상점, 프로필 탭이고 로그인이 안 되어있는 경우
+    if ((routeName === "team-center" || routeName === "shop" || routeName === "profile") && !currentAuthUser) {
+      setLoginDialogVisible(true);
+      // 다이얼로그가 표시되면 기본 네비게이션을 막아 탭 전환을 방지
+      return;
+    }
+
+    // 로그인된 경우: 이벤트 전파를 막고 탭 전환 허용
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    defaultNavigation();
+  };
+
+  // 커스텀 탭 버튼 컴포넌트
+  const createCustomTabButton = (routeName: string) => (props: any) => {
+    const { onPress, ...otherProps } = props;
+    return (
+      <TouchableOpacity
+        {...otherProps}
+          onPress={(e: any) => {
+            handleTabPress(routeName, onPress, e);
+            e.preventDefault?.();
+            e.stopPropagation?.();
+          }}
+      />
+    );
+  };
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarActiveTintColor: teamMain, // 활성 탭 색상을 팀 메인 컬러로 설정
-        tabBarInactiveTintColor: theme.colors.textDim,
-        tabBarStyle: {
-          height: 64,
-          paddingTop: 6,
-          paddingBottom: 8,
-          backgroundColor: theme.colors.card,
-          borderTopColor: theme.colors.border,
-          borderTopWidth: 0.5,
-        },
-      }}
-    >
+    <>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarActiveTintColor: teamMain, // 활성 탭 색상을 팀 메인 컬러로 설정
+          tabBarInactiveTintColor: theme.colors.textDim,
+          tabBarStyle: {
+            height: 64,
+            paddingTop: 6,
+            paddingBottom: 8,
+            backgroundColor: theme.colors.card,
+            borderTopColor: theme.colors.border,
+            borderTopWidth: 0.5,
+          },
+        }}
+      >
       <Tabs.Screen
         name="feed"
         options={{
@@ -65,6 +113,7 @@ function MobileTabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="trophy-outline" size={26} color={color} />
           ),
+          tabBarButton: createCustomTabButton("team-center"),
         }}
       />
       <Tabs.Screen
@@ -89,6 +138,7 @@ function MobileTabLayout() {
               </Text>
             </View>
           ),
+          tabBarButton: createCustomTabButton("shop"),
         }}
       />
       <Tabs.Screen
@@ -98,9 +148,23 @@ function MobileTabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="person" size={26} color={color} />
           ),
+          tabBarButton: createCustomTabButton("profile"),
         }}
       />
-    </Tabs>
+      </Tabs>
+
+      {/* 로그인 필요 다이얼로그 */}
+      <AppDialog
+        visible={loginDialogVisible}
+        onClose={handleLoginDialogCancel}
+        onConfirm={handleLoginDialogConfirm}
+        title="로그인이 필요한 기능입니다"
+        description="이 기능을 이용하려면 로그인이 필요합니다."
+        confirmText="예"
+        cancelText="아니오"
+        dismissOnBackdrop={false}
+      />
+    </>
   );
 }
 

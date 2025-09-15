@@ -23,15 +23,19 @@ interface GlobalWebLayoutProps {
 
 /**
  * 메인 앱 화면인지 확인하는 함수
- * 메인 앱 화면(feed, search, profile)에서는 사이드바 레이아웃을 사용
+ * 메인 앱 화면(feed, search, team-center, shop, profile)에서는 사이드바 레이아웃을 사용
  */
 const isMainAppScreen = (pathname: string): boolean => {
   const mainScreens = [
     "/feed",
     "/search",
+    "/team-center",
+    "/shop",
     "/profile",
     "/(app)/feed",
     "/(app)/search",
+    "/(app)/team-center",
+    "/(app)/shop",
     "/(app)/profile",
   ];
   return (

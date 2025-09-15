@@ -120,7 +120,9 @@ function DesktopSidebarLayout() {
           style={[
             themed($contentWrapper),
             {
-              maxWidth: Math.min(640, screenWidth * 0.8), // 화면 크기에 따른 동적 조정
+              // 사이드바(280px)를 제외한 나머지 공간 사용
+              // width: "100%",
+              maxWidth: Math.min(640, screenWidth * 0.8),
               paddingHorizontal: screenWidth > 1200 ? 24 : 16, // 큰 화면에서 더 큰 여백
             },
           ]}
@@ -175,6 +177,8 @@ const $contentWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
   width: "100%",
   flex: 1,
   backgroundColor: colors.background,
+  // 콘텐츠 영역이 사이드바를 제외한 전체 공간을 사용하도록 설정
+  // maxWidth: "none", // maxWidth 제한 제거
   // 이미지 컨테이너 최적화를 위한 스타일
   ...(isWeb() && {
     borderRadius: 8,

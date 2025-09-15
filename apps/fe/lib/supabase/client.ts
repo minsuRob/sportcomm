@@ -177,7 +177,9 @@ export const supabase = createClient<Database>(
       storageKey: "sportcomm-auth-session",
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
+      // OAuth 리다이렉트 후 URL에서 세션을 감지하도록 웹 환경에서 활성화합니다
+      detectSessionInUrl:
+        typeof window !== "undefined" && !!window.location?.href,
     },
     // 실시간 연결 설정
     realtime: {

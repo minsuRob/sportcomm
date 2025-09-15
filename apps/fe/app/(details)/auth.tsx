@@ -12,7 +12,7 @@ import { Stack, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { Ionicons } from "@expo/vector-icons";
 import { saveSession, getSession, User } from "@/lib/auth";
-import { signIn, signUp } from "@/lib/supabase/auth";
+import { signIn, signUp, SupabaseAuthService } from "@/lib/supabase/auth";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useAppTheme } from "@/lib/theme/context";
 import { typography } from "@/lib/theme/typography";
@@ -123,17 +123,11 @@ export default function AuthScreen() {
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [dialog, setDialog] = useState<{
-    visible: boolean;
-    title: string;
-    description: string;
-  }>({ visible: false, title: "", description: "" });
 
   // 에러 상태 관리
   const [emailError, setEmailError] = useState("");
   const [nicknameError, setNicknameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [generalError, setGeneralError] = useState("");
 
   const nicknameInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
@@ -151,6 +145,16 @@ export default function AuthScreen() {
       console.warn("⚠️ AuthScreen: 동기화 에러:", error.message);
     },
   });
+
+  // 다이얼로그 상태 관리 (두 UI 모두에서 사용)
+  const [dialog, setDialog] = useState<{
+    visible: boolean;
+    title: string;
+    description: string;
+  }>({ visible: false, title: "", description: "" });
+
+  // 일반 에러 상태 관리
+  const [generalError, setGeneralError] = useState("");
 
   // 에러 상태 초기화
   const clearErrors = () => {
@@ -321,7 +325,11 @@ export default function AuthScreen() {
           }
         }
 
-        handleLoginSuccess(user);
+        if (isLoginAction) {
+          handleLoginSuccess(user);
+        } else {
+          router.replace("/(modals)/post-signup-profile");
+        }
       }
     } catch (error: any) {
       console.error(
@@ -360,23 +368,28 @@ export default function AuthScreen() {
   const handleSocialLogin = async (provider: string) => {
     try {
       console.log(`🔄 ${provider} 소셜 로그인 시작`);
+      if (provider !== "google") {
+        setDialog({
+          visible: true,
+          title: "알림",
+          description: `${provider} 로그인은 곧 지원 예정입니다.`,
+        });
+        return;
+      }
 
-      // TODO: Supabase OAuth 구현
-      // const { data, error } = await supabase.auth.signInWithOAuth({
-      //   provider: provider as any,
-      //   options: {
-      //     redirectTo: `${window.location.origin}/auth/callback`
-      //   }
-      // });
+      // 웹: 현재 origin으로 돌아오고, detectSessionInUrl로 세션 감지
+      const redirectTo =
+        typeof window !== "undefined" && window.location?.origin
+          ? window.location.origin
+          : "myapp://auth-callback";
 
-      setDialog({
-        visible: true,
-        title: "알림",
-        description: `${provider} 로그인은 곧 지원 예정입니다.`,
-      });
-    } catch (error) {
+      const { error } = await SupabaseAuthService.signInWithGoogle(redirectTo);
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
       console.error(`${provider} 로그인 실패:`, error);
-      setGeneralError(`${provider} 로그인 중 오류가 발생했습니다.`);
+      setGeneralError(error.message || `${provider} 로그인 중 오류가 발생했습니다.`);
     }
   };
 
@@ -532,6 +545,14 @@ export default function AuthScreen() {
             </View>
           </View>
         </ScrollView>
+        <AppDialog
+          visible={dialog.visible}
+          onClose={() => setDialog({ ...dialog, visible: false })}
+          title={dialog.title}
+          description={dialog.description}
+          confirmText="확인"
+          onConfirm={() => setDialog({ ...dialog, visible: false })}
+        />
       </>
     );
   }

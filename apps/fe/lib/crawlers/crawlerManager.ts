@@ -49,7 +49,7 @@ export class CrawlerManager {
    */
   registerCrawler(name: string, crawler: BaseCrawler): void {
     this.crawlers.set(name, crawler);
-    console.log(`크롤러 등록됨: ${name}`);
+    //console.log(`크롤러 등록됨: ${name}`);
   }
 
   /**
@@ -58,7 +58,7 @@ export class CrawlerManager {
   unregisterCrawler(name: string): boolean {
     const removed = this.crawlers.delete(name);
     if (removed) {
-      console.log(`크롤러 제거됨: ${name}`);
+      //console.log(`크롤러 제거됨: ${name}`);
     }
     return removed;
   }
@@ -86,14 +86,14 @@ export class CrawlerManager {
       }
 
       if (!crawler.isEnabled()) {
-        console.log(`크롤러 비활성화됨: ${source}`);
+        //console.log(`크롤러 비활성화됨: ${source}`);
         return null;
       }
 
       try {
-        console.log(`크롤링 시작: ${source}`);
+        //console.log(`크롤링 시작: ${source}`);
         const result = await crawler.crawl(crawlerOptions);
-        console.log(
+        //console.log(
           `크롤링 완료: ${source}, 기사 수: ${result.articles.length}`,
         );
         return { source, result };

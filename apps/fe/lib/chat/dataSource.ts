@@ -21,9 +21,9 @@ export class ChatDataSource {
   constructor() {
     // Supabase를 기본값으로 설정 (개발용)
     this.useSupabase = true;
-    console.log(
-      `채팅 데이터 소스: ${this.useSupabase ? "Supabase" : "Mock Data"}`,
-    );
+    //console.log(
+    //   `채팅 데이터 소스: ${this.useSupabase ? "Supabase" : "Mock Data"}`,
+    // );
 
     if (!this.useSupabase) {
       this.initializeMockData();
@@ -331,11 +331,11 @@ export class ChatDataSource {
       return supabaseChatService.subscribeToMessages(channelId, onMessage);
     } else {
       // 임시 데이터에서는 실시간 구독 시뮬레이션
-      console.log(`Mock: 채널 ${channelId}에 대한 실시간 구독 시작`);
+      //console.log(`Mock: 채널 ${channelId}에 대한 실시간 구독 시작`);
 
       // 임시로 빈 구독 해제 함수 반환
       return () => {
-        console.log(`Mock: 채널 ${channelId}에 대한 실시간 구독 해제`);
+        //console.log(`Mock: 채널 ${channelId}에 대한 실시간 구독 해제`);
       };
     }
   }
@@ -391,7 +391,7 @@ export class ChatDataSource {
    */
   switchToSupabase(): void {
     this.useSupabase = true;
-    console.log("데이터 소스를 Supabase로 전환했습니다.");
+    //console.log("데이터 소스를 Supabase로 전환했습니다.");
   }
 
   /**
@@ -400,7 +400,7 @@ export class ChatDataSource {
   switchToMock(): void {
     this.useSupabase = false;
     this.initializeMockData();
-    console.log("데이터 소스를 Mock Data로 전환했습니다.");
+    //console.log("데이터 소스를 Mock Data로 전환했습니다.");
   }
 }
 

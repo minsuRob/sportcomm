@@ -142,12 +142,12 @@ export class NewsService {
     // 캐시 확인
     const cached = this.cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      console.log("캐시된 뉴스 데이터 사용:", cacheKey);
+      //console.log("캐시된 뉴스 데이터 사용:", cacheKey);
       return cached.data;
     }
 
     try {
-      console.log("실제 뉴스 크롤링 시작:", { category, limit, sources });
+      //console.log("실제 뉴스 크롤링 시작:", { category, limit, sources });
 
       // 크롤러 매니저를 통해 실제 크롤링 실행
       const crawlResult = await crawlerManager.crawlAll({
@@ -173,13 +173,13 @@ export class NewsService {
         timestamp: Date.now(),
       });
 
-      console.log(`뉴스 크롤링 완료: ${articles.length}개 기사`);
+      //console.log(`뉴스 크롤링 완료: ${articles.length}개 기사`);
       return response;
     } catch (error) {
       console.error("뉴스 크롤링 실패:", error);
 
       // 실패 시 대체 데이터 반환
-      console.log("대체 뉴스 데이터 사용");
+      //console.log("대체 뉴스 데이터 사용");
       return this.getFallbackNews(limit);
     }
   }
@@ -285,7 +285,7 @@ export class NewsService {
     limit: number = 5,
   ): Promise<NewsArticle[]> {
     try {
-      console.log(`팀별 뉴스 크롤링: ${teamSectionId}`);
+      //console.log(`팀별 뉴스 크롤링: ${teamSectionId}`);
 
       const crawlResult = await crawlerManager.crawlNaverTeamNews(
         teamSectionId,
@@ -303,7 +303,7 @@ export class NewsService {
    */
   clearCache(): void {
     this.cache.clear();
-    console.log("뉴스 캐시가 클리어되었습니다.");
+    //console.log("뉴스 캐시가 클리어되었습니다.");
   }
 
   /**

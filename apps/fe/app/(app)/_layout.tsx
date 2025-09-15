@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ViewStyle, useWindowDimensions } from "react-native";
+import { View, ViewStyle, useWindowDimensions, Text } from "react-native";
 import { Tabs } from "expo-router";
 import { Slot } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +8,7 @@ import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import SidebarNavigation from "@/components/SidebarNavigation";
 import { isWeb } from "@/lib/platform";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 
 /**
  * 모바일용 탭 레이아웃 컴포넌트
@@ -15,9 +16,12 @@ import { isWeb } from "@/lib/platform";
  */
 function MobileTabLayout() {
   const { theme } = useAppTheme();
+  const { currentUser } = useCurrentUser();
 
   // 팀 메인 컬러 (fallback 처리)
   const teamMain = theme.colors.teamMain ?? theme.colors.tint;
+  const points: number = currentUser?.points ?? 0;
+  const pointsLabel: string = `${points.toLocaleString()}P`;
 
   return (
     <Tabs
@@ -27,7 +31,7 @@ function MobileTabLayout() {
         tabBarActiveTintColor: teamMain, // 활성 탭 색상을 팀 메인 컬러로 설정
         tabBarInactiveTintColor: theme.colors.textDim,
         tabBarStyle: {
-          height: 60,
+          height: 64,
           paddingTop: 6,
           paddingBottom: 8,
           backgroundColor: theme.colors.card,
@@ -67,8 +71,23 @@ function MobileTabLayout() {
         name="shop"
         options={{
           title: "상점",
+          // 커스텀 아이콘: 상점 아이콘 하단에 포인트(숫자P) 표기
           tabBarIcon: ({ color }) => (
-            <Ionicons name="bag-handle-outline" size={26} color={color} />
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="bag-handle-outline" size={26} color={color} />
+              <Text
+                style={{
+                  color,
+                  fontSize: 11,
+                  marginTop: 2,
+                  fontWeight: "700",
+                  fontFamily: "SpaceGrotesk-SemiBold",
+                }}
+                numberOfLines={1}
+              >
+                {pointsLabel}
+              </Text>
+            </View>
           ),
         }}
       />

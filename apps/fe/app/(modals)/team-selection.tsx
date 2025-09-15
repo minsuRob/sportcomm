@@ -11,9 +11,11 @@ import {
   TextStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
+import { getTeamColors } from "@/lib/theme/teams/teamColor";
+import { useTeamColorSelection } from "@/lib/hooks/useTeamColorSelection";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useAuth } from "@/lib/auth/context/AuthContext";
 import { showToast } from "@/components/CustomToast";
@@ -42,11 +44,13 @@ import {
  * - 불필요한 인증 중복 검사 제거 (isAuthenticated / accessToken 바로 활용)
  */
 
+import { markPostSignupStepDone, PostSignupStep } from "@/lib/auth/post-signup";
 const { width: screenWidth } = Dimensions.get("window");
 
 export default function TeamSelectionScreen() {
-  const { themed, theme } = useAppTheme();
+  const { themed, theme, setTeamColorOverride } = useAppTheme();
   const router = useRouter();
+  const { origin } = useLocalSearchParams<{ origin?: string }>();
   const {
     user: currentUser,
     isAuthenticated,
@@ -56,6 +60,9 @@ export default function TeamSelectionScreen() {
 
   // --- 로컬 UI 상태 ---
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+
+  // selectedTeams가 항상 배열이 되도록 보장
+  const safeSelectedTeams = Array.isArray(selectedTeams) ? selectedTeams : [];
   const [teamFavoriteDates, setTeamFavoriteDates] = useState<
     Record<string, string>
   >({});
@@ -101,9 +108,28 @@ export default function TeamSelectionScreen() {
   });
 
   const [updateMyTeams, { loading: updateLoading }] =
-    useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
+    useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS, {
+      onCompleted: async () => {
+        // post-signup: 팀 선택 단계 완료 플래그 마킹
+        await markPostSignupStepDone(PostSignupStep.Teams);
+      },
+    });
 
   const isLoading = sportsLoading || myTeamsLoading || updateLoading;
+
+  // 팀 색상 선택 로직 (공유 hook 사용)
+  const {
+    applyTeamColor,
+    handleTeamSelection,
+    getPriorityBasedSelection,
+    deriveTeamSlug,
+    findTeamById,
+  } = useTeamColorSelection({
+    myTeamsData,
+    teamColorTeamId: null, // team-selection에서는 teamColorTeamId를 사용하지 않음
+    selectedTeamId: safeSelectedTeams[0] || null, // 첫 번째 선택된 팀
+    setTeamColorOverride,
+  });
 
   // --- 인증 상태 감시 ---
   useEffect(() => {
@@ -152,10 +178,20 @@ export default function TeamSelectionScreen() {
       setSelectedTeams(teamIds);
       setTeamFavoriteDates(favoriteDates);
       setTeamFavoritePlayers(favoritePlayers);
+
+      // 초기 로딩 시 선택된 첫 번째 팀의 색상 적용
+      if (teamIds.length > 0) {
+        // 색상 적용은 비동기로 처리
+        setTimeout(() => {
+          applyTeamColor(teamIds[0], sportsData).catch(error => {
+            console.warn("초기 팀 색상 적용 실패:", error);
+          });
+        }, 100);
+      }
     } catch (e) {
       console.error("myTeams 처리 오류:", e);
     }
-  }, [myTeamsData]);
+  }, [myTeamsData, sportsData]);
 
   // --- myTeams 쿼리 오류 추가 처리 ---
   useEffect(() => {
@@ -171,8 +207,11 @@ export default function TeamSelectionScreen() {
 
   // --- 팀 선택/해제 ---
   const handleTeamSelect = (teamId: string) => {
+    // 관련 날짜 제거 로직은 기존 유지
     setSelectedTeams((prev) => {
-      if (prev.includes(teamId)) {
+      let updatedTeams = prev;
+
+      if (safeSelectedTeams.includes(teamId)) {
         // 해제 → 관련 날짜 제거
         setTeamFavoriteDates((p) => {
           const next = { ...p };
@@ -181,9 +220,11 @@ export default function TeamSelectionScreen() {
           return next;
         });
         setShowSettings(false);
-        return prev.filter((id) => id !== teamId);
       }
-      return [...prev, teamId];
+
+      // 공유 hook을 사용한 팀 선택 처리 (색상 적용 포함)
+      updatedTeams = handleTeamSelection(teamId, prev, sportsData);
+      return updatedTeams;
     });
   };
 
@@ -247,7 +288,7 @@ export default function TeamSelectionScreen() {
       });
       return;
     }
-    if (selectedTeams.length === 0) {
+    if (safeSelectedTeams.length === 0) {
       showToast({
         type: "warning",
         title: "팀 선택 필요",
@@ -260,7 +301,7 @@ export default function TeamSelectionScreen() {
     try {
       const { errors } = await updateMyTeams({
         variables: {
-          teams: selectedTeams.map((teamId) => ({
+          teams: safeSelectedTeams.map((teamId) => ({
             teamId,
             favoriteDate: teamFavoriteDates[teamId] || null,
             favoritePlayerName: teamFavoritePlayers[teamId]?.name || null,
@@ -283,11 +324,18 @@ export default function TeamSelectionScreen() {
       const newMyTeams = refetched?.data?.myTeams || [];
       await updateUser({ myTeams: newMyTeams } as any);
 
+      // 저장 완료 후 최종 팀 색상 적용 (첫 번째 팀 기준)
+      if (safeSelectedTeams.length > 0) {
+        applyTeamColor(selectedTeams[0], sportsData).catch(error => {
+          console.warn("저장 후 팀 색상 적용 실패:", error);
+        });
+      }
+
       // 필터 상태도 로컬 저장 (피드 필터링과 동기화)
       try {
         await AsyncStorage.setItem(
           "selected_team_filter",
-          JSON.stringify(selectedTeams),
+          JSON.stringify(safeSelectedTeams),
         );
       } catch (e) {
         console.warn("팀 필터 AsyncStorage 저장 실패:", (e as any)?.message);
@@ -296,7 +344,7 @@ export default function TeamSelectionScreen() {
       showToast({
         type: "success",
         title: "저장 완료",
-        message: `${selectedTeams.length}개 팀이 저장되었습니다.`,
+        message: `${safeSelectedTeams.length}개 팀이 저장되었습니다.`,
         duration: 2000,
       });
       router.back();
@@ -332,7 +380,8 @@ export default function TeamSelectionScreen() {
         <View key={`row-${i}`} style={themed($teamRow)}>
           {rowTeams.map((team) => {
             const teamId = team.id;
-            const isSelected = selectedTeams.includes(teamId);
+            const isSelected = safeSelectedTeams.includes(teamId);
+            const priorityInfo = getPriorityBasedSelection(teamId);
             return (
               <View key={teamId} style={themed($teamItemColumn)}>
                 <TouchableOpacity
@@ -374,6 +423,7 @@ export default function TeamSelectionScreen() {
                       numberOfLines={1}
                     >
                       {team.name}
+                      {priorityInfo.isPrimaryTeam && " ⭐"}
                     </Text>
                     {isSelected && teamFavoriteDates[teamId] && (
                       <Text
@@ -488,7 +538,17 @@ export default function TeamSelectionScreen() {
     <View style={themed($container)}>
       {/* 헤더 */}
       <View style={themed($header)}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => {
+            if (origin === "profile") {
+              router.replace("/(modals)/post-signup-profile");
+            } else if (origin === "team-center") {
+              router.replace("/(details)/team-center");
+            } else {
+              router.back();
+            }
+          }}
+        >
           <Ionicons name="close" color={theme.colors.text} size={24} />
         </TouchableOpacity>
         <Text style={themed($headerTitle)}>My Team 선택</Text>
@@ -500,9 +560,9 @@ export default function TeamSelectionScreen() {
             (isLoading || !currentUser) && { opacity: 0.5 },
           ]}
         >
-          <Text style={themed($saveButtonText)}>
-            {isLoading ? "저장 중..." : "저장"}
-          </Text>
+        <Text style={themed($saveButtonText)}>
+          {isLoading ? "저장 중..." : "저장 (색상 즉시 적용)"}
+        </Text>
         </TouchableOpacity>
       </View>
 
@@ -511,11 +571,11 @@ export default function TeamSelectionScreen() {
         <Text style={themed($descriptionTitle)}>응원할 팀을 선택하세요</Text>
         <Text style={themed($descriptionText)}>
           여러 팀을 선택할 수 있으며, 첫 번째로 선택한 팀이 주 팀으로
-          설정됩니다.
+          설정됩니다. 선택 시 즉시 앱 색상이 변경됩니다.
         </Text>
-        {selectedTeams.length > 0 && (
+        {safeSelectedTeams.length > 0 && (
           <Text style={themed($selectedCountText)}>
-            {selectedTeams.length}개 팀 선택됨
+            {safeSelectedTeams.length}개 팀 선택됨
           </Text>
         )}
       </View>
@@ -625,7 +685,7 @@ export default function TeamSelectionScreen() {
           try {
             await updateMyTeams({
               variables: {
-                teams: selectedTeams.map((teamId) => ({
+                teams: safeSelectedTeams.map((teamId) => ({
                   teamId,
                   favoriteDate: teamFavoriteDates[teamId] || null,
                   favoritePlayerName: updatedPlayers[teamId]?.name || null,
@@ -919,4 +979,4 @@ const $retryButtonText: ThemedStyle<TextStyle> = () => ({
   fontWeight: "600",
 });
 
-/* 커밋 메세지: refactor(team-selection): AuthContext 기반 전면 재작성 & 세션 의존 로직 정리 */
+/* 커밋 메세지: refactor(team-selection): useTeamColorSelection hook 활용하여 코드 중복 제거 */

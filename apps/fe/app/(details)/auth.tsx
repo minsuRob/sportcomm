@@ -18,6 +18,10 @@ import { useAppTheme } from "@/lib/theme/context";
 import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
 import AppDialog from "@/components/ui/AppDialog";
+import {
+  shouldRunPostSignup,
+  getNextPostSignupRoute,
+} from "@/lib/auth/post-signup";
 
 /**
  * 소셜 로그인 컴포넌트
@@ -115,22 +119,25 @@ const SocialLogins = ({
  */
 export default function AuthScreen() {
   const router = useRouter();
-  const { themed, theme } = useAppTheme();
+  const { themed, theme, toggleTheme } = useAppTheme();
 
   const [isLogin, setIsLogin] = useState(true);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   // 에러 상태 관리
   const [emailError, setEmailError] = useState("");
   const [nicknameError, setNicknameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
   const nicknameInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
 
   // 로딩 상태 관리
   const [loginLoading, setLoginLoading] = useState(false);
@@ -139,7 +146,7 @@ export default function AuthScreen() {
   // 통합 인증 훅 사용
   const { syncAfterSignUp, checkAndSyncAfterSignIn } = useAuth({
     onSyncSuccess: (user) => {
-      console.log("✅ AuthScreen: 사용자 동기화 성공:", user.nickname);
+      //console.log("✅ AuthScreen: 사용자 동기화 성공:", user.nickname);
     },
     onError: (error) => {
       console.warn("⚠️ AuthScreen: 동기화 에러:", error.message);
@@ -161,6 +168,7 @@ export default function AuthScreen() {
     setEmailError("");
     setNicknameError("");
     setPasswordError("");
+    setConfirmPasswordError("");
     setGeneralError("");
   };
 
@@ -168,12 +176,8 @@ export default function AuthScreen() {
    * 인증 성공 시 처리 함수
    * 로그인/회원가입 성공 후 메인 화면으로 이동합니다
    */
-  const handleLoginSuccess = (user: User) => {
-    console.log(
-      "✅ AuthScreen: 로그인 성공, 메인 화면으로 이동:",
-      user.nickname,
-    );
-    // 메인 앱으로 이동 (스택을 초기화하여 뒤로가기 방지)
+  const handleLoginSuccess = async (user: User) => {
+    // 일반 로그인: 바로 피드로 이동 (post-signup은 회원가입 직후에만 실행)
     router.replace("/(app)/feed");
   };
 
@@ -198,11 +202,11 @@ export default function AuthScreen() {
 
       if (isLoginAction) {
         // Supabase 로그인
-        console.log("🔄 Supabase 로그인 시작:", { email });
+        //console.log("🔄 Supabase 로그인 시작:", { email });
         result = await signIn({ email, password });
       } else {
         // Supabase 회원가입
-        console.log("🔄 Supabase 회원가입 시작:", { email, nickname });
+        //console.log("🔄 Supabase 회원가입 시작:", { email, nickname });
         result = await signUp({ email, password, nickname });
       }
 
@@ -245,12 +249,12 @@ export default function AuthScreen() {
       }
 
       if (result.user && result.session) {
-        console.log(`✅ ${isLoginAction ? "로그인" : "회원가입"} 성공:`, {
-          사용자ID: result.user.id,
-          닉네임: result.user.nickname,
-          이메일: result.user.email,
-          역할: result.user.role,
-        });
+        //console.log(`✅ ${isLoginAction ? "로그인" : "회원가입"} 성공:`, {
+        // 사용자ID: result.user.id,
+        //   닉네임: result.user.nickname,
+        //   이메일: result.user.email,
+        //   역할: result.user.role,
+        // });
 
         // 세션 토큰 저장 (기존 auth.ts와 호환성을 위해)
         const token = result.session.access_token;
@@ -267,37 +271,37 @@ export default function AuthScreen() {
 
         // 저장된 세션 확인
         const { token: savedToken, user: savedUser } = await getSession();
-        console.log("저장된 세션 확인:", {
-          토큰저장됨: !!savedToken,
-          사용자정보: savedUser,
-          역할: savedUser?.role,
-        });
+        //console.log("저장된 세션 확인:", {
+        //   토큰저장됨: !!savedToken,
+        //   사용자정보: savedUser,
+        //   역할: savedUser?.role,
+        // });
 
         // 백엔드와 사용자 정보 동기화
         try {
           if (isLoginAction) {
             // 로그인 시: 사용자 정보 확인 및 동기화
-            console.log("🔄 로그인 후 사용자 정보 동기화 확인...");
+            //console.log("🔄 로그인 후 사용자 정보 동기화 확인...");
             const syncResult = await checkAndSyncAfterSignIn();
 
             if (syncResult.success && syncResult.user) {
-              console.log("✅ 사용자 정보 동기화 확인 완료:", syncResult.user);
+              //console.log("✅ 사용자 정보 동기화 확인 완료:", syncResult.user);
             } else {
-              console.log(
-                "⚠️ 백엔드에 사용자 정보가 없습니다:",
-                syncResult.error,
-              );
+              //console.log(
+              //   "⚠️ 백엔드에 사용자 정보가 없습니다:",
+              //   syncResult.error,
+              // );
             }
           } else {
             // 회원가입 시: 사용자 정보 자동 동기화
-            console.log("🔄 회원가입 후 사용자 정보 동기화...");
+            //console.log("🔄 회원가입 후 사용자 정보 동기화...");
             const syncResult = await syncAfterSignUp(result.user);
 
             if (syncResult.success && syncResult.user) {
-              console.log(
-                "✅ 회원가입 후 사용자 정보 동기화 완료:",
-                syncResult.user,
-              );
+              //console.log(
+              //   "✅ 회원가입 후 사용자 정보 동기화 완료:",
+              //   syncResult.user,
+              // );
             } else {
               console.warn("⚠️ 회원가입 후 동기화 실패:", syncResult.error);
             }
@@ -328,7 +332,22 @@ export default function AuthScreen() {
         if (isLoginAction) {
           handleLoginSuccess(user);
         } else {
-          router.replace("/(modals)/post-signup-profile");
+          try {
+            const need = await shouldRunPostSignup(user as any);
+            if (need) {
+              const nextRoute = await getNextPostSignupRoute(user as any);
+              if (nextRoute) {
+                router.replace(nextRoute as any);
+              } else {
+                router.replace("/(app)/feed");
+              }
+            } else {
+              router.replace("/(app)/feed");
+            }
+          } catch (e: any) {
+            console.warn("⚠️ post-signup 판단 중 오류:", e?.message);
+            router.replace("/(app)/feed");
+          }
         }
       }
     } catch (error: any) {
@@ -367,7 +386,7 @@ export default function AuthScreen() {
    */
   const handleSocialLogin = async (provider: string) => {
     try {
-      console.log(`🔄 ${provider} 소셜 로그인 시작`);
+      //console.log(`🔄 ${provider} 소셜 로그인 시작`);
       if (provider !== "google") {
         setDialog({
           visible: true,
@@ -389,7 +408,9 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error(`${provider} 로그인 실패:`, error);
-      setGeneralError(error.message || `${provider} 로그인 중 오류가 발생했습니다.`);
+      setGeneralError(
+        error.message || `${provider} 로그인 중 오류가 발생했습니다.`,
+      );
     }
   };
 
@@ -404,7 +425,7 @@ export default function AuthScreen() {
     }
 
     try {
-      console.log("🔄 비밀번호 재설정 이메일 전송:", email);
+      //console.log("🔄 비밀번호 재설정 이메일 전송:", email);
 
       // TODO: Supabase 비밀번호 재설정 구현
       // const { error } = await supabase.auth.resetPasswordForEmail(email);
@@ -419,6 +440,35 @@ export default function AuthScreen() {
       console.error("비밀번호 재설정 실패:", error);
       setGeneralError("비밀번호 재설정 중 오류가 발생했습니다.");
     }
+  };
+
+  /**
+   * 비밀번호 일치 검증
+   * 회원가입 시에만 수행됩니다
+   */
+  const validatePasswordMatch = () => {
+    if (!isLogin && password && confirmPassword && password !== confirmPassword) {
+      setConfirmPasswordError("비밀번호가 일치하지 않습니다.");
+      return false;
+    }
+    setConfirmPasswordError("");
+    return true;
+  };
+
+  /**
+   * 회원가입 버튼 활성화 조건 확인
+   */
+  const isRegisterButtonEnabled = () => {
+    if (isLogin) return true; // 로그인일 때는 항상 활성화
+
+    // 회원가입 시 필수 조건들
+    const hasEmail = email.trim().length > 0;
+    const hasNickname = nickname.trim().length > 0;
+    const hasPassword = password.trim().length > 0;
+    const hasConfirmPassword = confirmPassword.trim().length > 0;
+    const passwordsMatch = password === confirmPassword;
+
+    return hasEmail && hasNickname && hasPassword && hasConfirmPassword && passwordsMatch;
   };
 
   /**
@@ -444,6 +494,11 @@ export default function AuthScreen() {
       return;
     }
 
+    // 회원가입 시 비밀번호 일치 검증
+    if (!isLogin && !validatePasswordMatch()) {
+      return;
+    }
+
     if (isLogin) {
       handleLogin();
     } else {
@@ -454,24 +509,31 @@ export default function AuthScreen() {
   if (!showEmailForm) {
     return (
       <>
-        <Stack.Screen
-          options={{
-            title: "로그인",
-            headerStyle: {
-              backgroundColor: theme.colors.background,
-            },
-            headerTintColor: theme.colors.text,
-            headerBackTitle: "뒤로",
-          }}
-        />
+        {/* 헤더 */}
+        <View style={themed($header)}>
+          <TouchableOpacity onPress={() => router.back()} style={themed($backButton)}>
+            <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
+          </TouchableOpacity>
+
+          <Text style={themed($headerTitle)}>로그인</Text>
+
+          <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
+            <Ionicons
+              name={theme.isDark ? "sunny-outline" : "moon-outline"}
+              size={24}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+        </View>
         <ScrollView
           style={themed($container)}
           contentContainerStyle={themed($contentContainer)}
           keyboardShouldPersistTaps="handled"
         >
           <View style={themed($mainContent)}>
-            <Text style={themed($titleText)}>Log into your account</Text>
+            <Text style={themed($logoText)}>Sportalk</Text>
 
+            <View style={themed($socialButtonsContainer)}>
             <Button
               variant="outline"
               size="lg"
@@ -491,8 +553,6 @@ export default function AuthScreen() {
                 <Text style={themed($socialButtonText)}>Login with email</Text>
               </View>
             </Button>
-
-            <View style={themed($socialButtonsContainer)}>
               <Button
                 variant="outline"
                 size="lg"
@@ -559,16 +619,25 @@ export default function AuthScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: isLogin ? "로그인" : "회원가입",
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.text,
-          headerBackTitle: "뒤로",
-        }}
-      />
+      {/* 헤더 */}
+      <View style={themed($header)}>
+        <TouchableOpacity onPress={() => setShowEmailForm(false)} style={themed($backButton)}>
+          <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
+        </TouchableOpacity>
+
+        <Text style={themed($headerTitle)}>{isLogin ? "로그인" : "회원가입"}</Text>
+
+        <View style={themed($headerRight)}>
+          <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
+            <Ionicons
+              name={theme.isDark ? "sunny-outline" : "moon-outline"}
+              size={20}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+
+        </View>
+      </View>
 
       <ScrollView
         style={themed($container)}
@@ -576,8 +645,8 @@ export default function AuthScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={themed($mainContent)}>
-          <Text style={themed($titleText)}>
-            {isLogin ? "Sportalk 환영합니다" : "계정 만들기"}
+          <Text style={themed($logoText)}>
+            {isLogin ? "Sportalk Login" : "회원가입"}
           </Text>
 
           {/* 이메일 입력 필드 */}
@@ -686,6 +755,58 @@ export default function AuthScreen() {
             ) : null}
           </View>
 
+          {/* 비밀번호 확인 입력 필드 (회원가입 시에만) */}
+          {!isLogin && (
+            <View style={themed($inputContainer)}>
+              <View style={themed($passwordContainer)}>
+                <TextInput
+                  ref={confirmPasswordInputRef}
+                  style={[
+                    themed($inputField),
+                    themed($passwordInput),
+                    confirmPasswordError && themed($inputFieldError),
+                  ]}
+                  placeholder="비밀번호 확인"
+                  placeholderTextColor={theme.colors.textDim}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (confirmPasswordError) setConfirmPasswordError(""); // 입력 시 에러 초기화
+                    // 실시간 검증: 비밀번호가 일치하는지 확인
+                    if (password && text && password !== text) {
+                      setConfirmPasswordError("비밀번호가 일치하지 않습니다.");
+                    } else if (password && text && password === text) {
+                      setConfirmPasswordError("");
+                    }
+                  }}
+                  secureTextEntry={!isPasswordVisible}
+                  returnKeyType="done"
+                  onSubmitEditing={handleContinue}
+                />
+                <TouchableOpacity
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                  style={themed($eyeButton)}
+                >
+                  {isPasswordVisible ? (
+                    <Ionicons
+                      name="eye-off"
+                      color={theme.colors.textDim}
+                      size={20}
+                    />
+                  ) : (
+                    <Ionicons name="eye" color={theme.colors.textDim} size={20} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {confirmPasswordError ? (
+                <View style={themed($errorContainer)}>
+                  <Ionicons name="alert-circle" color="#ef4444" size={16} />
+                  <Text style={themed($errorText)}>{confirmPasswordError}</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+
           {/* 일반 에러 메시지 */}
           {generalError ? (
             <View style={themed($errorContainer)}>
@@ -694,6 +815,8 @@ export default function AuthScreen() {
             </View>
           ) : null}
 
+          {/* 
+          // TODO : 기능 테스트 필요.
           {isLogin && (
             <TouchableOpacity
               style={themed($forgotPasswordButton)}
@@ -703,13 +826,13 @@ export default function AuthScreen() {
                 비밀번호를 잊으셨나요?
               </Text>
             </TouchableOpacity>
-          )}
+          )} */}
 
           <Button
             size="lg"
             style={themed($continueButton)}
             onPress={handleContinue}
-            disabled={loginLoading || registerLoading}
+            disabled={loginLoading || registerLoading || !isRegisterButtonEnabled()}
           >
             <Text style={themed($continueButtonText)}>계속</Text>
           </Button>
@@ -755,11 +878,14 @@ const $mainContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   padding: spacing.xl,
 });
 
-const $titleText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 30, // typography.fontSize["3xl"] 대신 직접 값 사용
-  fontWeight: "bold",
+  fontFamily: "TTTogether",
+  fontWeight: "500",
   textAlign: "center",
-  color: colors.text,
+  color: colors.teamMain ?? colors.tint,
+  // 웹/네이티브 모두 동일 키(TTTogether) 사용
+  // fontFamily: "TTTogether",
   marginBottom: 32,
 });
 
@@ -844,19 +970,19 @@ const $socialButtonContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
 });
 
-const $continueButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $continueButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
   // 메인 액션: 검은색(또는 텍스트 컬러) 배경의 두꺼운 필 버튼
   backgroundColor: colors.text,
-  borderRadius: 30,
-  height: 56,
+  borderRadius: 28,
+  height: 52,
   justifyContent: "center",
-  marginTop: spacing.sm,
 });
 
 const $continueButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.background,
   fontSize: 17,
   fontWeight: "600",
+  textAlign: "center",
 });
 
 const $toggleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -868,11 +994,13 @@ const $toggleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $toggleText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim, // colors.textSecondary 대신 colors.textDim 사용
+  
 });
 
 const $toggleLinkText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.tint, // colors.primary 대신 colors.tint 사용
   fontWeight: "600",
+  
 });
 
 const $dividerContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -894,11 +1022,62 @@ const $dividerText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
 
 const $socialButtonsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   gap: spacing.sm,
-  marginTop: spacing.md,
+  // marginTop: spacing.md,
 });
 
 const $socialButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
   fontSize: 15,
   fontWeight: "500",
+});
+
+// === 헤더 관련 스타일 ===
+const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $backButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
+});
+
+const $themeToggleButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
+  marginRight: spacing.sm,
+});
+
+const $headerRight: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+});
+
+const $headerButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingVertical: spacing.xs,
+  paddingHorizontal: spacing.sm,
+});
+
+const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "600",
+  color: colors.text,
+});
+
+const $cancelText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+});
+
+const $saveText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: colors.tint,
+});
+
+const $disabledText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
 });

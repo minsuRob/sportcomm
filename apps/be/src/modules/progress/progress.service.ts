@@ -102,17 +102,22 @@ export class ProgressService {
 
     const reward = USER_PROGRESS_REWARD[action] ?? 0;
     if (reward > 0) {
-      // user.points = beforePoints + reward;
-      // if (action === UserProgressAction.DAILY_ATTENDANCE) {
-      //   user.lastAttendanceAt = now;
-      // }
-      // await this.userRepository.save(user);
-      await this.userRepository.increment({ id: userId }, 'points', reward);
-      if (action === UserProgressAction.DAILY_ATTENDANCE) {
-        await this.userRepository.update({ id: userId }, { lastAttendanceAt: now });
-      }
-      // 로컬 user 객체의 points를 업데이트하여 반환값에 반영
-      user.points = beforePoints + reward;
+      // 트랜잭션을 사용하여 안전하게 포인트 업데이트 (레이스 컨디션 방지)
+      await this.userRepository.manager.transaction(async (transactionalEntityManager) => {
+        // 현재 사용자 포인트 조회 및 업데이트
+        await transactionalEntityManager.increment(User, { id: userId }, 'points', reward);
+
+        // 데일리 출석의 경우 lastAttendanceAt도 업데이트
+        if (action === UserProgressAction.DAILY_ATTENDANCE) {
+          await transactionalEntityManager.update(User, { id: userId }, { lastAttendanceAt: now });
+        }
+
+        // 로컬 user 객체의 points를 업데이트하여 반환값에 반영
+        user.points = beforePoints + reward;
+        if (action === UserProgressAction.DAILY_ATTENDANCE) {
+          user.lastAttendanceAt = now;
+        }
+      });
     }
 
 
@@ -149,6 +154,66 @@ export class ProgressService {
    */
   async awardDailyAttendance(userId: string): Promise<AwardResult> {
     return this.awardAction(userId, UserProgressAction.DAILY_ATTENDANCE);
+  }
+
+  /**
+   * 포인트 차감 (상점 구매 등)
+   *
+   * @param userId 대상 사용자
+   * @param amount 차감할 포인트 양
+   * @param reason 차감 사유
+   * @param now 기준 시간
+   */
+  async deductPoints(
+    userId: string,
+    amount: number,
+    reason?: string,
+    now: Date = new Date(),
+  ): Promise<{ success: boolean; message: string; remainingPoints: number }> {
+    if (amount <= 0) {
+      const snapshot = await this.getUserProgress(userId);
+      return {
+        success: false,
+        message: '차감할 포인트 양이 올바르지 않습니다.',
+        remainingPoints: snapshot.points,
+      };
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+    const currentPoints = user.points || 0;
+    if (currentPoints < amount) {
+      return {
+        success: false,
+        message: `포인트가 부족합니다. 필요: ${amount}P, 보유: ${currentPoints}P`,
+        remainingPoints: currentPoints,
+      };
+    }
+
+    // 트랜잭션을 사용하여 안전하게 포인트 차감 (레이스 컨디션 방지)
+    await this.userRepository.manager.transaction(async (transactionalEntityManager) => {
+      // 포인트 차감
+      await transactionalEntityManager.decrement(User, { id: userId }, 'points', amount);
+
+      // 이벤트 발행
+      this.eventEmitter.emit('progress.deducted', {
+        userId,
+        deductedPoints: amount,
+        remainingPoints: currentPoints - amount,
+        reason,
+        timestamp: now,
+      });
+
+      // 로컬 객체 업데이트
+      user.points = currentPoints - amount;
+    });
+
+    return {
+      success: true,
+      message: `${amount}P가 차감되었습니다.`,
+      remainingPoints: user.points,
+    };
   }
 
   /**

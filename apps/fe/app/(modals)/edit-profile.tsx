@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Switch,
+  ActivityIndicator,
   ViewStyle,
   TextStyle,
   ImageStyle,
@@ -21,6 +22,7 @@ import { User } from "@/lib/auth";
 import { useAuth } from "@/lib/auth/context/AuthContext";
 import { useMutation, useLazyQuery } from "@apollo/client";
 import { UPDATE_PROFILE, CHECK_NICKNAME_AVAILABILITY } from "@/lib/graphql";
+import { GET_REFERRAL_STATS, VALIDATE_REFERRAL_CODE, APPLY_REFERRAL_CODE } from "@/lib/graphql/admin";
 import { showToast } from "@/components/CustomToast";
 import { uploadFilesWeb } from "@/lib/api/webUpload";
 import { uploadFilesMobile } from "@/lib/api/mobileUpload";
@@ -28,6 +30,7 @@ import { generateAvatarFileName } from "@/lib/utils/file-utils";
 import { isWeb } from "@/lib/platform";
 import { UploadedMedia, ProgressCallback } from "@/lib/api/common";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import * as Clipboard from 'expo-clipboard';
 
 /**
  * 프로필 편집 모달 화면
@@ -39,7 +42,7 @@ export default function EditProfileScreen() {
 
   // 상태 관리
   // 전역 AuthContext에서 사용자 정보 사용 (로컬 currentUser 상태 제거)
-  const { user: currentUser, updateUser } = useAuth();
+  const { user: currentUser, updateUser, reloadUser } = useAuth();
   const [profileImage, setProfileImage] = useState<string>("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
@@ -56,9 +59,34 @@ export default function EditProfileScreen() {
   }>({ available: null, message: "" });
   const [isCheckingNickname, setIsCheckingNickname] = useState(false);
 
+  // --- 추천인 코드 상태 ---
+  const [referralStats, setReferralStats] = useState<{
+    referralCode: string;
+    totalReferrals: number;
+    availableSlots: number;
+    referredUsers: Array<{
+      id: string;
+      nickname: string;
+      createdAt: Date;
+    }>;
+  } | null>(null);
+  const [isLoadingReferralStats, setIsLoadingReferralStats] = useState(true);
+  const [userPoints, setUserPoints] = useState<number>(0);
+
+  // --- 추천인 코드 입력 상태 ---
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [referralCodeValidation, setReferralCodeValidation] = useState<{
+    isValid: boolean | null;
+    message: string;
+  }>({ isValid: null, message: "" });
+  const [isApplyingReferral, setIsApplyingReferral] = useState<boolean>(false);
+
   // GraphQL 뮤테이션 및 쿼리
   const [updateProfile] = useMutation(UPDATE_PROFILE);
   const [checkNicknameAvailability] = useLazyQuery(CHECK_NICKNAME_AVAILABILITY);
+  const [getReferralStats] = useLazyQuery(GET_REFERRAL_STATS);
+  const [validateReferralCode, { data: validationData, loading: validationLoading, error: validationError }] = useLazyQuery(VALIDATE_REFERRAL_CODE);
+  const [applyReferralCode] = useMutation(APPLY_REFERRAL_CODE);
 
   // 사용자 정보 로드
   // 기존 getSession 기반 초기 로드 → 전역 AuthProvider 부트스트랩으로 대체
@@ -71,8 +99,16 @@ export default function EditProfileScreen() {
     setTeam(currentUser.team || "");
     setIsPrivate(currentUser.isPrivate || false);
     setAge((currentUser as any).age);
+    setUserPoints((currentUser as any).points || 0);
     // 닉네임이 변경되면 중복 확인 결과 초기화
     setNicknameCheckResult({ available: null, message: "" });
+  }, [currentUser]);
+
+  // 추천인 통계 자동 로드
+  useEffect(() => {
+    if (currentUser) {
+      loadReferralStats();
+    }
   }, [currentUser]);
 
   /**
@@ -86,15 +122,15 @@ export default function EditProfileScreen() {
       setIsImageUploading(true);
       setUploadProgress(0);
 
-      console.log("프로필 이미지 업로드 시작:", {
-        isWeb: isWeb(),
-        fileInfo: isWeb() ? (file as File).name : (file as any).name,
-      });
+      // console.log("프로필 이미지 업로드 시작:", {
+      //   isWeb: isWeb(),
+      //   fileInfo: isWeb() ? (file as File).name : (file as any).name,
+      // });
 
       // 진행률 콜백 함수
       const progressCallback: ProgressCallback = (progress) => {
         setUploadProgress(progress.percentage);
-        console.log(`업로드 진행률: ${progress.percentage}%`);
+        //console.log(`업로드 진행률: ${progress.percentage}%`);
       };
 
       let uploadedFiles: UploadedMedia[];
@@ -120,7 +156,7 @@ export default function EditProfileScreen() {
       }
 
       const uploadedMedia = uploadedFiles[0];
-      console.log("프로필 이미지 업로드 응답:", uploadedMedia);
+      //console.log("프로필 이미지 업로드 응답:", uploadedMedia);
 
       // 업로드 상태별 처리
       if (uploadedMedia.status === "FAILED") {
@@ -147,11 +183,11 @@ export default function EditProfileScreen() {
         // URL 검증 실패해도 계속 진행 (네트워크 문제일 수 있음)
       }
 
-      console.log("프로필 이미지 업로드 성공:", {
-        id: uploadedMedia.id,
-        url: uploadedMedia.url,
-        status: uploadedMedia.status,
-      });
+      //console.log("프로필 이미지 업로드 성공:", {
+      //   id: uploadedMedia.id,
+      //   url: uploadedMedia.url,
+      //   status: uploadedMedia.status,
+      // });
 
       return uploadedMedia.url;
     } catch (error) {
@@ -386,28 +422,12 @@ export default function EditProfileScreen() {
 
       if (result.data?.updateProfile) {
         // AuthContext를 통한 사용자 정보 업데이트 (권장)
-        console.log("프로필 업데이트 - 기존 값:", {
-          nickname: currentUser?.nickname,
-          bio: currentUser?.bio,
-          profileImageUrl: currentUser?.profileImageUrl,
-          age: (currentUser as any)?.age,
-        });
-
-        console.log("프로필 업데이트 - 새 값:", {
-          nickname: name.trim(),
-          bio: bio.trim(),
-          profileImageUrl: profileImage,
-          age,
-        });
-
         await updateUser({
           nickname: name.trim(),
           bio: bio.trim(),
           profileImageUrl: profileImage,
           age, // 나이 필드도 업데이트
         });
-
-        console.log("프로필 업데이트 완료");
 
         showToast({
           type: "success",
@@ -514,6 +534,230 @@ export default function EditProfileScreen() {
    */
   const handleCancel = () => {
     router.back();
+  };
+
+  /**
+   * 추천인 통계 조회
+   */
+  const loadReferralStats = async () => {
+    if (!currentUser) return;
+
+    setIsLoadingReferralStats(true);
+    try {
+      const { data } = await getReferralStats();
+      if (data?.getReferralStats) {
+        setReferralStats(data.getReferralStats);
+      }
+    } catch (error) {
+      console.error("추천인 통계 조회 오류:", error);
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "추천인 통계를 불러올 수 없습니다.",
+        duration: 3000,
+      });
+    } finally {
+      setIsLoadingReferralStats(false);
+    }
+  };
+
+  /**
+   * 추천인 코드 입력 처리
+   */
+  const handleReferralCodeChange = (text: string): void => {
+    // 대문자로 변환하고 특수문자 제거
+    const cleanCode = text.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    setReferralCode(cleanCode);
+
+    // 입력이 변경되면 검증 상태 초기화
+    if (cleanCode !== text) {
+      setReferralCodeValidation({ isValid: null, message: "" });
+    }
+  };
+
+  /**
+   * 추천인 코드 검증 처리
+   */
+  const handleValidateReferralCode = (): void => {
+    if (!referralCode.trim()) {
+      showToast({
+        type: "error",
+        title: "입력 오류",
+        message: "추천인 코드를 입력해주세요.",
+        duration: 2500,
+      });
+      return;
+    }
+
+    if (referralCode.length !== 8) {
+      showToast({
+        type: "error",
+        title: "형식 오류",
+        message: "추천인 코드는 8글자여야 합니다.",
+        duration: 2500,
+      });
+      return;
+    }
+
+    validateReferralCode({
+      variables: { referralCode },
+    });
+  };
+
+  // 추천인 코드 검증 결과 처리
+  useEffect(() => {
+    if (validationData?.validateReferralCode && !validationLoading) {
+      const result = validationData.validateReferralCode;
+      setReferralCodeValidation({
+        isValid: result.isValid,
+        message: result.message,
+      });
+
+      showToast({
+        type: result.isValid ? "success" : "error",
+        title: result.isValid ? "사용 가능" : "사용 불가",
+        message: result.message,
+        duration: 3000,
+      });
+    }
+
+    if (validationError && !validationLoading) {
+      console.error("추천인 코드 검증 오류:", validationError);
+      setReferralCodeValidation({
+        isValid: false,
+        message: "추천인 코드 검증 중 오류가 발생했습니다.",
+      });
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "추천인 코드 검증 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    }
+  }, [validationData, validationError, validationLoading]);
+
+  /**
+   * 추천인 코드 적용 처리
+   */
+  const applyReferralIfValid = async (): Promise<boolean> => {
+    // 추천인 코드가 입력되지 않은 경우
+    if (!referralCode.trim()) {
+      return true; // 건너뛰기
+    }
+
+    // 추천인 코드가 8글자가 아닌 경우
+    if (referralCode.length !== 8) {
+      showToast({
+        type: "error",
+        title: "추천인 코드 오류",
+        message: "추천인 코드는 8글자여야 합니다.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    // 추천인 코드가 검증되지 않은 경우
+    if (referralCodeValidation.isValid === null) {
+      showToast({
+        type: "error",
+        title: "검증 필요",
+        message: "추천인 코드를 먼저 검증해주세요.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    // 추천인 코드가 유효하지 않은 경우
+    if (!referralCodeValidation.isValid) {
+      showToast({
+        type: "error",
+        title: "유효하지 않은 코드",
+        message: "유효하지 않은 추천인 코드입니다.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    setIsApplyingReferral(true);
+    try {
+      const { data } = await applyReferralCode({
+        variables: { referralCode },
+      });
+
+      if (data?.applyReferralCode) {
+        const result = data.applyReferralCode;
+        if (result.success) {
+          showToast({
+            type: "success",
+            title: "추천인 적용 완료",
+            message: `${result.pointsAwarded || 50} 포인트가 지급되었습니다!`,
+            duration: 3000,
+          });
+
+          // 포인트 지급을 위해 사용자 정보 새로고침
+          try {
+            await reloadUser({ force: true });
+          } catch (reloadError) {
+            console.warn("사용자 정보 새로고침 실패:", reloadError);
+            // 새로고침 실패해도 추천인 적용은 성공했으므로 계속 진행
+          }
+
+          // 추천인 코드 입력 초기화 및 통계 새로고침
+          setReferralCode("");
+          setReferralCodeValidation({ isValid: null, message: "" });
+          // 포인트 업데이트 (50포인트 추가)
+          setUserPoints(prev => prev + (result.pointsAwarded || 50));
+          // 추천인 통계 새로고침
+          loadReferralStats();
+          return true;
+        } else {
+          showToast({
+            type: "error",
+            title: "추천인 적용 실패",
+            message: result.message,
+            duration: 3000,
+          });
+          return false;
+        }
+      }
+      return false;
+    } catch (error: any) {
+      console.error("추천인 코드 적용 오류:", error);
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "추천인 코드 적용 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+      return false;
+    } finally {
+      setIsApplyingReferral(false);
+    }
+  };
+
+  /**
+   * 추천인 코드 클립보드 복사
+   */
+  const copyReferralCode = async () => {
+    if (!referralStats?.referralCode) return;
+
+    try {
+      await Clipboard.setStringAsync(referralStats.referralCode);
+      showToast({
+        type: "success",
+        title: "복사 완료",
+        message: "추천인 코드가 클립보드에 복사되었습니다.",
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error("클립보드 복사 오류:", error);
+      showToast({
+        type: "error",
+        title: "복사 실패",
+        message: "클립보드를 사용할 수 없습니다.",
+        duration: 3000,
+      });
+    }
   };
 
   const avatarUrl =
@@ -773,6 +1017,191 @@ export default function EditProfileScreen() {
             />
           </View>
         </View>
+
+        {/* 추천인 코드 섹션 */}
+        <View style={themed($section)}>
+          <View style={themed($referralHeader)}>
+            <Text style={themed($sectionTitle)}>나의 추천인 코드</Text>
+            <View style={themed($pointsDisplay)}>
+              <Ionicons name="diamond" size={16} color={theme.colors.tint} />
+              <Text style={themed($pointsText)}>{userPoints.toLocaleString()}P</Text>
+            </View>
+          </View>
+
+          {/* 로딩 중 표시 */}
+          {isLoadingReferralStats ? (
+            <View style={themed($loadingContainer)}>
+              <ActivityIndicator size="small" color={theme.colors.tint} />
+              <Text style={themed($loadingText)}>추천인 정보를 불러오는 중...</Text>
+            </View>
+          ) : (
+            <>
+              {/* 내 추천인 코드 표시 */}
+              {referralStats && (
+                <View style={themed($referralCodeContainer)}>
+                  <View style={themed($referralCodeBox)}>
+                    <Text style={themed($referralCodeText)}>
+                      {referralStats.referralCode}
+                    </Text>
+                  </View>
+
+                  {/* 추천 슬롯 시각화 */}
+                  <View style={themed($slotsContainer)}>
+                    <Text style={themed($slotsTitle)}>추천 슬롯</Text>
+                    <View style={themed($slotsRow)}>
+                      {[1, 2, 3].map((slot) => {
+                        const isUsed = slot <= referralStats.totalReferrals;
+                        return (
+                          <View
+                            key={slot}
+                            style={[
+                              themed($slot),
+                              isUsed ? themed($slotUsed) : themed($slotAvailable),
+                            ]}
+                          >
+                            {isUsed && (
+                              <Ionicons
+                                name="checkmark-circle"
+                                size={14}
+                                color="#fff"
+                              />
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                    <Text style={themed($slotsText)}>
+                      {referralStats.availableSlots}개 남음
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={themed($referralRow)}>
+                <View style={themed($referralInfo)}>
+                  <Text style={themed($referralDescription)}>
+                    친구들에게 공유하여 함께 혜택을 누려보세요.
+                  </Text>
+                </View>
+                {referralStats && (
+                  <TouchableOpacity
+                    style={themed($referralButton)}
+                    onPress={copyReferralCode}
+                  >
+                    <Ionicons
+                      name="copy-outline"
+                      size={16}
+                      color={theme.colors.tint}
+                    />
+                    <Text style={themed($referralButtonText)}>코드 복사</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </>
+          )}
+
+          <Text style={themed($inputHelper)}>
+            추천인 코드를 공유하면 친구가 가입할 때 서로 50 포인트씩 받을 수 있습니다.
+          </Text>
+        </View>
+
+        {/* 추천인 코드 입력 섹션 */}
+        <View style={themed($section)}>
+          <Text style={themed($sectionTitle)}>추천인 코드 입력</Text>
+          <View style={themed($referralContainer)}>
+            <View style={themed($inputContainer)}>
+              <Ionicons
+                name="gift-outline"
+                size={16}
+                color={theme.colors.textDim}
+              />
+              <TextInput
+                style={themed($textInput)}
+                value={referralCode}
+                onChangeText={handleReferralCodeChange}
+                placeholder="친구의 추천인 코드를 입력하세요"
+                placeholderTextColor={theme.colors.textDim}
+                maxLength={8}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
+            <TouchableOpacity
+              style={[
+                themed($validateButton),
+                (validationLoading || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateButton),
+              ]}
+              onPress={handleValidateReferralCode}
+              disabled={validationLoading || !referralCode.trim() || referralCode.length !== 8}
+            >
+              <Text
+                style={[
+                  themed($validateButtonText),
+                  (validationLoading || !referralCode.trim() || referralCode.length !== 8) && themed($disabledValidateText),
+                ]}
+              >
+                {validationLoading ? "확인 중..." : "코드 확인"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 추천인 코드 검증 결과 표시 */}
+          {referralCodeValidation.message && (
+            <View style={themed($validationResult)}>
+              <Ionicons
+                name={
+                  referralCodeValidation.isValid
+                    ? "checkmark-circle"
+                    : "close-circle"
+                }
+                size={16}
+                color={
+                  referralCodeValidation.isValid
+                    ? theme.colors.tint
+                    : theme.colors.error
+                }
+              />
+              <Text
+                style={[
+                  themed($validationText),
+                  referralCodeValidation.isValid
+                    ? themed($validText)
+                    : themed($invalidText),
+                ]}
+              >
+                {referralCodeValidation.message}
+              </Text>
+            </View>
+          )}
+
+          {/* 추천인 코드 적용 버튼 */}
+          {referralCodeValidation.isValid && (
+            <TouchableOpacity
+              style={[
+                themed($applyReferralButton),
+                isApplyingReferral && { opacity: 0.6 },
+              ]}
+              onPress={applyReferralIfValid}
+              disabled={isApplyingReferral}
+            >
+              {isApplyingReferral ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={themed($applyReferralButtonText)}>적용 중...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
+                  <Text style={themed($applyReferralButtonText)}>추천인 코드 적용</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
+          <Text style={themed($inputHelper)}>
+            추천인 코드를 입력하면 서로에게 50 포인트가 지급됩니다.
+          </Text>
+        </View>
       </KeyboardAwareScrollView>
       <AppDialog
         visible={showDeleteDialog}
@@ -1022,4 +1451,222 @@ const $availableText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $unavailableText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.error,
+});
+
+// === 추천인 코드 관련 스타일 ===
+
+const $referralHeader: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 12,
+});
+
+const $pointsDisplay: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.card,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: colors.tint + "30",
+});
+
+const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+  fontSize: 14,
+  fontWeight: "600",
+  marginLeft: 4,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: spacing.lg,
+  gap: 8,
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+  fontSize: 14,
+});
+
+const $slotsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
+  alignItems: "center",
+});
+
+const $slotsTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  marginBottom: spacing.xs,
+  fontWeight: "600",
+});
+
+const $slotsRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  gap: spacing.sm,
+  marginBottom: spacing.xs,
+});
+
+const $slot: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  borderWidth: 2,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $slotUsed: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.tint,
+  borderColor: colors.tint,
+});
+
+const $slotAvailable: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.background,
+  borderColor: colors.border,
+});
+
+const $slotsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  fontWeight: "500",
+});
+
+const $referralRow: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+});
+
+const $referralInfo: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  marginRight: 16,
+});
+
+const $referralDescription: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 14,
+  color: colors.textDim,
+  marginTop: spacing.xs,
+  lineHeight: 20,
+});
+
+const $referralButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  backgroundColor: colors.card,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $referralButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "600",
+  color: colors.tint,
+  marginLeft: 4,
+});
+
+const $referralCodeContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.md,
+});
+
+const $referralCodeBox: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.card,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.tint + "40",
+  padding: spacing.md,
+  alignItems: "center",
+});
+
+const $referralCodeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "700",
+  color: colors.tint,
+  letterSpacing: 2,
+});
+
+const $referralStats: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginTop: spacing.sm,
+});
+
+const $referralStatsText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+});
+
+const $referralContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.sm,
+});
+
+const $validateButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  backgroundColor: colors.tint,
+  borderRadius: 6,
+  minWidth: 80,
+  alignItems: "center",
+});
+
+const $validateButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "600",
+  color: colors.background,
+});
+
+const $disabledValidateButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $disabledValidateText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+});
+
+const $validationResult: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: spacing.xs,
+  gap: spacing.xs,
+});
+
+const $validationText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  flex: 1,
+});
+
+const $validText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+});
+
+const $invalidText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.error,
+});
+
+const $applyReferralButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: spacing.xs,
+  backgroundColor: colors.tint,
+  paddingVertical: spacing.md,
+  borderRadius: 10,
+  marginTop: spacing.sm,
+});
+
+const $applyReferralButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: "700",
 });

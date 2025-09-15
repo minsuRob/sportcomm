@@ -66,7 +66,7 @@ export default function TeamSettingsPopover({
   };
 
   const handleSelectCard = (cardId: string) => {
-    console.log("Selected card:", cardId);
+    //console.log("Selected card:", cardId);
     setPhotoCardSelectorVisible(false);
   };
 
@@ -77,7 +77,7 @@ export default function TeamSettingsPopover({
   };
 
   const handleSelectFavoritePlayer = (player: PlayerRecord) => {
-    console.log("Selected favorite player:", player);
+    //console.log("Selected favorite player:", player);
     onSelectFavoritePlayer?.(player);
     setFavoritePlayerSelectorVisible(false);
   };

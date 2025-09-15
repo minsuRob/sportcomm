@@ -96,7 +96,7 @@ export async function compressVideoMobile(
   } = options;
 
   try {
-    console.log(`모바일 동영상 압축 시작: ${uri.substring(0, 50)}...`);
+    //console.log(`모바일 동영상 압축 시작: ${uri.substring(0, 50)}...`);
 
     // react-native-compressor를 사용한 동영상 압축
     const compressedUri = await Video.compress(
@@ -104,18 +104,18 @@ export async function compressVideoMobile(
       {
         compressionMethod: "auto",
         getCancellationId: (cancellationId) => {
-          console.log(`압축 작업 ID: ${cancellationId}`);
+          //console.log(`압축 작업 ID: ${cancellationId}`);
         },
         progressDivider: 10,
         includeAudio: true,
         minimumFileSizeForCompress: 2, // 2MB 이상일 때만 압축
       },
       (progress) => {
-        console.log(`압축 진행률: ${progress}%`);
+        //console.log(`압축 진행률: ${progress}%`);
       },
     );
 
-    console.log(`동영상 압축 완료: ${compressedUri}`);
+    //console.log(`동영상 압축 완료: ${compressedUri}`);
 
     // 압축된 동영상의 메타데이터 가져오기
     const videoInfo = await Video.getVideoMetaData(compressedUri);
@@ -182,7 +182,7 @@ export async function uploadVideos(
       throw new UploadError("최대 1개의 동영상만 업로드할 수 있습니다.", 400);
     }
 
-    console.log(`${videos.length}개 동영상 업로드 시작`);
+    //console.log(`${videos.length}개 동영상 업로드 시작`);
 
     // 인증 토큰 가져오기
     const { token } = await getSession();
@@ -200,9 +200,9 @@ export async function uploadVideos(
       if (video instanceof File) {
         // 웹 환경 - File 객체
         formData.append("files", video, video.name);
-        console.log(
-          `웹 환경 - 동영상 추가: ${video.name}, 크기: ${video.size}바이트`,
-        );
+        //console.log(
+        //   `웹 환경 - 동영상 추가: ${video.name}, 크기: ${video.size}바이트`,
+        // );
       } else {
         // 모바일 환경 - SelectedVideo 객체
         const fileName = video.name || `video_${index}_${Date.now()}.mp4`;
@@ -215,9 +215,9 @@ export async function uploadVideos(
           type: mimeType,
         });
 
-        console.log(
-          `모바일 환경 - 동영상 추가: ${fileName}, URI: ${video.uri.substring(0, 30)}...`,
-        );
+        //console.log(
+        //   `모바일 환경 - 동영상 추가: ${fileName}, URI: ${video.uri.substring(0, 30)}...`,
+        // );
       }
     }
 
@@ -249,11 +249,11 @@ export async function uploadVideos(
               xhr.responseText,
             ) as VideoUploadResponse;
             if (response.success) {
-              console.log(
-                "동영상 업로드 성공:",
-                response.data.totalCount,
-                "개 파일",
-              );
+              //console.log(
+              //   "동영상 업로드 성공:",
+              //   response.data.totalCount,
+              //   "개 파일",
+              // );
               resolve(response.data.files);
             } else {
               reject(
@@ -491,7 +491,7 @@ export async function generateVideoThumbnail(
       quality: "medium",
     });
 
-    console.log(`동영상 썸네일 생성 완료: ${thumbnailUri}`);
+    //console.log(`동영상 썸네일 생성 완료: ${thumbnailUri}`);
     return thumbnailUri;
   } catch (error) {
     console.error("동영상 썸네일 생성 실패:", error);

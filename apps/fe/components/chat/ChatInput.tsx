@@ -182,7 +182,7 @@ export default function ChatInput({
       // 키보드가 아직 올라오지 않은 경우 약간의 지연 후 스크롤
       setTimeout(() => {
         // 부모 컴포넌트에 포커스 이벤트 알림
-        console.log("입력창 포커스 - 키보드 올라오는 중");
+        //console.log("입력창 포커스 - 키보드 올라오는 중");
       }, 100);
     }
   };
@@ -193,7 +193,7 @@ export default function ChatInput({
    */
   const handleInputBlur = () => {
     // 입력창에서 포커스가 벗어날 때 처리
-    console.log("입력창 블러 - 키보드 내려가는 중");
+    //console.log("입력창 블러 - 키보드 내려가는 중");
   };
 
   return (

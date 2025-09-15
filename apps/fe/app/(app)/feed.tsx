@@ -427,13 +427,13 @@ export default function FeedScreen() {
             onEndReached={loadMore}
             onFeedRefresh={refresh}
             ListHeaderComponent={
-              currentUser ? (
+              // currentUser ? (
                 <StorySection
                   teamIds={teamIds}
                   currentUser={currentUser}
                   feedPosts={posts}
                 />
-              ) : null
+              // ) : null
             }
             ListFooterComponent={
               <ListFooter loading={footerLoading} error={error} />

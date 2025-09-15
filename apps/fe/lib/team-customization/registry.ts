@@ -128,15 +128,15 @@ class TeamCustomizationRegistryClass {
   /**
    * 디버깅용 레지스트리 상태 출력
    */
-  debug(): void {
-    if (__DEV__) {
-      console.log("TeamCustomizationRegistry State:", {
-        registeredTeams: this.getAllTeamIds(),
-        totalConfigs: Object.keys(this.registry).length,
-        registry: this.registry,
-      });
-    }
-  }
+  // debug(): void {
+  //   if (__DEV__) {
+  //     //console.log("TeamCustomizationRegistry State:", {
+  //       registeredTeams: this.getAllTeamIds(),
+  //       totalConfigs: Object.keys(this.registry).length,
+  //       registry: this.registry,
+  //     });
+  //   }
+  // }
 }
 
 // 싱글톤 인스턴스 생성

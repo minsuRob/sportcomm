@@ -164,5 +164,5 @@ export function usePostDetail({
 // 캐시 정리 유틸리티 함수 (필요 시 사용)
 export const clearPostDetailCache = () => {
   // Apollo Client 캐시는 자동으로 관리됨
-  console.log("Post detail cache cleared");
+  //console.log("Post detail cache cleared");
 };

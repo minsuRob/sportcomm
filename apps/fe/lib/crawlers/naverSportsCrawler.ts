@@ -72,7 +72,7 @@ export class NaverSportsCrawler extends BaseCrawler {
 
     try {
       const url = this.buildUrl(category, sectionId, page);
-      console.log(`네이버 스포츠 크롤링 시작: ${url}`);
+      //console.log(`네이버 스포츠 크롤링 시작: ${url}`);
 
       const response = await this.fetchWithTimeout(url);
 

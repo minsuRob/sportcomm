@@ -149,7 +149,7 @@ export default function AdminChatRoomsScreen() {
         { query: GET_ADMIN_CHAT_ROOMS, variables: { page, limit: 20 } },
       ],
       onCompleted: (data, { variables }) => {
-        console.log("✅ 삭제 뮤테이션 성공:", data, variables);
+        // //console.log("✅ 삭제 뮤테이션 성공:", data, variables);
         showToast({
           type: "success",
           title: "채팅방 삭제 완료",

@@ -13,6 +13,9 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import type { User } from "@/lib/auth";
 import ShopItem from "./ShopItem";
 import AppDialog from "@/components/ui/AppDialog";
+import { useMutation } from "@apollo/client";
+import { DEDUCT_USER_POINTS } from "@/lib/graphql/admin";
+import { showToast } from "@/components/CustomToast";
 
 // 상점 아이템 타입 정의
 export interface ShopItemData {
@@ -115,6 +118,24 @@ export default function ShopModal({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
 
+  // 포인트 차감 뮤테이션
+  const [deductUserPoints] = useMutation(DEDUCT_USER_POINTS, {
+    onCompleted: () =>
+      showToast({
+        type: "success",
+        title: "포인트 차감 완료",
+        message: "포인트가 정상적으로 차감되었습니다.",
+        duration: 2000,
+      }),
+    onError: (err) =>
+      showToast({
+        type: "error",
+        title: "포인트 차감 실패",
+        message: err.message,
+        duration: 3000,
+      }),
+  });
+
   // 다이얼로그 상태
   const [showInsufficientPointsDialog, setShowInsufficientPointsDialog] =
     useState(false);
@@ -162,13 +183,28 @@ export default function ShopModal({
 
   // 구매 확인 처리
   const handleConfirmPurchase = async () => {
-    if (!selectedItem || !onPurchase) return;
+    if (!selectedItem || !currentUser || !onPurchase) return;
 
     setPurchasingItemId(selectedItem.id);
     setShowPurchaseConfirmDialog(false);
 
     try {
+      const finalPrice = selectedItem.discount
+        ? Math.floor(selectedItem.price * (1 - selectedItem.discount / 100))
+        : selectedItem.price;
+
+      // 1. 먼저 포인트 차감
+      await deductUserPoints({
+        variables: {
+          userId: currentUser.id,
+          amount: finalPrice,
+          reason: `상점 구매: ${selectedItem.name}`,
+        },
+      });
+
+      // 2. 아이템 구매 처리 (사용자 정의 로직)
       await onPurchase(selectedItem);
+
       setDialogMessage(`${selectedItem.name}을(를) 성공적으로 구매했습니다!`);
       setShowSuccessDialog(true);
     } catch (error) {

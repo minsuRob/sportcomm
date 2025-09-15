@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import TeamLogo from "@/components/TeamLogo";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useAuth } from "@/lib/auth/context/AuthContext";
@@ -21,6 +23,17 @@ import {
   sanitizeAge,
   normalizeGender,
 } from "@/lib/supabase/quick-update";
+import {
+  markPostSignupStepDone,
+  PostSignupStep,
+  shouldRunPostSignup,
+} from "@/lib/auth/post-signup";
+import { useMutation, useLazyQuery } from "@apollo/client";
+import {
+  VALIDATE_REFERRAL_CODE,
+  APPLY_REFERRAL_CODE,
+} from "@/lib/graphql/admin";
+import { useTeams } from "@/hooks/useTeams";
 
 /**
  * 회원가입 직후 경량 프로필 설정 모달
@@ -28,15 +41,45 @@ import {
  * - 구현: Supabase PostgREST 기반의 경량 업데이트(quick-update) 사용
  * - 비고: GraphQL 경로를 우회하여 빠른 UX 제공
  */
-export default function PostSignupProfileScreen(): JSX.Element {
+export default function PostSignupProfileScreen(): React.ReactElement {
   const { themed, theme } = useAppTheme();
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, reloadUser } = useAuth();
 
   // --- UI 상태 ---
   const [ageText, setAgeText] = useState<string>("");
   const [gender, setGender] = useState<GenderCode | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
+
+  // --- 추천인 코드 상태 ---
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [referralCodeValidation, setReferralCodeValidation] = useState<{
+    isValid: boolean | null;
+    message: string;
+  }>({ isValid: null, message: "" });
+  const [isApplyingReferral, setIsApplyingReferral] = useState<boolean>(false);
+
+  // --- GraphQL 쿼리 및 뮤테이션 ---
+  const [
+    validateReferralCode,
+    {
+      data: validationData,
+      loading: validationLoading,
+      error: validationError,
+    },
+  ] = useLazyQuery(VALIDATE_REFERRAL_CODE);
+  const [applyReferralCode] = useMutation(APPLY_REFERRAL_CODE);
+
+  // --- 팀 정보 ---
+  const { teams, getTeamById } = useTeams();
+
+  // --- 선택된 팀 정보 계산 ---
+  const selectedTeams = useMemo(() => {
+    if (!user?.myTeams?.length || !getTeamById) return [];
+    return user.myTeams
+      .map((userTeam: any) => getTeamById(userTeam.teamId || userTeam))
+      .filter((team) => team !== undefined);
+  }, [user?.myTeams, getTeamById]);
 
   // --- 안내 문구 계산 ---
   const subtitle = useMemo<string>(() => {
@@ -54,6 +97,31 @@ export default function PostSignupProfileScreen(): JSX.Element {
       setGender(((user as any).gender as string).toUpperCase() as GenderCode);
     }
   }, [user]);
+
+  // --- 접근 가드: 최초 회원가입(이메일/소셜) 직후 플로우에서만 노출, 일반 로그인 시 피드로 이동 ---
+  // useEffect(() => {
+  //   const run = async (): Promise<void> => {
+  //     // 비인증 상태이거나, post-signup이 필요하지 않으면 접근 불가 → 피드로
+  //     console.log("isAuthenticated", isAuthenticated);
+      
+  //     if (!isAuthenticated) {
+  //       router.replace("/(app)/feed");
+  //       return;
+  //     }
+  //     try {
+  //       // const need = await shouldRunPostSignup(user as any);
+  //       // if (!need) {
+  //       //   router.replace("/(app)/feed");
+  //       //   return;
+  //       // }
+  //       // 프로필 단계 여부와 무관하게, post-signup 진행 중이면 접근 허용
+  //     } catch {
+  //       // 판단 중 오류가 발생해도 보수적으로 피드로 이동
+  //       router.replace("/(app)/feed");
+  //     }
+  //   };
+  //   run();
+  // }, [isAuthenticated, user]);
 
   /**
    * 나이 입력 처리 (숫자만 허용, 1~120 범위로 클램프)
@@ -73,11 +141,197 @@ export default function PostSignupProfileScreen(): JSX.Element {
   };
 
   /**
-   * 저장 및 팀 선택 화면으로 이동
-   * - 나이/성별을 빠르게 업데이트 → 성공 시 team-selection 으로 이동
+   * 추천인 코드 입력 처리
+   * @param text 입력된 추천인 코드
    */
-  const handleSaveAndGoTeamSelection = async (): Promise<void> => {
-    if (saving) return;
+  const handleReferralCodeChange = (text: string): void => {
+    // 대문자로 변환하고 특수문자 제거
+    const cleanCode = text.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+    setReferralCode(cleanCode);
+
+    // 입력이 변경되면 검증 상태 초기화
+    if (cleanCode !== text) {
+      setReferralCodeValidation({ isValid: null, message: "" });
+    }
+  };
+
+  /**
+   * 추천인 코드 검증 처리
+   */
+  const handleValidateReferralCode = (): void => {
+    if (!referralCode.trim()) {
+      showToast({
+        type: "error",
+        title: "입력 오류",
+        message: "추천인 코드를 입력해주세요.",
+        duration: 2500,
+      });
+      return;
+    }
+
+    if (referralCode.length !== 8) {
+      showToast({
+        type: "error",
+        title: "형식 오류",
+        message: "추천인 코드는 8글자여야 합니다.",
+        duration: 2500,
+      });
+      return;
+    }
+
+    validateReferralCode({
+      variables: { referralCode },
+    });
+  };
+
+  // 추천인 코드 검증 결과 처리
+  useEffect(() => {
+    if (validationData?.validateReferralCode && !validationLoading) {
+      const result = validationData.validateReferralCode;
+      setReferralCodeValidation({
+        isValid: result.isValid,
+        message: result.message,
+      });
+
+      showToast({
+        type: result.isValid ? "success" : "error",
+        title: result.isValid ? "사용 가능" : "사용 불가",
+        message: result.message,
+        duration: 3000,
+      });
+    }
+
+    if (validationError && !validationLoading) {
+      console.error("추천인 코드 검증 오류:", validationError);
+      setReferralCodeValidation({
+        isValid: false,
+        message: "추천인 코드 검증 중 오류가 발생했습니다.",
+      });
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "추천인 코드 검증 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+    }
+  }, [validationData, validationError, validationLoading]);
+
+  /**
+   * 추천인 코드 적용 처리
+   */
+  const applyReferralIfValid = async (): Promise<boolean> => {
+    // 추천인 코드가 입력되지 않은 경우
+    if (!referralCode.trim()) {
+      return true; // 건너뛰기
+    }
+
+    // 추천인 코드가 8글자가 아닌 경우
+    if (referralCode.length !== 8) {
+      showToast({
+        type: "error",
+        title: "추천인 코드 오류",
+        message: "추천인 코드는 8글자여야 합니다.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    // 추천인 코드가 검증되지 않은 경우
+    if (referralCodeValidation.isValid === null) {
+      showToast({
+        type: "error",
+        title: "검증 필요",
+        message: "추천인 코드를 먼저 검증해주세요.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    // 추천인 코드가 유효하지 않은 경우
+    if (!referralCodeValidation.isValid) {
+      showToast({
+        type: "error",
+        title: "유효하지 않은 코드",
+        message: "유효하지 않은 추천인 코드입니다.",
+        duration: 2500,
+      });
+      return false;
+    }
+
+    setIsApplyingReferral(true);
+    try {
+      const { data } = await applyReferralCode({
+        variables: { referralCode },
+      });
+
+      if (data?.applyReferralCode) {
+        const result = data.applyReferralCode;
+        if (result.success) {
+          showToast({
+            type: "success",
+            title: "추천인 적용 완료",
+            message: `${result.pointsAwarded || 50} 포인트가 지급되었습니다!`,
+            duration: 3000,
+          });
+
+          // 포인트 지급을 위해 사용자 정보 새로고침
+          try {
+            await reloadUser({ force: true });
+          } catch (reloadError) {
+            console.warn("사용자 정보 새로고침 실패:", reloadError);
+            // 새로고침 실패해도 추천인 적용은 성공했으므로 계속 진행
+          }
+
+          return true;
+        } else {
+          showToast({
+            type: "error",
+            title: "추천인 적용 실패",
+            message: result.message,
+            duration: 3000,
+          });
+          return false;
+        }
+      }
+      return false;
+    } catch (error: any) {
+      console.error("추천인 코드 적용 오류:", error);
+      showToast({
+        type: "error",
+        title: "오류",
+        message: "추천인 코드 적용 중 오류가 발생했습니다.",
+        duration: 3000,
+      });
+      return false;
+    } finally {
+      setIsApplyingReferral(false);
+    }
+  };
+
+  /**
+   * 저장 및 팀 선택 화면으로 이동
+   * - 나이/성별을 빠르게 업데이트 → 추천인 코드 적용 → 성공 시 team-selection 으로 이동
+   */
+  /**
+   * 저장만 수행 (팀 선택 이동은 별도 섹션에서 처리)
+   * - 나이/성별을 빠르게 업데이트 → 추천인 코드 적용 → 성공 시 완료 토스트
+   * - 내비게이션은 수행하지 않음
+   */
+  const handleSave = async (): Promise<void> => {
+    if (saving || isApplyingReferral) return;
+
+    // 팀 선택 필수 검증
+    if (selectedTeams.length === 0) {
+      showToast({
+        type: "error",
+        title: "팀 선택 필요",
+        message: "(필수) 최소 1개 이상의 팀을 선택해 주세요.",
+        duration: 2500,
+      });
+      // handleGoTeamSelection();
+      return;
+    }
+
     if (!isAuthenticated) {
       showToast({
         type: "error",
@@ -88,7 +342,7 @@ export default function PostSignupProfileScreen(): JSX.Element {
       return;
     }
 
-    const ageNumber = ageText ? sanitizeAge(ageText) : null;
+    const ageNumber = sanitizeAge(ageText);
     if (ageText && ageNumber === null) {
       showToast({
         type: "error",
@@ -105,35 +359,44 @@ export default function PostSignupProfileScreen(): JSX.Element {
       if (ageNumber !== null) payload.age = ageNumber;
       if (gender) payload.gender = gender;
 
-      // 아무 것도 입력하지 않은 경우 바로 팀 선택으로 이동 (선택적 UX)
-      if (!("age" in payload) && !("gender" in payload)) {
-        router.replace("/(modals)/team-selection");
-        return;
-      }
-
-      const result = await quickUpdateAgeAndGender(payload, {
-        updateLocal: true,
-      });
-
-      if (!result.success) {
-        showToast({
-          type: "error",
-          title: "저장 실패",
-          message: result.error || "정보 저장에 실패했습니다.",
-          duration: 2500,
+      // 나이/성별은 선택사항이므로 존재할 때만 저장
+      if ("age" in payload || "gender" in payload) {
+        const result = await quickUpdateAgeAndGender(payload, {
+          updateLocal: true,
         });
-        return;
+
+        if (!result.success) {
+          showToast({
+            type: "error",
+            title: "저장 실패",
+            message: result.error || "정보 저장에 실패했습니다.",
+            duration: 2500,
+          });
+          return;
+        }
       }
+
+      // 추천인 코드 적용 (입력된 경우에만)
+      if (referralCode.trim()) {
+        const referralSuccess = await applyReferralIfValid();
+        if (!referralSuccess) {
+          // 추천인 코드 적용 실패 시에도 계속 진행
+          console.warn("추천인 코드 적용 실패했지만 프로필 저장은 계속 진행");
+        }
+      }
+
+      // post-signup: 프로필 단계 완료 플래그 저장
+      await markPostSignupStepDone(PostSignupStep.Profile);
 
       showToast({
         type: "success",
-        title: "저장 완료",
-        message: "기본 프로필 정보가 저장되었습니다.",
-        duration: 2000,
+        title: "완료",
+        message: "설정이 완료되었습니다. 피드로 이동합니다.",
+        duration: 1200,
       });
 
-      // 다음 단계: My 팀 설정
-      router.replace("/(modals)/team-selection");
+      // 완료 시 피드로 이동
+      router.replace("/feed");
     } catch (e: any) {
       showToast({
         type: "error",
@@ -147,10 +410,11 @@ export default function PostSignupProfileScreen(): JSX.Element {
   };
 
   /**
-   * 팀 선택 화면으로 바로 이동 (건너뛰기)
+   * 팀 선택 섹션 버튼 핸들러
+   * - 별도 섹션에서 팀 선택 모달로 이동
    */
-  const handleSkip = (): void => {
-    router.replace("/(modals)/team-selection");
+  const handleGoTeamSelection = (): void => {
+    router.push("/(modals)/team-selection?origin=profile");
   };
 
   // 성별 버튼 공통 뷰
@@ -158,7 +422,7 @@ export default function PostSignupProfileScreen(): JSX.Element {
     code: GenderCode,
     label: string,
     icon: keyof typeof Ionicons.glyphMap,
-  ): JSX.Element => {
+  ): React.ReactElement => {
     const active = gender === code;
     return (
       <TouchableOpacity
@@ -166,7 +430,9 @@ export default function PostSignupProfileScreen(): JSX.Element {
           themed($genderButton),
           {
             borderColor: active ? theme.colors.tint : theme.colors.border,
-            backgroundColor: active ? theme.colors.tint + "15" : theme.colors.card,
+            backgroundColor: active
+              ? theme.colors.tint + "15"
+              : theme.colors.card,
           },
         ]}
         onPress={() => handleGenderSelect(code)}
@@ -193,39 +459,99 @@ export default function PostSignupProfileScreen(): JSX.Element {
     <View style={themed($container)}>
       {/* 헤더 */}
       <View style={themed($header)}>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           accessibilityRole="button"
           onPress={() => router.back()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="close" size={22} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={themed($headerTitle)}>기본 프로필 설정</Text>
+        </TouchableOpacity> */}
+        <Text style={themed($headerTitle)}>내 프로필 설정</Text>
         <TouchableOpacity
-          onPress={handleSkip}
+          onPress={handleSave}
           disabled={saving}
           accessibilityRole="button"
         >
           <Text
             style={[
-              themed($skipText),
+              themed($saveText),
               saving ? { color: theme.colors.textDim } : undefined,
             ]}
           >
-            건너뛰기
+            완료
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* 본문 */}
-      <View style={themed($content)}>
+      <KeyboardAwareScrollView
+        style={themed($content)}
+        contentContainerStyle={themed($scrollContent)}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        enableOnAndroid={true}
+        extraHeight={100}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={themed($subtitle)}>{subtitle}</Text>
+
+        {/* 팀 선택 */}
+        <View style={themed($section)}>
+          <Text style={themed($label)}>
+            팀 선택 <Text style={themed($requiredText)}>(필수)</Text>
+          </Text>
+          <Text style={themed($helper)}>
+            관심 팀을 최소 1개 이상 선택해야 합니다. 선택하면 피드가 더
+            맞춤화됩니다.
+          </Text>
+
+          {/* 선택된 팀 정보 표시 */}
+          {selectedTeams.length > 0 && (
+            <View style={themed($selectedTeamsContainer)}>
+              <Text style={themed($selectedTeamsLabel)}>
+                선택된 팀 ({selectedTeams.length})
+              </Text>
+              <View style={themed($selectedTeamsList)}>
+                {selectedTeams.map((team) => (
+                  <View key={team.id} style={themed($selectedTeamItem)}>
+                    <TeamLogo
+                      logoUrl={team.logoUrl}
+                      fallbackIcon={team.icon}
+                      teamName={team.name}
+                      size={24}
+                    />
+                    <Text style={themed($selectedTeamName)}>{team.name}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={handleGoTeamSelection}
+            style={themed($teamSelectButton)}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="people-outline"
+              size={16}
+              color={theme.colors.text}
+            />
+            <Text style={themed($teamSelectButtonText)}>
+              {selectedTeams.length > 0 ? "팀 변경하기" : "팀 선택하기"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* 나이 입력 */}
         <View style={themed($section)}>
           <Text style={themed($label)}>나이</Text>
           <View style={themed($inputContainer)}>
-            <Ionicons name="calendar-outline" size={16} color={theme.colors.textDim} />
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={theme.colors.textDim}
+            />
             <TextInput
               style={themed($textInput)}
               value={ageText}
@@ -252,10 +578,94 @@ export default function PostSignupProfileScreen(): JSX.Element {
           </Text>
         </View>
 
-        {/* 안내 및 액션 */}
-        <View style={themed($footer)}>
+        {/* 추천인 코드 입력 */}
+        <View style={themed($section)}>
+          <Text style={themed($label)}>추천인 코드</Text>
+          <View style={themed($referralContainer)}>
+            <View style={[themed($inputContainer), { flex: 2 }]}>
+              <Ionicons
+                name="gift-outline"
+                size={16}
+                color={theme.colors.textDim}
+              />
+              <TextInput
+                style={themed($textInput)}
+                value={referralCode}
+                onChangeText={handleReferralCodeChange}
+                placeholder="친구의 추천인 코드를 입력하세요"
+                placeholderTextColor={theme.colors.textDim}
+                maxLength={8}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
+            <TouchableOpacity
+              style={[
+                themed($validateButton),
+                (validationLoading ||
+                  !referralCode.trim() ||
+                  referralCode.length !== 8) &&
+                  themed($disabledValidateButton),
+              ]}
+              onPress={handleValidateReferralCode}
+              disabled={
+                validationLoading ||
+                !referralCode.trim() ||
+                referralCode.length !== 8
+              }
+            >
+              <Text
+                style={[
+                  themed($validateButtonText),
+                  (validationLoading ||
+                    !referralCode.trim() ||
+                    referralCode.length !== 8) &&
+                    themed($disabledValidateText),
+                ]}
+              >
+                {validationLoading ? "확인 중..." : "코드 확인"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 추천인 코드 검증 결과 표시 */}
+          {referralCodeValidation.message && (
+            <View style={themed($validationResult)}>
+              <Ionicons
+                name={
+                  referralCodeValidation.isValid
+                    ? "checkmark-circle"
+                    : "close-circle"
+                }
+                size={16}
+                color={
+                  referralCodeValidation.isValid
+                    ? theme.colors.tint
+                    : theme.colors.error
+                }
+              />
+              <Text
+                style={[
+                  themed($validationText),
+                  referralCodeValidation.isValid
+                    ? themed($validText)
+                    : themed($invalidText),
+                ]}
+              >
+                {referralCodeValidation.message}
+              </Text>
+            </View>
+          )}
+
+          <Text style={themed($helper)}>
+            추천인 코드를 입력하면 서로에게 50 포인트가 지급됩니다.
+          </Text>
+        </View>
+
+        {/* 저장하기 버튼 - 맨 밑에 별도 배치 */}
+        <View style={themed($saveButtonContainer)}>
           <TouchableOpacity
-            onPress={handleSaveAndGoTeamSelection}
+            onPress={handleSave}
             disabled={saving}
             style={[
               themed($primaryButton),
@@ -265,27 +675,22 @@ export default function PostSignupProfileScreen(): JSX.Element {
           >
             {saving ? (
               <>
-                <ActivityIndicator size="small" color="#fff" />
-                <Text style={themed($primaryButtonText)}>저장 중...</Text>
+                <ActivityIndicator size="small" color={theme.colors.text} />
+                <Text style={themed($primaryButtonText)}>완료 중...</Text>
               </>
             ) : (
               <>
-                <Ionicons name="save-outline" size={16} color="#fff" />
-                <Text style={themed($primaryButtonText)}>저장하고 팀 선택하기</Text>
+                <Ionicons
+                  name="checkmark-done-outline"
+                  size={16}
+                  color={theme.colors.tint}
+                />
+                <Text style={themed($primaryButtonText)}>완료</Text>
               </>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleSkip}
-            disabled={saving}
-            style={themed($ghostButton)}
-            accessibilityRole="button"
-          >
-            <Text style={themed($ghostButtonText)}>나중에 할게요</Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -310,26 +715,30 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "700",
-  color: colors.text,
+  color: colors.tint,
 });
 
-const $skipText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $saveText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
   color: colors.tint,
   fontWeight: "600",
 });
 
-const $content: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $content: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
+});
+
+const $scrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
   paddingTop: spacing.lg,
+  paddingBottom: spacing.xl,
 });
 
 const $subtitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   color: colors.textDim,
   fontSize: 14,
   lineHeight: 20,
-  marginBottom: spacing.lg,
+  marginBottom: spacing.md,
 });
 
 const $section: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -339,7 +748,15 @@ const $section: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 });
 
 const $label: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.tint,
+  fontWeight: "700",
+  fontSize: 16,
+  marginBottom: spacing.xs,
+});
+
+const $requiredText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.text,
+  textDecorationLine: "underline",
   fontWeight: "700",
   fontSize: 16,
 });
@@ -347,7 +764,7 @@ const $label: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
 const $inputContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
-  marginTop: spacing.md,
+  // marginTop: spacing.md,
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.sm,
   backgroundColor: colors.card,
@@ -373,7 +790,7 @@ const $genderRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   gap: spacing.sm,
-  marginTop: spacing.md,
+  // marginTop: spacing.md,
 });
 
 const $genderButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -401,27 +818,143 @@ const $primaryButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   alignItems: "center",
   justifyContent: "center",
   gap: spacing.xs,
-  backgroundColor: colors.tint,
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
   paddingVertical: spacing.md,
   borderRadius: 10,
 });
 
-const $primaryButtonText: ThemedStyle<TextStyle> = () => ({
-  color: "#fff",
+const $primaryButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
   fontSize: 16,
   fontWeight: "700",
 });
 
-const $ghostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  paddingVertical: spacing.md,
+const $saveButtonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.xl,
+  marginBottom: spacing.lg,
+
+});
+
+// === 추천인 코드 관련 스타일 ===
+
+const $referralContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
   alignItems: "center",
+  gap: spacing.sm,
+  height: 48, // Match height of $inputContainer and $teamSelectButton
+});
+
+const $validateButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  backgroundColor: colors.tint,
+  borderRadius: 8, // Match borderRadius of $inputContainer and $teamSelectButton
+  minWidth: 80,
+  alignItems: "center",
+  height: 48, // Match height of $inputContainer and $teamSelectButton
   justifyContent: "center",
 });
 
-const $ghostButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+const $validateButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
-  color: colors.textDim,
   fontWeight: "600",
+  color: colors.background,
+});
+
+const $disabledValidateButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $disabledValidateText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
+});
+
+const $validationResult: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: spacing.xs,
+  gap: spacing.xs,
+});
+
+const $validationText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  flex: 1,
+});
+
+const $validText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+});
+
+const $invalidText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.error,
+});
+
+// === 팀 선택 섹션 스타일 ===
+const $teamSelectButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  marginTop: spacing.md,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: spacing.xs,
+  backgroundColor: colors.card,
+  borderWidth: 1,
+  borderColor: colors.border,
+  paddingVertical: spacing.sm,
+  borderRadius: 8,
+});
+
+const $teamSelectButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+  fontSize: 14,
+  fontWeight: "700",
+});
+
+// === 선택된 팀 표시 스타일 ===
+const $selectedTeamsContainer: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  marginTop: spacing.md,
+  padding: spacing.sm,
+  backgroundColor: colors.card,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $selectedTeamsLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "600",
+  marginBottom: spacing.xs,
+});
+
+const $selectedTeamsList: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: spacing.xs,
+});
+
+const $selectedTeamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.background,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: colors.border,
+  gap: spacing.xs,
+});
+
+const $selectedTeamName: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 12,
+  fontWeight: "500",
 });
 
 /**

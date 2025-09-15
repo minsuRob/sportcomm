@@ -57,7 +57,7 @@ const SEARCH_TAGS_QUERY = gql`
  * 태그 검색 실행
  */
 async function searchWithTag(tagQuery, searchCount = 1) {
-  console.log(`\n🔍 [${searchCount}번째 검색] "${tagQuery}" 태그로 검색 중...`);
+  //console.log(`\n🔍 [${searchCount}번째 검색] "${tagQuery}" 태그로 검색 중...`);
 
   try {
     const { data } = await client.query({
@@ -76,31 +76,31 @@ async function searchWithTag(tagQuery, searchCount = 1) {
     const posts = data?.search?.posts || [];
     const metadata = data?.search?.metadata;
 
-    console.log(`✅ 검색 완료: ${metadata?.totalCount || 0}개 게시물 발견`);
+    //console.log(`✅ 검색 완료: ${metadata?.totalCount || 0}개 게시물 발견`);
 
     if (posts.length === 0) {
-      console.log("❌ 검색 결과가 없습니다.");
+      //console.log("❌ 검색 결과가 없습니다.");
       return;
     }
 
     // 검색 결과 표시
     posts.forEach((post, index) => {
-      console.log(`\n📝 게시물 ${index + 1}:`);
-      console.log(`   ID: ${post.id}`);
-      console.log(`   제목: ${post.title || "제목 없음"}`);
-      console.log(`   내용: ${post.content?.substring(0, 100)}...`);
-      console.log(`   작성자: ${post.author?.nickname || "알 수 없음"}`);
-      console.log(
+      //console.log(`\n📝 게시물 ${index + 1}:`);
+      //console.log(`   ID: ${post.id}`);
+      //console.log(`   제목: ${post.title || "제목 없음"}`);
+      //console.log(`   내용: ${post.content?.substring(0, 100)}...`);
+      //console.log(`   작성자: ${post.author?.nickname || "알 수 없음"}`);
+      //console.log(
         `   조회수: ${post.viewCount}, 좋아요: ${post.likeCount}, 댓글: ${post.commentCount}`,
       );
 
       // 태그 정보 표시
       if (post.tags && post.tags.length > 0) {
-        console.log(
+        //console.log(
           `   태그: ${post.tags.map((tag) => `#${tag.name}`).join(", ")}`,
         );
       } else {
-        console.log(`   태그: 없음`);
+        //console.log(`   태그: 없음`);
       }
     });
 
@@ -115,7 +115,7 @@ async function searchWithTag(tagQuery, searchCount = 1) {
  * 반복 검색 테스트
  */
 async function runRepeatedSearchTest() {
-  console.log("🚀 태그 검색 반복 테스트 시작\n");
+  //console.log("🚀 태그 검색 반복 테스트 시작\n");
 
   const testTags = [
     "#전술분석",
@@ -135,12 +135,12 @@ async function runRepeatedSearchTest() {
     const result = await searchWithTag(tag, totalSearchCount);
 
     if (result) {
-      console.log(`\n📊 "${tag}" 검색 결과 요약:`);
-      console.log(`   - 총 게시물: ${result.metadata.totalCount}개`);
-      console.log(
+      //console.log(`\n📊 "${tag}" 검색 결과 요약:`);
+      //console.log(`   - 총 게시물: ${result.metadata.totalCount}개`);
+      //console.log(
         `   - 현재 페이지: ${result.metadata.currentPage + 1}/${result.metadata.totalPages}`,
       );
-      console.log(
+      //console.log(
         `   - 다음 페이지: ${result.metadata.hasNextPage ? "있음" : "없음"}`,
       );
     }
@@ -149,7 +149,7 @@ async function runRepeatedSearchTest() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
-  console.log(
+  //console.log(
     `\n🎉 모든 태그 검색 테스트 완료! 총 ${totalSearchCount}번의 검색을 수행했습니다.`,
   );
 }
@@ -158,7 +158,7 @@ async function runRepeatedSearchTest() {
  * 특정 태그로 반복 검색 테스트
  */
 async function runSpecificTagRepeatedTest(tagQuery, repeatCount = 5) {
-  console.log(
+  //console.log(
     `🔄 "${tagQuery}" 태그로 ${repeatCount}번 반복 검색 테스트 시작\n`,
   );
 
@@ -166,16 +166,16 @@ async function runSpecificTagRepeatedTest(tagQuery, repeatCount = 5) {
     const result = await searchWithTag(tagQuery, i);
 
     if (result) {
-      console.log(`\n📈 ${i}번째 검색 결과:`);
-      console.log(`   - 검색된 게시물: ${result.posts.length}개`);
-      console.log(`   - 총 게시물: ${result.metadata.totalCount}개`);
+      //console.log(`\n📈 ${i}번째 검색 결과:`);
+      //console.log(`   - 검색된 게시물: ${result.posts.length}개`);
+      //console.log(`   - 총 게시물: ${result.metadata.totalCount}개`);
     }
 
     // 검색 간격을 두기 위해 잠시 대기
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 
-  console.log(`\n✅ "${tagQuery}" 반복 검색 테스트 완료!`);
+  //console.log(`\n✅ "${tagQuery}" 반복 검색 테스트 완료!`);
 }
 
 /**
@@ -183,13 +183,13 @@ async function runSpecificTagRepeatedTest(tagQuery, repeatCount = 5) {
  */
 async function main() {
   try {
-    console.log("🏟️ 스포츠 커뮤니티 태그 검색 테스트");
-    console.log("=" * 50);
+    //console.log("🏟️ 스포츠 커뮤니티 태그 검색 테스트");
+    //console.log("=" * 50);
 
     // 1. 다양한 태그로 검색 테스트
     await runRepeatedSearchTest();
 
-    console.log("\n" + "=" * 50);
+    //console.log("\n" + "=" * 50);
 
     // 2. "#전술분석" 태그로 반복 검색 테스트
     await runSpecificTagRepeatedTest("#전술분석", 3);

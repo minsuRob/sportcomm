@@ -63,7 +63,7 @@ export class AuthEventListener {
     // 중복 호출 방지
     if (this.starting) {
       if (options.enableDebugLog) {
-        console.log("⏳ AuthEventListener: 이미 시작 처리중 (start 호출 무시)");
+        //console.log("⏳ AuthEventListener: 이미 시작 처리중 (start 호출 무시)");
       }
       return;
     }
@@ -81,7 +81,7 @@ export class AuthEventListener {
       ...options,
     };
 
-    console.log("🎧 Supabase Auth 이벤트 리스너 시작");
+    //console.log("🎧 Supabase Auth 이벤트 리스너 시작");
 
     try {
       // supabase-js v2 형태: { data: { subscription }, error }
@@ -105,7 +105,7 @@ export class AuthEventListener {
       if (isValidSubscription(potential)) {
         this.subscription = potential;
         if (this.options.enableDebugLog) {
-          console.log("✅ Auth 상태 변화 구독(subscription) 확보");
+          //console.log("✅ Auth 상태 변화 구독(subscription) 확보");
         }
       } else {
         // subscription 확보 실패 (구조 변경 / 에러)
@@ -140,7 +140,7 @@ export class AuthEventListener {
       if (isValidSubscription(this.subscription)) {
         this.subscription.unsubscribe();
         if (this.options.enableDebugLog) {
-          console.log("🛑 Supabase Auth 이벤트 리스너 구독 해제 완료");
+          //console.log("🛑 Supabase Auth 이벤트 리스너 구독 해제 완료");
         }
       } else {
         console.warn(
@@ -162,7 +162,7 @@ export class AuthEventListener {
     session: Session | null,
   ): Promise<void> {
     if (this.options.enableDebugLog) {
-      console.log("🔔 Auth 상태 변화 감지:", { event, hasSession: !!session });
+      //console.log("🔔 Auth 상태 변화 감지:", { event, hasSession: !!session });
     }
 
     try {
@@ -181,7 +181,7 @@ export class AuthEventListener {
           break;
         default:
           if (this.options.enableDebugLog) {
-            console.log(`📝 처리되지 않은 Auth 이벤트: ${event}`);
+            //console.log(`📝 처리되지 않은 Auth 이벤트: ${event}`);
           }
       }
     } catch (error) {
@@ -199,7 +199,7 @@ export class AuthEventListener {
       return;
     }
 
-    console.log("✅ 사용자 로그인 감지");
+    //console.log("✅ 사용자 로그인 감지");
 
     if (!this.options.enableAutoSync) {
       AuthStore.updateAccessToken(session.access_token);
@@ -211,7 +211,7 @@ export class AuthEventListener {
     );
 
     if (syncResult.success && syncResult.user) {
-      console.log("✅ 로그인 후 사용자 동기화 완료:", syncResult.user.nickname);
+      //console.log("✅ 로그인 후 사용자 동기화 완료:", syncResult.user.nickname);
       if (this.options.onSyncSuccess) {
         this.options.onSyncSuccess(syncResult.user);
       }
@@ -225,7 +225,7 @@ export class AuthEventListener {
    * SIGNED_OUT 처리
    */
   private static async handleSignedOut(): Promise<void> {
-    console.log("👋 사용자 로그아웃 감지");
+    //console.log("👋 사용자 로그아웃 감지");
     EnhancedUserSyncService.resetSyncState();
   }
 
@@ -240,7 +240,7 @@ export class AuthEventListener {
       return;
     }
     if (this.options.enableDebugLog) {
-      console.log("🔄 토큰 갱신 감지");
+      //console.log("🔄 토큰 갱신 감지");
     }
     AuthStore.updateAccessToken(session.access_token);
   }
@@ -257,7 +257,7 @@ export class AuthEventListener {
     }
 
     if (this.options.enableDebugLog) {
-      console.log("👤 사용자 정보 업데이트 감지");
+      //console.log("👤 사용자 정보 업데이트 감지");
     }
 
     if (this.options.enableAutoSync && AuthStore.getState().isAuthenticated) {
@@ -267,7 +267,7 @@ export class AuthEventListener {
             session.access_token,
           );
         if (syncResult.success && syncResult.user) {
-          console.log("✅ 사용자 정보 업데이트 후 재동기화 완료");
+          //console.log("✅ 사용자 정보 업데이트 후 재동기화 완료");
         }
       } catch (error) {
         console.warn("⚠️ 사용자 정보 업데이트 후 재동기화 실패:", error);

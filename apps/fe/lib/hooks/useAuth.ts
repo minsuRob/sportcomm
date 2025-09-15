@@ -96,7 +96,7 @@ export interface UseAuthOptions {
 function dbg(enabled: boolean, ...args: any[]) {
   if (enabled) {
     // eslint-disable-next-line no-console
-    console.log("[useAuth]", ...args);
+    //console.log("[useAuth]", ...args);
   }
 }
 

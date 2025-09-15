@@ -114,6 +114,7 @@ export interface Post {
   team: {
     id: string;
     name: string;
+    logoUrl?: string;
     // 팀 팔레트 컬러 (DB에서 로드)
     mainColor?: string;
     subColor?: string;
@@ -225,11 +226,11 @@ const PostCard = React.memo(function PostCard({
   // 개발 환경 체크
   const __DEV__ = process.env.NODE_ENV === "development";
 
-  // 미디어 타입별 필터링
-  const imageMedia = post.media.filter(
+  // 미디어 타입별 필터링 (media가 null일 수 있음)
+  const imageMedia = (post.media || []).filter(
     (item) => item.type === "image" || item.type === "IMAGE",
   );
-  const videoMedia = post.media.filter(
+  const videoMedia = (post.media || []).filter(
     (item) => item.type === "video" || item.type === "VIDEO",
   );
 
@@ -338,7 +339,7 @@ const PostCard = React.memo(function PostCard({
   useEffect(() => {
     if (__DEV__) {
       // 게시물 디버깅 로그를 한 줄로 통합
-      console.log("post", post);
+      //console.log("post", post);
     }
   }, [post.id]);
 
@@ -367,7 +368,7 @@ const PostCard = React.memo(function PostCard({
           if (videoRef.current) {
             videoRef.current
               .play()
-              .catch((err) => console.log("비디오 자동 재생 실패:", err));
+              .catch((err) => console.error("비디오 자동 재생 실패:", err));
           }
         } else {
           if (videoRef.current && !videoRef.current.paused) {
@@ -468,14 +469,14 @@ const PostCard = React.memo(function PostCard({
   const teamName = deriveTeamName();
 
   // 디버깅을 위한 로그 (개발 환경에서만)
-  if (__DEV__) {
-    console.log("PostCard 팀 정보:", {
-      teamId: post.teamId,
-      teamName,
-      postTeamName: (post as any)?.team?.name,
-      postTeamNameField: (post as any)?.teamName,
-    });
-  }
+  // if (__DEV__) {
+  //   console.log("PostCard 팀 정보:", {
+  //     teamId: post.teamId,
+  //     teamName,
+  //     postTeamName: (post as any)?.team?.name,
+  //     postTeamNameField: (post as any)?.teamName,
+  //   });
+  // }
 
   // --- 팀 팔레트 유틸 사용: DB 확장 컬러(main/sub/dark) 기반 ---
   // 동적 import (정적 import 추가 수정 없이 교체, Metro/Web 번들 모두 호환)

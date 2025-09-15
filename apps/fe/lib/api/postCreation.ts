@@ -127,10 +127,10 @@ export async function createTextOnlyPost(
   input: Omit<CreatePostWithFilesInput, "files">,
 ): Promise<CreatePostResponse> {
   try {
-    console.log("텍스트 전용 게시물 생성 시작...", {
-      title: input.title,
-      teamId: input.teamId,
-    });
+    //console.log("텍스트 전용 게시물 생성 시작...", {
+    //   title: input.title,
+    //   teamId: input.teamId,
+    // });
 
     const postInput: CreatePostInput = {
       title: input.title,
@@ -156,11 +156,11 @@ export async function createTextOnlyPost(
       throw new Error("게시물 생성 응답이 비어있습니다.");
     }
 
-    console.log("텍스트 전용 게시물 생성 완료:", {
-      postId: createdPost.id,
-      title: createdPost.title,
-      teamId: createdPost.teamId,
-    });
+    //console.log("텍스트 전용 게시물 생성 완료:", {
+    //   postId: createdPost.id,
+    //   title: createdPost.title,
+    //   teamId: createdPost.teamId,
+    // });
 
     return createdPost;
   } catch (error) {
@@ -210,7 +210,7 @@ export async function createPostWithFiles(
         );
       }
 
-      console.log(`${validFiles.length}개의 유효한 파일 업로드 시작...`);
+      //console.log(`${validFiles.length}개의 유효한 파일 업로드 시작...`);
 
       // 진행 상황 콜백 함수
       const progressCallback = input.onProgress;
@@ -233,10 +233,10 @@ export async function createPostWithFiles(
 
         mediaIds = uploadedFiles.map((file) => file.id);
 
-        console.log("파일 업로드 완료:", {
-          uploadedCount: uploadedFiles.length,
-          mediaIds,
-        });
+        //console.log("파일 업로드 완료:", {
+        //   uploadedCount: uploadedFiles.length,
+        //   mediaIds,
+        // });
       } catch (uploadError) {
         console.error("파일 업로드 실패:", uploadError);
 
@@ -249,11 +249,11 @@ export async function createPostWithFiles(
     }
 
     // 2단계: GraphQL로 게시물 생성
-    console.log("게시물 생성 시작...", {
-      title: input.title,
-      teamId: input.teamId,
-      mediaIds,
-    });
+    //console.log("게시물 생성 시작...", {
+    //   title: input.title,
+    //   teamId: input.teamId,
+    //   mediaIds,
+    // });
 
     try {
       const postInput: CreatePostInput = {
@@ -282,11 +282,11 @@ export async function createPostWithFiles(
         throw new Error("게시물 생성 응답이 비어있습니다.");
       }
 
-      console.log("게시물 생성 완료:", {
-        postId: createdPost.id,
-        title: createdPost.title,
-        mediaCount: createdPost.media?.length || 0,
-      });
+      //console.log("게시물 생성 완료:", {
+      //   postId: createdPost.id,
+      //   title: createdPost.title,
+      //   mediaCount: createdPost.media?.length || 0,
+      // });
 
       return createdPost;
     } catch (postError) {

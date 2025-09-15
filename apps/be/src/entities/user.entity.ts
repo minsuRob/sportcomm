@@ -48,8 +48,8 @@ export enum UserProgressAction {
  * 구조를 객체 형태로 확장 가능 (예: { points: 5, exp: 10 }).
  */
 export const USER_PROGRESS_REWARD: Record<UserProgressAction, number> = {
-  [UserProgressAction.CHAT_MESSAGE]: 5,
-  [UserProgressAction.POST_CREATE]: 5,
+  [UserProgressAction.CHAT_MESSAGE]: 3,
+  [UserProgressAction.POST_CREATE]: 10,
   [UserProgressAction.DAILY_ATTENDANCE]: 20,
 };
 
@@ -359,6 +359,39 @@ export class User {
   gender?: GenderCode;
 
   /**
+   * 사용자 추천인 코드
+   * 회원가입 시 자동 생성되는 고유한 추천인 코드입니다.
+   * 8글자 대문자 UUID 형식으로 생성됩니다.
+   */
+  @Field(() => String, { description: '사용자 추천인 코드', nullable: true })
+  @Column({
+    type: 'varchar',
+    length: 8,
+    unique: true,
+    nullable: true,
+    comment: '사용자 추천인 코드 (8글자 대문자 UUID)',
+  })
+  @IsOptional()
+  @IsString({ message: '추천인 코드는 문자열이어야 합니다.' })
+  referralCode?: string;
+
+  /**
+   * 추천인 코드 (나를 초대한 사람)
+   * 선택적 필드입니다. 다른 사용자의 추천인 코드를 입력할 수 있습니다.
+   * 최대 3명까지만 사용할 수 있는 제한이 있습니다.
+   */
+  @Field(() => String, { nullable: true, description: '추천인 코드' })
+  @Column({
+    type: 'varchar',
+    length: 8,
+    nullable: true,
+    comment: '추천인 코드 (나를 초대한 사람의 추천인 코드)',
+  })
+  @IsOptional()
+  @IsString({ message: '추천인 코드는 문자열이어야 합니다.' })
+  referredBy?: string;
+
+  /**
    * 이메일 인증 여부
    * 회원가입 시 이메일 인증을 완료했는지 나타냅니다.
    */
@@ -568,6 +601,10 @@ export interface CombinedUserInfo {
   points?: number;
   /** 최근 출석 보상 수령 일시 */
   lastAttendanceAt?: Date;
+  /** 사용자 추천인 코드 */
+  referralCode?: string;
+  /** 추천인 코드 (나를 초대한 사람) */
+  referredBy?: string;
   // 공통 정보
   createdAt: Date;
   updatedAt: Date;

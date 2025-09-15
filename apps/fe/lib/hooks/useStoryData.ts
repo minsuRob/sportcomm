@@ -250,7 +250,7 @@ export const useStoryData = ({
    */
   const loadMore = useCallback(async () => {
     // TODO: 페이지네이션 구현
-    console.log("더 많은 스토리 로드 (구현 예정)");
+    //console.log("더 많은 스토리 로드 (구현 예정)");
   }, []);
 
   return {

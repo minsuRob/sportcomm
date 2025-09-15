@@ -79,7 +79,7 @@ const handleSignUp = async () => {
     return;
   }
 
-  console.log("회원가입 성공:", result.user);
+  //console.log("회원가입 성공:", result.user);
 };
 
 // 로그인
@@ -94,7 +94,7 @@ const handleSignIn = async () => {
     return;
   }
 
-  console.log("로그인 성공:", result.user);
+  //console.log("로그인 성공:", result.user);
 };
 
 // 로그아웃
@@ -106,7 +106,7 @@ const handleSignOut = async () => {
     return;
   }
 
-  console.log("로그아웃 성공");
+  //console.log("로그아웃 성공");
 };
 
 // 현재 사용자 확인
@@ -118,7 +118,7 @@ const checkUser = async () => {
     return;
   }
 
-  console.log("현재 사용자:", user);
+  //console.log("현재 사용자:", user);
 };
 ```
 
@@ -133,15 +133,15 @@ useEffect(() => {
     (event, session) => {
       switch (event) {
         case "SIGNED_IN":
-          console.log("사용자 로그인:", session?.user?.id);
+          //console.log("사용자 로그인:", session?.user?.id);
           // 로그인 후 처리 로직
           break;
         case "SIGNED_OUT":
-          console.log("사용자 로그아웃");
+          //console.log("사용자 로그아웃");
           // 로그아웃 후 처리 로직
           break;
         case "TOKEN_REFRESHED":
-          console.log("토큰 갱신");
+          //console.log("토큰 갱신");
           break;
       }
     },
@@ -165,7 +165,7 @@ const resetPassword = async (email: string) => {
     return;
   }
 
-  console.log("비밀번호 재설정 이메일 전송 완료");
+  //console.log("비밀번호 재설정 이메일 전송 완료");
 };
 
 // 이메일 확인 재전송
@@ -177,7 +177,7 @@ const resendConfirmation = async (email: string) => {
     return;
   }
 
-  console.log("이메일 확인 재전송 완료");
+  //console.log("이메일 확인 재전송 완료");
 };
 ```
 
@@ -201,7 +201,7 @@ const LoginComponent = () => {
       });
 
       // 성공 처리
-      console.log('로그인 성공:', data.login.user);
+      //console.log('로그인 성공:', data.login.user);
     } catch (error) {
       console.error('로그인 실패:', error);
     }
@@ -233,7 +233,7 @@ const LoginComponent = () => {
       setError(result.error.message);
     } else {
       // 성공 처리
-      console.log('로그인 성공:', result.user);
+      //console.log('로그인 성공:', result.user);
     }
 
     setLoading(false);

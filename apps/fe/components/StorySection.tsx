@@ -43,6 +43,7 @@ interface BaseStory {
     viewCount?: number;
     source?: string; // 뉴스 기사의 경우 출처
     teamName?: string; // MyTeams 게시물의 경우 팀명
+    teamLogoUrl?: string; // 팀 로고 URL
     isPopular?: boolean;
   };
 }
@@ -148,12 +149,27 @@ const StoryItemComponent = ({
 }) => {
   const { themed } = useAppTheme();
 
-  // 썸네일 이미지 URL (우선순위: 본문 이미지 > 프로필 이미지 > 팀 로고)
-  const thumbnailUrl =
-    story.thumbnailUrl ||
-    story.author.profileImageUrl ||
-    story.metadata?.teamLogoUrl ||
-    "https://via.placeholder.com/200";
+  // 썸네일 이미지 URL (우선순위: media 이미지 > 프로필 이미지 > 팀 로고)
+  const thumbnailUrl = (() => {
+    // 1. media에서 이미지 찾기 (PostStory 타입인 경우에만)
+    if (story.type === "popular" || story.type === "myteams") {
+      const postStory = story as PostStory;
+      const mediaImage = postStory.media?.find(
+        (m) => m.type === "IMAGE" || m.type === "image"
+      )?.url;
+
+      if (mediaImage) return mediaImage;
+    }
+
+    // 2. 작성자 프로필 이미지
+    if (story.author?.profileImageUrl) return story.author.profileImageUrl;
+
+    // 3. 팀 로고 (metadata나 team 정보에서)
+    if (story.metadata?.teamLogoUrl) return story.metadata.teamLogoUrl;
+
+    // 4. 기본 플레이스홀더
+    return "https://via.placeholder.com/200";
+  })();
 
   // 표시할 정보
   const displayTitle = story.title;
@@ -172,7 +188,7 @@ const StoryItemComponent = ({
           style={themed($storyImage)}
           resizeMode="cover"
           onError={() =>
-            console.warn(`Failed to load story image: ${thumbnailUrl}`)
+            console.warn(`StorySection: 이미지 로드 실패 - ${story.title} ${story.thumbnailUrl}`)
           }
           fadeDuration={200}
           loadingIndicatorSource={{
@@ -253,6 +269,7 @@ export default function StorySection({
       try {
         // 피드에서 최신 posts 가져와 StoryItem으로 변환
         const sourcePosts = snap.posts.slice(0, maxItems);
+
         const derived: StoryItem[] = sourcePosts.map((p) => {
           const isMyTeam = !!currentUser?.myTeams?.some(
             (mt: any) => mt.team.id === p.teamId,
@@ -265,6 +282,7 @@ export default function StorySection({
             width: (m as any).width,
             height: (m as any).height,
           }));
+          
           return {
             id: p.id,
             type,
@@ -273,16 +291,23 @@ export default function StorySection({
             createdAt: p.createdAt,
             teamId: p.teamId,
             media,
-            thumbnailUrl:
-              media.find(
-                (m) =>
-                  m.type === "IMAGE" ||
-                  m.type === "image" ||
-                  m.type === "IMAGE",
-              )?.url ||
-              p.author?.profileImageUrl ||
-              (p as any).team?.logoUrl ||
-              (p as any).team?.icon,
+            thumbnailUrl: (() => {
+              // 1. media에서 이미지 찾기
+              const mediaImage = media.find(
+                (m) => m.type === "IMAGE" || m.type === "image"
+              )?.url;
+              if (mediaImage) return mediaImage;
+
+              // 2. 작성자 프로필 이미지
+              if (p.author?.profileImageUrl) return p.author.profileImageUrl;
+
+              // 3. 팀 로고
+              if ((p as any).team?.logoUrl) return (p as any).team.logoUrl;
+              if ((p as any).team?.icon) return (p as any).team.icon;
+
+              // 4. 기본 플레이스홀더
+              return "https://via.placeholder.com/200";
+            })(),
             author: {
               id: p.author.id,
               nickname: p.author.nickname,
@@ -298,6 +323,7 @@ export default function StorySection({
             },
           } as StoryItem;
         });
+
         setStories(derived);
         setHasMore(false); // 별도 페이지네이션 미사용
         setLoading(false);
@@ -315,6 +341,7 @@ export default function StorySection({
     // 캐시 구독에서 이미 stories 가 구성되었다면 폴백 불필요
     if (stories.length > 0) return;
     // feedPosts 기반 파생 스토리 생성 (상위  maxItems )
+
     try {
       const derived = feedPosts.slice(0, maxItems).map((p) => {
         const media = (p.media || []).map((m: any) => ({
@@ -332,14 +359,23 @@ export default function StorySection({
           createdAt: p.createdAt,
           teamId: (p as any).teamId,
           media,
-          thumbnailUrl:
-            media.find(
-              (m) =>
-                m.type === "IMAGE" || m.type === "image" || m.type === "IMAGE",
-            )?.url ||
-            p.author?.profileImageUrl ||
-            (p as any).team?.logoUrl ||
-            (p as any).team?.icon,
+          thumbnailUrl: (() => {
+            // 1. media에서 이미지 찾기
+            const mediaImage = media.find(
+              (m) => m.type === "IMAGE" || m.type === "image"
+            )?.url;
+            if (mediaImage) return mediaImage;
+
+            // 2. 작성자 프로필 이미지
+            if (p.author?.profileImageUrl) return p.author.profileImageUrl;
+
+            // 3. 팀 로고
+            if ((p as any).team?.logoUrl) return (p as any).team.logoUrl;
+            if ((p as any).team?.icon) return (p as any).team.icon;
+
+            // 4. 기본 플레이스홀더
+            return "https://via.placeholder.com/200";
+          })(),
           author: {
             id: p.author.id,
             nickname: p.author.nickname,
@@ -356,6 +392,7 @@ export default function StorySection({
         } as StoryItem;
       });
       if (derived.length > 0) {
+
         setStories(derived);
         setLoading(false);
       }
@@ -380,7 +417,7 @@ export default function StorySection({
         // 스토리 타입에 따른 기본 동작
         if (story.type === "news" && "url" in story) {
           // 뉴스 기사는 외부 링크로 이동 (웹뷰 또는 브라우저)
-          console.log("뉴스 기사 열기:", story.url);
+          //console.log("뉴스 기사 열기:", story.url);
           // TODO: 웹뷰 모달 또는 외부 브라우저로 열기
         } else {
           // 게시물은 상세 페이지로 이동
@@ -398,7 +435,7 @@ export default function StorySection({
   const handleScrollEnd = useCallback(() => {
     if (hasMore && !loading) {
       // TODO: 추가 로드 구현
-      console.log("더 많은 스토리 로드");
+      //console.log("더 많은 스토리 로드");
     }
   }, [hasMore, loading]);
 

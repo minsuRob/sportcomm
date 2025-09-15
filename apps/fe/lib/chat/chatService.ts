@@ -29,11 +29,11 @@ export class ChatService {
    */
   private async initialize(): Promise<void> {
     try {
-      console.log(
-        `채팅 서비스 초기화 중... (${this.dataSource.getDataSourceType()})`,
-      );
+      //console.log(
+      //   `채팅 서비스 초기화 중... (${this.dataSource.getDataSourceType()})`,
+      // );
       this.isInitialized = true;
-      console.log("채팅 서비스 초기화 완료");
+      //console.log("채팅 서비스 초기화 완료");
     } catch (error) {
       console.error("채팅 서비스 초기화 실패:", error);
       this.isInitialized = false;
@@ -149,7 +149,7 @@ export class ChatService {
       const message = await this.dataSource.sendMessage(input, currentUser);
 
       if (message) {
-        console.log(`메시지 전송 완료: ${message.id}`);
+        //console.log(`메시지 전송 완료: ${message.id}`);
       } else {
         console.error("메시지 전송 실패: null 반환");
       }
@@ -196,7 +196,7 @@ export class ChatService {
       const channel = await this.dataSource.createChatChannel(input);
 
       if (channel) {
-        console.log(`채팅방 생성 완료: ${channel.name} (${channel.id})`);
+        //console.log(`채팅방 생성 완료: ${channel.name} (${channel.id})`);
       } else {
         console.error("채팅방 생성 실패: null 반환");
       }
@@ -220,7 +220,7 @@ export class ChatService {
       const success = await this.dataSource.joinChatChannel(channelId);
 
       if (success) {
-        console.log(`채팅방 참여 완료: ${channelId}`);
+        //console.log(`채팅방 참여 완료: ${channelId}`);
       } else {
         console.error(`채팅방 참여 실패: ${channelId}`);
       }
@@ -244,7 +244,7 @@ export class ChatService {
       const success = await this.dataSource.leaveChatChannel(channelId);
 
       if (success) {
-        console.log(`채팅방 나가기 완료: ${channelId}`);
+        //console.log(`채팅방 나가기 완료: ${channelId}`);
         // 실시간 구독도 해제
         this.unsubscribeFromMessages(channelId);
       } else {
@@ -270,7 +270,7 @@ export class ChatService {
       const success = await this.dataSource.markChannelAsRead(channelId);
 
       if (success) {
-        console.log(`채팅방 읽음 처리 완료: ${channelId}`);
+        //console.log(`채팅방 읽음 처리 완료: ${channelId}`);
       }
 
       return success;
@@ -299,7 +299,7 @@ export class ChatService {
       const unsubscribe = this.dataSource.subscribeToMessages(
         channelId,
         (message: Message) => {
-          console.log(`새 메시지 수신: ${message.id} (채널: ${channelId})`);
+          //console.log(`새 메시지 수신: ${message.id} (채널: ${channelId})`);
           onMessage(message);
         },
       );
@@ -307,7 +307,7 @@ export class ChatService {
       // 구독 해제 함수 저장
       this.realtimeSubscriptions.set(channelId, unsubscribe);
 
-      console.log(`실시간 메시지 구독 시작: ${channelId}`);
+      //console.log(`실시간 메시지 구독 시작: ${channelId}`);
 
       return () => this.unsubscribeFromMessages(channelId);
     } catch (error) {
@@ -326,7 +326,7 @@ export class ChatService {
       try {
         unsubscribe();
         this.realtimeSubscriptions.delete(channelId);
-        console.log(`실시간 메시지 구독 해제: ${channelId}`);
+        //console.log(`실시간 메시지 구독 해제: ${channelId}`);
       } catch (error) {
         console.error("실시간 메시지 구독 해제 실패:", error);
       }
@@ -339,7 +339,7 @@ export class ChatService {
   async refresh(): Promise<void> {
     try {
       await this.dataSource.refresh();
-      console.log("채팅 데이터 새로고침 완료");
+      //console.log("채팅 데이터 새로고침 완료");
     } catch (error) {
       console.error("채팅 데이터 새로고침 실패:", error);
     }
@@ -353,14 +353,14 @@ export class ChatService {
       // 모든 실시간 구독 해제
       this.realtimeSubscriptions.forEach((unsubscribe, channelId) => {
         unsubscribe();
-        console.log(`구독 해제: ${channelId}`);
+        //console.log(`구독 해제: ${channelId}`);
       });
       this.realtimeSubscriptions.clear();
 
       // 데이터 소스 정리
       this.dataSource.cleanup();
 
-      console.log("채팅 서비스 정리 완료");
+      //console.log("채팅 서비스 정리 완료");
     } catch (error) {
       console.error("채팅 서비스 정리 실패:", error);
     }
@@ -396,7 +396,7 @@ export class ChatService {
    */
   switchToSupabase(): void {
     this.dataSource.switchToSupabase();
-    console.log("채팅 서비스를 Supabase로 전환했습니다.");
+    //console.log("채팅 서비스를 Supabase로 전환했습니다.");
   }
 
   /**
@@ -404,7 +404,7 @@ export class ChatService {
    */
   switchToMock(): void {
     this.dataSource.switchToMock();
-    console.log("채팅 서비스를 Mock 데이터로 전환했습니다.");
+    //console.log("채팅 서비스를 Mock 데이터로 전환했습니다.");
   }
 }
 

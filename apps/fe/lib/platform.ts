@@ -130,21 +130,21 @@ export function platformSelect<T>(web: T, native: T): T {
  * 디버깅 용도로 사용할 수 있습니다.
  */
 export function logPlatformInfo(): void {
-  console.log("환경 감지 결과:");
-  console.log(`- 웹 환경: ${isWeb()}`);
-  console.log(`- React Native 환경: ${isReactNative()}`);
-  console.log(`- Android: ${isAndroid()}`);
-  console.log(`- iOS: ${isIOS()}`);
-  console.log(`- 플랫폼 타입: ${getPlatformType()}`);
+  //console.log("환경 감지 결과:");
+  //console.log(`- 웹 환경: ${isWeb()}`);
+  //console.log(`- React Native 환경: ${isReactNative()}`);
+  //console.log(`- Android: ${isAndroid()}`);
+  //console.log(`- iOS: ${isIOS()}`);
+  //console.log(`- 플랫폼 타입: ${getPlatformType()}`);
 
   // 디버깅에 유용한 추가 정보
   if (isReactNative()) {
-    console.log(`- React Native Platform.OS: ${Platform.OS}`);
-    console.log(`- React Native Platform.Version: ${Platform.Version}`);
+    //console.log(`- React Native Platform.OS: ${Platform.OS}`);
+    //console.log(`- React Native Platform.Version: ${Platform.Version}`);
   }
 
   // 브라우저 환경 정보
   if (isWeb() && typeof navigator !== "undefined") {
-    console.log(`- 브라우저: ${navigator.userAgent}`);
+    //console.log(`- 브라우저: ${navigator.userAgent}`);
   }
 }

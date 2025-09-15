@@ -106,7 +106,7 @@ class SimpleTokenManager implements ITokenManager {
     await this.syncSession();
 
     if (!this.session) {
-      console.log("ℹ️ 활성 세션 없음");
+      //console.log("ℹ️ 활성 세션 없음");
       return null;
     }
 
@@ -115,7 +115,7 @@ class SimpleTokenManager implements ITokenManager {
     }
 
     // 2. 만료 또는 직전 만료 감지 → 강제 refresh 1회
-    console.log("🔄 토큰 만료 감지 → 강제 refresh 시도");
+    //console.log("🔄 토큰 만료 감지 → 강제 refresh 시도");
     const refreshed = await this.refreshToken();
     return refreshed?.access_token ?? null;
   }
@@ -131,7 +131,7 @@ class SimpleTokenManager implements ITokenManager {
 
     this.inflightRefresh = (async () => {
       try {
-        console.log("🔄 refreshSession 호출 시작");
+        //console.log("🔄 refreshSession 호출 시작");
         const {
           data: { session },
           error,
@@ -159,10 +159,10 @@ class SimpleTokenManager implements ITokenManager {
 
         this.session = session;
         this.lastSyncAt = Date.now();
-        console.log("✅ refreshSession 성공:", {
-          userId: session.user.id,
-          expiresAt: new Date(session.expires_at! * 1000).toISOString(),
-        });
+        //console.log("✅ refreshSession 성공:", {
+          // userId: session.user.id,
+          // expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+        // });
         return session;
       } catch (e) {
         console.error("❌ refreshToken 처리 중 예외:", e);
@@ -215,7 +215,7 @@ class SimpleTokenManager implements ITokenManager {
       this.session = null;
       this.inflightRefresh = null;
     }
-    console.log("🚪 로그아웃 완료 (캐시 초기화)");
+    //console.log("🚪 로그아웃 완료 (캐시 초기화)");
   }
 
   /**
@@ -226,14 +226,14 @@ class SimpleTokenManager implements ITokenManager {
     const expiresAtISO = this.session?.expires_at
       ? new Date(this.session.expires_at * 1000).toISOString()
       : null;
-    console.log("🔍 TokenManager Debug", {
-      hasSession: !!this.session,
-      userId: this.session?.user?.id,
-      expiresAt: expiresAtISO,
-      isValid: this.isTokenValid(),
-      lastSyncAt: new Date(this.lastSyncAt).toISOString(),
-      inflightRefresh: !!this.inflightRefresh,
-    });
+    //console.log("🔍 TokenManager Debug", {
+    //   hasSession: !!this.session,
+    //   userId: this.session?.user?.id,
+    //   expiresAt: expiresAtISO,
+    //   isValid: this.isTokenValid(),
+    //   lastSyncAt: new Date(this.lastSyncAt).toISOString(),
+    //   inflightRefresh: !!this.inflightRefresh,
+    // });
   }
 }
 

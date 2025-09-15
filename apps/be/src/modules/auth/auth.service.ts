@@ -106,12 +106,16 @@ export class AuthService {
     // 비밀번호 해시화
     const hashedPassword = await this.hashPassword(password);
 
+    // 고유한 추천인 코드 생성
+    const referralCode = await this.usersService.createUniqueReferralCode();
+
     // 사용자 생성
     const user = this.userRepository.create({
       email,
       password: hashedPassword,
       nickname,
       role,
+      referralCode,
       isActive: true,
       isEmailVerified: false, // 실제 구현에서는 이메일 인증 로직 추가
     });
@@ -311,7 +315,7 @@ export class AuthService {
    */
   async updateProfile(
     userId: string,
-    updateData: Partial<Pick<User, 'nickname' | 'bio' | 'profileImageUrl'>>,
+    updateData: Partial<Pick<User, 'nickname' | 'bio' | 'profileImageUrl' | 'age'>>,
   ): Promise<User> {
     // 닉네임 변경 시 중복 확인
     if (updateData.nickname) {

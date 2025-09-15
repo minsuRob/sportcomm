@@ -22,8 +22,8 @@ export async function handleSignUp() {
     return;
   }
 
-  console.log("회원가입 성공:", result.user);
-  console.log("세션:", result.session);
+  //console.log("회원가입 성공:", result.user);
+  //console.log("세션:", result.session);
 }
 
 /**
@@ -40,8 +40,8 @@ export async function handleSignIn() {
     return;
   }
 
-  console.log("로그인 성공:", result.user);
-  console.log("세션:", result.session);
+  //console.log("로그인 성공:", result.user);
+  //console.log("세션:", result.session);
 }
 
 /**
@@ -55,7 +55,7 @@ export async function handleSignOut() {
     return;
   }
 
-  console.log("로그아웃 성공");
+  //console.log("로그아웃 성공");
 }
 
 /**
@@ -70,9 +70,9 @@ export async function checkCurrentUser() {
   }
 
   if (user) {
-    console.log("현재 사용자:", user);
+    //console.log("현재 사용자:", user);
   } else {
-    console.log("로그인된 사용자가 없습니다.");
+    //console.log("로그인된 사용자가 없습니다.");
   }
 }
 
@@ -84,16 +84,16 @@ export function setupAuthListener() {
     (event, session) => {
       switch (event) {
         case "SIGNED_IN":
-          console.log("사용자 로그인:", session?.user?.id);
+          //console.log("사용자 로그인:", session?.user?.id);
           break;
         case "SIGNED_OUT":
-          console.log("사용자 로그아웃");
+          //console.log("사용자 로그아웃");
           break;
         case "TOKEN_REFRESHED":
-          console.log("토큰 갱신:", session?.user?.id);
+          //console.log("토큰 갱신:", session?.user?.id);
           break;
         default:
-          console.log("인증 이벤트:", event);
+          //console.log("인증 이벤트:", event);
       }
     },
   );
@@ -118,7 +118,7 @@ export const AuthExampleComponent = () => {
     }
 
     // 성공 처리 (리다이렉트, 상태 업데이트 등)
-    console.log("로그인 성공:", result.user);
+    //console.log("로그인 성공:", result.user);
   };
 
   const handleRegister = async (
@@ -133,7 +133,7 @@ export const AuthExampleComponent = () => {
       return;
     }
 
-    console.log("회원가입 성공:", result.user);
+    //console.log("회원가입 성공:", result.user);
     // 이메일 확인 안내 메시지 표시
     alert("회원가입이 완료되었습니다. 이메일을 확인해주세요.");
   };

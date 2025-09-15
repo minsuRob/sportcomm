@@ -8,6 +8,7 @@ import {
   CombinedUserInfo,
 } from '../../entities/user.entity';
 import { SupabaseService } from '../../common/services/supabase.service';
+import { UsersService } from '../../modules/users/users.service';
 
 /**
  * 사용자 동기화 입력 인터페이스
@@ -54,6 +55,7 @@ export class UserSyncService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly supabaseService: SupabaseService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -100,6 +102,9 @@ export class UserSyncService {
         this.logger.log(`기본 정보로 새 사용자 생성: ${userId}`);
         const defaultNickname = nickname || `user_${userId.slice(0, 8)}`;
 
+        // OAuth 사용자도 고유한 추천인 코드 생성
+        const referralCode = await this.usersService.createUniqueReferralCode();
+
         const newUser = this.userRepository.create({
           id: userId,
           nickname: defaultNickname,
@@ -107,6 +112,7 @@ export class UserSyncService {
           email: '',
           profileImageUrl,
           bio,
+          referralCode,
           isEmailVerified: false,
           isActive: true,
           points: 0,
@@ -179,6 +185,10 @@ export class UserSyncService {
         // 기존 사용자 정보 업데이트 (변경사항이 있을 때만)
         let hasChanges = false;
 
+        // 추천인 데이터 보호: 기존 값이 있으면 절대 덮어쓰지 않음
+        const existingReferralCode = user.referralCode;
+        const existingReferredBy = user.referredBy;
+
         if (user.nickname !== finalNickname) {
           user.nickname = finalNickname;
           hasChanges = true;
@@ -221,8 +231,20 @@ export class UserSyncService {
           (user as any).provider = detectedProvider as any;
           hasChanges = true;
         }
+
+        // 추천인 코드가 없는 경우에만 새로 생성 (기존 데이터 보호)
+        if (!existingReferralCode) {
+          const referralCode =
+            await this.usersService.createUniqueReferralCode();
+          user.referralCode = referralCode;
+          hasChanges = true;
+          this.logger.log(`새 추천인 코드 생성: ${userId} -> ${referralCode}`);
+        }
+
         if (hasChanges) {
-          this.logger.log(`기존 사용자 정보 업데이트: ${userId}`);
+          this.logger.log(
+            `기존 사용자 정보 업데이트: ${userId} (추천인 데이터 보호됨)`,
+          );
           user.updatedAt = new Date();
           user = await this.userRepository.save(user);
         } else {
@@ -230,9 +252,21 @@ export class UserSyncService {
             `기존 사용자 정보 변경사항 없음: ${userId} (${user.nickname})`,
           );
         }
+
+        // 세션 복원 시 추천인 데이터 검증 및 복구
+        const validationResult =
+          await this.usersService.validateAndRepairReferralData(userId);
+        if (validationResult.repaired) {
+          this.logger.log(
+            `추천인 데이터 복구 완료: ${userId} - ${validationResult.message}`,
+          );
+        }
       } else {
         // 새 사용자 정보 생성
         this.logger.log(`새 사용자 정보 생성: ${userId}`);
+
+        // OAuth 사용자도 고유한 추천인 코드 생성
+        const referralCode = await this.usersService.createUniqueReferralCode();
 
         user = this.userRepository.create({
           id: userId,
@@ -241,6 +275,7 @@ export class UserSyncService {
           email: supabaseUser.email || '',
           profileImageUrl,
           bio,
+          referralCode,
           isEmailVerified: !!supabaseUser.email_confirmed_at,
           isActive: true,
           points: 0,
@@ -549,6 +584,8 @@ export class UserSyncService {
       profileImageUrl: user.profileImageUrl,
       bio: user.bio,
       isActive: user.isActive,
+      ...(user.referralCode && { referralCode: user.referralCode }),
+      referredBy: user.referredBy,
       // 포인트 / 경험치 / 출석 관련 (백엔드 엔티티 필드)
       // CombinedUserInfo 타입 확장 없이 안전하게 캐스팅해서 전달
       ...(typeof (user as any).points === 'number'

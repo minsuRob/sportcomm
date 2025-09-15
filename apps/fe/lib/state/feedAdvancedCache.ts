@@ -130,7 +130,7 @@ const pruneLRUIfNeeded = () => {
     const victim = arr[i];
     buckets.delete(victim.key);
     listenersMap.delete(victim.key);
-    if (DEBUG) console.log("[feedAdvancedCache] LRU prune:", victim.key);
+    // if (DEBUG) //console.log("[feedAdvancedCache] LRU prune:", victim.key);
   }
 };
 

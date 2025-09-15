@@ -53,7 +53,7 @@ class NotificationService {
   async initialize() {
     // SSR 환경에서는 초기화를 건너뜀
     if (typeof window === "undefined") {
-      console.log("알림 서비스 초기화 건너뜀 - SSR 환경");
+      //console.log("알림 서비스 초기화 건너뜀 - SSR 환경");
       return;
     }
 
@@ -66,7 +66,7 @@ class NotificationService {
      * 앱이 시작될 때, 로그인된 사용자의 알림 목록을 백엔드 서버로부터 가져옵니다.
      * Apollo Client를 사용하여 GraphQL 쿼리를 실행합니다.
      */
-    console.log("알림 서비스 초기화 - 서버 모드");
+    //console.log("알림 서비스 초기화 - 서버 모드");
     await this.fetchNotificationsFromServer();
 
     // 주기적으로 새 알림 확인
@@ -309,7 +309,7 @@ class NotificationService {
     try {
       // SSR 환경에서는 건너뜀
       if (typeof window === "undefined") {
-        console.log("마지막 확인 시점 로드 건너뜀 - SSR 환경");
+        //console.log("마지막 확인 시점 로드 건너뜀 - SSR 환경");
         return;
       }
 
@@ -379,4 +379,4 @@ export const notificationService = new NotificationService();
 // 서비스 초기화
 notificationService.initialize();
 
-console.log("알림 서비스가 초기화되었습니다.");
+//console.log("알림 서비스가 초기화되었습니다.");

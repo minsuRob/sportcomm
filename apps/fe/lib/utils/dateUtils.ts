@@ -15,7 +15,7 @@
  */
 const parseUTCDate = (utcString: string): Date => {
   if (__DEV__) {
-    console.log('🔍 parseUTCDate input:', utcString);
+    //console.log('🔍 parseUTCDate input:', utcString);
   }
 
   // UTC 형식의 ISO 문자열을 Date 객체로 변환
@@ -23,8 +23,8 @@ const parseUTCDate = (utcString: string): Date => {
   const date = new Date(utcString);
 
   if (__DEV__) {
-    console.log('🔍 parseUTCDate result:', date.toISOString());
-    console.log('🔍 parseUTCDate local:', date.toLocaleString());
+    //console.log('🔍 parseUTCDate result:', date.toISOString());
+    //console.log('🔍 parseUTCDate local:', date.toLocaleString());
   }
 
   return date;
@@ -60,17 +60,17 @@ export const formatTimeAgo = (createdAt: string): string => {
   const diffInHours = Math.floor(diffInMinutes / 60);
   const diffInDays = Math.floor(diffInHours / 24);
 
-  if (__DEV__) {
-    console.log('🕐 TIME DEBUG:', {
-      input: createdAt,
-      utcDate: utcDate.toISOString(),
-      postDateKST: postDateKST.toLocaleString('ko-KR'),
-      now: now.toLocaleString('ko-KR'),
-      nowKST: nowKST.toLocaleString('ko-KR'),
-      diffInHours,
-      diffInMinutes
-    });
-  }
+  // if (__DEV__) {
+    //console.log('🕐 TIME DEBUG:', {
+  //     input: createdAt,
+  //     utcDate: utcDate.toISOString(),
+  //     postDateKST: postDateKST.toLocaleString('ko-KR'),
+  //     now: now.toLocaleString('ko-KR'),
+  //     nowKST: nowKST.toLocaleString('ko-KR'),
+  //     diffInHours,
+  //     diffInMinutes
+  //   });
+  // }
 
   if (diffInMinutes < 1) return "방금 전";
   if (diffInMinutes < 60) return `${diffInMinutes}분 전`;

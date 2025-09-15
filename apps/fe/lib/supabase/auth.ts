@@ -98,7 +98,7 @@ export class SupabaseAuthService {
       }
 
       // 웹 환경에선 즉시 리다이렉트됩니다. data.url은 리디렉션될 URL입니다.
-      console.log("🔗 Google OAuth redirect URL:", data?.url);
+      //console.log("🔗 Google OAuth redirect URL:", data?.url);
       return { error: null };
     } catch (error) {
       console.error("❌ Google OAuth 중 예외 발생:", error);
@@ -121,10 +121,10 @@ export class SupabaseAuthService {
    */
   static async signUp(input: RegisterInput): Promise<AuthResult> {
     try {
-      console.log("🔄 Supabase 회원가입 시작:", {
-        email: input.email,
-        nickname: input.nickname,
-      });
+      //console.log("🔄 Supabase 회원가입 시작:", {
+      //   email: input.email,
+      //   nickname: input.nickname,
+      // });
 
       // 패스워드 확인 검증
       if (input.confirmPassword && input.password !== input.confirmPassword) {
@@ -162,7 +162,7 @@ export class SupabaseAuthService {
         };
       }
 
-      console.log("✅ Supabase 회원가입 성공:", data.user?.id);
+      //console.log("✅ Supabase 회원가입 성공:", data.user?.id);
 
       // 사용자 프로필 정보 구성
       const userProfile: UserProfile | null = data.user
@@ -205,7 +205,7 @@ export class SupabaseAuthService {
    */
   static async signIn(input: LoginInput): Promise<AuthResult> {
     try {
-      console.log("🔄 Supabase 로그인 시작:", { email: input.email });
+      //console.log("🔄 Supabase 로그인 시작:", { email: input.email });
 
       // Supabase Auth를 사용한 로그인
       const credentials: SignInWithPasswordCredentials = {
@@ -225,7 +225,7 @@ export class SupabaseAuthService {
         };
       }
 
-      console.log("✅ Supabase 로그인 성공:", data.user?.id);
+      //console.log("✅ Supabase 로그인 성공:", data.user?.id);
 
       // 사용자 프로필 정보 구성
       const userProfile: UserProfile | null = data.user
@@ -270,7 +270,7 @@ export class SupabaseAuthService {
    */
   static async signOut(): Promise<{ error: AuthError | null }> {
     try {
-      console.log("🔄 Supabase 로그아웃 시작");
+      //console.log("🔄 Supabase 로그아웃 시작");
 
       const { error } = await supabase.auth.signOut();
 
@@ -279,7 +279,7 @@ export class SupabaseAuthService {
         return { error };
       }
 
-      console.log("✅ Supabase 로그아웃 성공");
+      //console.log("✅ Supabase 로그아웃 성공");
       return { error: null };
     } catch (error) {
       console.error("❌ 로그아웃 중 예외 발생:", error);
@@ -398,7 +398,7 @@ export class SupabaseAuthService {
     email: string,
   ): Promise<{ error: AuthError | null }> {
     try {
-      console.log("🔄 비밀번호 재설정 이메일 전송:", email);
+      //console.log("🔄 비밀번호 재설정 이메일 전송:", email);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
@@ -409,7 +409,7 @@ export class SupabaseAuthService {
         return { error };
       }
 
-      console.log("✅ 비밀번호 재설정 이메일 전송 성공");
+      //console.log("✅ 비밀번호 재설정 이메일 전송 성공");
       return { error: null };
     } catch (error) {
       console.error("❌ 비밀번호 재설정 중 예외 발생:", error);
@@ -435,7 +435,7 @@ export class SupabaseAuthService {
     email: string,
   ): Promise<{ error: AuthError | null }> {
     try {
-      console.log("🔄 이메일 확인 재전송:", email);
+      //console.log("🔄 이메일 확인 재전송:", email);
 
       const { error } = await supabase.auth.resend({
         type: "signup",
@@ -447,7 +447,7 @@ export class SupabaseAuthService {
         return { error };
       }
 
-      console.log("✅ 이메일 확인 재전송 성공");
+      //console.log("✅ 이메일 확인 재전송 성공");
       return { error: null };
     } catch (error) {
       console.error("❌ 이메일 확인 재전송 중 예외 발생:", error);

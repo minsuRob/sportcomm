@@ -44,7 +44,7 @@ export class EnhancedUserSyncService {
     try {
       // 중복 호출 방지 확인
       if (!forceSync && AuthStore.isSynced()) {
-        console.log("✅ 이미 동기화 완료된 사용자 - 스킵");
+        //console.log("✅ 이미 동기화 완료된 사용자 - 스킵");
 
         const currentUser = AuthStore.getState().user;
         return {
@@ -56,7 +56,7 @@ export class EnhancedUserSyncService {
 
       // 진행 중인 동기화가 있으면 해당 Promise 반환
       if (this.syncPromise && !forceSync) {
-        console.log("🔄 진행 중인 동기화 대기...");
+        //console.log("🔄 진행 중인 동기화 대기...");
         return await this.syncPromise;
       }
 
@@ -88,7 +88,7 @@ export class EnhancedUserSyncService {
     accessToken: string,
   ): Promise<SyncResult> {
     try {
-      console.log("🔄 사용자 동기화 시작:", input);
+      //console.log("🔄 사용자 동기화 시작:", input);
 
       // 로딩 상태 설정
       AuthStore.setLoading(true);
@@ -99,7 +99,7 @@ export class EnhancedUserSyncService {
       // 전역 상태 업데이트
       AuthStore.setAuthenticated(user, accessToken);
 
-      console.log("✅ 사용자 동기화 성공:", user);
+      //console.log("✅ 사용자 동기화 성공:", user);
 
       return {
         success: true,
@@ -156,12 +156,12 @@ export class EnhancedUserSyncService {
     accessToken: string,
   ): Promise<SyncResult> {
     try {
-      console.log("🔄 로그인 후 사용자 정보 확인 시작");
+      //console.log("🔄 로그인 후 사용자 정보 확인 시작");
 
       // 이미 동기화된 경우 스킵
       if (AuthStore.isSynced()) {
         const currentUser = AuthStore.getState().user;
-        console.log("✅ 이미 동기화된 사용자 - 현재 정보 사용");
+        //console.log("✅ 이미 동기화된 사용자 - 현재 정보 사용");
 
         return {
           success: true,
@@ -179,7 +179,7 @@ export class EnhancedUserSyncService {
       // 전역 상태 업데이트
       AuthStore.setAuthenticated(user, accessToken);
 
-      console.log("✅ 로그인 후 사용자 정보 확인 완료:", user);
+      //console.log("✅ 로그인 후 사용자 정보 확인 완료:", user);
 
       return {
         success: true,
@@ -207,7 +207,7 @@ export class EnhancedUserSyncService {
   static resetSyncState(): void {
     this.syncPromise = null;
     AuthStore.setUnauthenticated();
-    console.log("✅ 동기화 상태 리셋 완료");
+    //console.log("✅ 동기화 상태 리셋 완료");
   }
 
   /**
@@ -222,7 +222,7 @@ export class EnhancedUserSyncService {
     accessToken: string,
   ): Promise<SyncResult> {
     try {
-      console.log("🔄 사용자 프로필 업데이트 시작:", input);
+      //console.log("🔄 사용자 프로필 업데이트 시작:", input);
 
       // 로딩 상태 설정
       AuthStore.setLoading(true);
@@ -236,7 +236,7 @@ export class EnhancedUserSyncService {
       // 전역 상태의 사용자 정보 업데이트
       AuthStore.updateUser(updatedUser);
 
-      console.log("✅ 사용자 프로필 업데이트 성공:", updatedUser);
+      //console.log("✅ 사용자 프로필 업데이트 성공:", updatedUser);
 
       return {
         success: true,

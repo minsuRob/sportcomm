@@ -212,12 +212,12 @@ export async function fetchActiveBannerNotices(options?: {
     // 에러 처리는 camel/snake 재시도 로직에서 처리됨
     const notices = rows.map(mapDbRowToNotice).filter((n) => isActive(n, now));
 
-    if (debug) {
+    // if (debug) {
       // eslint-disable-next-line no-console
-      console.log(
-        `[notice/api] DB 배너 공지 ${notices.length}건 조회 (limit=${limit})`,
-      );
-    }
+      //console.log(
+      //   `[notice/api] DB 배너 공지 ${notices.length}건 조회 (limit=${limit})`,
+      // );
+    // }
 
     return notices;
   } catch (e: any) {

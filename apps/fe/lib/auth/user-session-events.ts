@@ -19,7 +19,7 @@
  *  // 구독 (컴포넌트 마운트 시)
  *  useEffect(() => {
  *    const off = onSessionChange(({ user, reason }) => {
- *      console.log("세션 변경:", reason, user);
+ *      //console.log("세션 변경:", reason, user);
  *      setCurrentUser(user);
  *    });
  *    return off; // 언마운트 시 구독 해제

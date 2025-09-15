@@ -107,7 +107,7 @@ export async function uploadFilesWeb(
       throw new UploadError("최대 4개의 파일만 업로드할 수 있습니다.", 400);
     }
 
-    console.log(`웹 환경에서 ${validFiles.length}개 파일 업로드 시작`);
+    //console.log(`웹 환경에서 ${validFiles.length}개 파일 업로드 시작`);
 
     // 인증 토큰 가져오기
     const { token } = await getSession();
@@ -138,9 +138,9 @@ export async function uploadFilesWeb(
       const fieldName = options.category === "avatar" ? "file" : "files";
       formData.append(fieldName, file, safeFileName);
 
-      console.log(
-        `웹 환경 - 파일 추가: ${originalName} -> ${safeFileName}, 크기: ${file.size}바이트, 타입: ${file.type || "알 수 없음"}`,
-      );
+      //console.log(
+        // `웹 환경 - 파일 추가: ${originalName} -> ${safeFileName}, 크기: ${file.size}바이트, 타입: ${file.type || "알 수 없음"}`,
+      // );
     });
 
     const endpoints = getUploadEndpoints();
@@ -182,11 +182,11 @@ export async function uploadFilesWeb(
                 );
                 return;
               }
-              console.log(
-                "웹 파일 업로드 성공:",
-                response.data.files.length,
-                "개 파일",
-              );
+              //console.log(
+              //   "웹 파일 업로드 성공:",
+              //   response.data.files.length,
+              //   "개 파일",
+              // );
               resolve(response.data.files);
             } else {
               reject(
@@ -279,9 +279,9 @@ export async function uploadFileWeb(
     const safeFileName = generateSafeFileName(originalName, "single");
     formData.append("file", file, safeFileName);
 
-    console.log(
-      `웹 환경 - 단일 파일 업로드: ${originalName} -> ${safeFileName}, 크기: ${file.size}바이트`,
-    );
+    //console.log(
+    //   `웹 환경 - 단일 파일 업로드: ${originalName} -> ${safeFileName}, 크기: ${file.size}바이트`,
+    // );
 
     const endpoints = getUploadEndpoints();
 
@@ -311,7 +311,7 @@ export async function uploadFileWeb(
               xhr.responseText,
             ) as WebSingleUploadResponse;
             if (response.success) {
-              console.log("웹 단일 파일 업로드 성공:", response.data.id);
+              //console.log("웹 단일 파일 업로드 성공:", response.data.id);
               resolve(response.data);
             } else {
               reject(
@@ -445,7 +445,7 @@ export async function compressImageWeb(
 
     // GIF 파일인 경우 원본 그대로 반환
     if (blob.type === "image/gif") {
-      console.log("GIF 파일 감지 - 원본 유지");
+      //console.log("GIF 파일 감지 - 원본 유지");
       const originalFileName = fileName.replace(/\.(jpg|jpeg)$/i, ".gif");
       return new File([blob], originalFileName, {
         type: "image/gif",

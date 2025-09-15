@@ -99,20 +99,6 @@ export default function FeedHeader({
         )}
 
         <View style={themed($headerRight)}>
-          {currentUser && (
-            <>
-              <TouchableOpacity
-                style={themed($pointsBadge)}
-                onPress={onShopPress}
-                activeOpacity={0.7}
-              >
-                <Text style={themed($pointsText)}>
-                  {(currentUser.points ?? 0).toLocaleString()}P
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-
           <TouchableOpacity
             ref={profileButtonRef}
             style={themed($iconButton)}
@@ -209,24 +195,6 @@ const $iconButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
   justifyContent: "center",
   alignItems: "center",
   position: "relative",
-});
-
-const $pointsBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  paddingHorizontal: spacing.sm,
-  height: 28,
-  borderRadius: 14,
-  backgroundColor: colors.backgroundAlt,
-  alignItems: "center",
-  justifyContent: "center",
-  marginRight: spacing.xs,
-});
-
-const $pointsText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 12,
-  fontWeight: "700",
-  // 크로스플랫폼 안전한 외부 폰트 적용 (expo-google-fonts SpaceGrotesk)
-  fontFamily: "SpaceGrotesk-SemiBold",
 });
 
 const $boardButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => {

@@ -57,7 +57,7 @@ export const saveSession = async (
       }
 
       await setItem(USER_KEY, JSON.stringify(user));
-      console.log("세션 저장 완료: 토큰과 사용자 정보가 모두 저장됨");
+      // //console.log("세션 저장 완료: 토큰과 사용자 정보가 모두 저장됨");
       // --- 세션 이벤트 브로드캐스트 (로그인/토큰+유저 저장) ---
       emitSessionChange({
         user,
@@ -137,7 +137,7 @@ export const clearSession = async (): Promise<void> => {
     // 토큰 매니저를 통한 Supabase 로그아웃
     const { tokenManager } = await import("./auth/token-manager");
     await tokenManager.signOut();
-    console.log("세션 정보가 모두 삭제되었습니다.");
+    // //console.log("세션 정보가 모두 삭제되었습니다.");
     // --- 세션 이벤트 브로드캐스트 (로그아웃) ---
     emitSessionChange({
       user: null,

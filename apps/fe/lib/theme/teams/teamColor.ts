@@ -486,7 +486,7 @@ export const teamColors = {
 export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamName?: string) => {
   const mode = isDarkMode ? "dark" : "light";
   if (__DEV__) {
-    console.log("getTeamColors 호출:", { teamId, teamName, isDarkMode, mode });
+    //console.log("getTeamColors 호출:", { teamId, teamName, isDarkMode, mode });
   }
   const teamKey = teamId.toLowerCase();
   const teamNameKey = teamName?.toLowerCase();
@@ -511,7 +511,7 @@ export const getTeamColors = (teamId: string, isDarkMode: boolean = false, teamN
   if (match(["kiwoom", "키움", "키움 히어로즈", "kiwoom heroes", "heroes"])) return teamColors.kiwoom[mode];
 
   if (__DEV__) {
-    console.log("팀 색상 매칭 실패, 기본 색상 사용:", { teamKey, teamNameKey });
+    //console.log("팀 색상 매칭 실패, 기본 색상 사용:", { teamKey, teamNameKey });
   }
 
   return {

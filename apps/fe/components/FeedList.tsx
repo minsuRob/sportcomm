@@ -40,13 +40,13 @@ export default function FeedList({
   const { t } = useTranslation();
 
   // 디버깅: 웹 환경 확인
-  React.useEffect(() => {
-    console.log("FeedList 환경 확인:", {
-      isWeb: isWeb(),
-      platform: typeof window !== "undefined" ? "browser" : "native",
-      windowWidth: typeof window !== "undefined" ? window.innerWidth : "N/A",
-    });
-  }, []);
+  // React.useEffect(() => {
+    //console.log("FeedList 환경 확인:", {
+    //   isWeb: isWeb(),
+    //   platform: typeof window !== "undefined" ? "browser" : "native",
+    //   windowWidth: typeof window !== "undefined" ? window.innerWidth : "N/A",
+    // });
+  // }, []);
 
   // 메모이제이션된 렌더 함수들
   const renderItem = useCallback(

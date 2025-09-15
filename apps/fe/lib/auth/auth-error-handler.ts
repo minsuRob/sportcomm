@@ -50,7 +50,7 @@ export class AuthErrorHandler {
       code === "FORBIDDEN";
 
     if (isAuthRelated) {
-      console.log("🔍 인증 관련 오류 감지:", {
+      console.warn("🔍 인증 관련 오류 감지:", {
         message,
         code,
         isTokenExpired: this.isTokenExpiredError(error),
@@ -86,7 +86,7 @@ export class AuthErrorHandler {
     error: any,
     operationName?: string,
   ): Promise<boolean> {
-    console.log("🔍 인증 오류 처리 시작:", {
+    console.warn("🔍 인증 오류 처리 시작:", {
       operationName,
       errorMessage: error.message,
       errorCode: error.extensions?.code || error.code,
@@ -125,7 +125,7 @@ export class AuthErrorHandler {
     }
 
     try {
-      console.log("🔄 토큰 만료 감지, refreshSession 직접 호출 시도...", {
+      console.warn("🔄 토큰 만료 감지, refreshSession 직접 호출 시도...", {
         operationName,
         attempt: currentAttempts + 1,
       });
@@ -137,7 +137,7 @@ export class AuthErrorHandler {
       const refreshedSession = await tokenManager.refreshToken();
 
       if (refreshedSession) {
-        console.log("✅ 토큰 갱신 성공, 요청 재시도 가능");
+        //console.log("✅ 토큰 갱신 성공, 요청 재시도 가능");
         // 성공 시 재시도 횟수 초기화
         this.retryAttempts.delete(retryKey);
         return true;
@@ -190,7 +190,7 @@ export class AuthErrorHandler {
             text: "확인",
             onPress: () => {
               // 여기서 로그인 화면으로 이동하는 로직 추가 가능
-              console.log("사용자가 재로그인 알림 확인");
+              //console.log("사용자가 재로그인 알림 확인");
             },
           },
         ],

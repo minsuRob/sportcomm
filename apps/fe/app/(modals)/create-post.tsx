@@ -113,7 +113,7 @@ export default function CreatePostScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // 전역 AuthContext 로부터 현재 사용자/인증 상태 수신
-  const { user: currentUser, isAuthenticated } = useAuth();
+  const { user: currentUser, isAuthenticated, reloadUser } = useAuth();
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<SelectedVideo[]>([]);
   const [uploadProgress, setUploadProgress] = useState<string>("");
@@ -140,16 +140,21 @@ export default function CreatePostScreen() {
   });
 
   // 인증 상태 감시: 비로그인 시 다이얼로그 표시 (전역 AuthProvider 사용)
-  React.useEffect(() => {
-    if (isAuthenticated || currentUser) return;
-    setDialog({
-      visible: true,
-      title: "로그인 필요",
-      description: "게시물을 작성하려면 로그인이 필요합니다.",
-      onConfirm: () => router.back(),
-      showCancel: false,
-    });
-  }, [currentUser, isAuthenticated, router]);
+  
+  // TODO : 다 로드 되고 검증해야할듯.
+
+  // React.useEffect(() => {
+  //   console.log("isAuthenticated", isAuthenticated);
+  //   console.log("currentUser", currentUser);
+  //   if (isAuthenticated || currentUser) return;
+  //   setDialog({
+  //     visible: true,
+  //     title: "로그인 필요",
+  //     description: "게시물을 작성하려면 로그인이 필요합니다.",
+  //     onConfirm: () => router.back(),
+  //     showCancel: false,
+  //   });
+  // }, [currentUser, isAuthenticated, router]);
 
   // 사용자가 선택한 팀들을 옵션으로 변환
   const teamOptions: TeamOption[] = React.useMemo(() => {
@@ -252,20 +257,20 @@ export default function CreatePostScreen() {
       });
 
       if (!result.canceled && result.assets) {
-        console.log(`📱 미디어 선택 완료: ${result.assets.length}개`);
+        //console.log(`📱 미디어 선택 완료: ${result.assets.length}개`);
 
         const newImages: SelectedImage[] = [];
         const newVideos: SelectedVideo[] = [];
 
         for (const [index, asset] of result.assets.entries()) {
-          console.log(`📱 Asset ${index}:`, {
-            uri: asset.uri?.substring(0, 50) + "...",
-            width: asset.width,
-            height: asset.height,
-            type: asset.type,
-            fileSize: asset.fileSize,
-            duration: asset.duration,
-          });
+          //console.log(`📱 Asset ${index}:`, {
+          //   uri: asset.uri?.substring(0, 50) + "...",
+          //   width: asset.width,
+          //   height: asset.height,
+          //   type: asset.type,
+          //   fileSize: asset.fileSize,
+          //   duration: asset.duration,
+          // });
 
           try {
             if (asset.type === "video") {
@@ -487,12 +492,12 @@ export default function CreatePostScreen() {
         isPublic: true,
       };
 
-      console.log("게시물 생성 시작:", {
-        title: postInput.title,
-        teamId: postInput.teamId,
-        hasImages: selectedImages.length > 0,
-        imageCount: selectedImages.length,
-      });
+      //console.log("게시물 생성 시작:", {
+        // title: postInput.title,
+        // teamId: postInput.teamId,
+        // hasImages: selectedImages.length > 0,
+        // imageCount: selectedImages.length,
+      // });
 
       let createdPost;
 
@@ -579,7 +584,7 @@ export default function CreatePostScreen() {
         createdPost = await createTextOnlyPost(postInput);
       }
 
-      console.log("게시물 생성 완료:", createdPost);
+      //console.log("게시물 생성 완료:", createdPost);
 
       // 성공 메시지
       const totalMediaCount = selectedImages.length + selectedVideos.length;
@@ -593,12 +598,26 @@ export default function CreatePostScreen() {
         mediaMessage = ` (${parts.join(", ")} 포함)`;
       }
 
-      showToast({
-        type: "success",
-        title: "게시물 작성 완료",
-        message: `게시물이 성공적으로 작성되었습니다!${mediaMessage}`,
-        duration: 3000,
-      });
+      // showToast({
+      //   type: "success",
+      //   title: "게시물 작성 완료",
+      //   message: `게시물이 성공적으로 작성되었습니다!${mediaMessage}`,
+      //   duration: 3000,
+      // });
+
+      // 포인트 지급을 위해 사용자 정보 새로고침
+      try {
+        await reloadUser({ force: true });
+        showToast({
+          type: "success",
+          title: "게시글 작성 완료",
+          message: "게시글 작성으로 10포인트를 받았습니다!",
+          duration: 3000,
+        });
+      } catch (reloadError) {
+        console.warn("사용자 정보 새로고침 실패:", reloadError);
+        // 사용자 정보 새로고침 실패해도 게시물 작성이 성공했으므로 계속 진행
+      }
 
       // 피드로 돌아가기
       router.back();
@@ -888,7 +907,7 @@ export default function CreatePostScreen() {
         {/* 태그 입력 영역 (모던) */}
         {
           <View style={themed($tagSection)}>
-            <Text style={themed($sectionTitle)}>태그</Text>
+            <Text style={themed($sectionTitle)}>주제(선택)</Text>
             <TagInput
               tags={tags}
               onTagsChange={setTags}

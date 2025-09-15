@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useTeamColorSelection } from "@/lib/hooks/useTeamColorSelection";
 import {
   View,
   Text,
@@ -60,6 +61,26 @@ export default function TeamColorsDetailsScreen() {
     teamColorTeamId ?? null,
   );
 
+  // 팀 색상 선택 로직 (공유 hook 사용)
+  const {
+    getDefaultTeamByPriority,
+    applyTeamColorByPriority,
+    getPriorityBasedSelection,
+  } = useTeamColorSelection({
+    myTeamsData,
+    teamColorTeamId,
+    selectedTeamId,
+    setTeamColorOverride,
+  });
+
+  // 사용자가 선택하지 않은 경우 priority 기반으로 자동 선택
+  useEffect(() => {
+    const defaultTeamId = getDefaultTeamByPriority();
+    if (!selectedTeamId && !teamColorTeamId && defaultTeamId) {
+      setSelectedTeamId(defaultTeamId);
+    }
+  }, [selectedTeamId, teamColorTeamId, getDefaultTeamByPriority]);
+
   // teamMap 캐시 (성능 최적화)
   const teamMap = useMemo(() => {
     const m = new Map<string, Team>();
@@ -106,23 +127,28 @@ export default function TeamColorsDetailsScreen() {
 
   /**
    * 팀 선택 핸들러
-   * - teamId 는 선택 체크 표시에 사용
-   * - teamSlug(deriveTeamSlug) 를 ThemeProvider 에 전달하여 색상 매칭
+   * - 이제는 UI 미리보기만 변경(로컬 상태)
+   * - 실제 적용은 저장 버튼으로 수행
    */
-  const handleSelectTeam = async (teamId: string | null): Promise<void> => {
+  const handleSelectTeam = (teamId: string | null): void => {
+    const nextId = selectedTeamId === teamId ? null : teamId;
+    setSelectedTeamId(nextId);
+  };
+
+  /**
+   * 저장 핸들러
+   * - 현재 선택된 팀 기준으로 slug 유추 후 setTeamColorOverride 적용
+   */
+  const handleSave = async (): Promise<void> => {
     try {
-      const nextId = selectedTeamId === teamId ? null : teamId;
       let slug: string | null = null;
-      if (nextId) {
-        const team = teamMap.get(nextId);
+      if (selectedTeamId) {
+        const team = teamMap.get(selectedTeamId);
         slug = deriveTeamSlug(team?.name);
       }
-      // 새로운 통합 세터 (teamId + slug) 사용
-      await setTeamColorOverride(nextId, slug);
-
-      setSelectedTeamId(nextId);
+      await setTeamColorOverride(selectedTeamId, slug);
     } catch (error) {
-      console.error("팀 색상 적용 실패:", error);
+      console.error("팀 색상 저장 실패:", error);
     }
   };
 
@@ -139,13 +165,25 @@ export default function TeamColorsDetailsScreen() {
     }
     const team = teamMap.get(teamId);
     const colors = getTeamColors(teamId, theme.isDark, team?.name);
+
+    // 사용자가 직접 선택했는지 priority 기반 자동 선택인지 구분
+    const isUserSelected = teamColorTeamId === teamId;
+    const isPriorityBased = !teamColorTeamId && selectedTeamId === teamId && getDefaultTeamByPriority() === teamId;
+
+    let label = team?.name ?? "선택된 팀";
+    if (isPriorityBased) {
+      label += " (주 팀)";
+    } else if (isUserSelected) {
+      label += " (직접 선택)";
+    }
+
     return {
       mainColor: (colors as any).mainColor ?? theme.colors.tint,
       subColor:
         (colors as any).subColor ??
         theme.colors.accent ??
         theme.colors.backgroundAlt,
-      label: team?.name ?? "선택된 팀",
+      label,
     };
   };
 
@@ -164,14 +202,26 @@ export default function TeamColorsDetailsScreen() {
 
         <Text style={themed($title)}>앱 색상 설정 (내 팀 기반)</Text>
 
-        <TouchableOpacity
-          onPress={async () => {
-            // 초기화: 팀 기반 오버라이드 제거
-            await handleSelectTeam(null);
-          }}
-          style={themed($resetButton)}
-        >
-          <Text style={themed($resetButtonText)}>기본으로 되돌리기</Text>
+        {/* 선택 상태 설명 */}
+        <View style={themed($statusInfo)}>
+          {teamColorTeamId ? (
+            <Text style={themed($statusText)}>직접 선택한 팀 색상 적용 중</Text>
+          ) : selectedTeamId ? (
+            <Text style={themed($statusText)}>주 팀 색상 자동 적용 중</Text>
+          ) : (
+            <Text style={themed($statusText)}>팀을 선택하여 색상을 설정하세요</Text>
+          )}
+        </View>
+
+        <TouchableOpacity onPress={handleSave} style={themed($resetButton)}>
+          <Text
+            style={[
+              themed($resetButtonText),
+              { color: activePreview.mainColor },
+            ]}
+          >
+            저장
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -204,7 +254,7 @@ export default function TeamColorsDetailsScreen() {
       >
         {myTeamsLoading ? (
           <View style={themed($loadingContainer)}>
-            <ActivityIndicator size="large" color={theme.colors.tint} />
+            <ActivityIndicator size="large" color={activePreview.mainColor} />
             <Text style={themed($loadingText)}>내 팀을 불러오는 중...</Text>
           </View>
         ) : myTeamsError ? (
@@ -214,7 +264,10 @@ export default function TeamColorsDetailsScreen() {
             </Text>
             <TouchableOpacity
               onPress={() => refetch()}
-              style={themed($retryButton)}
+              style={[
+                themed($retryButton),
+                { backgroundColor: activePreview.mainColor },
+              ]}
             >
               <Text style={themed($retryButtonText)}>다시 시도</Text>
             </TouchableOpacity>
@@ -227,6 +280,10 @@ export default function TeamColorsDetailsScreen() {
           myTeamsData.myTeams.map((userTeam) => {
             const team = userTeam.team;
             const isActive = selectedTeamId === team.id;
+            const isPrimaryTeam = userTeam.priority === 0; // 주 팀 여부
+            const isUserSelected = teamColorTeamId === team.id; // 사용자가 직접 선택했는지
+            const isAutoSelected = !teamColorTeamId && selectedTeamId === team.id && getDefaultTeamByPriority() === team.id; // priority 기반 자동 선택
+
             const teamColors = getTeamColors(
               team.id,
               theme.isDark,
@@ -244,6 +301,12 @@ export default function TeamColorsDetailsScreen() {
                 style={[
                   themed($teamRow),
                   isActive ? themed($teamRowActive) : null,
+                  isActive
+                    ? {
+                        borderColor: activePreview.mainColor,
+                        backgroundColor: activePreview.mainColor + "12",
+                      }
+                    : null,
                 ]}
                 onPress={() => handleSelectTeam(team.id)}
               >
@@ -256,6 +319,9 @@ export default function TeamColorsDetailsScreen() {
                 <View style={themed($teamMeta)}>
                   <Text style={themed($teamName)} numberOfLines={1}>
                     {team.name}
+                    {isPrimaryTeam && " ⭐"}
+                    {isUserSelected && " ✓"}
+                    {isAutoSelected && " 🤖"}
                   </Text>
                   <View style={themed($colorPreviewRow)}>
                     <View
@@ -271,7 +337,7 @@ export default function TeamColorsDetailsScreen() {
                   <Ionicons
                     name="checkmark-circle"
                     size={20}
-                    color={theme.colors.tint}
+                    color={activePreview.mainColor}
                   />
                 ) : (
                   <Ionicons
@@ -432,6 +498,24 @@ const $colorDot: ThemedStyle<ViewStyle> = () => ({
   borderColor: "rgba(0,0,0,0.06)",
 });
 
+const $statusInfo: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  top: 60,
+  left: spacing.md,
+  right: spacing.md,
+  backgroundColor: "rgba(0,0,0,0.7)",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+  borderRadius: 6,
+});
+
+const $statusText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 12,
+  fontWeight: "500",
+  textAlign: "center",
+});
+
 /*
-커밋 메시지 (git): feat(details): 팀 기반 앱 색상 설정 페이지 추가
+커밋 메시지 (git): refactor(team-colors-select): useTeamColorSelection hook 도입하여 코드 중복 제거
 */

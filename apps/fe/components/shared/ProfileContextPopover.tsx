@@ -92,18 +92,18 @@ export default function ProfileContextPopover({
           onNotificationPress();
         },
       },
-      {
-        key: "teamFilter",
-        label: t("profilePopover.teamFilter"),
-        icon: (
-          <Ionicons name="funnel-outline" size={18} color={theme.colors.text} />
-        ),
-        onPress: () => {
-          // FeedHeader 등에 있는 TeamFilterSelector 모달 트리거
-          onClose();
-          onTeamFilterPress();
-        },
-      },
+      // {
+      //   key: "teamFilter",
+      //   label: t("profilePopover.teamFilter"),
+      //   icon: (
+      //     <Ionicons name="funnel-outline" size={18} color={theme.colors.text} />
+      //   ),
+      //   onPress: () => {
+      //     // FeedHeader 등에 있는 TeamFilterSelector 모달 트리거
+      //     onClose();
+      //     onTeamFilterPress();
+      //   },
+      // },
       {
         key: "board",
         label: t("profilePopover.board"),
@@ -115,47 +115,47 @@ export default function ProfileContextPopover({
           onBoardPress();
         },
       },
-      {
-        key: "lottery",
-        label: t("profilePopover.lottery"),
-        icon: (
-          <Ionicons name="ticket-outline" size={18} color={theme.colors.text} />
-        ),
-        onPress: () => {
-          onClose();
-          onLotteryPress();
-        },
-      },
-      {
-        key: "shop",
-        label: t("profilePopover.shop"),
-        icon: (
-          <Ionicons
-            name="storefront-outline"
-            size={18}
-            color={theme.colors.text}
-          />
-        ),
-        onPress: () => {
-          onClose();
-          onShopPress();
-        },
-      },
-      {
-        key: "teamColorFilter",
-        label: t("profilePopover.teamColorFilter"),
-        icon: (
-          <Ionicons
-            name="color-filter-outline"
-            size={18}
-            color={theme.colors.text}
-          />
-        ),
-        onPress: () => {
-          onClose();
-          router.push({ pathname: "/(details)/team-colors-select" });
-        },
-      },
+      // {
+      //   key: "lottery",
+      //   label: t("profilePopover.lottery"),
+      //   icon: (
+      //     <Ionicons name="ticket-outline" size={18} color={theme.colors.text} />
+      //   ),
+      //   onPress: () => {
+      //     onClose();
+      //     onLotteryPress();
+      //   },
+      // },
+      // {
+      //   key: "shop",
+      //   label: t("profilePopover.shop"),
+      //   icon: (
+      //     <Ionicons
+      //       name="storefront-outline"
+      //       size={18}
+      //       color={theme.colors.text}
+      //     />
+      //   ),
+      //   onPress: () => {
+      //     onClose();
+      //     onShopPress();
+      //   },
+      // },
+      // {
+      //   key: "teamColorFilter",
+      //   label: t("profilePopover.teamColorFilter"),
+      //   icon: (
+      //     <Ionicons
+      //       name="color-filter-outline"
+      //       size={18}
+      //       color={theme.colors.text}
+      //     />
+      //   ),
+      //   onPress: () => {
+      //     onClose();
+      //     router.push({ pathname: "/(details)/team-colors-select" });
+      //   },
+      // },
       {
         key: "toggleTheme",
         label: theme.isDark ? t("profilePopover.switchToLight") : t("profilePopover.switchToDark"),

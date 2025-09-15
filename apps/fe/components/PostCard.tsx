@@ -226,11 +226,11 @@ const PostCard = React.memo(function PostCard({
   // 개발 환경 체크
   const __DEV__ = process.env.NODE_ENV === "development";
 
-  // 미디어 타입별 필터링
-  const imageMedia = post.media.filter(
+  // 미디어 타입별 필터링 (media가 null일 수 있음)
+  const imageMedia = (post.media || []).filter(
     (item) => item.type === "image" || item.type === "IMAGE",
   );
-  const videoMedia = post.media.filter(
+  const videoMedia = (post.media || []).filter(
     (item) => item.type === "video" || item.type === "VIDEO",
   );
 

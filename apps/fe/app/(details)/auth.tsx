@@ -891,6 +891,7 @@ const $continueButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.background,
   fontSize: 17,
   fontWeight: "600",
+  textAlign: "center",
 });
 
 const $toggleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

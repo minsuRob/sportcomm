@@ -81,7 +81,7 @@ export default function AdFitBanner({
 
           // 스크립트 로드 완료 후 광고 표시
           script.onload = () => {
-            if (__DEV__) //console.log('AdFit 스크립트 로드 완료');
+            // if (__DEV__) //console.log('AdFit 스크립트 로드 완료');
             setAdStatus('loaded');
             // 광고 표시 (display: block으로 변경)
             if (adElement) {

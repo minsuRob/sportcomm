@@ -18,6 +18,7 @@ import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import TabSlider from "@/components/TabSlider";
+import { useRouter } from "expo-router";
 
 interface FeedHeaderProps {
   onNotificationPress: () => void;
@@ -52,6 +53,7 @@ export default function FeedHeader({
   const { t } = useTranslation();
   const { themed, theme } = useAppTheme();
   const { currentUser } = useCurrentUser();
+  const router = useRouter();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
   const [popoverPosition, setPopoverPosition] = React.useState({
     top: 0,
@@ -72,7 +74,8 @@ export default function FeedHeader({
         setProfileMenuVisible(true);
       });
     } else {
-      onProfilePress();
+      // currentUser가 없으면 로그인 페이지로 이동
+      router.push("/auth");
     }
   };
 

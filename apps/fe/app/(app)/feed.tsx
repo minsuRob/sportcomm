@@ -286,6 +286,9 @@ export default function FeedScreen() {
         onTabChange={setActiveTab}
       />
 
+      {/* 공지 섹션: 로그인 상태와 관계없이 항상 표시 */}
+      <FeedNotice />
+
       {/* 선택된 테마 팀(favoriteDate) 정보 표시 */}
       {currentUser?.myTeams && currentUser.myTeams.length > 0 && (
         <>
@@ -358,9 +361,6 @@ export default function FeedScreen() {
               );
             })()}
           </View>
-
-          {/* 공지 섹션 제거: 상단으로 이동 */}
-          <FeedNotice />
         </>
       )}
 

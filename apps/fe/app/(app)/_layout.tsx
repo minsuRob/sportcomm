@@ -79,8 +79,8 @@ function MobileTabLayout() {
           tabBarActiveTintColor: teamMain, // 활성 탭 색상을 팀 메인 컬러로 설정
           tabBarInactiveTintColor: theme.colors.textDim,
           tabBarStyle: {
-            height: 64,
-            paddingTop: 6,
+            height: 52,
+            paddingTop: 4,
             paddingBottom: 8,
             backgroundColor: theme.colors.card,
             borderTopColor: theme.colors.border,
@@ -120,22 +120,42 @@ function MobileTabLayout() {
         name="shop"
         options={{
           title: "상점",
-          // 커스텀 아이콘: 상점 아이콘 하단에 포인트(숫자P) 표기
+          // 커스텀 아이콘: 상점 아이콘 우측 상단에 포인트 말풍선 표시
           tabBarIcon: ({ color }) => (
-            <View style={{ alignItems: "center", justifyContent: "center" }}>
+            <View style={{ alignItems: "center", justifyContent: "center", position: "relative" }}>
               <Ionicons name="bag-handle-outline" size={26} color={color} />
-              <Text
+              <View
                 style={{
-                  color,
-                  fontSize: 11,
-                  marginTop: 2,
-                  fontWeight: "700",
-                  fontFamily: "SpaceGrotesk-SemiBold",
+                  position: "absolute",
+                  top: -6,
+                  right: -16,
+                  backgroundColor: color,
+                  borderRadius: 10,
+                  minWidth: 20,
+                  height: 20,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 4,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 2,
+                  elevation: 3,
                 }}
-                numberOfLines={1}
               >
-                {pointsLabel}
-              </Text>
+                <Text
+                  style={{
+                    color: "white",
+                    fontSize: 9,
+                    fontWeight: "800",
+                    fontFamily: "SpaceGrotesk-SemiBold",
+                    textAlign: "center",
+                  }}
+                  numberOfLines={1}
+                >
+                  {pointsLabel}
+                </Text>
+              </View>
             </View>
           ),
           tabBarButton: createCustomTabButton("shop"),

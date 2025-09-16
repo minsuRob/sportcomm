@@ -39,7 +39,7 @@ export default function AdFitBanner({
   const [adError, setAdError] = useState<string | null>(null);
 
   // 환경변수 혹은 EXPO_PUBLIC 값, 마지막으로 하드코딩 기본값 순서로 결합
-  const DEFAULT_AD_UNIT: string = "DAN-jaKdyGIgnRkALWCc";
+  const DEFAULT_AD_UNIT: string = "DAN-nQGfQA9mWth49XVX";
   const CONFIG_AD_UNIT: string =
     (ENV_AD_FIT_AD_UNIT as unknown as string) ||
     ((process.env as any)?.EXPO_PUBLIC_AD_FIT_AD_UNIT as string) ||

@@ -209,7 +209,7 @@ const StoryItemComponent = ({
       </View>
 
       <View style={themed($storyInfo)}>
-        <Text style={themed($storyUsername)} numberOfLines={1}>
+        <Text style={themed($storyUsername)} >
           {displayTitle}
         </Text>
         <Text style={themed($storyTimestamp)}>
@@ -217,11 +217,11 @@ const StoryItemComponent = ({
         </Text>
 
         {/* 추가 메타데이터 표시 */}
-        {story.metadata?.teamName && (
+        {/* {story.metadata?.teamName && (
           <Text style={themed($storyTeam)} numberOfLines={1}>
             {story.metadata.teamName}
           </Text>
-        )}
+        )} */}
       </View>
     </TouchableOpacity>
   );

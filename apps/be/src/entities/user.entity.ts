@@ -46,10 +46,24 @@ export enum UserProgressAction {
  * - value = 포인트 = 경험치 (현재는 동일 비율 요구사항)
  * 필요 시 향후 포인트와 경험치를 분리하여 다른 비율로 제공할 수 있도록
  * 구조를 객체 형태로 확장 가능 (예: { points: 5, exp: 10 }).
+ *
+ * Updated: 댓글 3점, 게시물 10점으로 조정 + 일일 포인트 제한 적용
+ * - 댓글: 3점/회, 일일 최대 30점 (약 10회 가능)
+ * - 게시물: 10점/회, 일일 최대 50점 (5회 가능)
  */
 export const USER_PROGRESS_REWARD: Record<UserProgressAction, number> = {
-  [UserProgressAction.CHAT_MESSAGE]: 3,
-  [UserProgressAction.POST_CREATE]: 10,
+  [UserProgressAction.CHAT_MESSAGE]: 3,    // 댓글 한 번 쓸 때 3점
+  [UserProgressAction.POST_CREATE]: 10,    // 게시물 한 번 쓸 때 10점
+  [UserProgressAction.DAILY_ATTENDANCE]: 20,
+};
+
+/**
+ * 일일 포인트 제한 설정
+ * 각 액션별로 하루에 얻을 수 있는 최대 포인트 양
+ */
+export const DAILY_POINT_LIMITS: Record<UserProgressAction, number> = {
+  [UserProgressAction.CHAT_MESSAGE]: 30,   // 댓글로 하루 최대 30점
+  [UserProgressAction.POST_CREATE]: 50,    // 게시물로 하루 최대 50점
   [UserProgressAction.DAILY_ATTENDANCE]: 20,
 };
 
@@ -253,6 +267,49 @@ export class User {
     comment: '최근 데일리 출석 보상 수령 일시',
   })
   lastAttendanceAt?: Date;
+
+  /**
+   * 일일 댓글 포인트 (최대 30점 제한)
+   */
+  @Field(() => Number, {
+    description: '오늘 댓글로 얻은 포인트',
+    defaultValue: 0
+  })
+  @Column({
+    type: 'integer',
+    default: 0,
+    comment: '일일 댓글 포인트 (최대 30점 제한)',
+  })
+  dailyChatPoints: number;
+
+  /**
+   * 일일 게시물 포인트 (최대 50점 제한)
+   */
+  @Field(() => Number, {
+    description: '오늘 게시물로 얻은 포인트',
+    defaultValue: 0
+  })
+  @Column({
+    type: 'integer',
+    default: 0,
+    comment: '일일 게시물 포인트 (최대 50점 제한)',
+  })
+  dailyPostPoints: number;
+
+  /**
+   * 마지막 일일 제한 초기화 일시
+   * 시간대별 초기화를 위한 기준 값입니다.
+   */
+  @Field(() => Date, {
+    nullable: true,
+    description: '마지막 일일 제한 초기화 일시',
+  })
+  @Column({
+    type: 'timestamp with time zone',
+    nullable: true,
+    comment: '마지막 일일 제한 초기화 일시',
+  })
+  lastDailyResetAt?: Date;
 
   /**
    * 사용자 비밀번호 (해시된 값) - DEPRECATED
@@ -545,6 +602,110 @@ export class User {
   }
 
   /**
+   * 일일 제한 초기화 필요 여부 확인
+   * 한국 시간(KST) 기준으로 매일 오전 6시에 초기화
+   * 다른 나라 시간대 지원을 위해 timezone 파라미터 추가
+   */
+  needsDailyReset(now: Date = new Date(), timezone: string = 'Asia/Seoul'): boolean {
+    if (!this.lastDailyResetAt) return true;
+
+    const kstNow = this.convertToTimezone(now, timezone);
+    const lastReset = this.convertToTimezone(this.lastDailyResetAt, timezone);
+
+    // 한국 시간 기준으로 날짜가 다른지 확인 (오전 6시 기준)
+    const resetHour = 6;
+    const currentDate = new Date(kstNow);
+    const lastResetDate = new Date(lastReset);
+
+    // 현재 시간이 오전 6시 이전이면 전날로 계산
+    if (currentDate.getHours() < resetHour) {
+      currentDate.setDate(currentDate.getDate() - 1);
+    }
+
+    const currentResetDate = `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`;
+    const lastResetDateStr = `${lastResetDate.getFullYear()}-${lastResetDate.getMonth()}-${lastResetDate.getDate()}`;
+
+    return currentResetDate !== lastResetDateStr;
+  }
+
+  /**
+   * 댓글 작성 가능 여부 확인 (포인트 제한 기반)
+   */
+  canSendChatMessage(): boolean {
+    return (this.dailyChatPoints || 0) < 30; // 하루 최대 30점
+  }
+
+  /**
+   * 게시물 작성 가능 여부 확인 (포인트 제한 기반)
+   */
+  canCreatePost(): boolean {
+    return (this.dailyPostPoints || 0) < 50; // 하루 최대 50점
+  }
+
+  /**
+   * 댓글 포인트 추가 및 검증
+   */
+  addChatPoints(points: number = 3): boolean {
+    const currentPoints = this.dailyChatPoints || 0;
+    if (currentPoints + points > 30) {
+      return false; // 제한 초과
+    }
+    this.dailyChatPoints = currentPoints + points;
+    return true;
+  }
+
+  /**
+   * 게시물 포인트 추가 및 검증
+   */
+  addPostPoints(points: number = 10): boolean {
+    const currentPoints = this.dailyPostPoints || 0;
+    if (currentPoints + points > 50) {
+      return false; // 제한 초과
+    }
+    this.dailyPostPoints = currentPoints + points;
+    return true;
+  }
+
+  /**
+   * 일일 제한 초기화
+   */
+  resetDailyLimits(now: Date = new Date()): void {
+    this.dailyChatPoints = 0;
+    this.dailyPostPoints = 0;
+    this.lastDailyResetAt = now;
+  }
+
+  /**
+   * 시간대 변환 헬퍼 메서드
+   * 다른 나라 시간대 지원을 위한 유틸리티
+   */
+  private convertToTimezone(date: Date, timezone: string): Date {
+    // 간단한 UTC offset 계산 (실제 구현에서는 moment-timezone 등의 라이브러리 사용 권장)
+    const utcDate = new Date(date.toISOString());
+    const offset = this.getTimezoneOffset(timezone);
+    return new Date(utcDate.getTime() + offset * 60 * 1000);
+  }
+
+  /**
+   * 시간대별 UTC offset 계산 (시간)
+   * 실제 서비스에서는 timezone 라이브러리 사용 권장
+   */
+  private getTimezoneOffset(timezone: string): number {
+    const timezoneOffsets: Record<string, number> = {
+      'Asia/Seoul': 9,      // KST (UTC+9)
+      'Asia/Tokyo': 9,      // JST (UTC+9)
+      'Asia/Shanghai': 8,   // CST (UTC+8)
+      'America/New_York': -5, // EST (UTC-5)
+      'America/Los_Angeles': -8, // PST (UTC-8)
+      'Europe/London': 0,   // GMT (UTC+0)
+      'Europe/Paris': 1,    // CET (UTC+1)
+      'Australia/Sydney': 10, // AEDT (UTC+10)
+      'UTC': 0,
+    };
+    return timezoneOffsets[timezone] || 0;
+  }
+
+  /**
    * (경험치 시스템 제거) 포인트 적립만 필요 시 별도 서비스 로직에서 직접 points 필드 증가 처리
    * 기존 awardProgress 메서드 삭제됨.
    */
@@ -601,6 +762,12 @@ export interface CombinedUserInfo {
   points?: number;
   /** 최근 출석 보상 수령 일시 */
   lastAttendanceAt?: Date;
+  /** 일일 댓글 포인트 (최대 30점) */
+  dailyChatPoints?: number;
+  /** 일일 게시물 포인트 (최대 50점) */
+  dailyPostPoints?: number;
+  /** 마지막 일일 제한 초기화 일시 */
+  lastDailyResetAt?: Date;
   /** 사용자 추천인 코드 */
   referralCode?: string;
   /** 추천인 코드 (나를 초대한 사람) */

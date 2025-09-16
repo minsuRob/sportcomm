@@ -5,6 +5,7 @@ import {
   User,
   UserProgressAction,
   USER_PROGRESS_REWARD,
+  DAILY_POINT_LIMITS,
 } from '../../entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -45,7 +46,26 @@ export interface UserProgressSnapshot {
   userId: string;
   points: number;
   lastAttendanceAt?: Date;
+  dailyChatPoints: number;
+  dailyPostPoints: number;
+  lastDailyResetAt?: Date;
   timestamp: Date;
+}
+
+/**
+ * 일일 제한 정보 DTO
+ */
+export interface DailyLimitsInfo {
+  userId: string;
+  dailyChatPoints: number;
+  dailyPostPoints: number;
+  chatPointLimit: number;
+  postPointLimit: number;
+  canSendChat: boolean;
+  canCreatePost: boolean;
+  lastResetAt?: Date;
+  nextResetAt?: Date;
+  timezone: string;
 }
 
 @Injectable()
@@ -59,16 +79,81 @@ export class ProgressService {
   /**
    * 사용자 진행 상태 스냅샷 조회
    */
-  async getUserProgress(userId: string): Promise<UserProgressSnapshot> {
+  async getUserProgress(userId: string, timezone: string = 'Asia/Seoul'): Promise<UserProgressSnapshot> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+    // 일일 제한 초기화 필요 시 초기화
+    if (user.needsDailyReset(new Date(), timezone)) {
+      user.resetDailyLimits(new Date());
+      await this.userRepository.save(user);
+    }
 
     return {
       userId: user.id,
       points: user.points || 0,
       lastAttendanceAt: user.lastAttendanceAt,
+      dailyChatPoints: user.dailyChatPoints || 0,
+      dailyPostPoints: user.dailyPostPoints || 0,
+      lastDailyResetAt: user.lastDailyResetAt,
       timestamp: new Date(),
     };
+  }
+
+  /**
+   * 사용자 일일 제한 정보 조회
+   */
+  async getDailyLimitsInfo(userId: string, timezone: string = 'Asia/Seoul'): Promise<DailyLimitsInfo> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+    const now = new Date();
+    const chatPointLimit = DAILY_POINT_LIMITS[UserProgressAction.CHAT_MESSAGE];
+    const postPointLimit = DAILY_POINT_LIMITS[UserProgressAction.POST_CREATE];
+
+    // 일일 제한 초기화 필요 시 초기화
+    if (user.needsDailyReset(now, timezone)) {
+      user.resetDailyLimits(now);
+      await this.userRepository.save(user);
+    }
+
+    // 다음 초기화 시간 계산
+    const nextReset = new Date(now);
+    nextReset.setHours(6, 0, 0, 0); // 오전 6시
+    if (now.getHours() >= 6) {
+      nextReset.setDate(nextReset.getDate() + 1); // 다음 날
+    }
+
+    return {
+      userId: user.id,
+      dailyChatPoints: user.dailyChatPoints || 0,
+      dailyPostPoints: user.dailyPostPoints || 0,
+      chatPointLimit,
+      postPointLimit,
+      canSendChat: user.canSendChatMessage(),
+      canCreatePost: user.canCreatePost(),
+      lastResetAt: user.lastDailyResetAt,
+      nextResetAt: nextReset,
+      timezone,
+    };
+  }
+
+  /**
+   * 수동 일일 제한 초기화 (관리자용)
+   */
+  async resetUserDailyLimits(userId: string, timezone: string = 'Asia/Seoul'): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+    const now = new Date();
+    user.resetDailyLimits(now);
+    await this.userRepository.save(user);
+
+    this.eventEmitter.emit('progress.dailyLimitsReset', {
+      userId,
+      timestamp: now,
+      timezone,
+    });
   }
 
   /**
@@ -79,11 +164,18 @@ export class ProgressService {
     userId: string,
     action: UserProgressAction,
     now: Date = new Date(),
+    timezone: string = 'Asia/Seoul',
   ): Promise<AwardResult> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
     const beforePoints = user.points || 0;
+
+    // 일일 제한 초기화 필요 시 먼저 초기화
+    if (user.needsDailyReset(now, timezone)) {
+      user.resetDailyLimits(now);
+      await this.userRepository.save(user);
+    }
 
     // 출석 중복 방지
     if (
@@ -100,6 +192,32 @@ export class ProgressService {
       };
     }
 
+    // 댓글 포인트 일일 제한 체크
+    if (action === UserProgressAction.CHAT_MESSAGE && !user.canSendChatMessage()) {
+      return {
+        userId,
+        action,
+        addedPoints: 0,
+        totalPoints: beforePoints,
+        skipped: true,
+        timestamp: now,
+        reason: `일일 댓글 포인트 제한(${DAILY_POINT_LIMITS[action]}점)을 초과했습니다.`,
+      };
+    }
+
+    // 게시물 포인트 일일 제한 체크
+    if (action === UserProgressAction.POST_CREATE && !user.canCreatePost()) {
+      return {
+        userId,
+        action,
+        addedPoints: 0,
+        totalPoints: beforePoints,
+        skipped: true,
+        timestamp: now,
+        reason: `일일 게시물 포인트 제한(${DAILY_POINT_LIMITS[action]}점)을 초과했습니다.`,
+      };
+    }
+
     const reward = USER_PROGRESS_REWARD[action] ?? 0;
     if (reward > 0) {
       // 트랜잭션을 사용하여 안전하게 포인트 업데이트 (레이스 컨디션 방지)
@@ -112,15 +230,22 @@ export class ProgressService {
           await transactionalEntityManager.update(User, { id: userId }, { lastAttendanceAt: now });
         }
 
-        // 로컬 user 객체의 points를 업데이트하여 반환값에 반영
+        // 댓글 또는 게시물 작성의 경우 포인트 증가
+        if (action === UserProgressAction.CHAT_MESSAGE) {
+          user.addChatPoints(reward);
+          await transactionalEntityManager.increment(User, { id: userId }, 'dailyChatPoints', reward);
+        } else if (action === UserProgressAction.POST_CREATE) {
+          user.addPostPoints(reward);
+          await transactionalEntityManager.increment(User, { id: userId }, 'dailyPostPoints', reward);
+        }
+
+        // 로컬 user 객체 업데이트
         user.points = beforePoints + reward;
         if (action === UserProgressAction.DAILY_ATTENDANCE) {
           user.lastAttendanceAt = now;
         }
       });
     }
-
-
 
     const result: AwardResult = {
       userId,
@@ -138,15 +263,15 @@ export class ProgressService {
   /**
    * 채팅 메시지 작성 적립
    */
-  async awardChatMessage(userId: string): Promise<AwardResult> {
-    return this.awardAction(userId, UserProgressAction.CHAT_MESSAGE);
+  async awardChatMessage(userId: string, timezone: string = 'Asia/Seoul'): Promise<AwardResult> {
+    return this.awardAction(userId, UserProgressAction.CHAT_MESSAGE, new Date(), timezone);
   }
 
   /**
    * 게시글 작성 적립
    */
-  async awardPostCreate(userId: string): Promise<AwardResult> {
-    return this.awardAction(userId, UserProgressAction.POST_CREATE);
+  async awardPostCreate(userId: string, timezone: string = 'Asia/Seoul'): Promise<AwardResult> {
+    return this.awardAction(userId, UserProgressAction.POST_CREATE, new Date(), timezone);
   }
 
   /**

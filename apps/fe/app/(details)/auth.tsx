@@ -241,7 +241,7 @@ export default function AuthScreen() {
           if (isLoginAction) {
             setPasswordError("잘못된 이메일 주소 또는 비밀번호입니다.");
           } else {
-            setEmailError("이미 사용 중인 이메일 주소입니다.");
+            setEmailError(errorMessage);
           }
         } else if (
           errorMessage.toLowerCase().includes("password") ||

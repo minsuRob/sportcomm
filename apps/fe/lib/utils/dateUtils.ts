@@ -6,6 +6,7 @@
  * - 표시: 브라우저의 로컬 시간대로 자동 변환됨
  *
  * 예: 한국 시간으로 "오후 1시"에 올린 글이 뉴욕 사람에겐 "새벽 0시"로 표시될 수 있음
+ * (이는 의도된 동작으로, 각 사용자는 자신의 로컬 시간을 기준으로 시간을 봅니다)
  */
 
 /**
@@ -40,39 +41,26 @@ const parseUTCDate = (utcString: string): Date => {
 };
 
 /**
- * UTC 시간을 로컬 시간대로 변환하는 헬퍼 함수
+ * UTC 시간을 브라우저 로컬 시간대로 변환하는 헬퍼 함수
+ * JavaScript의 Date 객체는 UTC 시간을 자동으로 로컬 시간대로 변환합니다.
  * @param utcString UTC ISO 문자열
  * @returns 브라우저 로컬 시간대의 Date 객체
  */
 const parseLocalTime = (utcString: string): Date => {
-  // UTC 시간을 파싱하여 로컬 시간대로 자동 변환
-  let utcDate: Date;
+  // UTC 시간을 파싱하여 브라우저의 로컬 시간대로 자동 변환
   if (utcString.endsWith('Z')) {
-    utcDate = new Date(utcString);
+    return new Date(utcString);
   } else {
-    utcDate = new Date(utcString + 'Z');
+    return new Date(utcString + 'Z');
   }
-
-  // 한국 시간으로 변환 (UTC + 9시간)
-  const koreanTime = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
-
-
-  // 한국 시간으로 변환하여 반환
-  return koreanTime;
 };
 
 /**
- * 현재 시간을 한국 시간으로 반환하는 헬퍼 함수
- * @returns 한국 시간대의 현재 Date 객체
+ * 현재 시간을 브라우저 로컬 시간대로 반환하는 헬퍼 함수
+ * @returns 브라우저 로컬 시간대의 현재 Date 객체
  */
 const getCurrentLocalTime = (): Date => {
-  // 현재 시간을 한국 시간으로 변환
-  const now = new Date();
-  const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-
-
-
-  return koreanTime;
+  return new Date();
 };
 
 /**
@@ -95,7 +83,7 @@ const isYesterday = (targetDate: Date, baseDate: Date): boolean => {
 /**
  * 시간 경과를 한국어로 표시하는 함수 (브라우저 로컬 시간대로 자동 변환)
  * @param createdAt ISO 문자열 형태의 날짜 (UTC)
- * @returns 한국어로 포맷된 시간 경과 문자열
+ * @returns 로컬 시간대를 기준으로 한 한국어로 포맷된 시간 경과 문자열
  */
 
 export const formatTimeAgo = (createdAt: string): string => {
@@ -129,24 +117,24 @@ export const formatTimeAgo = (createdAt: string): string => {
 /**
  * 날짜를 한국어로 포맷하는 함수 (브라우저 로컬 시간대로 자동 변환)
  * @param date ISO 문자열 형태의 날짜 (UTC)
- * @returns 한국어로 포맷된 날짜 문자열
+ * @returns 로컬 시간대를 기준으로 한 한국어로 포맷된 날짜 문자열
  */
 export const formatDate = (date: string): string => {
   // UTC 시간을 로컬 시간으로 변환
   const targetDate = parseLocalTime(date);
   const nowLocal = getCurrentLocalTime();
 
-  // 오늘인지 확인
+  // 오늘인지 확인 (로컬 시간 기준)
   if (isSameDate(targetDate, nowLocal)) {
     return "오늘";
   }
 
-  // 어제인지 확인
+  // 어제인지 확인 (로컬 시간 기준)
   if (isYesterday(targetDate, nowLocal)) {
     return "어제";
   }
 
-  // 그 외의 경우
+  // 그 외의 경우 (로컬 시간 기준)
   return targetDate.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
@@ -157,7 +145,7 @@ export const formatDate = (date: string): string => {
 /**
  * 시간을 HH:MM 형태로 포맷하는 함수 (브라우저 로컬 시간대로 자동 변환)
  * @param date ISO 문자열 형태의 날짜 (UTC)
- * @returns HH:MM 형태의 시간 문자열
+ * @returns 로컬 시간대를 기준으로 한 HH:MM 형태의 시간 문자열
  */
 export const formatTime = (date: string): string => {
   // UTC 시간을 로컬 시간으로 변환
@@ -172,25 +160,23 @@ export const formatTime = (date: string): string => {
 /**
  * 날짜와 시간을 함께 포맷하는 함수 (브라우저 로컬 시간대로 자동 변환)
  * @param date ISO 문자열 형태의 날짜 (UTC)
- * @returns 날짜와 시간이 포함된 문자열
+ * @returns 로컬 시간대를 기준으로 한 날짜와 시간이 포함된 문자열
  */
 export const formatDateTime = (date: string): string => {
   // UTC 시간을 로컬 시간으로 변환
   const targetDate = parseLocalTime(date);
   const nowLocal = getCurrentLocalTime();
 
-
-
-  // 오늘인지 확인
+  // 오늘인지 확인 (로컬 시간 기준)
   if (isSameDate(targetDate, nowLocal)) {
     return `오늘 ${formatTime(date)}`;
   }
 
-  // 어제인지 확인
+  // 어제인지 확인 (로컬 시간 기준)
   if (isYesterday(targetDate, nowLocal)) {
     return `어제 ${formatTime(date)}`;
   }
 
-  // 그 외의 경우
+  // 그 외의 경우 (로컬 시간 기준)
   return `${formatDate(date)} ${formatTime(date)}`;
 };

@@ -903,7 +903,8 @@ export default function AuthScreen() {
                   themed($passwordInput),
                   passwordError && themed($inputFieldError),
                 ]}
-                placeholder="비밀번호(최소 6자  )"
+                placeholder={isLogin ? "비밀번호" : "비밀번호(최소 6자)"}
+                //<Text style={themed($headerLogoTitle)}>{isLogin ? "Sportalk" : "회원가입"}</Text>
                 placeholderTextColor={theme.colors.textDim}
                 value={password}
                 onChangeText={(text) => {

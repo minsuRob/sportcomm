@@ -906,7 +906,7 @@ const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $statsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   justifyContent: "space-around",
-  paddingVertical: spacing.lg,
+  paddingVertical: spacing.sm,
   marginTop: spacing.md,
   borderTopWidth: 1,
   borderBottomWidth: 1,

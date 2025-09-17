@@ -50,11 +50,11 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
 
   // 폰트별 최적화된 테두리 두께 계산
   const getOptimizedThickness = (baseThickness: number) => {
-    // SpaceGrotesk-SemiBold는 더 얇은 폰트이므로 테두리를 약간 더 두껍게 조정
-    const fontMultiplier = 1.2; // SpaceGrotesk-SemiBold에 최적화된 배율
+    // SpaceGrotesk-SemiBold는 더 얇은 폰트이므로 테두리를 더 얇게 조정
+    const fontMultiplier = 0.7; // 더 얇은 테두리를 위한 배율 감소
     // 폰트 사이즈에 따른 추가 조정 (큰 폰트일수록 상대적으로 테두리가 얇아 보임)
-    const sizeMultiplier = fontSize > 50 ? 1.1 : fontSize > 30 ? 1.0 : 0.9;
-    return Math.max(1, Math.round(baseThickness * fontMultiplier * sizeMultiplier));
+    const sizeMultiplier = fontSize > 50 ? 0.9 : fontSize > 30 ? 0.8 : 0.7;
+    return Math.max(0.5, Math.round(baseThickness * fontMultiplier * sizeMultiplier * 10) / 10);
   };
 
   // 테두리 두께 결정 (prop > teamColors.uniformNumberThickness > 1)
@@ -89,7 +89,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
             color: numberMainColor,
             textAlign: 'center',
             textShadowColor: numberOutlineColor,
-            textShadowOffset: { width: effectiveThickness, height: effectiveThickness },
+            textShadowOffset: { width: effectiveThickness * 0.7, height: effectiveThickness * 0.7 },
             textShadowRadius: 0,
           }}
         >
@@ -101,48 +101,37 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
     const textX = finalContainerWidth / 2;
     const textY = finalContainerHeight / 2 + fontSize / 3;
 
-    // SpaceGrotesk-SemiBold에 최적화된 stroke 방향 계산
+    // SpaceGrotesk-SemiBold에 최적화된 stroke 방향 계산 (더 얇은 테두리)
     const getStrokeDirections = (thickness: number) => {
-      // SpaceGrotesk-SemiBold는 더 얇은 폰트이므로 더 많은 stroke 방향으로 보완
+      // 더 얇은 테두리를 위해 방향 수 감소 및 offset 조정
       const baseDirections = [
-        { x: -thickness, y: 0 },      // 왼쪽
-        { x: thickness, y: 0 },       // 오른쪽
-        { x: 0, y: -thickness },      // 위
-        { x: 0, y: thickness },       // 아래
+        { x: -thickness * 0.8, y: 0 },      // 왼쪽 (약간 감소)
+        { x: thickness * 0.8, y: 0 },       // 오른쪽 (약간 감소)
+        { x: 0, y: -thickness * 0.8 },      // 위 (약간 감소)
+        { x: 0, y: thickness * 0.8 },       // 아래 (약간 감소)
       ];
 
+      // 대각선 방향도 간소화
       const diagonalDirections = [
-        { x: -thickness, y: -thickness }, // 왼쪽 위
-        { x: thickness, y: -thickness },  // 오른쪽 위
-        { x: -thickness, y: thickness },  // 왼쪽 아래
-        { x: thickness, y: thickness },   // 오른쪽 아래
+        { x: -thickness * 0.6, y: -thickness * 0.6 }, // 왼쪽 위 (축소)
+        { x: thickness * 0.6, y: -thickness * 0.6 },  // 오른쪽 위 (축소)
+        { x: -thickness * 0.6, y: thickness * 0.6 },  // 왼쪽 아래 (축소)
+        { x: thickness * 0.6, y: thickness * 0.6 },   // 오른쪽 아래 (축소)
       ];
 
-      if (thickness <= 1.2) {
-        // 얇은 테두리: 8방향 (기본 4방향 + 대각선 4방향)
-        return [...baseDirections, ...diagonalDirections];
-      } else if (thickness <= 2.4) {
-        // 중간 테두리: 12방향 (대각선 강화)
-        const extraDiagonal = [
-          { x: -thickness * 0.7, y: -thickness * 0.7 }, // 왼쪽 위 대각선
-          { x: thickness * 0.7, y: -thickness * 0.7 },  // 오른쪽 위 대각선
-          { x: -thickness * 0.7, y: thickness * 0.7 },  // 왼쪽 아래 대각선
-          { x: thickness * 0.7, y: thickness * 0.7 },   // 오른쪽 아래 대각선
+      if (thickness <= 0.8) {
+        // 매우 얇은 테두리: 기본 4방향만 사용
+        return baseDirections;
+      } else if (thickness <= 1.5) {
+        // 얇은 테두리: 4방향 + 주요 대각선 2방향
+        return [
+          ...baseDirections,
+          { x: -thickness * 0.5, y: -thickness * 0.5 }, // 왼쪽 위
+          { x: thickness * 0.5, y: thickness * 0.5 },   // 오른쪽 아래
         ];
-        return [...baseDirections, ...diagonalDirections, ...extraDiagonal];
       } else {
-        // 두꺼운 테두리: 16방향 (최대 강화)
-        const extraDiagonal = [
-          { x: -thickness * 0.7, y: -thickness * 0.7 }, // 왼쪽 위 대각선
-          { x: thickness * 0.7, y: -thickness * 0.7 },  // 오른쪽 위 대각선
-          { x: -thickness * 0.7, y: thickness * 0.7 },  // 왼쪽 아래 대각선
-          { x: thickness * 0.7, y: thickness * 0.7 },   // 오른쪽 아래 대각선
-          { x: -thickness * 0.5, y: 0 },     // 왼쪽 중간
-          { x: thickness * 0.5, y: 0 },      // 오른쪽 중간
-          { x: 0, y: -thickness * 0.5 },     // 위쪽 중간
-          { x: 0, y: thickness * 0.5 },      // 아래쪽 중간
-        ];
-        return [...baseDirections, ...diagonalDirections, ...extraDiagonal];
+        // 약간 두꺼운 테두리: 8방향 (기본 + 모든 대각선)
+        return [...baseDirections, ...diagonalDirections];
       }
     };
 
@@ -195,10 +184,10 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
           top: '50%',
           transform: 'translate(-50%, -50%)',
           fontSize: `${fontSize}px`,
-          fontWeight: '600',
+          fontWeight: '500',
           fontFamily: 'SpaceGrotesk-SemiBold',
           color: numberMainColor,
-          textShadow: `${effectiveThickness}px 0 0 ${numberOutlineColor}, ${-effectiveThickness}px 0 0 ${numberOutlineColor}, 0 ${effectiveThickness}px 0 ${numberOutlineColor}, 0 ${-effectiveThickness}px 0 ${numberOutlineColor}, ${effectiveThickness}px ${effectiveThickness}px 0 ${numberOutlineColor}, ${-effectiveThickness}px ${effectiveThickness}px 0 ${numberOutlineColor}, ${effectiveThickness}px ${-effectiveThickness}px 0 ${numberOutlineColor}, ${-effectiveThickness}px ${-effectiveThickness}px 0 ${numberOutlineColor}`,
+          textShadow: `${effectiveThickness * 0.7}px 0 0 ${numberOutlineColor}, ${-effectiveThickness * 0.7}px 0 0 ${numberOutlineColor}, 0 ${effectiveThickness * 0.7}px 0 ${numberOutlineColor}, 0 ${-effectiveThickness * 0.7}px 0 ${numberOutlineColor}`,
           textAlign: 'center',
           userSelect: 'none',
           pointerEvents: 'none',
@@ -212,12 +201,12 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
       <Text
         style={{
           fontSize,
-          fontWeight: '600',
+          fontWeight: '500',
           fontFamily: 'SpaceGrotesk-SemiBold',
           color: numberMainColor,
           textAlign: 'center',
           textShadowColor: numberOutlineColor,
-          textShadowOffset: { width: effectiveThickness, height: effectiveThickness },
+          textShadowOffset: { width: effectiveThickness * 0.7, height: effectiveThickness * 0.7 },
           textShadowRadius: 0,
         }}
       >

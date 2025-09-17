@@ -124,6 +124,7 @@ export default function TagInput({
 
   return (
     <View style={themed($container)}>
+      <Text style={themed($sectionTitle)}>주제(선택)</Text>
       {/* 선택된 태그 표시 - 1개만 표시 */}
       {tags.length > 0 && (
         <View style={themed($selectedTagContainer)}>
@@ -397,4 +398,11 @@ const $popularTagChip: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $popularTagText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
   color: colors.textDim,
+});
+
+const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: colors.text,
+  marginBottom: spacing.sm,
 });

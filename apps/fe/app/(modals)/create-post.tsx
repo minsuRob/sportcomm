@@ -902,7 +902,7 @@ export default function CreatePostScreen() {
         {/* 태그 입력 영역 (모던) */}
         {
           <View style={themed($tagSection)}>
-            <Text style={themed($sectionTitle)}>주제(선택)</Text>
+            
             <TagInput
               tags={tags}
               onTagsChange={setTags}
@@ -1050,12 +1050,7 @@ const $typeSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.md,
 });
 
-const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 16,
-  fontWeight: "600",
-  color: colors.text,
-  marginBottom: spacing.sm,
-});
+
 
 const $sectionHeader: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",

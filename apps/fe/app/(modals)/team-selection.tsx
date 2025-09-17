@@ -474,12 +474,12 @@ export default function TeamSelectionScreen() {
               </View>
             );
           })}
-          {/* 빈 자리 채우기 */}
+          {/* 빈 자리 채우기: 실제 셀과 동일한 래퍼/구조로 렌더링하여 마지막 줄도 정렬 통일 */}
           {Array.from({ length: teamsPerRow - rowTeams.length }).map((_, j) => (
-            <View
-              key={`empty-${i}-${j}`}
-              style={[themed($teamCard), { opacity: 0 }]}
-            />
+            <View key={`empty-${i}-${j}`} style={themed($teamItemColumn)}>
+              <View style={[themed($teamCard), { opacity: 0 }]} />
+              <View style={themed($teamSettingsPlaceholder)} />
+            </View>
           ))}
         </View>,
       );

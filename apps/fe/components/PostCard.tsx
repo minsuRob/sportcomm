@@ -46,7 +46,7 @@ import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
 import { StrokedText } from "@/lib/utils/StrokedText";
 import { UniformPlaceholder } from "@/lib/team-customization/common/uniform/UniformPlaceholder";
 import { useTeamCustomization } from "@/lib/team-customization";
-import { formatTimeAgo } from "@/lib/utils/dateUtils";
+import { formatDateTime } from "@/lib/utils/dateUtils";
 
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
@@ -860,7 +860,7 @@ const PostCard = React.memo(function PostCard({
                   style={themed($timeTap)}
                 >
                   <StrokedText
-                    content={formatTimeAgo(post.createdAt)}
+                    content={formatDateTime(post.createdAt)}
                     fontSize={13}
                     lineHeight={16}
                     numberOfLines={1}

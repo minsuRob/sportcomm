@@ -84,7 +84,16 @@ export default function FeedHeader({
       {/* 1행: 로고 + (탭) + 우측 버튼들 */}
       <View style={themed($headerRow)}>
         <View style={themed($headerLeft)}>
-          <Text style={themed($logoText)}>{t("SportCom")}</Text>
+          <View style={themed($logoRow)}>
+            <Text style={themed($logoText)}>sp</Text>
+            <Ionicons
+              name="baseball"
+              size={16}
+              color={theme.colors.teamMain ?? theme.colors.tint}
+              style={themed($baseballIcon) as any}
+            />
+            <Text style={themed($logoText)}>rtalk</Text>
+          </View>
         </View>
 
         {/* {tabs && tabs.length > 0 && (
@@ -180,6 +189,18 @@ const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.teamMain ?? colors.tint,
   // 웹/네이티브 모두 동일 키(TTTogether) 사용
   fontFamily: "TTTogether",
+});
+
+const $baseballIcon: ThemedStyle<ViewStyle> = () => ({
+  marginTop: 5,
+  marginLeft: -4,
+  marginRight: -4,
+});
+
+const $logoRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing?.xxs ?? 4,
 });
 
 const $headerRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({

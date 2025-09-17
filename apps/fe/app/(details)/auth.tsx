@@ -627,14 +627,14 @@ export default function AuthScreen() {
             </View>
 
             <View style={themed($toggleContainer)}>
-              <Text style={themed($toggleText)}>Don't have an account? </Text>
+              <Text style={themed($toggleText)}>계정이 없으신가요? </Text>
               <TouchableOpacity
                 onPress={() => {
                   setIsLogin(false);
                   setShowEmailForm(true);
                 }}
               >
-                <Text style={themed($toggleLinkText)}>Sign up</Text>
+                <Text style={themed($toggleLinkText)}>가입하기</Text>
               </TouchableOpacity>
             </View>
           </View>

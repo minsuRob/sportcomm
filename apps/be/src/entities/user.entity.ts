@@ -68,6 +68,28 @@ export const DAILY_POINT_LIMITS: Record<UserProgressAction, number> = {
 };
 
 /**
+ * 일일 제한 초기화 시간 설정
+ * 매일 몇 시에 포인트 제한이 초기화되는지 설정
+ */
+export const DAILY_RESET_HOUR = 6;
+
+/**
+ * 시간대별 UTC 오프셋 설정 (시간 단위)
+ * 국제 표준 시간대 지원을 위한 설정
+ */
+export const TIMEZONE_OFFSETS: Record<string, number> = {
+  'Asia/Seoul': 9,      // KST (UTC+9)
+  'Asia/Tokyo': 9,      // JST (UTC+9)
+  'Asia/Shanghai': 8,   // CST (UTC+8)
+  'America/New_York': -5, // EST (UTC-5)
+  'America/Los_Angeles': -8, // PST (UTC-8)
+  'Europe/London': 0,   // GMT (UTC+0)
+  'Europe/Paris': 1,    // CET (UTC+1)
+  'Australia/Sydney': 10, // AEDT (UTC+10)
+  'UTC': 0,
+};
+
+/**
  * 사용자 역할 열거형
  * 시스템 내에서 사용자의 권한과 역할을 정의합니다.
  */
@@ -603,7 +625,7 @@ export class User {
 
   /**
    * 일일 제한 초기화 필요 여부 확인
-   * 한국 시간(KST) 기준으로 매일 오전 6시에 초기화
+   * 지정된 시간대 기준으로 매일 특정 시각에 초기화
    * 다른 나라 시간대 지원을 위해 timezone 파라미터 추가
    */
   needsDailyReset(now: Date = new Date(), timezone: string = 'Asia/Seoul'): boolean {
@@ -612,13 +634,12 @@ export class User {
     const kstNow = this.convertToTimezone(now, timezone);
     const lastReset = this.convertToTimezone(this.lastDailyResetAt, timezone);
 
-    // 한국 시간 기준으로 날짜가 다른지 확인 (오전 6시 기준)
-    const resetHour = 6;
+    // 지정된 시간대 기준으로 날짜가 다른지 확인
     const currentDate = new Date(kstNow);
     const lastResetDate = new Date(lastReset);
 
-    // 현재 시간이 오전 6시 이전이면 전날로 계산
-    if (currentDate.getHours() < resetHour) {
+    // 현재 시간이 초기화 시각 이전이면 전날로 계산
+    if (currentDate.getHours() < DAILY_RESET_HOUR) {
       currentDate.setDate(currentDate.getDate() - 1);
     }
 
@@ -691,18 +712,7 @@ export class User {
    * 실제 서비스에서는 timezone 라이브러리 사용 권장
    */
   private getTimezoneOffset(timezone: string): number {
-    const timezoneOffsets: Record<string, number> = {
-      'Asia/Seoul': 9,      // KST (UTC+9)
-      'Asia/Tokyo': 9,      // JST (UTC+9)
-      'Asia/Shanghai': 8,   // CST (UTC+8)
-      'America/New_York': -5, // EST (UTC-5)
-      'America/Los_Angeles': -8, // PST (UTC-8)
-      'Europe/London': 0,   // GMT (UTC+0)
-      'Europe/Paris': 1,    // CET (UTC+1)
-      'Australia/Sydney': 10, // AEDT (UTC+10)
-      'UTC': 0,
-    };
-    return timezoneOffsets[timezone] || 0;
+    return TIMEZONE_OFFSETS[timezone] || 0;
   }
 
   /**

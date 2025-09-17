@@ -22,13 +22,15 @@ import type { SupportedStorage } from "@supabase/supabase-js";
  * 네이티브 환경에서만 AsyncStorage 로드 (웹/SSR 환경 보호)
  * - 타입 힌트: 동적 import 반환 타입과 동일하게 지정
  */
-let RNAsyncStorage: typeof import("@react-native-async-storage/async-storage").default | null =
-  null;
+let RNAsyncStorage:
+  | typeof import("@react-native-async-storage/async-storage").default
+  | null = null;
 
 if (Platform.OS !== "web") {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    RNAsyncStorage = require("@react-native-async-storage/async-storage").default;
+    RNAsyncStorage =
+      require("@react-native-async-storage/async-storage").default;
   } catch (error) {
     // 네이티브 환경인데 AsyncStorage 로드 실패 시, 이후 스토리지 동작은 no-op 처리됨
     console.warn("[supabaseStorage] AsyncStorage 모듈 로드 실패:", error);
@@ -68,14 +70,44 @@ export const supabaseStorage: SupportedStorage = {
    */
   getItem: async (key: string): Promise<string | null> => {
     try {
-      if (Platform.OS === "web") {
-        if (!isLocalStorageAvailable()) return null;
-        return window.localStorage.getItem(key);
+      const platform = Platform.OS;
+      let value: string | null = null;
+      let storage = "none";
+
+      if (platform === "web") {
+        if (!isLocalStorageAvailable()) {
+          storage = "web-localStorage-unavailable";
+          value = null;
+        } else {
+          storage = "web-localStorage";
+          value = window.localStorage.getItem(key);
+        }
+      } else if (RNAsyncStorage) {
+        storage = "native-AsyncStorage";
+        value = await RNAsyncStorage.getItem(key);
       }
-      if (RNAsyncStorage) {
-        return await RNAsyncStorage.getItem(key);
+
+      // sportcomm-auth-session 키에 대해서만 정밀 디버그 로그 출력
+      if (key === "sportcomm-auth-session") {
+        let parsed: any = null;
+        try {
+          parsed = value ? JSON.parse(value) : null;
+        } catch {
+          // 파싱 실패는 무시 (손상된 값일 수 있음)
+        }
+        const expiresAt =
+          parsed?.expires_at != null
+            ? new Date(parsed.expires_at * 1000).toISOString()
+            : null;
+        const userId = parsed?.user?.id ?? null;
+
+        console.log(
+          `[supabaseStorage][GET] key=${key} platform=${platform} storage=${storage} ` +
+            `value=${value ? "present" : "null"} userId=${userId} expiresAt=${expiresAt}`,
+        );
       }
-      return null;
+
+      return value;
     } catch (error) {
       console.error(`[supabaseStorage] getItem 실패: key=${key}`, error);
       return null;
@@ -89,15 +121,38 @@ export const supabaseStorage: SupportedStorage = {
    */
   setItem: async (key: string, value: string): Promise<void> => {
     try {
+      const platform = Platform.OS;
+      let storage = "none";
+
       if (Platform.OS === "web") {
         if (!isLocalStorageAvailable()) return;
         window.localStorage.setItem(key, value);
-        return;
-      }
-      if (RNAsyncStorage) {
+        storage = "web-localStorage";
+      } else if (RNAsyncStorage) {
         await RNAsyncStorage.setItem(key, value);
-        return;
+        storage = "native-AsyncStorage";
       }
+
+      // sportcomm-auth-session 키에 대해서만 정밀 디버그 로그 출력
+      if (key === "sportcomm-auth-session") {
+        let parsed: any = null;
+        try {
+          parsed = value ? JSON.parse(value) : null;
+        } catch {
+          // 파싱 실패는 무시
+        }
+        const expiresAt =
+          parsed?.expires_at != null
+            ? new Date(parsed.expires_at * 1000).toISOString()
+            : null;
+        const userId = parsed?.user?.id ?? null;
+        console.log(
+          `[supabaseStorage][SET] key=${key} platform=${platform} storage=${storage} ` +
+            `length=${value ? value.length : 0} userId=${userId} expiresAt=${expiresAt}`,
+        );
+      }
+
+      return;
     } catch (error) {
       console.error(`[supabaseStorage] setItem 실패: key=${key}`, error);
     }
@@ -109,15 +164,44 @@ export const supabaseStorage: SupportedStorage = {
    */
   removeItem: async (key: string): Promise<void> => {
     try {
+      const platform = Platform.OS;
+      let storage = "none";
+      let prevValue: string | null = null;
+
       if (Platform.OS === "web") {
         if (!isLocalStorageAvailable()) return;
+        // 삭제 전 기존 값 스냅샷 (디버그용)
+        prevValue = window.localStorage.getItem(key);
         window.localStorage.removeItem(key);
-        return;
-      }
-      if (RNAsyncStorage) {
+        storage = "web-localStorage";
+      } else if (RNAsyncStorage) {
+        // 삭제 전 기존 값 스냅샷 (디버그용)
+        prevValue = await RNAsyncStorage.getItem(key);
         await RNAsyncStorage.removeItem(key);
-        return;
+        storage = "native-AsyncStorage";
       }
+
+      // sportcomm-auth-session 키에 대해서만 정밀 디버그 로그 출력
+      if (key === "sportcomm-auth-session") {
+        let parsed: any = null;
+        try {
+          parsed = prevValue ? JSON.parse(prevValue) : null;
+        } catch {
+          // 파싱 실패는 무시
+        }
+        const expiresAt =
+          parsed?.expires_at != null
+            ? new Date(parsed.expires_at * 1000).toISOString()
+            : null;
+        const userId = parsed?.user?.id ?? null;
+
+        console.log(
+          `[supabaseStorage][REMOVE] key=${key} platform=${platform} storage=${storage} ` +
+            `existedBefore=${prevValue ? "yes" : "no"} userId=${userId} expiresAt=${expiresAt}`,
+        );
+      }
+
+      return;
     } catch (error) {
       console.error(`[supabaseStorage] removeItem 실패: key=${key}`, error);
     }

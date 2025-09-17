@@ -246,8 +246,8 @@ export class PostsService {
         'author.provider',
         'author."createdAt"',
         'author."updatedAt"',
-        // 'author."referralCode"', // DB에 컬럼이 없어서 주석 처리
-        // 'author."referredBy"', // DB에 컬럼이 없어서 주석 처리
+        'author."referralCode"', // DB에 컬럼이 없어서 주석 처리
+        'author."referredBy"', // DB에 컬럼이 없어서 주석 처리
         'media.*',
       ])
       // team 은 선택 컬럼만 addSelect

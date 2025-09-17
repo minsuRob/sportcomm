@@ -198,17 +198,17 @@ export default function ProfileContextPopover({
           onClose();
         },
       },
-      {
-        key: "toggleLanguage",
-        label: currentLanguage === "ko" ? t("profilePopover.switchToEnglish") : t("profilePopover.switchToKorean"),
-        icon: (
-          <Ionicons name="globe-outline" size={18} color={theme.colors.text} />
-        ),
-        onPress: () => {
-          switchLanguage(currentLanguage === "ko" ? "en" : "ko");
-          onClose();
-        },
-      },
+      // {
+      //   key: "toggleLanguage",
+      //   label: currentLanguage === "ko" ? t("profilePopover.switchToEnglish") : t("profilePopover.switchToKorean"),
+      //   icon: (
+      //     <Ionicons name="globe-outline" size={18} color={theme.colors.text} />
+      //   ),
+      //   onPress: () => {
+      //     switchLanguage(currentLanguage === "ko" ? "en" : "ko");
+      //     onClose();
+      //   },
+      // },
       {
         key: "logout",
         label: "로그아웃",

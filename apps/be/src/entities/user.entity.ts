@@ -632,22 +632,22 @@ export class User {
    * 댓글 작성 가능 여부 확인 (포인트 제한 기반)
    */
   canSendChatMessage(): boolean {
-    return (this.dailyChatPoints || 0) < 30; // 하루 최대 30점
+    return (this.dailyChatPoints || 0) < DAILY_POINT_LIMITS[UserProgressAction.CHAT_MESSAGE];
   }
 
   /**
    * 게시물 작성 가능 여부 확인 (포인트 제한 기반)
    */
   canCreatePost(): boolean {
-    return (this.dailyPostPoints || 0) < 50; // 하루 최대 50점
+    return (this.dailyPostPoints || 0) < DAILY_POINT_LIMITS[UserProgressAction.POST_CREATE];
   }
 
   /**
    * 댓글 포인트 추가 및 검증
    */
-  addChatPoints(points: number = 3): boolean {
+  addChatPoints(points: number = USER_PROGRESS_REWARD[UserProgressAction.CHAT_MESSAGE]): boolean {
     const currentPoints = this.dailyChatPoints || 0;
-    if (currentPoints + points > 30) {
+    if (currentPoints + points > DAILY_POINT_LIMITS[UserProgressAction.CHAT_MESSAGE]) {
       return false; // 제한 초과
     }
     this.dailyChatPoints = currentPoints + points;
@@ -657,9 +657,9 @@ export class User {
   /**
    * 게시물 포인트 추가 및 검증
    */
-  addPostPoints(points: number = 10): boolean {
+  addPostPoints(points: number = USER_PROGRESS_REWARD[UserProgressAction.POST_CREATE]): boolean {
     const currentPoints = this.dailyPostPoints || 0;
-    if (currentPoints + points > 50) {
+    if (currentPoints + points > DAILY_POINT_LIMITS[UserProgressAction.POST_CREATE]) {
       return false; // 제한 초과
     }
     this.dailyPostPoints = currentPoints + points;

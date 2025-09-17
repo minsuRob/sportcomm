@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ScrollView,
   ViewStyle,
   TextStyle,
+  Animated,
+  Easing,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
@@ -152,6 +154,12 @@ export default function AuthScreen() {
   const passwordInputRef = useRef<TextInput>(null);
   const confirmPasswordInputRef = useRef<TextInput>(null);
 
+  // 애니메이션 상태 관리
+  const [isAnimating, setIsAnimating] = useState(false);
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+  const contentScale = useRef(new Animated.Value(1)).current;
+  const contentTranslateY = useRef(new Animated.Value(0)).current;
+
   // 로딩 상태 관리
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
@@ -184,6 +192,86 @@ export default function AuthScreen() {
     setConfirmPasswordError("");
     setGeneralError("");
   };
+
+  // 애니메이션 함수들
+  const animateTransition = () => {
+    if (isAnimating) return;
+
+    setIsAnimating(true);
+
+    // 아웃 애니메이션
+    Animated.parallel([
+      Animated.timing(contentOpacity, {
+        toValue: 0,
+        duration: 120,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentScale, {
+        toValue: 0.98,
+        duration: 120,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentTranslateY, {
+        toValue: -8,
+        duration: 120,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) {
+        // 인 애니메이션
+        Animated.parallel([
+          Animated.timing(contentOpacity, {
+            toValue: 1,
+            duration: 180,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.sequence([
+            Animated.spring(contentScale, {
+              toValue: 1.02,
+              damping: 12,
+              stiffness: 220,
+              mass: 0.6,
+              useNativeDriver: true,
+            }),
+            Animated.spring(contentScale, {
+              toValue: 1,
+              damping: 14,
+              stiffness: 220,
+              mass: 0.6,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.spring(contentTranslateY, {
+            toValue: 0,
+            damping: 14,
+            stiffness: 180,
+            mass: 0.8,
+            useNativeDriver: true,
+          }),
+        ]).start(({ finished: inFinished }) => {
+          if (inFinished) {
+            setIsAnimating(false);
+          }
+        });
+      }
+    });
+  };
+
+  // showEmailForm 상태 변경 시 애니메이션
+  useEffect(() => {
+    animateTransition();
+  }, [showEmailForm]);
+
+  // isLogin 상태 변경 시 애니메이션 (이메일 폼 내에서만)
+  useEffect(() => {
+    if (showEmailForm) {
+      animateTransition();
+    }
+  }, [isLogin]);
 
   /**
    * 인증 성공 시 처리 함수
@@ -603,7 +691,18 @@ export default function AuthScreen() {
           contentContainerStyle={themed($contentContainer)}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={themed($mainContent)}>
+          <Animated.View
+            style={[
+              themed($mainContent),
+              {
+                opacity: contentOpacity,
+                transform: [
+                  { scale: contentScale },
+                  { translateY: contentTranslateY },
+                ],
+              },
+            ]}
+          >
             <View style={themed($socialButtonsContainer)}>
             <Button
               variant="outline"
@@ -674,7 +773,7 @@ export default function AuthScreen() {
                 <Text style={themed($toggleLinkText)}>가입하기</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
         <AppDialog
           visible={dialog.visible}
@@ -715,7 +814,18 @@ export default function AuthScreen() {
         contentContainerStyle={themed($contentContainer)}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={themed($mainContent)}>
+        <Animated.View
+          style={[
+            themed($mainContent),
+            {
+              opacity: contentOpacity,
+              transform: [
+                { scale: contentScale },
+                { translateY: contentTranslateY },
+              ],
+            },
+          ]}
+        >
           {/* 이메일 입력 필드 */}
           <View style={themed($inputContainer)}>
             <TextInput
@@ -793,7 +903,6 @@ export default function AuthScreen() {
                   themed($passwordInput),
                   passwordError && themed($inputFieldError),
                 ]}
-                placeholder="비밀번호(최소 6자)"
                 placeholder="비밀번호(최소 6자  )"
                 placeholderTextColor={theme.colors.textDim}
                 value={password}
@@ -802,9 +911,6 @@ export default function AuthScreen() {
                   if (passwordError) setPasswordError(""); // 입력 시 에러 초기화
 
                   // 실시간 비밀번호 길이 검증 (6자 미만 시 경고)
-                  if (text.length > 0 && text.length < 6) {
-                    setPasswordError("비밀번호는 최소 6자 이상이어야 합니다.");
-                  }
                   // if (text.length > 0 && text.length < 6) {
                   //   setPasswordError("비밀번호는 최소 6자 이상이어야 합니다.");
                   // }
@@ -928,7 +1034,7 @@ export default function AuthScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
       <AppDialog
         visible={dialog.visible}

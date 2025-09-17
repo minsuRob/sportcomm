@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ScrollView,
   ViewStyle,
   TextStyle,
+  Animated,
+  Easing,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
@@ -152,6 +154,12 @@ export default function AuthScreen() {
   const passwordInputRef = useRef<TextInput>(null);
   const confirmPasswordInputRef = useRef<TextInput>(null);
 
+  // 애니메이션 상태 관리
+  const [isAnimating, setIsAnimating] = useState(false);
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+  const contentScale = useRef(new Animated.Value(1)).current;
+  const contentTranslateY = useRef(new Animated.Value(0)).current;
+
   // 로딩 상태 관리
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
@@ -184,6 +192,86 @@ export default function AuthScreen() {
     setConfirmPasswordError("");
     setGeneralError("");
   };
+
+  // 애니메이션 함수들
+  const animateTransition = () => {
+    if (isAnimating) return;
+
+    setIsAnimating(true);
+
+    // 아웃 애니메이션
+    Animated.parallel([
+      Animated.timing(contentOpacity, {
+        toValue: 0,
+        duration: 120,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentScale, {
+        toValue: 0.98,
+        duration: 120,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentTranslateY, {
+        toValue: -8,
+        duration: 120,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) {
+        // 인 애니메이션
+        Animated.parallel([
+          Animated.timing(contentOpacity, {
+            toValue: 1,
+            duration: 180,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.sequence([
+            Animated.spring(contentScale, {
+              toValue: 1.02,
+              damping: 12,
+              stiffness: 220,
+              mass: 0.6,
+              useNativeDriver: true,
+            }),
+            Animated.spring(contentScale, {
+              toValue: 1,
+              damping: 14,
+              stiffness: 220,
+              mass: 0.6,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.spring(contentTranslateY, {
+            toValue: 0,
+            damping: 14,
+            stiffness: 180,
+            mass: 0.8,
+            useNativeDriver: true,
+          }),
+        ]).start(({ finished: inFinished }) => {
+          if (inFinished) {
+            setIsAnimating(false);
+          }
+        });
+      }
+    });
+  };
+
+  // showEmailForm 상태 변경 시 애니메이션
+  useEffect(() => {
+    animateTransition();
+  }, [showEmailForm]);
+
+  // isLogin 상태 변경 시 애니메이션 (이메일 폼 내에서만)
+  useEffect(() => {
+    if (showEmailForm) {
+      animateTransition();
+    }
+  }, [isLogin]);
 
   /**
    * 인증 성공 시 처리 함수
@@ -241,7 +329,7 @@ export default function AuthScreen() {
           if (isLoginAction) {
             setPasswordError("잘못된 이메일 주소 또는 비밀번호입니다.");
           } else {
-            setEmailError("이미 사용 중인 이메일 주소입니다.");
+            setEmailError(errorMessage);
           }
         } else if (
           errorMessage.toLowerCase().includes("password") ||
@@ -477,6 +565,45 @@ export default function AuthScreen() {
   };
 
   /**
+   * 닉네임 유효성 검증
+   * 한글 닉네임은 최대 8자까지만 허용
+   */
+  const validateNickname = (nickname: string) => {
+    if (!nickname.trim()) {
+      setNicknameError("닉네임을 입력해주세요.");
+      return false;
+    }
+
+    // 한글 닉네임 길이 검증 (8자 제한)
+    if (nickname.length > 8) {
+      setNicknameError("닉네임은 최대 8자까지만 입력 가능합니다.");
+      return false;
+    }
+
+    setNicknameError("");
+    return true;
+  };
+
+  /**
+   * 비밀번호 유효성 검증
+   * 최소 6자 이상이어야 함
+   */
+  const validatePassword = (password: string) => {
+    if (!password.trim()) {
+      setPasswordError("비밀번호를 입력해주세요.");
+      return false;
+    }
+
+    if (password.length < 6) {
+      setPasswordError("비밀번호는 최소 6자 이상이어야 합니다.");
+      return false;
+    }
+
+    setPasswordError("");
+    return true;
+  };
+
+  /**
    * 비밀번호 일치 검증
    * 회원가입 시에만 수행됩니다
    */
@@ -497,12 +624,12 @@ export default function AuthScreen() {
 
     // 회원가입 시 필수 조건들
     const hasEmail = email.trim().length > 0;
-    const hasNickname = nickname.trim().length > 0;
-    const hasPassword = password.trim().length > 0;
+    const hasValidNickname = nickname.trim().length > 0 && nickname.length <= 8;
+    const hasValidPassword = password.trim().length >= 6;
     const hasConfirmPassword = confirmPassword.trim().length > 0;
     const passwordsMatch = password === confirmPassword;
 
-    return hasEmail && hasNickname && hasPassword && hasConfirmPassword && passwordsMatch;
+    return hasEmail && hasValidNickname && hasValidPassword && hasConfirmPassword && passwordsMatch;
   };
 
   /**
@@ -518,13 +645,13 @@ export default function AuthScreen() {
       return;
     }
 
-    if (!password.trim()) {
-      setPasswordError("비밀번호를 입력해주세요.");
+    // 비밀번호 유효성 검증
+    if (!validatePassword(password)) {
       return;
     }
 
-    if (!isLogin && !nickname.trim()) {
-      setNicknameError("닉네임을 입력해주세요.");
+    // 회원가입 시 닉네임 유효성 검증
+    if (!isLogin && !validateNickname(nickname)) {
       return;
     }
 
@@ -549,7 +676,7 @@ export default function AuthScreen() {
             <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
 
-          <Text style={themed($headerTitle)}>로그인</Text>
+          <Text style={themed($headerLogoTitle)}>Sportalk</Text>
 
           <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
             <Ionicons
@@ -564,9 +691,18 @@ export default function AuthScreen() {
           contentContainerStyle={themed($contentContainer)}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={themed($mainContent)}>
-            <Text style={themed($logoText)}>Sportalk</Text>
-
+          <Animated.View
+            style={[
+              themed($mainContent),
+              {
+                opacity: contentOpacity,
+                transform: [
+                  { scale: contentScale },
+                  { translateY: contentTranslateY },
+                ],
+              },
+            ]}
+          >
             <View style={themed($socialButtonsContainer)}>
             <Button
               variant="outline"
@@ -584,7 +720,7 @@ export default function AuthScreen() {
                   color={theme.colors.text}
                   style={{ marginRight: 8 }}
                 />
-                <Text style={themed($socialButtonText)}>Login with email</Text>
+                <Text style={themed($socialButtonText)}>email로 로그인</Text>
               </View>
             </Button>
               <Button
@@ -601,7 +737,7 @@ export default function AuthScreen() {
                     style={{ marginRight: 8 }}
                   />
                   <Text style={themed($socialButtonText)}>
-                    Login with Google
+                    Google로 로그인
                   </Text>
                 </View>
               </Button>
@@ -620,24 +756,24 @@ export default function AuthScreen() {
                     style={{ marginRight: 8 }}
                   />
                   <Text style={themed($socialButtonText)}>
-                    Login with Apple
+                    Apple로 로그인
                   </Text>
                 </View>
               </Button>
             </View>
 
             <View style={themed($toggleContainer)}>
-              <Text style={themed($toggleText)}>Don't have an account? </Text>
+              <Text style={themed($toggleText)}>계정이 없으신가요? </Text>
               <TouchableOpacity
                 onPress={() => {
                   setIsLogin(false);
                   setShowEmailForm(true);
                 }}
               >
-                <Text style={themed($toggleLinkText)}>Sign up</Text>
+                <Text style={themed($toggleLinkText)}>가입하기</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
         <AppDialog
           visible={dialog.visible}
@@ -659,7 +795,7 @@ export default function AuthScreen() {
           <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
 
-        <Text style={themed($headerTitle)}>{isLogin ? "로그인" : "회원가입"}</Text>
+        <Text style={themed($headerLogoTitle)}>{isLogin ? "Sportalk" : "회원가입"}</Text>
 
         <View style={themed($headerRight)}>
           <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
@@ -678,11 +814,18 @@ export default function AuthScreen() {
         contentContainerStyle={themed($contentContainer)}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={themed($mainContent)}>
-          <Text style={themed($logoText)}>
-            {isLogin ? "Sportalk Login" : "회원가입"}
-          </Text>
-
+        <Animated.View
+          style={[
+            themed($mainContent),
+            {
+              opacity: contentOpacity,
+              transform: [
+                { scale: contentScale },
+                { translateY: contentTranslateY },
+              ],
+            },
+          ]}
+        >
           {/* 이메일 입력 필드 */}
           <View style={themed($inputContainer)}>
             <TextInput
@@ -725,12 +868,17 @@ export default function AuthScreen() {
                   themed($inputField),
                   nicknameError && themed($inputFieldError),
                 ]}
-                placeholder="닉네임"
+                placeholder="닉네임(한글 8자 이하)"
                 placeholderTextColor={theme.colors.textDim}
                 value={nickname}
                 onChangeText={(text) => {
                   setNickname(text);
                   if (nicknameError) setNicknameError(""); // 입력 시 에러 초기화
+
+                  // 실시간 닉네임 길이 검증 (8자 초과 시 경고)
+                  if (text.length > 8) {
+                    setNicknameError("닉네임은 최대 8자까지만 입력 가능합니다.");
+                  }
                 }}
                 autoCapitalize="none"
                 returnKeyType="next"
@@ -755,12 +903,18 @@ export default function AuthScreen() {
                   themed($passwordInput),
                   passwordError && themed($inputFieldError),
                 ]}
-                placeholder="비밀번호"
+                placeholder={isLogin ? "비밀번호" : "비밀번호(최소 6자)"}
+                //<Text style={themed($headerLogoTitle)}>{isLogin ? "Sportalk" : "회원가입"}</Text>
                 placeholderTextColor={theme.colors.textDim}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
                   if (passwordError) setPasswordError(""); // 입력 시 에러 초기화
+
+                  // 실시간 비밀번호 길이 검증 (6자 미만 시 경고)
+                  // if (text.length > 0 && text.length < 6) {
+                  //   setPasswordError("비밀번호는 최소 6자 이상이어야 합니다.");
+                  // }
                 }}
                 secureTextEntry={!isPasswordVisible}
                 returnKeyType="done"
@@ -881,7 +1035,7 @@ export default function AuthScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
       <AppDialog
         visible={dialog.visible}
@@ -1099,6 +1253,14 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "600",
   color: colors.text,
+});
+
+const $headerLogoTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 24, // 로고용으로 약간 큰 크기
+  fontFamily: "TTTogether",
+  fontWeight: "500",
+  textAlign: "center",
+  color: colors.teamMain ?? colors.tint,
 });
 
 const $cancelText: ThemedStyle<TextStyle> = ({ colors }) => ({

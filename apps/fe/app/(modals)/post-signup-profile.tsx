@@ -501,8 +501,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             팀 선택 <Text style={themed($requiredText)}>(필수)</Text>
           </Text>
           <Text style={themed($helper)}>
-            관심 팀을 최소 1개 이상 선택해야 합니다. 선택하면 피드가 더
-            맞춤화됩니다.
+            최애 팀을 1개 이상 선택해야 합니다. 선택 시, 맞춤 피드가 구성 됩니다.
           </Text>
 
           {/* 선택된 팀 정보 표시 */}
@@ -571,11 +570,11 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           <View style={themed($genderRow)}>
             {renderGenderButton("M", "남성", "male")}
             {renderGenderButton("F", "여성", "female")}
-            {renderGenderButton("O", "기타", "people")}
+            {/* {renderGenderButton("O", "기타", "people")} */}
           </View>
-          <Text style={themed($helper)}>
+          {/* <Text style={themed($helper)}>
             선택은 선택사항이며, 언제든지 변경할 수 있습니다.
-          </Text>
+          </Text> */}
         </View>
 
         {/* 추천인 코드 입력 */}
@@ -658,7 +657,9 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           )}
 
           <Text style={themed($helper)}>
-            추천인 코드를 입력하면 서로에게 50 포인트가 지급됩니다.
+            {"추천인 코드를 입력하면 서로에게 50 포인트가 지급됩니다."}
+            {"\n추후에 내 프로필에서 등록 가능합니다."}
+
           </Text>
         </View>
 

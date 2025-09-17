@@ -33,7 +33,7 @@ export default function TagInput({
   tags,
   onTagsChange,
   placeholder = "주제를 입력하세요 (예: 전술분석, 이적소식)",
-  maxTags = 10,
+  maxTags = 1,
   disabled = false,
   suggestedTags = [],
 }: TagInputProps) {
@@ -124,128 +124,128 @@ export default function TagInput({
 
   return (
     <View style={themed($container)}>
-      {/* 태그 목록 */}
+      <Text style={themed($sectionTitle)}>주제(선택)</Text>
+      {/* 선택된 태그 표시 - 1개만 표시 */}
       {tags.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={themed($tagsContainer)}
-          contentContainerStyle={themed($tagsContent)}
-        >
-          {tags.map((tag, index) => (
-            <View key={index} style={themed($tagChip)}>
-              <Text style={themed($tagText)}>#{tag}</Text>
-              {!disabled && (
-                <TouchableOpacity
-                  onPress={() => removeTag(index)}
-                  style={themed($removeButton)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="close" size={14} color={theme.colors.text} />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
-        </ScrollView>
-      )}
-
-      {/* 입력 필드 */}
-      <View style={themed($inputContainer)}>
-        <TextInput
-          ref={inputRef}
-          style={themed($textInput)}
-          value={inputValue}
-          onChangeText={handleInputChange}
-          onSubmitEditing={() => {
-            if (inputValue.trim()) {
-              addTag(inputValue);
-            }
-          }}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          placeholder={
-            tags.length >= maxTags ? `최대 ${maxTags}개까지 가능` : placeholder
-          }
-          placeholderTextColor={theme.colors.textDim}
-          editable={!disabled && tags.length < maxTags}
-          returnKeyType="done"
-          blurOnSubmit={false}
-        />
-
-        {inputValue.length > 0 && !disabled && (
-          <TouchableOpacity
-            onPress={() => addTag(inputValue)}
-            style={themed($addButton)}
-          >
-            <Ionicons name="add" size={20} color={theme.colors.tint} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* 태그 개수 표시 */}
-      <View style={themed($infoRow)}>
-        <Text style={themed($tagCount)}>
-          {tags.length}/{maxTags}
-        </Text>
-        <Text style={themed($helpText)}>엔터로 주제 추가</Text>
-      </View>
-
-      {/* 추천 태그 */}
-      {showSuggestions && filteredSuggestions.length > 0 && (
-        <View style={themed($suggestionsContainer)}>
-          <Text style={themed($suggestionsTitle)}>추천 주제</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={themed($suggestionsContent)}
-          >
-            {filteredSuggestions.slice(0, 5).map((suggestion, index) => (
+        <View style={themed($selectedTagContainer)}>
+          <View style={themed($tagChip)}>
+            <Text style={themed($tagText)}>#{tags[0]}</Text>
+            {!disabled && (
               <TouchableOpacity
-                key={index}
-                onPress={() => selectSuggestion(suggestion)}
-                style={themed($suggestionChip)}
+                onPress={() => removeTag(0)}
+                style={themed($removeButton)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={themed($suggestionText)}>#{suggestion}</Text>
+                <Ionicons name="close" size={14} color={theme.colors.text} />
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          </View>
         </View>
       )}
 
-      {/* 인기 태그 (입력값이 없을 때만 표시) */}
-      {!showSuggestions &&
-        inputValue.length === 0 &&
-        suggestedTags.length > 0 && (
-          <View style={themed($popularTagsContainer)}>
-            <Text style={themed($popularTagsTitle)}>인기 주제</Text>
-            <View style={themed($popularTagsGrid)}>
-              {suggestedTags.slice(0, 6).map((tag, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => addTag(tag)}
-                  style={themed($popularTagChip)}
-                  disabled={
-                    disabled || tags.includes(tag) || tags.length >= maxTags
-                  }
-                >
-                  <Text
-                    style={[
-                      themed($popularTagText),
-                      {
-                        opacity:
-                          tags.includes(tag) || tags.length >= maxTags
-                            ? 0.5
-                            : 1,
-                      },
-                    ]}
-                  >
-                    #{tag}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+      {/* 입력 필드 - 태그가 1개 미만일 때만 표시 */}
+      {tags.length < maxTags && (
+        <View style={themed($inputContainer)}>
+          <TextInput
+            ref={inputRef}
+            style={themed($textInput)}
+            value={inputValue}
+            onChangeText={handleInputChange}
+            onSubmitEditing={() => {
+              if (inputValue.trim()) {
+                addTag(inputValue);
+              }
+            }}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            placeholderTextColor={theme.colors.textDim}
+            editable={!disabled}
+            returnKeyType="done"
+            blurOnSubmit={false}
+          />
+
+          {inputValue.length > 0 && !disabled && (
+            <TouchableOpacity
+              onPress={() => addTag(inputValue)}
+              style={themed($addButton)}
+            >
+              <Ionicons name="add" size={20} color={theme.colors.tint} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* 태그 개수 표시 */}
+      <View style={themed($infoRow)}>
+        {/* <Text style={themed($tagCount)}>
+          {tags.length}/{maxTags}
+        </Text> */}
+        {tags.length < maxTags && (
+          <Text style={themed($helpText)}>엔터로 주제 추가</Text>
         )}
+      </View>
+
+      {/* 추천 태그 - 태그가 1개 미만일 때만 표시 */}
+      {tags.length < maxTags && (
+        <>
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <View style={themed($suggestionsContainer)}>
+              <Text style={themed($suggestionsTitle)}>추천 주제</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={themed($suggestionsContent)}
+              >
+                {filteredSuggestions.slice(0, 5).map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => selectSuggestion(suggestion)}
+                    style={themed($suggestionChip)}
+                  >
+                    <Text style={themed($suggestionText)}>#{suggestion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* 인기 태그 (입력값이 없을 때만 표시) */}
+          {!showSuggestions &&
+            inputValue.length === 0 &&
+            suggestedTags.length > 0 && (
+              <View style={themed($popularTagsContainer)}>
+                <Text style={themed($popularTagsTitle)}>추천 주제</Text>
+                <View style={themed($popularTagsGrid)}>
+                  {suggestedTags.slice(0, 6).map((tag, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => addTag(tag)}
+                      style={themed($popularTagChip)}
+                      disabled={
+                        disabled || tags.includes(tag) || tags.length >= maxTags
+                      }
+                    >
+                      <Text
+                        style={[
+                          themed($popularTagText),
+                          {
+                            opacity:
+                              tags.includes(tag) || tags.length >= maxTags
+                                ? 0.5
+                                : 1,
+                          },
+                        ]}
+                      >
+                        #{tag}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+        </>
+      )}
     </View>
   );
 }
@@ -257,6 +257,11 @@ const $container: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $tagsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginBottom: spacing.sm,
+});
+
+const $selectedTagContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginBottom: spacing.sm,
+  alignSelf: 'flex-start',
 });
 
 const $tagsContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -273,10 +278,11 @@ const $tagChip: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderRadius: 16,
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.xs,
-  marginRight: spacing.xs,
+  alignSelf: 'flex-start',
 });
 
 const $tagText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  flex: 1,
   fontSize: 12,
   fontWeight: "600",
   color: colors.tint,
@@ -392,4 +398,11 @@ const $popularTagChip: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 const $popularTagText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
   color: colors.textDim,
+});
+
+const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
+  fontSize: 16,
+  fontWeight: "600",
+  color: colors.text,
+  marginBottom: spacing.sm,
 });

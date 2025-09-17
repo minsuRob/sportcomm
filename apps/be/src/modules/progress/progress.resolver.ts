@@ -6,6 +6,7 @@ import {
   Int,
   Mutation,
   ObjectType,
+  Query,
   Resolver,
   registerEnumType,
 } from '@nestjs/graphql';
@@ -83,6 +84,81 @@ class AwardResultGraphQL {
     description: '지급 사유(로그/분석용)',
   })
   reason?: string;
+}
+
+/**
+ * 사용자 진행도 스냅샷 GraphQL 타입
+ */
+@ObjectType('UserProgressSnapshot')
+class UserProgressSnapshotGraphQL {
+  @Field(() => String, { description: '사용자 ID' })
+  userId!: string;
+
+  @Field(() => Int, { description: '현재 포인트' })
+  points!: number;
+
+  @Field(() => GraphQLISODateTime, {
+    nullable: true,
+    description: '최근 출석 체크 일시'
+  })
+  lastAttendanceAt?: Date;
+
+  @Field(() => Int, { description: '오늘 댓글로 얻은 포인트' })
+  dailyChatPoints!: number;
+
+  @Field(() => Int, { description: '오늘 게시물로 얻은 포인트' })
+  dailyPostPoints!: number;
+
+  @Field(() => GraphQLISODateTime, {
+    nullable: true,
+    description: '마지막 일일 제한 초기화 일시'
+  })
+  lastDailyResetAt?: Date;
+
+  @Field(() => GraphQLISODateTime, { description: '조회 시각' })
+  timestamp!: Date;
+}
+
+/**
+ * 일일 제한 정보 GraphQL 타입
+ */
+@ObjectType('DailyLimitsInfo')
+class DailyLimitsInfoGraphQL {
+  @Field(() => String, { description: '사용자 ID' })
+  userId!: string;
+
+  @Field(() => Int, { description: '오늘 댓글로 얻은 포인트' })
+  dailyChatPoints!: number;
+
+  @Field(() => Int, { description: '오늘 게시물로 얻은 포인트' })
+  dailyPostPoints!: number;
+
+  @Field(() => Int, { description: '댓글 포인트 일일 제한 (30점)' })
+  chatPointLimit!: number;
+
+  @Field(() => Int, { description: '게시물 포인트 일일 제한' })
+  postPointLimit!: number;
+
+  @Field(() => Boolean, { description: '댓글 작성 가능 여부' })
+  canSendChat!: boolean;
+
+  @Field(() => Boolean, { description: '게시물 작성 가능 여부' })
+  canCreatePost!: boolean;
+
+  @Field(() => GraphQLISODateTime, {
+    nullable: true,
+    description: '마지막 초기화 일시'
+  })
+  lastResetAt?: Date;
+
+  @Field(() => GraphQLISODateTime, {
+    nullable: true,
+    description: '다음 초기화 예정 일시'
+  })
+  nextResetAt?: Date;
+
+  @Field(() => String, { description: '적용된 시간대' })
+  timezone!: string;
 }
 
 /**
@@ -183,6 +259,84 @@ export class ProgressResolver {
       reason,
       timestamp: new Date(),
     };
+  }
+
+  /**
+   * 사용자 진행도 정보 조회
+   */
+  @UseGuards(GqlAuthGuard)
+  @Query(() => UserProgressSnapshotGraphQL, {
+    name: 'getUserProgress',
+    description: '사용자의 진행도 정보를 조회합니다.',
+  })
+  async getUserProgress(
+    @Args('userId', { type: () => String }) userId: string,
+    @Args('timezone', { type: () => String, nullable: true }) timezone?: string,
+  ): Promise<UserProgressSnapshotGraphQL> {
+    const result = await this.progressService.getUserProgress(
+      userId,
+      timezone || 'Asia/Seoul'
+    );
+
+    return {
+      userId: result.userId,
+      points: result.points,
+      lastAttendanceAt: result.lastAttendanceAt,
+      dailyChatPoints: result.dailyChatPoints,
+      dailyPostPoints: result.dailyPostPoints,
+      lastDailyResetAt: result.lastDailyResetAt,
+      timestamp: result.timestamp,
+    };
+  }
+
+  /**
+   * 사용자 일일 제한 정보 조회
+   */
+  @UseGuards(GqlAuthGuard)
+  @Query(() => DailyLimitsInfoGraphQL, {
+    name: 'getDailyLimitsInfo',
+    description: '사용자의 일일 제한 정보를 조회합니다.',
+  })
+  async getDailyLimitsInfo(
+    @Args('userId', { type: () => String }) userId: string,
+    @Args('timezone', { type: () => String, nullable: true }) timezone?: string,
+  ): Promise<DailyLimitsInfoGraphQL> {
+    const result = await this.progressService.getDailyLimitsInfo(
+      userId,
+      timezone || 'Asia/Seoul'
+    );
+
+    return {
+      userId: result.userId,
+      dailyChatPoints: result.dailyChatPoints,
+      dailyPostPoints: result.dailyPostPoints,
+      chatPointLimit: result.chatPointLimit,
+      postPointLimit: result.postPointLimit,
+      canSendChat: result.canSendChat,
+      canCreatePost: result.canCreatePost,
+      lastResetAt: result.lastResetAt,
+      nextResetAt: result.nextResetAt,
+      timezone: result.timezone,
+    };
+  }
+
+  /**
+   * 관리자: 사용자 일일 제한 수동 초기화
+   */
+  @UseGuards(GqlAuthGuard, AdminGuard)
+  @Mutation(() => Boolean, {
+    name: 'adminResetUserDailyLimits',
+    description: '관리자 권한으로 사용자의 일일 제한을 수동으로 초기화합니다.',
+  })
+  async adminResetUserDailyLimits(
+    @Args('userId', { type: () => String }) userId: string,
+    @Args('timezone', { type: () => String, nullable: true }) timezone?: string,
+  ): Promise<boolean> {
+    await this.progressService.resetUserDailyLimits(
+      userId,
+      timezone || 'Asia/Seoul'
+    );
+    return true;
   }
 }
 

@@ -18,6 +18,7 @@ import { typography } from "@/lib/theme/typography";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import TabSlider from "@/components/TabSlider";
+import { useRouter } from "expo-router";
 
 interface FeedHeaderProps {
   onNotificationPress: () => void;
@@ -52,6 +53,7 @@ export default function FeedHeader({
   const { t } = useTranslation();
   const { themed, theme } = useAppTheme();
   const { currentUser } = useCurrentUser();
+  const router = useRouter();
   const [profileMenuVisible, setProfileMenuVisible] = React.useState(false);
   const [popoverPosition, setPopoverPosition] = React.useState({
     top: 0,
@@ -72,7 +74,8 @@ export default function FeedHeader({
         setProfileMenuVisible(true);
       });
     } else {
-      onProfilePress();
+      // currentUser가 없으면 로그인 페이지로 이동
+      router.push("/auth");
     }
   };
 
@@ -81,7 +84,16 @@ export default function FeedHeader({
       {/* 1행: 로고 + (탭) + 우측 버튼들 */}
       <View style={themed($headerRow)}>
         <View style={themed($headerLeft)}>
-          <Text style={themed($logoText)}>{t("SportCom")}</Text>
+          <View style={themed($logoRow)}>
+            <Text style={themed($logoText)}>sp</Text>
+            <Ionicons
+              name="baseball"
+              size={16}
+              color={theme.colors.teamMain ?? theme.colors.tint}
+              style={themed($baseballIcon) as any}
+            />
+            <Text style={themed($logoText)}>rtalk</Text>
+          </View>
         </View>
 
         {/* {tabs && tabs.length > 0 && (
@@ -177,6 +189,18 @@ const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.teamMain ?? colors.tint,
   // 웹/네이티브 모두 동일 키(TTTogether) 사용
   fontFamily: "TTTogether",
+});
+
+const $baseballIcon: ThemedStyle<ViewStyle> = () => ({
+  marginTop: 5,
+  marginLeft: -4,
+  marginRight: -4,
+});
+
+const $logoRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing?.xxs ?? 4,
 });
 
 const $headerRight: ThemedStyle<ViewStyle> = ({ spacing }) => ({

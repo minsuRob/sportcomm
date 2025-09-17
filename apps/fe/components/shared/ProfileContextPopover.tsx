@@ -12,6 +12,8 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { Portal } from "@rn-primitives/portal";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/lib/auth/context/AuthContext";
+import Toast from "react-native-toast-message";
 
 export interface ProfileContextPopoverProps {
   visible: boolean;
@@ -44,6 +46,31 @@ export default function ProfileContextPopover({
   const { theme, toggleTheme, themed } = useAppTheme();
   const { currentLanguage, switchLanguage, t } = useTranslation();
   const router = useRouter();
+  const { signOut } = useAuth();
+
+  /**
+   * 로그아웃 처리
+   */
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await signOut();
+      Toast.show({
+        type: "success",
+        text1: "로그아웃 성공",
+        text2: "로그아웃이 완료되었습니다.",
+        position: "bottom",
+      });
+      router.push("/auth");
+    } catch (error) {
+      console.error("로그아웃 중 오류 발생:", error);
+      Toast.show({
+        type: "error",
+        text1: "로그아웃 실패",
+        text2: "로그아웃 처리 중 오류가 발생했습니다.",
+        position: "bottom",
+      });
+    }
+  };
 
   const items = useMemo(
     () => [
@@ -171,15 +198,26 @@ export default function ProfileContextPopover({
           onClose();
         },
       },
+      // {
+      //   key: "toggleLanguage",
+      //   label: currentLanguage === "ko" ? t("profilePopover.switchToEnglish") : t("profilePopover.switchToKorean"),
+      //   icon: (
+      //     <Ionicons name="globe-outline" size={18} color={theme.colors.text} />
+      //   ),
+      //   onPress: () => {
+      //     switchLanguage(currentLanguage === "ko" ? "en" : "ko");
+      //     onClose();
+      //   },
+      // },
       {
-        key: "toggleLanguage",
-        label: currentLanguage === "ko" ? t("profilePopover.switchToEnglish") : t("profilePopover.switchToKorean"),
+        key: "logout",
+        label: "로그아웃",
         icon: (
-          <Ionicons name="globe-outline" size={18} color={theme.colors.text} />
+          <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
         ),
         onPress: () => {
-          switchLanguage(currentLanguage === "ko" ? "en" : "ko");
           onClose();
+          handleLogout();
         },
       },
     ],
@@ -197,6 +235,7 @@ export default function ProfileContextPopover({
       onBoardPress,
       onTeamFilterPress,
       onNotificationPress,
+      handleLogout,
     ],
   );
 

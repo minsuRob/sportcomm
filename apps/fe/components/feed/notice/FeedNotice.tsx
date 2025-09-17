@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   ViewStyle,
   TextStyle,
   Animated,
@@ -344,7 +345,6 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
         style={[themed($noticeItem), contentStyle]}
         activeOpacity={0.85}
         onPress={handlePressNotice}
-        accessibilityRole="button"
         accessibilityLabel="공지 상세 보기로 이동"
       >
         <Ionicons name={iconName} size={16} color={theme.colors.tint} />
@@ -355,18 +355,18 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
         >
           {children || displayTitle}
         </Text>
-        <TouchableOpacity
+        <Pressable
           onPress={(e: any) => {
             e?.stopPropagation?.();
             handleClosePress();
           }}
           style={themed($noticeCloseButton)}
           accessibilityLabel="공지 닫기"
-          accessibilityRole="button"
+          accessibilityRole="none"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="close" size={16} color={theme.colors.textDim} />
-        </TouchableOpacity>
+        </Pressable>
       </TouchableOpacity>
 
       <AppDialog

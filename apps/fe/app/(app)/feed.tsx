@@ -243,7 +243,6 @@ export default function FeedScreen() {
     { key: "chat", title: t(TRANSLATION_KEYS.FEED_CHAT) },
   ];
 
-
   if (error && posts.length === 0) {
     return (
       <View style={themed($centeredContainer)}>
@@ -358,11 +357,10 @@ export default function FeedScreen() {
               );
             })()}
           </View>
-
-          {/* 공지 섹션 제거: 상단으로 이동 */}
-          <FeedNotice />
         </>
       )}
+      {/* 공지 섹션: 로그인 상태와 관계없이 항상 표시 */}
+      <FeedNotice />
 
       {/* 팀 필터 선택 모달 */}
       <TeamFilterSelector

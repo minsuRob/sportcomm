@@ -547,12 +547,12 @@ export default function ProfileScreen({
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
             >
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 onPress={handleOpenTeamCenter}
                 accessibilityLabel="팀 센터 열기"
               >
                 <Ionicons name="trophy-outline" color={"#fff"} size={24} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               <TouchableOpacity
                 onPress={handleSettings}
                 accessibilityLabel="설정 열기"
@@ -906,7 +906,7 @@ const $ageBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $statsSection: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   justifyContent: "space-around",
-  paddingVertical: spacing.lg,
+  paddingVertical: spacing.sm,
   marginTop: spacing.md,
   borderTopWidth: 1,
   borderBottomWidth: 1,

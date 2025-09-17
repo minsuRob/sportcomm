@@ -14,7 +14,7 @@ const palette = {
   primary200: "#BAE6FD",
   primary300: "#7DD3FC",
   primary400: "#38BDF8",
-  primary500: "#0EA5E9",
+  primary500: "#0a6e9c",
   primary600: "#0284C7",
 
   // 빨간색 계열

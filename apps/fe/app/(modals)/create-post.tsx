@@ -89,17 +89,12 @@ export default function CreatePostScreen() {
   const { themed, theme } = useAppTheme();
   const { t } = useTranslation();
 
-  // 인기 태그 목록 (실제로는 API에서 가져와야 함)
+  // 추천 태그 목록 (실제로는 API에서 가져와야 함)
   const popularTags = [
-    "전술분석",
-    "이적소식",
-    "경기예측",
-    "선수분석",
+    "자유",
+    "선수",
+    "경기정보",
     "팀뉴스",
-    "하이라이트",
-    "골장면",
-    "세리머니",
-    "응원가",
     "경기후기",
   ];
 
@@ -907,7 +902,7 @@ export default function CreatePostScreen() {
         {/* 태그 입력 영역 (모던) */}
         {
           <View style={themed($tagSection)}>
-            <Text style={themed($sectionTitle)}>주제(선택)</Text>
+            
             <TagInput
               tags={tags}
               onTagsChange={setTags}
@@ -1055,12 +1050,7 @@ const $typeSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.md,
 });
 
-const $sectionTitle: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  fontSize: 16,
-  fontWeight: "600",
-  color: colors.text,
-  marginBottom: spacing.sm,
-});
+
 
 const $sectionHeader: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",

@@ -76,16 +76,33 @@ export const DAILY_RESET_HOUR = 6;
 /**
  * 시간대별 UTC 오프셋 설정 (시간 단위)
  * 국제 표준 시간대 지원을 위한 설정
+ *
+ * ⚠️ 중요 경고:
+ * 이 오프셋들은 표준 시간(standard time)을 기준으로 하며,
+ * DST(일광 절약 시간제)를 고려하지 않습니다.
+ *
+ * DST 적용 국가 및 시간대:
+ * - 미국: 3월 두 번째 일요일 ~ 11월 첫 번째 일요일 (UTC-4)
+ * - 유럽: 3월 마지막 일요일 ~ 10월 마지막 일요일 (UTC+1/+2)
+ * - 호주: 10월 첫 번째 일요일 ~ 4월 첫 번째 일요일 (UTC+10/+11)
+ *
+ * 실제 서비스에서는 date-fns-tz 또는 moment-timezone 라이브러리를 사용하여
+ * DST를 자동으로 처리하는 것을 강력히 권장합니다.
+ *
+ * 라이브러리 마이그레이션 시 IANA 시간대 식별자를 사용하세요:
+ * - 'America/New_York' (EST/EDT 자동 처리)
+ * - 'Europe/London' (GMT/BST 자동 처리)
+ * - 'Australia/Sydney' (AEDT/AEST 자동 처리)
  */
 export const TIMEZONE_OFFSETS: Record<string, number> = {
-  'Asia/Seoul': 9,      // KST (UTC+9)
-  'Asia/Tokyo': 9,      // JST (UTC+9)
-  'Asia/Shanghai': 8,   // CST (UTC+8)
-  'America/New_York': -5, // EST (UTC-5)
-  'America/Los_Angeles': -8, // PST (UTC-8)
-  'Europe/London': 0,   // GMT (UTC+0)
-  'Europe/Paris': 1,    // CET (UTC+1)
-  'Australia/Sydney': 10, // AEDT (UTC+10)
+  'Asia/Seoul': 9,      // KST (UTC+9) - DST 미적용
+  'Asia/Tokyo': 9,      // JST (UTC+9) - DST 미적용
+  'Asia/Shanghai': 8,   // CST (UTC+8) - DST 미적용
+  'America/New_York': -5, // EST (UTC-5) - DST 시 UTC-4
+  'America/Los_Angeles': -8, // PST (UTC-8) - DST 시 UTC-7
+  'Europe/London': 0,   // GMT (UTC+0) - DST 시 UTC+1
+  'Europe/Paris': 1,    // CET (UTC+1) - DST 시 UTC+2
+  'Australia/Sydney': 10, // AEDT (UTC+10) - DST 시 UTC+11
   'UTC': 0,
 };
 
@@ -699,6 +716,33 @@ export class User {
   /**
    * 시간대 변환 헬퍼 메서드
    * 다른 나라 시간대 지원을 위한 유틸리티
+   *
+   * ⚠️ DST(일광 절약 시간제) 및 정확한 시간대 처리 고려사항:
+   * 현재 구현은 간단한 UTC 오프셋 계산만 수행하므로 DST 전환 시점에서
+   * 1시간 오차가 발생할 수 있습니다.
+   *
+   * 개선 권장사항:
+   * 1. date-fns-tz 라이브러리 사용:
+   *    npm install date-fns-tz
+   *    import { zonedTimeToUtc, utcToZonedTime, format } from 'date-fns-tz';
+   *
+   * 2. moment-timezone 라이브러리 사용:
+   *    npm install moment-timezone
+   *    import moment from 'moment-timezone';
+   *
+   * 3. 현재 TIMEZONE_OFFSETS 상수는 DST를 고려하지 않으므로
+   *    라이브러리 도입 시 IANA 시간대 식별자(ex: 'Asia/Seoul')를 사용해야 합니다.
+   *
+   * 예시 개선 코드 (date-fns-tz 사용 시):
+   * ```typescript
+   * import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
+   *
+   * private convertToTimezone(date: Date, timezone: string): Date {
+   *   // UTC로 변환 후 지정된 시간대로 변환
+   *   const utcDate = zonedTimeToUtc(date, 'UTC');
+   *   return utcToZonedTime(utcDate, timezone);
+   * }
+   * ```
    */
   private convertToTimezone(date: Date, timezone: string): Date {
     // 간단한 UTC offset 계산 (실제 구현에서는 moment-timezone 등의 라이브러리 사용 권장)
@@ -710,6 +754,16 @@ export class User {
   /**
    * 시간대별 UTC offset 계산 (시간)
    * 실제 서비스에서는 timezone 라이브러리 사용 권장
+   *
+   * ⚠️ 현재 구현의 한계:
+   * - DST(일광 절약 시간제)를 고려하지 않음
+   * - 고정된 오프셋만 사용하므로 계절에 따른 시간 변경을 반영하지 못함
+   * - 새로운 시간대 추가 시 수동으로 오프셋 계산 필요
+   *
+   * 라이브러리 도입 시 개선점:
+   * - date-fns-tz: 자동으로 DST를 고려한 정확한 오프셋 계산
+   * - moment-timezone: 풍부한 시간대 지원 및 DST 처리
+   * - Intl.DateTimeFormat: 브라우저 네이티브 API 활용 (제한적 지원)
    */
   private getTimezoneOffset(timezone: string): number {
     return TIMEZONE_OFFSETS[timezone] || 0;

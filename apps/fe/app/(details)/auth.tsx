@@ -584,7 +584,7 @@ export default function AuthScreen() {
                   color={theme.colors.text}
                   style={{ marginRight: 8 }}
                 />
-                <Text style={themed($socialButtonText)}>Login with email</Text>
+                <Text style={themed($socialButtonText)}>email로 로그인</Text>
               </View>
             </Button>
               <Button
@@ -601,7 +601,7 @@ export default function AuthScreen() {
                     style={{ marginRight: 8 }}
                   />
                   <Text style={themed($socialButtonText)}>
-                    Login with Google
+                    Google로 로그인
                   </Text>
                 </View>
               </Button>
@@ -620,7 +620,7 @@ export default function AuthScreen() {
                     style={{ marginRight: 8 }}
                   />
                   <Text style={themed($socialButtonText)}>
-                    Login with Apple
+                    Apple로 로그인
                   </Text>
                 </View>
               </Button>

@@ -48,11 +48,21 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
 }) => {
   const { themed, theme } = useAppTheme();
 
+  // 폰트별 최적화된 테두리 두께 계산
+  const getOptimizedThickness = (baseThickness: number) => {
+    // SpaceGrotesk-SemiBold는 더 얇은 폰트이므로 테두리를 약간 더 두껍게 조정
+    const fontMultiplier = 1.2; // SpaceGrotesk-SemiBold에 최적화된 배율
+    // 폰트 사이즈에 따른 추가 조정 (큰 폰트일수록 상대적으로 테두리가 얇아 보임)
+    const sizeMultiplier = fontSize > 50 ? 1.1 : fontSize > 30 ? 1.0 : 0.9;
+    return Math.max(1, Math.round(baseThickness * fontMultiplier * sizeMultiplier));
+  };
+
   // 테두리 두께 결정 (prop > teamColors.uniformNumberThickness > 1)
-  const effectiveThickness =
-    borderThickness !== undefined
-      ? borderThickness
-      : (teamColors?.uniformNumberThickness ?? 1);
+  const baseThickness = borderThickness !== undefined
+    ? borderThickness
+    : (teamColors?.uniformNumberThickness ?? 1);
+
+  const effectiveThickness = getOptimizedThickness(baseThickness);
 
   // 색상 결정 (테마 fallback)
   const numberMainColor = teamColors?.uniformNumberText || theme.colors.text || mainColor ;
@@ -74,7 +84,8 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
         <Text
           style={{
             fontSize,
-            fontWeight: 'bold',
+            fontWeight: '600',
+            fontFamily: 'SpaceGrotesk-SemiBold',
             color: numberMainColor,
             textAlign: 'center',
             textShadowColor: numberOutlineColor,
@@ -90,50 +101,48 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
     const textX = finalContainerWidth / 2;
     const textY = finalContainerHeight / 2 + fontSize / 3;
 
-    // borderThickness에 따른 stroke 방향 개수 결정
+    // SpaceGrotesk-SemiBold에 최적화된 stroke 방향 계산
     const getStrokeDirections = (thickness: number) => {
-      if (thickness <= 1) {
-        // 얇은 테두리: 8방향
-        return [
-          { x: -thickness, y: 0 },      // 왼쪽
-          { x: thickness, y: 0 },       // 오른쪽
-          { x: 0, y: -thickness },      // 위
-          { x: 0, y: thickness },       // 아래
-          { x: -thickness, y: -thickness }, // 왼쪽 위
-          { x: thickness, y: -thickness },  // 오른쪽 위
-          { x: -thickness, y: thickness },  // 왼쪽 아래
-          { x: thickness, y: thickness },   // 오른쪽 아래
-        ];
-      } else if (thickness <= 2) {
-        // 중간 테두리: 10방향 (대각선 추가)
-        return [
-          { x: -thickness, y: 0 },      // 왼쪽
-          { x: thickness, y: 0 },       // 오른쪽
-          { x: 0, y: -thickness },      // 위
-          { x: 0, y: thickness },       // 아래
-          { x: -thickness, y: -thickness }, // 왼쪽 위
-          { x: thickness, y: -thickness },  // 오른쪽 위
-          { x: -thickness, y: thickness },  // 왼쪽 아래
-          { x: thickness, y: thickness },   // 오른쪽 아래
-          { x: -thickness * 0.7, y: -thickness * 0.7 }, // 왼쪽 위 대각선
-          { x: thickness * 0.7, y: -thickness * 0.7 },  // 오른쪽 위 대각선
-        ];
-      } else {
-        // 두꺼운 테두리: 12방향 (더 촘촘한 배치)
-        return [
-          { x: -thickness, y: 0 },      // 왼쪽
-          { x: thickness, y: 0 },       // 오른쪽
-          { x: 0, y: -thickness },      // 위
-          { x: 0, y: thickness },       // 아래
-          { x: -thickness, y: -thickness }, // 왼쪽 위
-          { x: thickness, y: -thickness },  // 오른쪽 위
-          { x: -thickness, y: thickness },  // 왼쪽 아래
-          { x: thickness, y: thickness },   // 오른쪽 아래
+      // SpaceGrotesk-SemiBold는 더 얇은 폰트이므로 더 많은 stroke 방향으로 보완
+      const baseDirections = [
+        { x: -thickness, y: 0 },      // 왼쪽
+        { x: thickness, y: 0 },       // 오른쪽
+        { x: 0, y: -thickness },      // 위
+        { x: 0, y: thickness },       // 아래
+      ];
+
+      const diagonalDirections = [
+        { x: -thickness, y: -thickness }, // 왼쪽 위
+        { x: thickness, y: -thickness },  // 오른쪽 위
+        { x: -thickness, y: thickness },  // 왼쪽 아래
+        { x: thickness, y: thickness },   // 오른쪽 아래
+      ];
+
+      if (thickness <= 1.2) {
+        // 얇은 테두리: 8방향 (기본 4방향 + 대각선 4방향)
+        return [...baseDirections, ...diagonalDirections];
+      } else if (thickness <= 2.4) {
+        // 중간 테두리: 12방향 (대각선 강화)
+        const extraDiagonal = [
           { x: -thickness * 0.7, y: -thickness * 0.7 }, // 왼쪽 위 대각선
           { x: thickness * 0.7, y: -thickness * 0.7 },  // 오른쪽 위 대각선
           { x: -thickness * 0.7, y: thickness * 0.7 },  // 왼쪽 아래 대각선
           { x: thickness * 0.7, y: thickness * 0.7 },   // 오른쪽 아래 대각선
         ];
+        return [...baseDirections, ...diagonalDirections, ...extraDiagonal];
+      } else {
+        // 두꺼운 테두리: 16방향 (최대 강화)
+        const extraDiagonal = [
+          { x: -thickness * 0.7, y: -thickness * 0.7 }, // 왼쪽 위 대각선
+          { x: thickness * 0.7, y: -thickness * 0.7 },  // 오른쪽 위 대각선
+          { x: -thickness * 0.7, y: thickness * 0.7 },  // 왼쪽 아래 대각선
+          { x: thickness * 0.7, y: thickness * 0.7 },   // 오른쪽 아래 대각선
+          { x: -thickness * 0.5, y: 0 },     // 왼쪽 중간
+          { x: thickness * 0.5, y: 0 },      // 오른쪽 중간
+          { x: 0, y: -thickness * 0.5 },     // 위쪽 중간
+          { x: 0, y: thickness * 0.5 },      // 아래쪽 중간
+        ];
+        return [...baseDirections, ...diagonalDirections, ...extraDiagonal];
       }
     };
 
@@ -148,7 +157,8 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
             fill={numberOutlineColor}
             stroke="none"
             fontSize={fontSize}
-            fontWeight="bold"
+            fontWeight="400"
+            fontFamily="SpaceGrotesk-SemiBold"
             x={textX + direction.x}
             y={textY + direction.y}
             textAnchor="middle"
@@ -162,7 +172,8 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
           fill={numberMainColor}
           stroke="none"
           fontSize={fontSize}
-          fontWeight="bold"
+          fontWeight="400"
+          fontFamily="SpaceGrotesk-SemiBold"
           x={textX}
           y={textY}
           textAnchor="middle"
@@ -184,9 +195,10 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
           top: '50%',
           transform: 'translate(-50%, -50%)',
           fontSize: `${fontSize}px`,
-          fontWeight: 'bold',
+          fontWeight: '600',
+          fontFamily: 'SpaceGrotesk-SemiBold',
           color: numberMainColor,
-          textShadow: `${effectiveThickness}px 0 0 ${numberOutlineColor}, ${-effectiveThickness}px 0 0 ${numberOutlineColor}, 0 ${effectiveThickness}px 0 ${numberOutlineColor}, 0 ${-effectiveThickness}px 0 ${numberOutlineColor}`,
+          textShadow: `${effectiveThickness}px 0 0 ${numberOutlineColor}, ${-effectiveThickness}px 0 0 ${numberOutlineColor}, 0 ${effectiveThickness}px 0 ${numberOutlineColor}, 0 ${-effectiveThickness}px 0 ${numberOutlineColor}, ${effectiveThickness}px ${effectiveThickness}px 0 ${numberOutlineColor}, ${-effectiveThickness}px ${effectiveThickness}px 0 ${numberOutlineColor}, ${effectiveThickness}px ${-effectiveThickness}px 0 ${numberOutlineColor}, ${-effectiveThickness}px ${-effectiveThickness}px 0 ${numberOutlineColor}`,
           textAlign: 'center',
           userSelect: 'none',
           pointerEvents: 'none',
@@ -200,7 +212,8 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
       <Text
         style={{
           fontSize,
-          fontWeight: 'bold',
+          fontWeight: '600',
+          fontFamily: 'SpaceGrotesk-SemiBold',
           color: numberMainColor,
           textAlign: 'center',
           textShadowColor: numberOutlineColor,

@@ -217,7 +217,7 @@ export default function TagInput({
         inputValue.length === 0 &&
         suggestedTags.length > 0 && (
           <View style={themed($popularTagsContainer)}>
-            <Text style={themed($popularTagsTitle)}>인기 주제</Text>
+            <Text style={themed($popularTagsTitle)}>추천 주제</Text>
             <View style={themed($popularTagsGrid)}>
               {suggestedTags.slice(0, 6).map((tag, index) => (
                 <TouchableOpacity

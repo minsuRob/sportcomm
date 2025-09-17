@@ -477,6 +477,45 @@ export default function AuthScreen() {
   };
 
   /**
+   * 닉네임 유효성 검증
+   * 한글 닉네임은 최대 8자까지만 허용
+   */
+  const validateNickname = (nickname: string) => {
+    if (!nickname.trim()) {
+      setNicknameError("닉네임을 입력해주세요.");
+      return false;
+    }
+
+    // 한글 닉네임 길이 검증 (8자 제한)
+    if (nickname.length > 8) {
+      setNicknameError("닉네임은 최대 8자까지만 입력 가능합니다.");
+      return false;
+    }
+
+    setNicknameError("");
+    return true;
+  };
+
+  /**
+   * 비밀번호 유효성 검증
+   * 최소 6자 이상이어야 함
+   */
+  const validatePassword = (password: string) => {
+    if (!password.trim()) {
+      setPasswordError("비밀번호를 입력해주세요.");
+      return false;
+    }
+
+    if (password.length < 6) {
+      setPasswordError("비밀번호는 최소 6자 이상이어야 합니다.");
+      return false;
+    }
+
+    setPasswordError("");
+    return true;
+  };
+
+  /**
    * 비밀번호 일치 검증
    * 회원가입 시에만 수행됩니다
    */
@@ -497,12 +536,12 @@ export default function AuthScreen() {
 
     // 회원가입 시 필수 조건들
     const hasEmail = email.trim().length > 0;
-    const hasNickname = nickname.trim().length > 0;
-    const hasPassword = password.trim().length > 0;
+    const hasValidNickname = nickname.trim().length > 0 && nickname.length <= 8;
+    const hasValidPassword = password.trim().length >= 6;
     const hasConfirmPassword = confirmPassword.trim().length > 0;
     const passwordsMatch = password === confirmPassword;
 
-    return hasEmail && hasNickname && hasPassword && hasConfirmPassword && passwordsMatch;
+    return hasEmail && hasValidNickname && hasValidPassword && hasConfirmPassword && passwordsMatch;
   };
 
   /**
@@ -518,13 +557,13 @@ export default function AuthScreen() {
       return;
     }
 
-    if (!password.trim()) {
-      setPasswordError("비밀번호를 입력해주세요.");
+    // 비밀번호 유효성 검증
+    if (!validatePassword(password)) {
       return;
     }
 
-    if (!isLogin && !nickname.trim()) {
-      setNicknameError("닉네임을 입력해주세요.");
+    // 회원가입 시 닉네임 유효성 검증
+    if (!isLogin && !validateNickname(nickname)) {
       return;
     }
 
@@ -719,12 +758,17 @@ export default function AuthScreen() {
                   themed($inputField),
                   nicknameError && themed($inputFieldError),
                 ]}
-                placeholder="닉네임"
+                placeholder="닉네임(한글 8자 이하)"
                 placeholderTextColor={theme.colors.textDim}
                 value={nickname}
                 onChangeText={(text) => {
                   setNickname(text);
                   if (nicknameError) setNicknameError(""); // 입력 시 에러 초기화
+
+                  // 실시간 닉네임 길이 검증 (8자 초과 시 경고)
+                  if (text.length > 8) {
+                    setNicknameError("닉네임은 최대 8자까지만 입력 가능합니다.");
+                  }
                 }}
                 autoCapitalize="none"
                 returnKeyType="next"
@@ -749,12 +793,21 @@ export default function AuthScreen() {
                   themed($passwordInput),
                   passwordError && themed($inputFieldError),
                 ]}
-                placeholder="비밀번호"
+                placeholder="비밀번호(최소 6자)"
+                placeholder="비밀번호(최소 6자  )"
                 placeholderTextColor={theme.colors.textDim}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
                   if (passwordError) setPasswordError(""); // 입력 시 에러 초기화
+
+                  // 실시간 비밀번호 길이 검증 (6자 미만 시 경고)
+                  if (text.length > 0 && text.length < 6) {
+                    setPasswordError("비밀번호는 최소 6자 이상이어야 합니다.");
+                  }
+                  // if (text.length > 0 && text.length < 6) {
+                  //   setPasswordError("비밀번호는 최소 6자 이상이어야 합니다.");
+                  // }
                 }}
                 secureTextEntry={!isPasswordVisible}
                 returnKeyType="done"

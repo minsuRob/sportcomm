@@ -549,7 +549,7 @@ export default function AuthScreen() {
             <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
 
-          <Text style={themed($headerTitle)}>로그인</Text>
+          <Text style={themed($headerLogoTitle)}>Sportalk</Text>
 
           <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
             <Ionicons
@@ -565,8 +565,6 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={themed($mainContent)}>
-            <Text style={themed($logoText)}>Sportalk</Text>
-
             <View style={themed($socialButtonsContainer)}>
             <Button
               variant="outline"
@@ -659,7 +657,7 @@ export default function AuthScreen() {
           <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
 
-        <Text style={themed($headerTitle)}>{isLogin ? "로그인" : "회원가입"}</Text>
+        <Text style={themed($headerLogoTitle)}>{isLogin ? "Sportalk" : "회원가입"}</Text>
 
         <View style={themed($headerRight)}>
           <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
@@ -679,10 +677,6 @@ export default function AuthScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={themed($mainContent)}>
-          <Text style={themed($logoText)}>
-            {isLogin ? "Sportalk Login" : "회원가입"}
-          </Text>
-
           {/* 이메일 입력 필드 */}
           <View style={themed($inputContainer)}>
             <TextInput
@@ -1099,6 +1093,14 @@ const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "600",
   color: colors.text,
+});
+
+const $headerLogoTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 24, // 로고용으로 약간 큰 크기
+  fontFamily: "TTTogether",
+  fontWeight: "500",
+  textAlign: "center",
+  color: colors.teamMain ?? colors.tint,
 });
 
 const $cancelText: ThemedStyle<TextStyle> = ({ colors }) => ({

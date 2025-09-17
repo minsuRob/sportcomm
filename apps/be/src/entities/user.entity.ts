@@ -748,7 +748,13 @@ export class User {
     // 간단한 UTC offset 계산 (실제 구현에서는 moment-timezone 등의 라이브러리 사용 권장)
     const utcDate = new Date(date.toISOString());
     const offset = this.getTimezoneOffset(timezone);
-    return new Date(utcDate.getTime() + offset * 60 * 1000);
+
+    // ⚠️ CRITICAL FIX: 시간대 오프셋 계산 버그 수정
+    // 기존: offset * 60 * 1000 (시간 * 60 * 1000 = 잘못된 계산)
+    // 수정: offset * 60 * 60 * 1000 (시간 * 60분 * 60초 * 1000ms = 올바른 밀리초 변환)
+    // 예: UTC+9의 경우 9시간 = 9 * 3600000 = 32,400,000 밀리초
+    // 기존 버그: 9 * 60000 = 540,000 밀리초 (9분에 해당)
+    return new Date(utcDate.getTime() + offset * 60 * 60 * 1000);
   }
 
   /**

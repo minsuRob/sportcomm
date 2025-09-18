@@ -2250,6 +2250,31 @@ export const TEAM_PLAYERS: Record<TeamId, PlayerRecord[]> = {
 // -------------------------------------------------------
 
 /**
+ * 팀명으로 TeamId를 유추하여 반환하는 헬퍼 함수
+ * - 팀 색상 설정 및 선수 데이터 조회 시 공통으로 사용
+ * @param teamName 팀 이름 (한글/영문)
+ * @returns TeamId | null
+ */
+export function deriveTeamSlug(teamName?: string | null): TeamId | null {
+  if (!teamName) return null;
+  const n = teamName.toLowerCase();
+
+  // 한국야구팀 매핑
+  if (n.includes("한화") || n.includes("hanwha")) return TEAM_IDS.HANWHA;
+  if (n.includes("두산") || n.includes("doosan")) return TEAM_IDS.DOOSAN;
+  if (n.includes("삼성") || n.includes("samsung")) return TEAM_IDS.SAMSUNG;
+  if (n.includes("기아") || n.includes("kia")) return TEAM_IDS.KIA;
+  if (n.includes("ssg") || n.includes("landers") || n.includes("랜더스")) return TEAM_IDS.SSG;
+  if (n.includes("lg") && (n.includes("트윈스") || n.includes("twins"))) return TEAM_IDS.LG;
+  if (n.includes("롯데") || n.includes("lotte") || n.includes("giants")) return TEAM_IDS.LOTTE;
+  if (n.includes("다이노스") || n.includes("dinos") || n.includes("nc")) return TEAM_IDS.NC;
+  if (n.includes("위즈") || n.includes("wiz") || n === "kt") return TEAM_IDS.KT;
+  if (n.includes("키움") || n.includes("kiwoom") || n.includes("heroes")) return TEAM_IDS.KIWOOM;
+
+  return null;
+}
+
+/**
  * 특정 팀의 선수 목록 반환
  * @param teamId 팀 식별자
  */

@@ -26,6 +26,7 @@ import {
   type UpdateMyTeamsPriorityResult,
   type UserTeam,
 } from "@/lib/graphql/teams";
+import { type TeamId, deriveTeamSlug } from "@/lib/team-data/players";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useAuth } from "@/lib/auth/context/AuthContext";
@@ -104,7 +105,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     useState(false);
 
   // 현재 설정 중인 팀 ID
-  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  const [activeTeamId, setActiveTeamId] = useState<TeamId | null>(null);
 
   // 최초 로딩 시 선택된 팀 순서 저장 (Dirty 판단용)
   const initialSelectedOrderRef = useRef<string[]>([]);
@@ -219,7 +220,21 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
   };
 
   /** 최애 선수 선택 */
-  const openPlayerSelector = (teamId: string) => {
+  const openPlayerSelector = (teamName: string) => {
+    // 팀 이름을 TeamId로 변환
+    const teamId = deriveTeamSlug(teamName);
+
+    if (!teamId) {
+      console.warn(`팀 이름 "${teamName}"을 TeamId로 변환할 수 없습니다.`);
+      showToast({
+        type: "error",
+        title: "팀 정보 오류",
+        message: "해당 팀의 선수 정보를 불러올 수 없습니다.",
+        duration: 3000,
+      });
+      return;
+    }
+
     setActiveTeamId(teamId);
     setPlayerSelectorVisible(true);
   };
@@ -571,17 +586,17 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
               style={themed($settingButton)}
               onPress={() => {
                 const supportedIds = Object.values(TEAM_IDS) as string[];
-                if (!supportedIds.includes(item.teamId)) {
-                  showToast({
-                    type: "warning",
-                    title: "지원 예정",
-                    message:
-                      "해당 팀은 최애 선수 선택이 아직 지원되지 않습니다.",
-                    duration: 2200,
-                  });
-                  return;
-                }
-                openPlayerSelector(item.teamId);
+                // if (!supportedIds.includes(item.teamId)) {
+                //   showToast({
+                //     type: "warning",
+                //     title: "지원 예정",
+                //     message:
+                //       "해당 팀은 최애 선수 선택이 아직 지원되지 않습니다.",
+                //     duration: 2200,
+                //   });
+                //   return;
+                // }
+                openPlayerSelector(item.team.name);  
               }}
               activeOpacity={0.85}
             >
@@ -788,9 +803,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
           setPlayerSelectorVisible(false);
           setActiveTeamId(null);
         }}
-        teamId={
-          (activeTeamId as any) || TEAM_IDS.DOOSAN /* 미지원 팀 안전 처리 */
-        }
+        teamId={activeTeamId || TEAM_IDS.DOOSAN}
         onSelect={(p) => handleSelectPlayer(p)}
       />
 

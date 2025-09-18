@@ -204,7 +204,8 @@ export default function TeamSelectionScreen() {
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
-  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
+  const [pendingTeamId, setPendingTeamId] = useState<TeamId | null>(null);
+  const [pendingOriginalTeamId, setPendingOriginalTeamId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<{
     top: number;
@@ -396,7 +397,12 @@ export default function TeamSelectionScreen() {
     pageX: number = 0,
     pageY: number = 0,
   ) => {
-    setPendingTeamId(teamId);
+    console.log("=== openTeamSettings 디버깅 ===");
+    console.log("받은 원본 GraphQL teamId:", teamId);
+    const mappedTeamId = mapGraphQLTeamIdToLocalTeamId(teamId);
+    console.log("매핑된 로컬 teamId:", mappedTeamId);
+    setPendingTeamId(mappedTeamId); // 변환된 teamId 저장
+    setPendingOriginalTeamId(teamId); // 원본 teamId도 저장
     setShowCalendar(false);
     setShowSettings(true);
     setSettingsAnchor({ top: pageY + 8, left: pageX - 110 });
@@ -404,19 +410,21 @@ export default function TeamSelectionScreen() {
 
   // --- 팬이 된 날짜 선택 ---
   const handleFavoriteDateSelect = (favoriteDate: string) => {
-    if (pendingTeamId) {
+    if (pendingOriginalTeamId) {
       setTeamFavoriteDates((prev) => ({
         ...prev,
-        [pendingTeamId]: favoriteDate,
+        [pendingOriginalTeamId]: favoriteDate,
       }));
     }
     setPendingTeamId(null);
+    setPendingOriginalTeamId(null);
     setShowCalendar(false);
   };
 
   // --- 캘린더 취소 ---
   const handleCalendarCancel = () => {
     setPendingTeamId(null);
+    setPendingOriginalTeamId(null);
     setShowCalendar(false);
   };
 
@@ -838,7 +846,11 @@ export default function TeamSelectionScreen() {
       {/* 팀 설정 팝오버 */}
       <TeamSettingsPopover
         visible={showSettings && !!pendingTeamId}
-        onClose={() => setShowSettings(false)}
+        onClose={() => {
+          setShowSettings(false);
+          setPendingTeamId(null);
+          setPendingOriginalTeamId(null);
+        }}
         anchorStyle={
           settingsAnchor
             ? {
@@ -856,11 +868,7 @@ export default function TeamSelectionScreen() {
           setShowSettings(false);
           setShowPlayerSelector(true);
         }}
-        teamId={
-          pendingTeamId
-            ? mapGraphQLTeamIdToLocalTeamId(pendingTeamId)
-            : undefined
-        }
+        teamId={pendingTeamId || undefined}
       />
 
       {/* 팬이 된 날짜 선택 Month Picker */}
@@ -893,23 +901,21 @@ export default function TeamSelectionScreen() {
         onClose={() => {
           setShowPlayerSelector(false);
           setPendingTeamId(null);
+          setPendingOriginalTeamId(null);
         }}
-        teamId={
-          pendingTeamId
-            ? mapGraphQLTeamIdToLocalTeamId(pendingTeamId)
-            : TEAM_IDS.DOOSAN
-        }
+        teamId={pendingTeamId || TEAM_IDS.DOOSAN}
         onSelect={(player) => {
-          if (!pendingTeamId) return;
+          if (!pendingOriginalTeamId) return;
           setTeamFavoritePlayers((prev) => ({
             ...prev,
-            [pendingTeamId]: {
+            [pendingOriginalTeamId]: {
               name: player.name,
               number: player.number,
             },
           }));
           setShowPlayerSelector(false);
           setPendingTeamId(null);
+          setPendingOriginalTeamId(null);
         }}
       />
     </View>

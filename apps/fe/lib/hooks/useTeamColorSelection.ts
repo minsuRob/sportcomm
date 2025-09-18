@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from "react";
 import { GetMyTeamsResult } from "@/lib/graphql/teams";
+import { deriveTeamSlug } from "@/lib/team-data/players";
 
 /**
  * 팀 색상 선택을 위한 공유 hook
@@ -21,29 +22,6 @@ export function useTeamColorSelection({
   selectedTeamId,
   setTeamColorOverride,
 }: UseTeamColorSelectionParams) {
-  /**
-   * 팀명으로 slug를 유추하여 getTeamColors 매칭에 사용하는 헬퍼
-   */
-  const deriveTeamSlug = useCallback((teamName?: string | null): string | null => {
-    if (!teamName) return null;
-    const n = teamName.toLowerCase();
-    if (n.includes("한화") || n.includes("hanwha")) return "hanwha";
-    if (n.includes("두산") || n.includes("doosan")) return "doosan";
-    if (n.includes("삼성") || n.includes("samsung")) return "samsung";
-    if (n.includes("기아") || n.includes("kia")) return "kia";
-    if (n.includes("ssg") || n.includes("landers") || n.includes("랜더스"))
-      return "ssg";
-    if (n.includes("lg") && (n.includes("트윈스") || n.includes("twins")))
-      return "lg";
-    if (n.includes("롯데") || n.includes("lotte") || n.includes("giants"))
-      return "lotte";
-    if (n.includes("다이노스") || n.includes("dinos") || n.includes("nc"))
-      return "nc";
-    if (n.includes("위즈") || n.includes("wiz") || n === "kt") return "kt";
-    if (n.includes("키움") || n.includes("kiwoom") || n.includes("heroes"))
-      return "kiwoom";
-    return null;
-  }, []);
 
   /**
    * priority가 가장 낮은(우선순위가 높은) 팀을 반환
@@ -148,7 +126,6 @@ export function useTeamColorSelection({
     applyTeamColor,
     handleTeamSelection,
     getPriorityBasedSelection,
-    deriveTeamSlug,
     findTeamById,
   };
 }

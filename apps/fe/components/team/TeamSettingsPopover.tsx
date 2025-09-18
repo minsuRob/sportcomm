@@ -33,7 +33,7 @@ export default function TeamSettingsPopover({
   anchorStyle,
   onSelectFavoriteDate,
   onSelectFavoritePlayer,
-  teamId = TEAM_IDS.DOOSAN, // 기본값: 두산 (외부 주입 ID가 미지원이면 fallback)
+  teamId, // 기본값 제거 - undefined일 경우 포토카드에서만 처리
 }: TeamSettingsPopoverProps) {
   const { themed, theme } = useAppTheme();
 
@@ -142,6 +142,7 @@ export default function TeamSettingsPopover({
         visible={photoCardSelectorVisible}
         onClose={() => setPhotoCardSelectorVisible(false)}
         onSelectCard={handleSelectCard}
+        teamId={teamId || TEAM_IDS.DOOSAN} // teamId가 없으면 기본값 사용
       />
 
     </>

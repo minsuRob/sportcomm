@@ -24,7 +24,7 @@ import TeamLogo from "@/components/TeamLogo";
 import FavoriteMonthPicker from "@/components/team/FavoriteMonthPicker";
 import FavoritePlayerSelector from "@/components/team/FavoritePlayerSelector";
 import TeamSettingsPopover from "@/components/team/TeamSettingsPopover";
-import { TEAM_IDS } from "@/lib/team-data/players";
+import { TEAM_IDS, type TeamId } from "@/lib/team-data/players";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -48,6 +48,136 @@ import {
 
 import { markPostSignupStepDone, PostSignupStep } from "@/lib/auth/post-signup";
 const { width: screenWidth } = Dimensions.get("window");
+
+/**
+ * GraphQL 팀 ID를 로컬 TEAM_IDS로 변환하는 헬퍼 함수
+ * @param graphQLTeamId GraphQL에서 받은 팀 ID
+ * @returns 로컬 TEAM_IDS 값 또는 기본값 (doosan)
+ */
+const mapGraphQLTeamIdToLocalTeamId = (graphQLTeamId: string): TeamId => {
+  // 팀 이름이나 코드에 따라 매핑
+  const teamNameMappings: Record<string, TeamId> = {
+    // ID 기반 매핑 (GraphQL ID가 로컬 ID와 같은 경우)
+    [TEAM_IDS.DOOSAN]: TEAM_IDS.DOOSAN,
+    [TEAM_IDS.LG]: TEAM_IDS.LG,
+    [TEAM_IDS.SSG]: TEAM_IDS.SSG,
+    [TEAM_IDS.KT]: TEAM_IDS.KT,
+    [TEAM_IDS.SAMSUNG]: TEAM_IDS.SAMSUNG,
+    [TEAM_IDS.LOTTE]: TEAM_IDS.LOTTE,
+    [TEAM_IDS.NC]: TEAM_IDS.NC,
+    [TEAM_IDS.KIA]: TEAM_IDS.KIA,
+    [TEAM_IDS.KIWOOM]: TEAM_IDS.KIWOOM,
+    [TEAM_IDS.HANWHA]: TEAM_IDS.HANWHA,
+
+    // === 두산 베어스 ===
+    "두산": TEAM_IDS.DOOSAN,
+    "doosan-bears": TEAM_IDS.DOOSAN,
+    "doosan bears": TEAM_IDS.DOOSAN,
+    "bears": TEAM_IDS.DOOSAN,
+    "ob": TEAM_IDS.DOOSAN, // OB 베어스
+    "doosanbearers": TEAM_IDS.DOOSAN,
+    "두산 베어스": TEAM_IDS.DOOSAN,
+    "두산베어스": TEAM_IDS.DOOSAN,
+
+    // === LG 트윈스 ===
+    "LG": TEAM_IDS.LG,
+    "lg-twins": TEAM_IDS.LG,
+    "lg twins": TEAM_IDS.LG,
+    "twins": TEAM_IDS.LG,
+    "엘지": TEAM_IDS.LG,
+    "lg트윈스": TEAM_IDS.LG,
+    "엘지 트윈스": TEAM_IDS.LG,
+
+    // === SSG 랜더스 ===
+    "SSG": TEAM_IDS.SSG,
+    "ssg-landers": TEAM_IDS.SSG,
+    "ssg landers": TEAM_IDS.SSG,
+    "landers": TEAM_IDS.SSG,
+    "에스에스지": TEAM_IDS.SSG,
+    "ssg랜더스": TEAM_IDS.SSG,
+    "sk": TEAM_IDS.SSG, // 이전 SK 와이번스
+    "에스에스지 랜더스": TEAM_IDS.SSG,
+
+    // === KT 위즈 ===
+    "KT": TEAM_IDS.KT,
+    "kt-wiz": TEAM_IDS.KT,
+    "kt wiz": TEAM_IDS.KT,
+    "wiz": TEAM_IDS.KT,
+    "케이티": TEAM_IDS.KT,
+    "kt위즈": TEAM_IDS.KT,
+    "케이티 위즈": TEAM_IDS.KT,
+
+    // === 삼성 라이온즈 ===
+    "삼성": TEAM_IDS.SAMSUNG,
+    "samsung-lions": TEAM_IDS.SAMSUNG,
+    "samsung lions": TEAM_IDS.SAMSUNG,
+    "lions": TEAM_IDS.SAMSUNG,
+    "삼성라이온즈": TEAM_IDS.SAMSUNG,
+    "삼성 라이온즈": TEAM_IDS.SAMSUNG,
+    "samsung라이온즈": TEAM_IDS.SAMSUNG,
+
+    // === 롯데 자이언츠 ===
+    "롯데": TEAM_IDS.LOTTE,
+    "lotte-giants": TEAM_IDS.LOTTE,
+    "lotte giants": TEAM_IDS.LOTTE,
+    "giants": TEAM_IDS.LOTTE,
+    "롯데자이언츠": TEAM_IDS.LOTTE,
+    "롯데 자이언츠": TEAM_IDS.LOTTE,
+    "lotte자이언츠": TEAM_IDS.LOTTE,
+
+    // === NC 다이노스 ===
+    "NC": TEAM_IDS.NC,
+    "nc-dinos": TEAM_IDS.NC,
+    "nc dinos": TEAM_IDS.NC,
+    "dinos": TEAM_IDS.NC,
+    "엔씨": TEAM_IDS.NC,
+    "nc다이노스": TEAM_IDS.NC,
+    "엔씨 다이노스": TEAM_IDS.NC,
+
+    // === KIA 타이거즈 ===
+    "KIA": TEAM_IDS.KIA,
+    "kia-tigers": TEAM_IDS.KIA,
+    "kia tigers": TEAM_IDS.KIA,
+    "tigers": TEAM_IDS.KIA,
+    "기아": TEAM_IDS.KIA,
+    "kia타이거즈": TEAM_IDS.KIA,
+    "해태": TEAM_IDS.KIA, // 이전 해태 타이거즈
+    "기아 타이거즈": TEAM_IDS.KIA,
+
+    // === 키움 히어로즈 ===
+    "키움": TEAM_IDS.KIWOOM,
+    "kiwoom-heroes": TEAM_IDS.KIWOOM,
+    "kiwoom heroes": TEAM_IDS.KIWOOM,
+    "heroes": TEAM_IDS.KIWOOM,
+    "넥센": TEAM_IDS.KIWOOM, // 이전 넥센 히어로즈
+    "우리": TEAM_IDS.KIWOOM, // 이전 우리 히어로즈
+    "히어로즈": TEAM_IDS.KIWOOM,
+    "키움 히어로즈": TEAM_IDS.KIWOOM,
+
+    // === 한화 이글스 ===
+    "한화": TEAM_IDS.HANWHA,
+    "hanwha-eagles": TEAM_IDS.HANWHA,
+    "hanwha eagles": TEAM_IDS.HANWHA,
+    "eagles": TEAM_IDS.HANWHA,
+    "한화이글스": TEAM_IDS.HANWHA,
+    "한화 이글스": TEAM_IDS.HANWHA,
+    "한화eagles": TEAM_IDS.HANWHA,
+    "hanwhaeagles": TEAM_IDS.HANWHA,
+  };
+
+  // 대소문자 구분 없이 매핑 시도
+  const normalizedId = graphQLTeamId.toLowerCase().trim();
+
+  const result = teamNameMappings[normalizedId] ||
+                 teamNameMappings[graphQLTeamId];
+
+  // 매핑 실패 시 로그로 확인
+  if (!result) {
+    console.warn("팀 ID 매핑 실패:", graphQLTeamId, "-> 기본값(doosan) 사용");
+  }
+
+  return result || TEAM_IDS.DOOSAN; // 기본값
+};
 
 export default function TeamSelectionScreen() {
   const { themed, theme, setTeamColorOverride } = useAppTheme();
@@ -212,6 +342,33 @@ export default function TeamSelectionScreen() {
 
   // --- 팀 선택/해제 ---
   const handleTeamSelect = (teamId: string) => {
+    // 디버깅: 실제 팀 ID 확인
+    console.log("=== 팀 선택 디버깅 ===");
+    console.log("GraphQL Team ID:", teamId);
+    console.log("GraphQL Team ID (대문자):", teamId.toUpperCase());
+    console.log("GraphQL Team ID (소문자):", teamId.toLowerCase());
+
+    const mappedTeamId = mapGraphQLTeamIdToLocalTeamId(teamId);
+    console.log("매핑된 로컬 Team ID:", mappedTeamId);
+
+    // 실제 선수 데이터 확인
+    const { getPlayersByTeam } = require("@/lib/team-data/players");
+    const players = getPlayersByTeam(mappedTeamId);
+    console.log(`매핑된 팀(${mappedTeamId})의 선수 수:`, players.length);
+    console.log("첫 번째 선수:", players[0]?.name || "없음");
+
+    // 한화 팀 특별 디버깅
+    if (teamId.toLowerCase().includes('한화') || teamId.toLowerCase().includes('hanwha') || teamId.toLowerCase().includes('eagles')) {
+      console.log("=== 한화 팀 특별 디버깅 ===");
+      console.log("한화 팀 ID 매핑 결과:", mappedTeamId);
+      console.log("한화 선수 수:", players.length);
+      if (players.length > 0) {
+        console.log("한화 선수 목록 (처음 5명):", players.slice(0, 5).map(p => `${p.name}(${p.number})`));
+      }
+    }
+
+    console.log("==================");
+
     // 관련 날짜 제거 로직은 기존 유지
     setSelectedTeams((prev) => {
       let updatedTeams = prev;
@@ -699,7 +856,11 @@ export default function TeamSelectionScreen() {
           setShowSettings(false);
           setShowPlayerSelector(true);
         }}
-        teamId={pendingTeamId || undefined}
+        teamId={
+          pendingTeamId
+            ? mapGraphQLTeamIdToLocalTeamId(pendingTeamId)
+            : undefined
+        }
       />
 
       {/* 팬이 된 날짜 선택 Month Picker */}
@@ -734,7 +895,9 @@ export default function TeamSelectionScreen() {
           setPendingTeamId(null);
         }}
         teamId={
-          (pendingTeamId as any) || TEAM_IDS.DOOSAN /* 미지원 팀 안전 처리 */
+          pendingTeamId
+            ? mapGraphQLTeamIdToLocalTeamId(pendingTeamId)
+            : TEAM_IDS.DOOSAN
         }
         onSelect={(player) => {
           if (!pendingTeamId) return;

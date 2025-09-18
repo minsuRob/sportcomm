@@ -59,10 +59,22 @@ export default function FavoritePlayerSelector({
 
   // 팀별 선수 목록 (정렬: 등번호 ASC)
   const players = useMemo(
-    () =>
-      getPlayersByTeam(teamId)
+    () => {
+      console.log("=== FavoritePlayerSelector 디버깅 ===");
+      console.log("받은 teamId:", teamId);
+      const teamPlayers = getPlayersByTeam(teamId);
+      console.log("찾은 선수 수:", teamPlayers.length);
+
+      // 한화 팀 특별 디버깅
+      if (teamId === "hanwha") {
+        console.log("=== 한화 팀 선수 데이터 ===");
+        console.log("한화 선수 목록 (처음 10명):", teamPlayers.slice(0, 10).map(p => `${p.name}(${p.number})`));
+      }
+
+      return teamPlayers
         .slice()
-        .sort((a, b) => a.number - b.number),
+        .sort((a, b) => a.number - b.number);
+    },
     [teamId],
   );
 

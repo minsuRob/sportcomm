@@ -11,7 +11,7 @@ import { UseGuards } from '@nestjs/common';
 import { Team, UserTeam, Sport } from '../../entities';
 import { TeamsService } from './teams.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { UpdateMyTeamInput } from './teams.mutation';
+import { UpdateMyTeamInput, UpdateMyTeamPriorityInput } from './teams.mutation';
 
 /**
  * 팀 GraphQL 리졸버
@@ -201,6 +201,41 @@ export class TeamsResolver {
 
     const userId = user.id;
     return this.teamsService.updateUserTeams(userId, teams);
+  }
+
+  /**
+   * 선택된 팀 우선순위만 경량 업데이트 (priority 필드만 변경)
+   * - 클라이언트는 단순히 teamIds 배열(현재 순서대로)을 전달
+   * - 서버에서 0부터 순차 priority를 매핑해 적용
+   * - 새로운 InputType 을 정의할 필요 없이 기본 String 배열만 사용 (스키마 인식 오류 방지)
+   */
+  @Mutation(() => [UserTeam], {
+    name: 'updateMyTeamsPriority',
+    description:
+      '사용자의 선택된 팀 우선순위(priority)만 일괄 업데이트 (teamIds 순서 기반).',
+  })
+  @UseGuards(JwtAuthGuard)
+  async updateMyTeamsPriority(
+    @Args('teamIds', {
+      type: () => [String],
+      description: '우선순위 적용 순서대로 나열된 팀 ID 배열 (0이 첫 번째)',
+    })
+    teamIds: string[],
+    @Context() context: any,
+  ): Promise<UserTeam[]> {
+    const request = context.req || context.request;
+    const user = request?.user;
+    if (!user || !user.id) {
+      throw new Error(
+        '인증된 사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.',
+      );
+    }
+    // teamIds → priority 매핑 객체 배열 생성
+    const priorities = teamIds.map((teamId, idx) => ({
+      teamId,
+      priority: idx,
+    }));
+    return this.teamsService.updateUserTeamsPriority(user.id, priorities);
   }
 
   /**

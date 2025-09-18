@@ -1,7 +1,13 @@
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { InputType, Field } from '@nestjs/graphql';
-import { IsString, IsOptional, MaxLength, IsDateString, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  MaxLength,
+  IsDateString,
+  IsInt,
+} from 'class-validator';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../entities/user.entity';
@@ -55,6 +61,23 @@ export class UpdateMyTeamInput {
   @IsOptional()
   @IsInt()
   favoritePlayerNumber?: number;
+}
+
+/**
+ * 우선순위만 일괄 업데이트하는 경량 입력 타입
+ * - 기존 updateMyTeams는 팀 전체 재구성(삭제 후 재생성) 로직으로 비교적 무겁기 때문에
+ *   단순 순서 변경( priority )만 수행할 때 사용할 수 있는 InputType 입니다.
+ * - resolver / service 레벨에서 배열을 받아 해당 user의 user_teams 레코드들의 priority만 업데이트하도록 구현 예정
+ */
+@InputType()
+export class UpdateMyTeamPriorityInput {
+  @Field(() => String, { description: '팀 ID' })
+  @IsString()
+  teamId: string;
+
+  @Field(() => Number, { description: '우선순위 (0이 가장 높음)' })
+  @IsInt()
+  priority: number;
 }
 
 /**

@@ -5,6 +5,7 @@ import { SportsService } from './sports.service';
 import { SportsResolver } from './sports.resolver';
 import { TeamsService } from './teams.service';
 import { TeamsResolver } from './teams.resolver';
+import { TeamsMutationResolver } from './teams.mutation';
 
 /**
  * 스포츠 및 팀 관리 모듈
@@ -14,7 +15,13 @@ import { TeamsResolver } from './teams.resolver';
  */
 @Module({
   imports: [TypeOrmModule.forFeature([Sport, Team, UserTeam, User])],
-  providers: [SportsService, SportsResolver, TeamsService, TeamsResolver],
+  providers: [
+    SportsService,
+    SportsResolver,
+    TeamsService,
+    TeamsResolver,
+    TeamsMutationResolver,
+  ],
   exports: [SportsService, TeamsService],
 })
 export class SportsModule {}

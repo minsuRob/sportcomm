@@ -165,6 +165,19 @@ export const UPDATE_MY_TEAMS = gql`
   ${USER_TEAM_FRAGMENT}
 `;
 
+/**
+ * 우선순위(priority)만 일괄 업데이트하는 경량 뮤테이션
+ * - 팀 추가 / 제거 / 날짜 / 선수 정보 변경 없이 순서만 조정할 때 사용
+ */
+export const UPDATE_MY_TEAMS_PRIORITY = gql`
+  mutation UpdateMyTeamsPriority($teamIds: [String!]!) {
+    updateMyTeamsPriority(teamIds: $teamIds) {
+      ...UserTeamInfo
+    }
+  }
+  ${USER_TEAM_FRAGMENT}
+`;
+
 // TypeScript 타입 정의
 export interface UpdateMyTeamInput {
   teamId: string;
@@ -172,6 +185,9 @@ export interface UpdateMyTeamInput {
   favoritePlayerName?: string;
   favoritePlayerNumber?: number;
 }
+
+/** priority 경량 업데이트용 입력 타입 (FE 전용 정의) */
+/* priority 전송은 teamIds 배열(순서 기준)로 대체되어 별도 입력 타입 불필요 */
 
 export interface Sport {
   id: string;
@@ -257,4 +273,8 @@ export interface UnselectTeamResult {
 
 export interface UpdateMyTeamsResult {
   updateMyTeams: UserTeam[];
+}
+
+export interface UpdateMyTeamsPriorityResult {
+  updateMyTeamsPriority: UserTeam[];
 }

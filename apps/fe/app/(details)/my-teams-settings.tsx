@@ -21,9 +21,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@apollo/client";
 import {
   GET_MY_TEAMS,
-  UPDATE_MY_TEAMS,
+  UPDATE_MY_TEAMS_PRIORITY,
   type GetMyTeamsResult,
-  type UpdateMyTeamsResult,
+  type UpdateMyTeamsPriorityResult,
   type UserTeam,
 } from "@/lib/graphql/teams";
 import { useAppTheme } from "@/lib/theme/context";
@@ -47,7 +47,7 @@ import { showToast } from "@/components/CustomToast";
  *     - 이미 선택된 칩을 다시 탭하면 맨 뒤로 이동 (요구사항)
  *  4. 팀 상세 카드는 선택된 팀만 순번대로 출력 (기존 디자인 유지)
  *  5. 순번 및 상세 설정(날짜 / 선수 / 포토카드)은 저장 버튼 누르기 전까지 로컬에만 반영
- *  6. 저장 시 UPDATE_MY_TEAMS 호출 → 순서대로 payload 전송 (선택된 팀만)
+ *  6. 저장 시 UPDATE_MY_TEAMS_PRIORITY 호출 → priority(순서)만 일괄 전송
  *  7. Dirty 판단:
  *      - 순서 변경
  *      - 선택 / 해제
@@ -61,23 +61,7 @@ import { showToast } from "@/components/CustomToast";
  *  - 서버 스키마 변경 시 여기 필드도 함께 유지/보수 필요
  */
 interface EditableUserTeam extends UserTeam {
-  /* ==== 원본(UserTeam) 필드 (사용되는 것만 재선언) ==== */
-  id: string;
-  teamId: string;
-  /** 서버 priority (없으면 null) */
-  priority: number | null;
-  team: {
-    id: string;
-    name: string;
-    logoUrl?: string | null;
-    icon?: string | null;
-    color?: string | null;
-  };
-  favoriteDate?: string | null;
-  favoritePlayerName?: string | null;
-  favoritePlayerNumber?: number | null;
-
-  /* ==== 로컬 확장 필드 ==== */
+  /* ==== 로컬 확장 필드 (UserTeam 기본 필드 확장) ==== */
   _dirty?: boolean;
   _tempFavoriteDate?: string | null;
   _tempFavoritePlayerName?: string | null;
@@ -105,8 +89,8 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
   } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, { fetchPolicy: "network-only" });
 
   // --- GraphQL: 업데이트 뮤테이션 ---
-  const [updateMyTeams, { loading: updating }] =
-    useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
+  const [updateMyTeamsPriority, { loading: updating }] =
+    useMutation<UpdateMyTeamsPriorityResult>(UPDATE_MY_TEAMS_PRIORITY);
 
   // --- 로컬 상태 ---
   const [teams, setTeams] = useState<EditableUserTeam[]>([]);
@@ -176,10 +160,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
    *  - 상세 값 변경
    */
   const isDirty = useMemo(() => {
-    // (1) 상세 변경 여부
-    const detailDirty = teams.some((t) => t._dirty);
-
-    // (2) 선택 상태 변경 (선택 해제되었거나 새로 선택된 경우)
+    // (1) 선택 상태 변경 (선택 해제되었거나 새로 선택된 경우)
     const initialSet = new Set(initialSelectedOrderRef.current);
     const currentSelectedIds = selectedTeams.map((t) => t.teamId);
 
@@ -190,14 +171,14 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         (origId) => !currentSelectedIds.includes(origId),
       );
 
-    // (3) 순서 변경
+    // (2) 순서 변경
     const orderChanged =
       !selectionChanged &&
       initialSelectedOrderRef.current.some(
         (teamId, idx) => teamId !== currentSelectedIds[idx],
       );
 
-    return detailDirty || selectionChanged || orderChanged;
+    return selectionChanged || orderChanged;
   }, [teams, selectedTeams]);
 
   /** 새로고침 */
@@ -425,19 +406,12 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     }
 
     try {
-      // 선택된 팀 순서대로 payload 구성
-      const payload = selectedTeams.map((t) => ({
-        teamId: t.teamId,
-        favoriteDate: t._tempFavoriteDate || null,
-        favoritePlayerName: t._tempFavoritePlayerName || null,
-        favoritePlayerNumber:
-          typeof t._tempFavoritePlayerNumber === "number"
-            ? t._tempFavoritePlayerNumber
-            : null,
-      }));
+      // 현재 선택된 팀 순서대로 priority payload 구성
+      // teamIds 배열(현재 순서)만 서버로 전달하여 priority를 경량 업데이트
+      const orderedTeamIds = selectedTeams.map((t) => t.teamId);
 
-      const { errors } = await updateMyTeams({
-        variables: { teams: payload },
+      const { errors } = await updateMyTeamsPriority({
+        variables: { teamIds: orderedTeamIds },
         context: {
           headers: {
             authorization: accessToken ? `Bearer ${accessToken}` : "",
@@ -449,45 +423,34 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         throw new Error(errors[0].message);
       }
 
-      // 서버 반영 후 재조회
+      // 서버 반영 후 재조회 (최신 priority 동기화)
       const refetched = await refetchMyTeams({ fetchPolicy: "network-only" });
       const newMyTeams = refetched?.data?.myTeams || [];
-
       await updateUser({ myTeams: newMyTeams } as any);
 
       showToast({
         type: "success",
-        title: "저장 완료",
-        message: "My Teams 설정이 저장되었습니다.",
-        duration: 2000,
+        title: "우선순위 저장",
+        message: "팀 우선순위가 저장되었습니다.",
+        duration: 1800,
       });
 
       // 초기 순서 갱신
-      initialSelectedOrderRef.current = payload.map((p) => p.teamId);
+      initialSelectedOrderRef.current = orderedTeamIds;
 
-      // 로컬 상태에 반영 (priority 재정렬 / dirty 초기화)
+      // 로컬 priority / dirty 초기화
       setTeams((prev) =>
         prev.map((t) => {
           const updated = newMyTeams.find((n) => n.teamId === t.teamId);
           if (updated) {
             return {
               ...t,
-              favoriteDate: updated.favoriteDate,
-              favoritePlayerName: updated.favoritePlayerName,
-              favoritePlayerNumber: updated.favoritePlayerNumber,
               priority: updated.priority,
-              _tempFavoriteDate: updated.favoriteDate || null,
-              _tempFavoritePlayerName: updated.favoritePlayerName || null,
-              _tempFavoritePlayerNumber:
-                typeof updated.favoritePlayerNumber === "number"
-                  ? updated.favoritePlayerNumber
-                  : null,
               _dirty: false,
               _selected: true,
               _initialPriority: updated.priority ?? null,
             };
           }
-          // 서버에 없는 경우(해제) → 유지
           return {
             ...t,
             _dirty: false,
@@ -499,7 +462,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
       showToast({
         type: "error",
         title: "저장 실패",
-        message: e?.message || "변경사항 저장 중 오류가 발생했습니다.",
+        message: e?.message || "우선순위 저장 중 오류가 발생했습니다.",
         duration: 3000,
       });
     }
@@ -509,7 +472,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     currentUser,
     accessToken,
     selectedTeams,
-    updateMyTeams,
+    updateMyTeamsPriority,
     refetchMyTeams,
     updateUser,
   ]);

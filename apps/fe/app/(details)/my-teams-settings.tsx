@@ -34,6 +34,7 @@ import FavoritePlayerSelector from "@/components/team/FavoritePlayerSelector";
 import PhotoCardSelector from "@/components/team/PhotoCardSelector";
 import { TEAM_IDS } from "@/lib/team-data/players";
 import TeamLogo from "@/components/TeamLogo";
+import PriorityTeamList from "@/components/team/PriorityTeamList";
 import { showToast } from "@/components/CustomToast";
 
 /** =========================================
@@ -688,49 +689,12 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
               선택된 팀이 없습니다. 아래에서 팀을 선택해 주세요.
             </Text>
           )}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={themed($priorityScrollContent)}
-          >
-            {selectedTeams.map((t, idx) => {
-              const teamColor = t.team.color || theme.colors.tint;
-              return (
-                <View key={t.teamId} style={themed($priorityItemWrap)}>
-                  {/* 제거(X) 버튼 */}
-                  <TouchableOpacity
-                    style={themed($priorityRemoveBtn)}
-                    onPress={() => handleUnselectTeam(t.teamId)}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  >
-                    <Ionicons
-                      name="close"
-                      size={14}
-                      color={theme.colors.text}
-                    />
-                  </TouchableOpacity>
-
-                  {/* 원형 번호 버튼 (탭하면 맨 뒤 이동) */}
-                  <TouchableOpacity
-                    style={[
-                      themed($priorityCircleBase),
-                      {
-                        backgroundColor: teamColor,
-                        borderColor: "#fff",
-                      },
-                    ]}
-                    onPress={() => handleSelectTeam(t.teamId)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={themed($priorityCircleText)}>{idx + 1}</Text>
-                  </TouchableOpacity>
-                  <Text style={themed($priorityTeamName)} numberOfLines={1}>
-                    {t.team.name}
-                  </Text>
-                </View>
-              );
-            })}
-          </ScrollView>
+          <PriorityTeamList
+            teams={selectedTeams}
+            size={40}
+            startIndex={0}
+            onRemove={handleUnselectTeam}
+          />
         </View>
 
         {/* 팀 선택 영역 */}
@@ -932,61 +896,6 @@ const $emptyHelperText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
 });
 
-const $priorityScrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  paddingVertical: spacing.xs,
-  gap: spacing.md,
-  alignItems: "flex-start",
-});
-
-const $priorityItemWrap: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "center",
-  marginRight: spacing.md,
-  position: "relative",
-  minWidth: 56,
-});
-
-const $priorityRemoveBtn: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  position: "absolute",
-  top: -6,
-  left: 2,
-  backgroundColor: colors.error + "55",
-  width: 24,
-  height: 24,
-  borderRadius: 12,
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 2,
-});
-
-const $priorityCircleBase: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  width: 56,
-  height: 56,
-  borderRadius: 28,
-  borderWidth: 3,
-  borderColor: colors.background,
-  alignItems: "center",
-  justifyContent: "center",
-  shadowColor: "#000",
-  shadowOpacity: 0.15,
-  shadowOffset: { width: 0, height: 2 },
-  shadowRadius: 4,
-  elevation: 3,
-});
-
-const $priorityCircleText: ThemedStyle<TextStyle> = () => ({
-  fontSize: 20,
-  fontWeight: "800",
-  color: "#fff",
-});
-
-const $priorityTeamName: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
-  marginTop: spacing.xs,
-  fontSize: 11,
-  fontWeight: "600",
-  color: colors.text,
-  textAlign: "center",
-  maxWidth: 70,
-});
 
 const $selectionHelperText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,

@@ -71,6 +71,7 @@ export default function TeamSelectionScreen() {
   >({});
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showPlayerSelector, setShowPlayerSelector] = useState(false);
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<{
@@ -680,38 +681,11 @@ export default function TeamSelectionScreen() {
           setShowSettings(false);
           setShowCalendar(true);
         }}
-        teamId={pendingTeamId || undefined}
-        onSelectFavoritePlayer={async (player) => {
-          if (!pendingTeamId) return;
-          const updatedPlayers = {
-            ...teamFavoritePlayers,
-            [pendingTeamId]: {
-              name: player.name,
-              number: player.number,
-            },
-          };
-          setTeamFavoritePlayers(updatedPlayers);
-          // 즉시 서버 반영 (선택 기능: 실패 시 롤백은 생략)
-          try {
-            await updateMyTeams({
-              variables: {
-                teams: safeSelectedTeams.map((teamId) => ({
-                  teamId,
-                  favoriteDate: teamFavoriteDates[teamId] || null,
-                  favoritePlayerName: updatedPlayers[teamId]?.name || null,
-                  favoritePlayerNumber: updatedPlayers[teamId]?.number ?? null,
-                })),
-              },
-              context: {
-                headers: {
-                  authorization: accessToken ? `Bearer ${accessToken}` : "",
-                },
-              },
-            });
-          } catch (e) {
-            console.warn("최애 선수 즉시 저장 실패:", (e as any)?.message);
-          }
+        onSelectFavoritePlayer={() => {
+          setShowSettings(false);
+          setShowPlayerSelector(true);
         }}
+        teamId={pendingTeamId || undefined}
       />
 
       {/* 팬이 된 날짜 선택 Month Picker */}

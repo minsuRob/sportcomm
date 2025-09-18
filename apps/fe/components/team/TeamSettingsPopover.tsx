@@ -11,19 +11,15 @@ import { Portal } from "@rn-primitives/portal";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import PhotoCardSelector from "./PhotoCardSelector";
-import FavoritePlayerSelector from "./FavoritePlayerSelector";
-import {
-  TEAM_IDS,
-  type PlayerRecord,
-} from "@/lib/team-data/players";
+import { TEAM_IDS } from "@/lib/team-data/players";
 
 export interface TeamSettingsPopoverProps {
   visible: boolean;
   onClose: () => void;
   anchorStyle?: ViewStyle; // 팝오버 위치 조정
   onSelectFavoriteDate: () => void;
+  onSelectFavoritePlayer: () => void; // 최애 선수 팝업 열기 콜백 (좋아한 날짜와 동일한 패턴)
   teamId?: string; // 선택된 팀 ID (없으면 기본 두산, 지원되지 않는 값은 두산으로 fallback)
-  onSelectFavoritePlayer?: (player: PlayerRecord) => void; // 최애 선수 선택 콜백
 }
 
 /**
@@ -36,28 +32,14 @@ export default function TeamSettingsPopover({
   onClose,
   anchorStyle,
   onSelectFavoriteDate,
-  teamId = TEAM_IDS.DOOSAN, // 기본값: 두산 (외부 주입 ID가 미지원이면 fallback)
   onSelectFavoritePlayer,
+  teamId = TEAM_IDS.DOOSAN, // 기본값: 두산 (외부 주입 ID가 미지원이면 fallback)
 }: TeamSettingsPopoverProps) {
   const { themed, theme } = useAppTheme();
 
   // 포토카드 모달
   const [photoCardSelectorVisible, setPhotoCardSelectorVisible] =
     useState(false);
-
-  // 최애 선수 모달
-  const [favoritePlayerSelectorVisible, setFavoritePlayerSelectorVisible] =
-    useState(false);
-
-  // FavoritePlayerSelector 가 지원하는 teamId만 허용 (현재: DOOSAN)
-  // 지원 목록 외 ID가 들어오면 두산으로 대체
-  const resolvedPlayerTeamId = useMemo(
-    () =>
-      (Object.values(TEAM_IDS) as string[]).includes(teamId)
-        ? (teamId as (typeof TEAM_IDS)[keyof typeof TEAM_IDS])
-        : TEAM_IDS.DOOSAN,
-    [teamId],
-  );
 
   // --- 핸들러: 포토카드 ---
   const handleOpenPhotoCard = () => {
@@ -73,13 +55,8 @@ export default function TeamSettingsPopover({
   // --- 핸들러: 최애 선수 ---
   const handleOpenFavoritePlayer = () => {
     onClose();
-    setFavoritePlayerSelectorVisible(true);
-  };
-
-  const handleSelectFavoritePlayer = (player: PlayerRecord) => {
-    //console.log("Selected favorite player:", player);
-    onSelectFavoritePlayer?.(player);
-    setFavoritePlayerSelectorVisible(false);
+    // 부모 컴포넌트에서 팝업 처리하도록 콜백 호출 (좋아한 날짜와 동일한 패턴)
+    onSelectFavoritePlayer();
   };
 
   // --- 메뉴 항목 정의 (확장 시 배열 요소만 추가) ---
@@ -167,13 +144,6 @@ export default function TeamSettingsPopover({
         onSelectCard={handleSelectCard}
       />
 
-      {/* 최애 선수 선택 모달 */}
-      <FavoritePlayerSelector
-        visible={favoritePlayerSelectorVisible}
-        onClose={() => setFavoritePlayerSelectorVisible(false)}
-        teamId={resolvedPlayerTeamId}
-        onSelect={handleSelectFavoritePlayer}
-      />
     </>
   );
 }

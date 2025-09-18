@@ -22,7 +22,9 @@ import { showToast } from "@/components/CustomToast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import TeamLogo from "@/components/TeamLogo";
 import FavoriteMonthPicker from "@/components/team/FavoriteMonthPicker";
+import FavoritePlayerSelector from "@/components/team/FavoritePlayerSelector";
 import TeamSettingsPopover from "@/components/team/TeamSettingsPopover";
+import { TEAM_IDS } from "@/lib/team-data/players";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -129,7 +131,9 @@ export default function TeamSelectionScreen() {
     myTeamsData,
     teamColorTeamId: null, // team-selection에서는 teamColorTeamId를 사용하지 않음
     selectedTeamId: safeSelectedTeams[0] || null, // 첫 번째 선택된 팀
-    setTeamColorOverride,
+    setTeamColorOverride: async (color: string) => {
+      setTeamColorOverride(color);
+    },
   });
 
   // --- 인증 상태 감시 ---
@@ -452,6 +456,16 @@ export default function TeamSelectionScreen() {
                         ~
                       </Text>
                     )}
+                    {isSelected && teamFavoritePlayers[teamId]?.name && (
+                      <Text
+                        style={themed($teamCardPlayer)}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {teamFavoritePlayers[teamId].name}
+                        {teamFavoritePlayers[teamId].number && ` (#${teamFavoritePlayers[teamId].number})`}
+                      </Text>
+                    )}
                   </View>
                 </TouchableOpacity>
                 {isSelected ? (
@@ -711,6 +725,30 @@ export default function TeamSelectionScreen() {
             : theme.colors.tint
         }
       />
+
+      {/* 최애 선수 선택 팝업 */}
+      <FavoritePlayerSelector
+        visible={showPlayerSelector}
+        onClose={() => {
+          setShowPlayerSelector(false);
+          setPendingTeamId(null);
+        }}
+        teamId={
+          (pendingTeamId as any) || TEAM_IDS.DOOSAN /* 미지원 팀 안전 처리 */
+        }
+        onSelect={(player) => {
+          if (!pendingTeamId) return;
+          setTeamFavoritePlayers((prev) => ({
+            ...prev,
+            [pendingTeamId]: {
+              name: player.name,
+              number: player.number,
+            },
+          }));
+          setShowPlayerSelector(false);
+          setPendingTeamId(null);
+        }}
+      />
     </View>
   );
 }
@@ -874,6 +912,14 @@ const $teamCardDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   textAlign: "center",
   marginTop: 2,
+});
+
+const $teamCardPlayer: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.tint,
+  textAlign: "center",
+  marginTop: 1,
+  fontWeight: "600",
 });
 
 const $teamSettingsButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

@@ -110,11 +110,3 @@ export function initializeTeamCustomizations(): void {
  * ```
  */
 
-// 팀 ID 상수들 (타입 안전성을 위해)
-export const TEAM_IDS = {
-  DOOSAN: 'doosan',
-  SAMSUNG: 'samsung',
-  // 새로운 팀 추가 시 여기에 추가
-} as const;
-
-export type TeamId = typeof TEAM_IDS[keyof typeof TEAM_IDS];

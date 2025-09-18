@@ -58,28 +58,6 @@ export default function TeamSelectionScreen() {
     updateUser,
   } = useAuth();
 
-  // origin에 따른 뒤로가기 경로 결정
-  const getBackPath = useCallback(() => {
-    switch (origin) {
-      case "profile":
-        return "/(modals)/post-signup-profile";
-      case "team-center":
-        return "/(details)/team-center";
-      default:
-        return null; // 기본적으로 router.back() 사용
-    }
-  }, [origin]);
-
-  // 뒤로가기 핸들러
-  const handleGoBack = useCallback(() => {
-    const backPath = getBackPath();
-    if (backPath) {
-      router.replace(backPath);
-    } else {
-      handleGoBack();
-    }
-  }, [getBackPath, router]);
-
   // --- 로컬 UI 상태 ---
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
@@ -163,7 +141,7 @@ export default function TeamSelectionScreen() {
         message: "로그인이 필요한 기능입니다.",
         duration: 2000,
       });
-      setTimeout(() => handleGoBack(), 600);
+      setTimeout(() => router.back(), 600);
     }
   }, [isAuthenticated, router]);
 
@@ -298,7 +276,7 @@ export default function TeamSelectionScreen() {
   const handleSave = async () => {
     if (isLoading) return;
     if (!checkAuthentication()) {
-      setTimeout(() => handleGoBack(), 600);
+      setTimeout(() => router.back(), 600);
       return;
     }
     if (!currentUser) {
@@ -369,7 +347,7 @@ export default function TeamSelectionScreen() {
         message: `${safeSelectedTeams.length}개 팀이 저장되었습니다.`,
         duration: 2000,
       });
-      handleGoBack();
+      router.back();
     } catch (e) {
       const msg =
         (e as any)?.message || "팀 선택을 저장하는 중 오류가 발생했습니다.";
@@ -385,7 +363,7 @@ export default function TeamSelectionScreen() {
         duration: 3000,
       });
       if (isAuth) {
-        setTimeout(() => handleGoBack(), 800);
+        setTimeout(() => router.back(), 800);
       }
     }
   };
@@ -520,7 +498,7 @@ export default function TeamSelectionScreen() {
         <Text style={themed($errorText)}>{authError}</Text>
         <TouchableOpacity
           style={themed($retryButton)}
-          onPress={handleGoBack}
+          onPress={() => router.back()}
         >
           <Text style={themed($retryButtonText)}>닫기</Text>
         </TouchableOpacity>
@@ -567,7 +545,7 @@ export default function TeamSelectionScreen() {
             } else if (origin === "team-center") {
               router.replace("/(details)/team-center");
             } else {
-              handleGoBack();
+              router.back();
             }
           }}
         >

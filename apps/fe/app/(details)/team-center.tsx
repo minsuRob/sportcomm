@@ -58,6 +58,8 @@ export default function TeamCenterScreen(): React.ReactElement {
   const goTeamSelection = (): void => router.push("/(modals)/team-selection");
   const goTeamColors = (): void => router.push("/(details)/team-colors-select");
   const goTeamFilter = (): void => router.push("/(details)/team-filter");
+  const goMyTeamsSettings = (): void =>
+    router.push("/(details)/my-teams-settings");
 
   return (
     <SafeAreaView style={themed($container)}>
@@ -226,6 +228,34 @@ export default function TeamCenterScreen(): React.ReactElement {
               <Text style={themed($actionTitle)}>앱 색상 (내 팀 기반)</Text>
               <Text style={themed($actionDesc)}>
                 선택한 팀의 대표 색상으로 앱의 포인트 컬러를 맞춰보세요.
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={theme.colors.textDim}
+              style={themed($chevron)}
+            />
+          </TouchableOpacity>
+
+          {/* My Teams 상세설정 */}
+          <TouchableOpacity
+            style={themed($actionItem)}
+            onPress={goMyTeamsSettings}
+            accessibilityRole="button"
+            accessibilityLabel="My Teams 상세설정 페이지 열기"
+          >
+            <View style={themed($actionIcon)}>
+              <Ionicons
+                name="settings-outline"
+                size={20}
+                color={theme.colors.tint}
+              />
+            </View>
+            <View style={themed($actionMeta)}>
+              <Text style={themed($actionTitle)}>My Teams 상세설정</Text>
+              <Text style={themed($actionDesc)}>
+                순서 변경 및 날짜·최애선수·포토카드 인라인 설정.
               </Text>
             </View>
             <Ionicons

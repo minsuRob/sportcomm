@@ -171,3 +171,90 @@ export const validateSession = async (): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * 출석체크 포인트 지급 헬퍼 함수
+ * 사용자 세션을 확인하고 출석체크 가능 여부를 검증한 후 포인트를 지급합니다.
+ *
+ * 사용 예시:
+ * ```typescript
+ * const result = await claimDailyAttendance();
+ * if (result.success) {
+ *   console.log(result.message); // "20포인트를 획득했습니다!"
+ *   console.log(`현재 포인트: ${result.pointsEarned}`);
+ * } else {
+ *   console.log(result.message); // "오늘은 이미 출석체크를 완료했습니다."
+ * }
+ * ```
+ *
+ * @param timezone 시간대 (기본값: 'Asia/Seoul')
+ * @returns 지급된 포인트 수량과 성공 여부
+ */
+export const claimDailyAttendance = async (
+  timezone: string = 'Asia/Seoul'
+): Promise<{ success: boolean; pointsEarned: number; message: string }> => {
+  try {
+    // 현재 세션 확인
+    const { user, isAuthenticated } = await getSession();
+
+    if (!isAuthenticated || !user) {
+      return {
+        success: false,
+        pointsEarned: 0,
+        message: '로그인이 필요합니다.'
+      };
+    }
+
+    // 출석체크 가능 여부 확인 (프론트엔드에서 간단한 검증)
+    const now = new Date();
+    const canClaim = user.lastAttendanceAt ? (() => {
+      const lastAttendance = new Date(user.lastAttendanceAt!);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const lastDay = new Date(lastAttendance.getFullYear(), lastAttendance.getMonth(), lastAttendance.getDate());
+      return today.getTime() !== lastDay.getTime();
+    })() : true;
+
+    if (!canClaim) {
+      return {
+        success: false,
+        pointsEarned: 0,
+        message: '오늘은 이미 출석체크를 완료했습니다.'
+      };
+    }
+
+    // GraphQL 뮤테이션을 통해 백엔드에서 출석체크 처리
+    // 실제로는 별도의 GraphQL 뮤테이션이나 REST API를 호출해야 함
+    // 여기서는 임시로 로컬 계산만 수행
+
+    // TODO: 백엔드 GraphQL 뮤테이션 구현 필요
+    // const result = await performAttendanceCheck({ timezone });
+
+    // 임시: 프론트엔드에서 간단한 계산 (실제로는 백엔드에서 처리)
+    const attendancePoints = 20; // DAILY_ATTENDANCE 포인트
+    const newPoints = (user.points || 0) + attendancePoints;
+
+    // 사용자 정보 업데이트
+    const updatedUser = {
+      ...user,
+      points: newPoints,
+      lastAttendanceAt: now.toISOString()
+    };
+
+    // 세션 저장
+    await saveSession(updatedUser);
+
+    return {
+      success: true,
+      pointsEarned: attendancePoints,
+      message: `${attendancePoints}포인트를 획득했습니다!`
+    };
+
+  } catch (error) {
+    console.error('출석체크 처리 중 오류 발생:', error);
+    return {
+      success: false,
+      pointsEarned: 0,
+      message: '출석체크 처리 중 오류가 발생했습니다.'
+    };
+  }
+};

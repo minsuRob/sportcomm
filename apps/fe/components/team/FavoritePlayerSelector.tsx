@@ -60,10 +60,6 @@ export default function FavoritePlayerSelector({
   // 팀별 선수 목록 (정렬: 등번호 ASC)
   const players = useMemo(
     () => {
-      console.log("=== FavoritePlayerSelector 디버깅 ===");
-      console.log("받은 teamId:", teamId);
-      console.log("받은 teamId 타입:", typeof teamId);
-      console.log("받은 teamId 길이:", teamId ? teamId.length : 0);
 
       // teamId 유효성 검증
       if (!teamId) {
@@ -72,21 +68,9 @@ export default function FavoritePlayerSelector({
       }
 
       const teamPlayers = getPlayersByTeam(teamId);
-      console.log("찾은 선수 수:", teamPlayers.length);
 
       if (teamPlayers.length === 0) {
         console.warn(`팀 "${teamId}"의 선수 데이터를 찾을 수 없습니다.`);
-      } else {
-        console.log("찾은 선수 목록 (처음 3명):", teamPlayers.slice(0, 3).map(p => `${p.name}(${p.number})`));
-
-        // 특정 팀 특별 디버깅
-        if (teamId === "hanwha") {
-          console.log("=== 한화 팀 선수 데이터 ===");
-          console.log("한화 선수 목록 (처음 10명):", teamPlayers.slice(0, 10).map(p => `${p.name}(${p.number})`));
-        } else if (teamId === "doosan") {
-          console.log("=== 두산 팀 선수 데이터 ===");
-          console.log("두산 선수 목록 (처음 5명):", teamPlayers.slice(0, 5).map(p => `${p.name}(${p.number})`));
-        }
       }
 
       return teamPlayers

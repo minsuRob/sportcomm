@@ -711,7 +711,7 @@ const PostCard = React.memo(function PostCard({
                         uri: selectOptimizedImageUrl(
                           imageMedia[0],
                           isDesktop ? "desktop" : "mobile",
-                        ),
+                        ) || imageMedia[0]?.url, // fallback to original URL
                       }}
                       style={{
                         ...(imageHeight &&

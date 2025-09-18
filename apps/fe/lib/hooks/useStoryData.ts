@@ -45,7 +45,7 @@ const transformPostToStory = (post: any, type: StoryType): StoryItem => {
     content: post.content,
     createdAt: post.createdAt,
     thumbnailUrl: imageMedia
-      ? selectOptimizedImageUrl(imageMedia, "thumbnails")
+      ? selectOptimizedImageUrl(imageMedia, "thumbnails") || imageMedia.url
       : post.author.profileImageUrl,
     author: {
       id: post.author.id,

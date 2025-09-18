@@ -1017,15 +1017,7 @@ export default function AuthScreen() {
             </TouchableOpacity>
           )} */}
 
-          {/* 로딩 표시 */}
-          {(loginLoading || registerLoading) && (
-            <View style={themed($loadingContainer)}>
-              <ActivityIndicator size="small" color={theme.colors.tint} />
-              <Text style={themed($loadingText)}>
-                {loginLoading ? "로그인 중..." : "회원가입 중..."}
-              </Text>
-            </View>
-          )}
+         
 
           <Button
             size="lg"
@@ -1037,6 +1029,15 @@ export default function AuthScreen() {
               {loginLoading ? "로그인 중..." : registerLoading ? "회원가입 중..." : "계속"}
             </Text>
           </Button>
+           {/* 로딩 표시 */}
+           {(loginLoading || registerLoading) && (
+            <View style={themed($loadingContainer)}>
+              <ActivityIndicator size="small" color={theme.colors.tint} />
+              <Text style={themed($loadingText)}>
+                {loginLoading ? "로그인 중..." : "회원가입 중..."}
+              </Text>
+            </View>
+          )}
 
           <View style={themed($toggleContainer)}>
             <Text style={themed($toggleText)}>

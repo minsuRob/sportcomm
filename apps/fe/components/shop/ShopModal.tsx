@@ -597,6 +597,7 @@ export default function ShopModal({
         description={dialogMessage}
         confirmText="확인"
         onConfirm={() => setShowSuccessDialog(false)}
+        showCancel={false}
       />
 
       {/* 구매 실패 다이얼로그 */}

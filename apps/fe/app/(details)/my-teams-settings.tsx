@@ -22,8 +22,10 @@ import { useQuery, useMutation } from "@apollo/client";
 import {
   GET_MY_TEAMS,
   UPDATE_MY_TEAMS_PRIORITY,
+  UPDATE_MY_TEAMS,
   type GetMyTeamsResult,
   type UpdateMyTeamsPriorityResult,
+  type UpdateMyTeamsResult,
   type UserTeam,
 } from "@/lib/graphql/teams";
 import { type TeamId, deriveTeamSlug } from "@/lib/team-data/players";
@@ -91,8 +93,11 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
   } = useQuery<GetMyTeamsResult>(GET_MY_TEAMS, { fetchPolicy: "network-only" });
 
   // --- GraphQL: 업데이트 뮤테이션 ---
-  const [updateMyTeamsPriority, { loading: updating }] =
+  const [updateMyTeamsPriority, { loading: updatingPriority }] =
     useMutation<UpdateMyTeamsPriorityResult>(UPDATE_MY_TEAMS_PRIORITY);
+
+  const [updateMyTeams, { loading: updatingDetails }] =
+    useMutation<UpdateMyTeamsResult>(UPDATE_MY_TEAMS);
 
   // --- 로컬 상태 ---
   const [teams, setTeams] = useState<EditableUserTeam[]>([]);
@@ -104,8 +109,9 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
   const [photoCardSelectorVisible, setPhotoCardSelectorVisible] =
     useState(false);
 
-  // 현재 설정 중인 팀 ID
+  // 현재 설정 중인 팀 ID 및 이름
   const [activeTeamId, setActiveTeamId] = useState<TeamId | null>(null);
+  const [activeTeamName, setActiveTeamName] = useState<string | null>(null);
 
   // 최초 로딩 시 선택된 팀 순서 저장 (Dirty 판단용)
   const initialSelectedOrderRef = useRef<string[]>([]);
@@ -159,7 +165,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
 
   /** 전체 Dirty 판단
    *  - 선택/해제/순서 변경
-   *  - 상세 값 변경
+   *  - 상세 값 변경 (_tempFavoriteDate, _tempFavoritePlayerName 등)
    */
   const isDirty = useMemo(() => {
     // (1) 선택 상태 변경 (선택 해제되었거나 새로 선택된 경우)
@@ -180,7 +186,10 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         (teamId, idx) => teamId !== currentSelectedIds[idx],
       );
 
-    return selectionChanged || orderChanged;
+    // (3) 상세 값 변경 (좋아한 날짜, 최애 선수 등)
+    const detailsChanged = teams.some((team) => team._dirty);
+
+    return selectionChanged || orderChanged || detailsChanged;
   }, [teams, selectedTeams]);
 
   /** 새로고침 */
@@ -209,8 +218,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
               _tempFavoriteDate: date,
               _dirty:
                 t._dirty ||
-                (t.favoriteDate || null) !== date ||
-                t.favoriteDate !== date,
+                t._tempFavoriteDate !== date,
             }
           : t,
       ),
@@ -220,22 +228,9 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
   };
 
   /** 최애 선수 선택 */
-  const openPlayerSelector = (teamName: string) => {
-    // 팀 이름을 TeamId로 변환
-    const teamId = deriveTeamSlug(teamName);
-
-    if (!teamId) {
-      console.warn(`팀 이름 "${teamName}"을 TeamId로 변환할 수 없습니다.`);
-      showToast({
-        type: "error",
-        title: "팀 정보 오류",
-        message: "해당 팀의 선수 정보를 불러올 수 없습니다.",
-        duration: 3000,
-      });
-      return;
-    }
-
-    setActiveTeamId(teamId);
+  const openPlayerSelector = (teamId: string, teamName: string) => {
+    setActiveTeamId(teamId); // UUID로 저장용 ID 설정
+    setActiveTeamName(teamName); // 팀 이름으로 선수 검색용
     setPlayerSelectorVisible(true);
   };
 
@@ -254,8 +249,8 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
               _tempFavoritePlayerNumber: player.number,
               _dirty:
                 t._dirty ||
-                t.favoritePlayerName !== player.name ||
-                t.favoritePlayerNumber !== player.number,
+                t._tempFavoritePlayerName !== player.name ||
+                t._tempFavoritePlayerNumber !== player.number,
             }
           : t,
       ),
@@ -409,7 +404,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
 
   /** 저장 */
   const handleSave = useCallback(async () => {
-    if (updating || !isDirty) return;
+    if (updatingPriority || updatingDetails || !isDirty) return;
 
     if (!currentUser) {
       showToast({
@@ -439,15 +434,39 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         throw new Error(errors[0].message);
       }
 
-      // 서버 반영 후 재조회 (최신 priority 동기화)
+      // 로컬에 저장된 상세 정보(좋아한 날짜, 최애 선수) 업데이트
+      const dirtyTeams = teams.filter((t) => t._dirty);
+      if (dirtyTeams.length > 0) {
+        const { errors: detailErrors } = await updateMyTeams({
+          variables: {
+            teams: dirtyTeams.map((team) => ({
+              teamId: team.teamId,
+              favoriteDate: team._tempFavoriteDate || null,
+              favoritePlayerName: team._tempFavoritePlayerName || null,
+              favoritePlayerNumber: team._tempFavoritePlayerNumber ?? null,
+            })),
+          },
+          context: {
+            headers: {
+              authorization: accessToken ? `Bearer ${accessToken}` : "",
+            },
+          },
+        });
+
+        if (detailErrors && detailErrors.length > 0) {
+          throw new Error(detailErrors[0].message);
+        }
+      }
+
+      // 서버 반영 후 재조회 (최신 데이터 동기화)
       const refetched = await refetchMyTeams({ fetchPolicy: "network-only" });
       const newMyTeams = refetched?.data?.myTeams || [];
       await updateUser({ myTeams: newMyTeams } as any);
 
       showToast({
         type: "success",
-        title: "우선순위 저장",
-        message: "팀 우선순위가 저장되었습니다.",
+        title: "저장 완료",
+        message: "팀 설정이 저장되었습니다.",
         duration: 1800,
       });
 
@@ -462,6 +481,9 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
             return {
               ...t,
               priority: updated.priority,
+              _tempFavoriteDate: updated.favoriteDate || null,
+              _tempFavoritePlayerName: (updated as any).favoritePlayerName || null,
+              _tempFavoritePlayerNumber: (updated as any).favoritePlayerNumber ?? null,
               _dirty: false,
               _selected: true,
               _initialPriority: updated.priority ?? null,
@@ -483,12 +505,15 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
       });
     }
   }, [
-    updating,
+    updatingPriority,
+    updatingDetails,
     isDirty,
     currentUser,
     accessToken,
     selectedTeams,
+    teams,
     updateMyTeamsPriority,
+    updateMyTeams,
     refetchMyTeams,
     updateUser,
   ]);
@@ -596,7 +621,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
                 //   });
                 //   return;
                 // }
-                openPlayerSelector(item.team.name);  
+                openPlayerSelector(item.teamId, item.team.name);  
               }}
               activeOpacity={0.85}
             >
@@ -671,10 +696,10 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         <Text style={themed($headerTitle)}>My Teams 상세설정</Text>
         <TouchableOpacity
           onPress={handleSave}
-          disabled={!isDirty || updating}
+          disabled={!isDirty || updatingPriority || updatingDetails}
           style={[
             themed($saveButton),
-            (!isDirty || updating) && { opacity: 0.45 },
+            (!isDirty || updatingPriority || updatingDetails) && { opacity: 0.45 },
           ]}
         >
           <Ionicons
@@ -684,7 +709,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
             style={{ marginRight: 4 }}
           />
           <Text style={themed($saveButtonText)}>
-            {updating ? "저장 중..." : "변경사항 저장"}
+            {updatingPriority || updatingDetails ? "저장 중..." : "변경사항 저장"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -802,9 +827,12 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         onClose={() => {
           setPlayerSelectorVisible(false);
           setActiveTeamId(null);
+          setActiveTeamName(null);
         }}
-        teamId={activeTeamId || TEAM_IDS.DOOSAN}
+        teamId={activeTeamName ? deriveTeamSlug(activeTeamName) || TEAM_IDS.DOOSAN : TEAM_IDS.DOOSAN}
         onSelect={(p) => handleSelectPlayer(p)}
+        initialSelectedPlayerId={undefined} // 현재 선택된 선수 하이라이트는 나중에 구현
+        title={activeTeamName ? `${activeTeamName} 최애 선수 선택` : "최애 선수 선택"}
       />
 
       {/* 포토카드 선택 (Mock) */}
@@ -818,7 +846,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
       />
 
       {/* 하단 고정 저장 바 */}
-      {isDirty && !updating && (
+      {isDirty && !updatingPriority && !updatingDetails && (
         <View style={themed($bottomBar)}>
           <TouchableOpacity
             style={themed($bottomSaveButton)}
@@ -832,7 +860,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
       )}
 
       {/* 글로벌 저장 진행 오버레이 */}
-      {updating && (
+      {(updatingPriority || updatingDetails) && (
         <View style={themed($overlay)}>
           <ActivityIndicator size="large" color={theme.colors.tint} />
           <Text style={themed($overlayText)}>저장 중...</Text>

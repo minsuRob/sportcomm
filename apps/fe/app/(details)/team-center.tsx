@@ -15,7 +15,7 @@ import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
-import TeamLogo from "@/components/TeamLogo";
+import TeamList from "@/components/team/TeamList";
 
 /**
  * Team Center (상세 페이지)
@@ -116,24 +116,8 @@ export default function TeamCenterScreen(): React.ReactElement {
               </TouchableOpacity>
             </View>
           ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={themed($teamsRow)}
-            >
-              {topTeams.map((userTeam) => (
-                <View key={userTeam.id} style={themed($teamLogoWrapper)}>
-                  <TeamLogo
-                    logoUrl={userTeam.team.logoUrl}
-                    fallbackIcon={userTeam.team.icon}
-                    teamName={userTeam.team.name}
-                    size={36}
-                  />
-                  <Text style={themed($teamName)} numberOfLines={1}>
-                    {userTeam.team.name}
-                  </Text>
-                </View>
-              ))}
+            <View style={themed($teamsContainer)}>
+              <TeamList teams={topTeams} />
               {/* 더보기 버튼 */}
               {myTeamsData.myTeams.length > topTeams.length && (
                 <TouchableOpacity
@@ -148,7 +132,7 @@ export default function TeamCenterScreen(): React.ReactElement {
                   <Text style={themed($moreButtonText)}>더보기</Text>
                 </TouchableOpacity>
               )}
-            </ScrollView>
+            </View>
           )}
         </View>
 
@@ -376,22 +360,9 @@ const $primaryButtonText: ThemedStyle<TextStyle> = () => ({
   fontWeight: "700",
 });
 
-const $teamsRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $teamsContainer: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
   alignItems: "center",
-  gap: spacing.md,
-});
-
-const $teamLogoWrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "center",
-  width: 72,
-});
-
-const $teamName: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 11,
-  marginTop: 6,
-  textAlign: "center",
 });
 
 const $moreButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

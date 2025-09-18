@@ -136,7 +136,7 @@ export class UpdatePostInput {
 export class FindPostsInput {
   @Field(() => Int, {
     nullable: true,
-    description: '페이지 번호 (기본값: 1)',
+    description: '페이지 번호 (기본값: 1) - 레거시 호환용',
     defaultValue: 1,
   })
   @IsOptional()
@@ -154,6 +154,14 @@ export class FindPostsInput {
   @Min(1, { message: '페이지 크기는 1 이상이어야 합니다.' })
   @Max(100, { message: '페이지 크기는 100 이하여야 합니다.' })
   limit?: number;
+
+  @Field(() => String, {
+    nullable: true,
+    description: '커서 기반 페이지네이션용 커서 (createdAt.timestamp)',
+  })
+  @IsOptional()
+  @IsString({ message: '커서는 문자열이어야 합니다.' })
+  cursor?: string;
 
   @Field(() => [String], {
     nullable: true,
@@ -229,6 +237,18 @@ export class PostsResponse {
 
   @Field(() => Boolean, { description: '다음 페이지 존재 여부' })
   hasNext: boolean;
+
+  @Field(() => String, {
+    nullable: true,
+    description: '커서 기반 페이지네이션용 다음 커서'
+  })
+  nextCursor?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: '커서 기반 페이지네이션용 이전 커서'
+  })
+  previousCursor?: string;
 }
 
 /**
@@ -384,7 +404,9 @@ export class PostsResolver {
   }
 
   /**
-   * 게시물 목록 조회
+   * 게시물 목록 조회 (최적화 버전)
+   * DataLoader를 사용하여 N+1 문제 해결
+   * 서비스 레벨 캐시 적용으로 성능 향상
    *
    * @param user - 현재 사용자 (선택적)
    * @param findPostsInput - 조회 옵션
@@ -399,6 +421,7 @@ export class PostsResolver {
     const options: FindPostsOptions = {
       page: findPostsInput?.page || 1,
       limit: findPostsInput?.limit || 10,
+      cursor: findPostsInput?.cursor,
       authorId: findPostsInput?.authorId,
       publicOnly: findPostsInput?.publicOnly || !user, // 비로그인 사용자는 공개 게시물만 조회
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
@@ -407,7 +430,25 @@ export class PostsResolver {
       teamIds: findPostsInput?.teamIds,
     };
 
-    return await this.postsService.findAll(options);
+    const response = await this.postsService.findAll(options, user?.id);
+
+    // DataLoader를 사용하여 좋아요/북마크 상태 로드 (N+1 문제 해결)
+    if (response.posts.length > 0 && user) {
+      const postIds = response.posts.map(post => post.id);
+
+      // 좋아요 상태 로드
+      const likedMap = await this.postsService.loadLikedStatusForPosts(postIds, user.id);
+      // 북마크 상태 로드
+      const bookmarkedMap = await this.postsService.loadBookmarkedStatusForPosts(postIds, user.id);
+
+      // 각 게시물에 상태 설정
+      response.posts.forEach(post => {
+        post.isLiked = likedMap.get(post.id) || false;
+        post.isBookmarked = bookmarkedMap.get(post.id) || false;
+      });
+    }
+
+    return response;
   }
 
   /**

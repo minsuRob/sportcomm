@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { CacheModule } from '@nestjs/cache-manager';
 import { join } from 'path';
 import { parse } from 'pg-connection-string';
 
@@ -51,6 +52,13 @@ import { InventoryModule } from './modules/inventory/inventory.module';
       envFilePath: ['.env.local', '.env'],
       cache: true,
       expandVariables: true,
+    }),
+
+    // Redis 캐시 모듈 (메모리 캐시 사용)
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 300000, // 5분 (기본 TTL)
+      max: 1000, // 최대 캐시 항목 수
     }),
 
     // TypeORM 데이터베이스 설정

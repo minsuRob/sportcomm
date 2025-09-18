@@ -95,16 +95,68 @@ export const client = new ApolloClient({
       Query: {
         fields: {
           search: { merge: false },
-          myTeams: { merge: false },
+          myTeams: {
+            merge: false,
+            read(existing) {
+              // 캐시된 myTeams 데이터가 있으면 사용
+              if (existing) {
+                console.log('📖 [Cache] Reading cached myTeams');
+                return existing;
+              }
+              return existing;
+            },
+          },
           sports: { merge: (_, incoming) => incoming },
           posts: {
-            keyArgs: ["input", ["authorId", "type"]],
+            // 커서 기반 페이지네이션 지원을 위한 캐시 키 설정
+            keyArgs: ["input", ["authorId", "teamIds", "publicOnly", "cursor"]],
             merge(existing, incoming, { args }) {
-              if (!existing || args?.input?.page === 1) return incoming;
+              // 커서 기반 페이지네이션 처리
+              if (args?.input?.cursor) {
+                // 커서가 있으면 기존 데이터에 추가
+                console.log('🔄 [Cache] Merging cursor-based pagination');
+                return {
+                  ...incoming,
+                  posts: [...(existing?.posts || []), ...(incoming.posts || [])],
+                  nextCursor: incoming.nextCursor,
+                  previousCursor: incoming.previousCursor,
+                };
+              }
+
+              // 일반 페이지네이션
+              if (!existing || args?.input?.page === 1) {
+                console.log('📝 [Cache] Setting first page data');
+                return incoming;
+              }
+
+              console.log('📄 [Cache] Merging paginated data');
               return {
                 ...incoming,
                 posts: [...(existing.posts || []), ...(incoming.posts || [])],
               };
+            },
+            read(existing, { args }) {
+              // 캐시된 데이터가 있으면 먼저 확인
+              if (existing && existing.posts?.length > 0) {
+                console.log('📖 [Cache] Reading cached posts data');
+                return existing;
+              }
+              return existing;
+            },
+          },
+        },
+      },
+      // Post 엔티티에 대한 캐시 정책
+      Post: {
+        fields: {
+          isLiked: {
+            read(existing) {
+              return existing ?? false;
+            },
+          },
+          isBookmarked: {
+            read(existing) {
+              return existing ?? false;
             },
           },
         },

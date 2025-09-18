@@ -1,4 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+/* TODO(GraphQL 인벤토리 연동):
+ * 서버 인벤토리/구매 GraphQL 연동을 위해 아래 추가 import 들이 필요합니다.
+ * - useQuery / useMutation
+ * - GET_MY_INVENTORY, PURCHASE_ITEM (shop.ts)
+ * 현재 요청에서 파일 전체 내용을 확실히 동기화하지 못했으므로
+ * 정확한 적용을 위해 최신 파일 본문(라인 번호 포함)을 한번 더 제공해 주세요.
+ */
 import {
   View,
   Text,
@@ -35,6 +42,13 @@ interface ShopModalProps {
   onClose: () => void;
   currentUser: User | null;
   onPurchase?: (item: ShopItemData) => Promise<void>;
+}
+
+// 사용자가 구매한 아이템 인벤토리 엔트리
+interface InventoryEntry {
+  item: ShopItemData;
+  quantity: number;
+  lastPurchasedAt: Date;
 }
 
 // 상점 아이템 목록 (실제로는 API에서 가져올 데이터)
@@ -91,6 +105,16 @@ export const SHOP_ITEMS: ShopItemData[] = [
     isAvailable: true,
   },
   {
+    id: "test_item_10p",
+    name: "테스트 상품",
+    description: "개발용 테스트 상품입니다",
+    price: 10,
+    category: "decoration",
+    icon: "🧪",
+    rarity: "common",
+    isAvailable: true,
+  },
+  {
     id: "team_supporter_badge",
     name: "팀 서포터 배지",
     description: "좋아하는 팀의 공식 서포터 배지를 획득합니다",
@@ -104,9 +128,10 @@ export const SHOP_ITEMS: ShopItemData[] = [
 ];
 
 /**
- * 상점 페이지 컴포넌트
- * - 기존 모달 형태에서 페이지 형태로 동작하도록 변경
- * - visible이 false면 렌더링하지 않도록 하여 기존 사용처와의 호환 유지
+ * 상점 / 인벤토리 페이지 컴포넌트
+ * - 기존 close 버튼을 제거하고 '상점 / 인벤토리' 토글을 제공
+ * - 인벤토리(가방)에서 구매한 아이템 확인 가능
+ * - 현재는 로컬 상태 기반 (백엔드 미구현 시), 추후 GraphQL 연동 시 인벤토리 조회/저장 로직 대체
  */
 export default function ShopModal({
   visible,
@@ -117,6 +142,25 @@ export default function ShopModal({
   const { themed, theme } = useAppTheme();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"shop" | "inventory">("shop"); // 상점/인벤토리 탭
+  const [inventory, setInventory] = useState<Record<string, InventoryEntry>>(
+    {},
+  ); // 간단한 인메모리 인벤토리 (서버 인벤토리 GraphQL 실패 시 fallback)
+  /* TODO(GraphQL 인벤토리):
+   * 아래 형태로 GraphQL 훅을 추가할 예정입니다.
+   *
+   * const { data: myInvData, loading: myInvLoading, refetch: refetchInventory } = useQuery(GET_MY_INVENTORY, {
+   *   skip: !visible, fetchPolicy: "cache-and-network"
+   * });
+   * const [purchaseItemMutation, { loading: purchasingViaServer }] = useMutation(PURCHASE_ITEM);
+   *
+   * 구매 로직(handleConfirmPurchase)에서:
+   *  1) 서버 purchaseItem 시도
+   *  2) 실패(필드 없음/네트워크) 시 기존 deductUserPoints + 로컬 인벤토리 업데이트 fallback
+   *  3) 성공 시 refetchInventory(), 사용자 포인트 reloadUser (외부 onPurchase 내부 혹은 추가 호출)
+   *
+   * inventoryList useMemo 에서는 myInvData?.getMyInventory 가 있으면 그것을 사용.
+   */
 
   // 포인트 차감 뮤테이션
   const [deductUserPoints] = useMutation(DEDUCT_USER_POINTS, {
@@ -146,17 +190,25 @@ export default function ShopModal({
   const [dialogMessage, setDialogMessage] = useState("");
   const [selectedItem, setSelectedItem] = useState<ShopItemData | null>(null);
 
-  const categories = [
-    { key: "all", label: "전체", icon: "grid-outline" },
-    { key: "decoration", label: "꾸미기", icon: "color-palette-outline" },
-    { key: "boost", label: "부스트", icon: "trending-up-outline" },
-    { key: "premium", label: "프리미엄", icon: "diamond-outline" },
-    { key: "special", label: "특별", icon: "star-outline" },
-  ];
+  const categories = useMemo(
+    () => [
+      { key: "all", label: "전체", icon: "grid-outline" },
+      { key: "decoration", label: "꾸미기", icon: "color-palette-outline" },
+      { key: "boost", label: "부스트", icon: "trending-up-outline" },
+      { key: "premium", label: "프리미엄", icon: "diamond-outline" },
+      { key: "special", label: "특별", icon: "star-outline" },
+    ],
+    [],
+  );
 
-  // 카테고리별 필터링
-  const filteredItems = SHOP_ITEMS.filter(
-    (item) => selectedCategory === "all" || item.category === selectedCategory,
+  // 카테고리별 필터링 (상점 탭일 때만 사용)
+  const filteredItems = useMemo(
+    () =>
+      SHOP_ITEMS.filter(
+        (item) =>
+          selectedCategory === "all" || item.category === selectedCategory,
+      ),
+    [selectedCategory],
   );
 
   // 구매 처리
@@ -193,7 +245,7 @@ export default function ShopModal({
         ? Math.floor(selectedItem.price * (1 - selectedItem.discount / 100))
         : selectedItem.price;
 
-      // 1. 먼저 포인트 차감
+      // 1. 포인트 차감
       await deductUserPoints({
         variables: {
           userId: currentUser.id,
@@ -202,8 +254,27 @@ export default function ShopModal({
         },
       });
 
-      // 2. 아이템 구매 처리 (사용자 정의 로직)
+      // 2. 외부 구매 처리 (예: 서버 인벤토리 저장)
       await onPurchase(selectedItem);
+
+      // 3. 로컬 인벤토리 갱신 (백엔드 연동 전 임시)
+      setInventory((prev) => {
+        const exists = prev[selectedItem.id];
+        return {
+          ...prev,
+          [selectedItem.id]: exists
+            ? {
+                ...exists,
+                quantity: exists.quantity + 1,
+                lastPurchasedAt: new Date(),
+              }
+            : {
+                item: selectedItem,
+                quantity: 1,
+                lastPurchasedAt: new Date(),
+              },
+        };
+      });
 
       setDialogMessage(`${selectedItem.name}을(를) 성공적으로 구매했습니다!`);
       setShowSuccessDialog(true);
@@ -215,24 +286,106 @@ export default function ShopModal({
     }
   };
 
-  // 페이지 형태로 동작: visible이 아니면 렌더링하지 않음(호환성 유지)
+  // 인벤토리 목록 (정렬: 최근 구매 순)
+  const inventoryList = useMemo(() => {
+    // TODO(GraphQL 인벤토리): 서버 데이터(getMyInventory)가 존재하면 그것을 우선 사용
+    // if (myInvData?.getMyInventory) {
+    //   return [...myInvData.getMyInventory].sort(
+    //     (a, b) =>
+    //       new Date(b.lastPurchasedAt).getTime() -
+    //       new Date(a.lastPurchasedAt).getTime(),
+    //   );
+    // }
+    return Object.values(inventory).sort(
+      (a, b) => b.lastPurchasedAt.getTime() - a.lastPurchasedAt.getTime(),
+    );
+  }, [inventory /*, myInvData*/]);
+
+  // 페이지 형태로 동작: visible이 아니면 렌더링하지 않음
   if (!visible) return null;
 
   return (
     <>
       <View style={themed($modalOverlay)}>
         <View style={themed($modalContent)}>
-          {/* 헤더 */}
+          {/* 헤더 - 상단 좌측 타이틀 / 우측 탭 토글 + 닫기 */}
           <View style={themed($header)}>
             <View style={themed($headerLeft)}>
-              <Text style={themed($title)}>상점</Text>
+              <Text style={themed($title)}>
+                {activeTab === "shop" ? "상점" : "인벤토리"}
+              </Text>
               <Text style={themed($subtitle)}>
-                포인트로 특별한 아이템을 구매하세요
+                {activeTab === "shop"
+                  ? "포인트로 특별한 아이템을 구매하세요"
+                  : "내가 보유한 아이템을 확인하세요"}
               </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={themed($closeButton)}>
-              <Ionicons name="close" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+
+            <View style={themed($headerRightGroup)}>
+              {/* 탭 토글 버튼 */}
+              <View style={themed($tabToggleGroup)}>
+                <TouchableOpacity
+                  style={[
+                    themed($tabToggleButton),
+                    activeTab === "shop" && themed($tabToggleButtonActive),
+                  ]}
+                  onPress={() => setActiveTab("shop")}
+                >
+                  <Ionicons
+                    name="storefront-outline"
+                    size={16}
+                    color={
+                      activeTab === "shop"
+                        ? theme.colors.tint
+                        : theme.colors.textDim
+                    }
+                  />
+                  <Text
+                    style={[
+                      themed($tabToggleText),
+                      activeTab === "shop" && themed($tabToggleTextActive),
+                    ]}
+                  >
+                    상점
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    themed($tabToggleButton),
+                    activeTab === "inventory" && themed($tabToggleButtonActive),
+                  ]}
+                  onPress={() => setActiveTab("inventory")}
+                >
+                  <Ionicons
+                    name="bag-handle-outline"
+                    size={16}
+                    color={
+                      activeTab === "inventory"
+                        ? theme.colors.tint
+                        : theme.colors.textDim
+                    }
+                  />
+                  <Text
+                    style={[
+                      themed($tabToggleText),
+                      activeTab === "inventory" && themed($tabToggleTextActive),
+                    ]}
+                  >
+                    가방
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* 닫기 (라우터 back) */}
+              <TouchableOpacity
+                onPress={onClose}
+                style={themed($closeIconButton)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.textDim} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* 포인트 잔액 */}
@@ -245,62 +398,171 @@ export default function ShopModal({
             </View>
           </View>
 
-          {/* 카테고리 탭 */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={themed($categoryTabs)}
-            contentContainerStyle={themed($categoryTabsContent)}
-          >
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.key}
-                style={[
-                  themed($categoryTab),
-                  selectedCategory === category.key &&
-                    themed($categoryTabActive),
-                ]}
-                onPress={() => setSelectedCategory(category.key)}
-              >
-                <Ionicons
-                  name={category.icon as any}
-                  size={18}
-                  color={
-                    selectedCategory === category.key
-                      ? theme.colors.tint
-                      : theme.colors.textDim
-                  }
-                />
-                <Text
+          {/* 상점 전용: 카테고리 탭 */}
+          {activeTab === "shop" && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={themed($categoryTabs)}
+              contentContainerStyle={themed($categoryTabsContent)}
+            >
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.key}
                   style={[
-                    themed($categoryTabText),
+                    themed($categoryTab),
                     selectedCategory === category.key &&
-                      themed($categoryTabTextActive),
+                      themed($categoryTabActive),
                   ]}
+                  onPress={() => setSelectedCategory(category.key)}
                 >
-                  {category.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  <Ionicons
+                    name={category.icon as any}
+                    size={18}
+                    color={
+                      selectedCategory === category.key
+                        ? theme.colors.tint
+                        : theme.colors.textDim
+                    }
+                  />
+                  <Text
+                    style={[
+                      themed($categoryTabText),
+                      selectedCategory === category.key &&
+                        themed($categoryTabTextActive),
+                    ]}
+                  >
+                    {category.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
-          {/* 상품 목록 */}
+          {/* 메인 콘텐츠 */}
           <ScrollView style={themed($itemsContainer)}>
             <View style={themed($itemsGrid)}>
-              {filteredItems.map((item) => (
-                <ShopItem
-                  key={item.id}
-                  item={item}
-                  onPurchase={() => handlePurchase(item)}
-                  isPurchasing={purchasingItemId === item.id}
-                  canAfford={
-                    (currentUser?.points ?? 0) >=
-                    (item.discount
-                      ? Math.floor(item.price * (1 - item.discount / 100))
-                      : item.price)
-                  }
-                />
-              ))}
+              {activeTab === "shop" &&
+                filteredItems.map((item) => (
+                  <ShopItem
+                    key={item.id}
+                    item={item}
+                    onPurchase={() => handlePurchase(item)}
+                    isPurchasing={purchasingItemId === item.id}
+                    canAfford={
+                      (currentUser?.points ?? 0) >=
+                      (item.discount
+                        ? Math.floor(item.price * (1 - item.discount / 100))
+                        : item.price)
+                    }
+                  />
+                ))}
+
+              {activeTab === "inventory" && (
+                <>
+                  {inventoryList.length === 0 && (
+                    <View style={themed($emptyInventoryContainer)}>
+                      <Ionicons
+                        name="bag-handle-outline"
+                        size={48}
+                        color={theme.colors.textDim}
+                      />
+                      <Text style={themed($emptyInventoryTitle)}>
+                        아직 보유한 아이템이 없어요
+                      </Text>
+                      <Text style={themed($emptyInventorySubtitle)}>
+                        상점에서 아이템을 구매하면 이곳에 표시됩니다.
+                      </Text>
+                      <TouchableOpacity
+                        style={themed($goShopButton)}
+                        onPress={() => setActiveTab("shop")}
+                      >
+                        <Ionicons
+                          name="storefront-outline"
+                          size={16}
+                          color="white"
+                        />
+                        <Text style={themed($goShopButtonText)}>
+                          상점 둘러보기
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {inventoryList.map((entry) => {
+                    const item = entry.item;
+                    const finalPrice = item.discount
+                      ? Math.floor(
+                          item.price * (1 - (item.discount || 0) / 100),
+                        )
+                      : item.price;
+
+                    return (
+                      <View key={item.id} style={themed($inventoryItemCard)}>
+                        <View style={themed($inventoryItemHeader)}>
+                          <Text style={themed($inventoryItemIcon)}>
+                            {item.icon}
+                          </Text>
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={themed($inventoryItemName)}
+                              numberOfLines={1}
+                            >
+                              {item.name}
+                            </Text>
+                            <Text
+                              style={themed($inventoryItemDesc)}
+                              numberOfLines={2}
+                            >
+                              {item.description}
+                            </Text>
+                          </View>
+                          <View style={themed($inventoryBadge)}>
+                            <Text style={themed($inventoryBadgeText)}>
+                              보유 {entry.quantity}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={themed($inventoryMetaRow)}>
+                          <View style={themed($inventoryMetaPill)}>
+                            <Ionicons
+                              name="time-outline"
+                              size={12}
+                              color={theme.colors.textDim}
+                            />
+                            <Text style={themed($inventoryMetaPillText)}>
+                              {entry.lastPurchasedAt.toLocaleDateString(
+                                "ko-KR",
+                                {
+                                  month: "numeric",
+                                  day: "numeric",
+                                },
+                              )}{" "}
+                              {entry.lastPurchasedAt.toLocaleTimeString(
+                                "ko-KR",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </Text>
+                          </View>
+                          <View style={themed($inventoryMetaPill)}>
+                            <Ionicons
+                              name="pricetag-outline"
+                              size={12}
+                              color={theme.colors.textDim}
+                            />
+                            <Text style={themed($inventoryMetaPillText)}>
+                              구매가 {finalPrice}P
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -350,21 +612,19 @@ export default function ShopModal({
   );
 }
 
-// 스타일 정의
-// 페이지 형태로 동작하도록 스타일 조정
+// ====================== 스타일 정의 ======================
+// 기존 스타일 + 인벤토리 관련 추가 스타일
 const $modalOverlay: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
   backgroundColor: colors.background,
   justifyContent: "flex-start",
-  alignItems: "center", // 와이드 화면에서 중앙 정렬
+  alignItems: "center",
 });
 
-const $modalContent: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: colors.background,
-  // 페이지 전체를 사용
+const $modalContent: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
   width: "100%",
-  maxWidth: 640, // 웹일 때 가독성 유지
+  maxWidth: 640,
   alignSelf: "center",
 });
 
@@ -377,10 +637,17 @@ const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingBottom: spacing.md,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
+  gap: spacing.md,
 });
 
 const $headerLeft: ThemedStyle<ViewStyle> = () => ({
   flex: 1,
+});
+
+const $headerRightGroup: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.sm,
 });
 
 const $title: ThemedStyle<TextStyle> = ({ colors }) => ({
@@ -396,9 +663,40 @@ const $subtitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "500",
 });
 
-const $closeButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  padding: spacing.sm,
-  marginTop: -spacing.sm,
+const $tabToggleGroup: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  backgroundColor: colors.backgroundAlt,
+  padding: 4,
+  borderRadius: 24,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $tabToggleButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: spacing.xs,
+  paddingHorizontal: spacing.sm,
+  borderRadius: 20,
+  gap: 4,
+});
+
+const $tabToggleButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  backgroundColor: colors.tint + "25",
+});
+
+const $tabToggleText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  fontWeight: "600",
+  color: colors.textDim,
+});
+
+const $tabToggleTextActive: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.tint,
+});
+
+const $closeIconButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.xs,
 });
 
 const $balanceSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -479,4 +777,120 @@ const $itemsGrid: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.lg,
   paddingBottom: spacing.xl,
   gap: spacing.md,
+});
+
+// 인벤토리 빈 상태
+const $emptyInventoryContainer: ThemedStyle<ViewStyle> = ({
+  spacing,
+  colors,
+}) => ({
+  alignItems: "center",
+  paddingVertical: spacing.xl,
+  gap: spacing.md,
+  backgroundColor: colors.backgroundAlt,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: colors.border,
+  padding: spacing.xl,
+});
+
+const $emptyInventoryTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 18,
+  fontWeight: "700",
+  color: colors.text,
+});
+
+const $emptyInventorySubtitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 13,
+  color: colors.textDim,
+  textAlign: "center",
+  lineHeight: 18,
+});
+
+const $goShopButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing.xs,
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.sm,
+  borderRadius: 24,
+});
+
+const $goShopButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 14,
+  fontWeight: "600",
+});
+
+// 인벤토리 아이템 카드
+const $inventoryItemCard: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.card,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: colors.border,
+  padding: spacing.md,
+  gap: spacing.sm,
+});
+
+const $inventoryItemHeader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "flex-start",
+  gap: spacing.md,
+});
+
+const $inventoryItemIcon: ThemedStyle<TextStyle> = () => ({
+  fontSize: 36,
+  lineHeight: 40,
+});
+
+const $inventoryItemName: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  fontWeight: "700",
+  color: colors.text,
+  marginBottom: 2,
+});
+
+const $inventoryItemDesc: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  lineHeight: 16,
+});
+
+const $inventoryBadge: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.tint + "25",
+  paddingHorizontal: spacing.sm,
+  paddingVertical: 4,
+  borderRadius: 12,
+  alignSelf: "flex-start",
+});
+
+const $inventoryBadgeText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 11,
+  fontWeight: "700",
+  color: colors.tint,
+});
+
+const $inventoryMetaRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: spacing.sm,
+});
+
+const $inventoryMetaPill: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 4,
+  backgroundColor: colors.backgroundAlt,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: 4,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: colors.border,
+});
+
+const $inventoryMetaPillText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 11,
+  fontWeight: "600",
+  color: colors.textDim,
 });

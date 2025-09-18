@@ -29,6 +29,7 @@ import { PostTag } from './post-tag.entity';
 import { PointLottery } from './point-lottery.entity';
 import { LotteryEntry } from './lottery-entry.entity';
 import { Notice } from './notice.entity'; // 공지 엔티티 추가
+import { UserItem, ShopItemCategory, ShopItemRarity } from './user-item.entity'; // 인벤토리 엔티티 추가
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -94,6 +95,8 @@ export { UserTeam } from './user-team.entity';
 
 // 공지(Notice) 관련 엔티티
 export { Notice, NoticeCategory, NoticeImportance } from './notice.entity';
+// 인벤토리(UserItem) 관련 엔티티
+export { UserItem, ShopItemCategory, ShopItemRarity } from './user-item.entity';
 
 /**
  * 모든 엔티티를 배열로 내보내는 상수
@@ -124,6 +127,7 @@ export const entities = [
   PointLottery,
   LotteryEntry,
   Notice, // 추가
+  UserItem, // 인벤토리
 ];
 
 /**
@@ -146,6 +150,7 @@ export const tableNames = {
   bookmarks: 'bookmarks',
   feedbacks: 'feedbacks',
   notices: 'notices',
+  userItems: 'user_items',
 } as const;
 
 /**
@@ -196,6 +201,9 @@ export const entityRelations = {
   Feedback: {
     manyToOne: ['submitter', 'responder'],
   },
+  UserItem: {
+    manyToOne: ['owner'],
+  },
   Notice: {
     manyToOne: ['author'],
   },
@@ -227,4 +235,5 @@ export const entityIndexes = {
   bookmarks: ['userId', 'postId', 'createdAt'],
   feedbacks: ['submitterId', 'type', 'status', 'priority', 'createdAt'],
   notices: ['createdAt', 'importance', 'pinned', 'highlightBanner'],
+  userItems: ['userId', 'itemId', 'createdAt'],
 } as const;

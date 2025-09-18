@@ -43,14 +43,13 @@ export default function TeamCenterScreen(): React.ReactElement {
     fetchPolicy: "cache-and-network",
   });
 
-  // 상단 요약에 보여줄 팀 배열 (최대 6개)
+  // 상단 요약에 보여줄 팀 배열 (모든 팀 표시)
   const topTeams = useMemo(() => {
     const teams = myTeamsData?.myTeams ?? [];
-    // priority 오름차순 정렬 후 상위 6개만
-    const sorted = [...teams].sort(
+    // priority 오름차순 정렬 (모든 팀 표시)
+    return [...teams].sort(
       (a, b) => (a.priority ?? 999) - (b.priority ?? 999),
     );
-    return sorted.slice(0, 6);
   }, [myTeamsData]);
 
   // 내비게이션 핸들러들
@@ -118,20 +117,6 @@ export default function TeamCenterScreen(): React.ReactElement {
           ) : (
             <View style={themed($teamsContainer)}>
               <TeamList teams={topTeams} />
-              {/* 더보기 버튼 */}
-              {myTeamsData.myTeams.length > topTeams.length && (
-                <TouchableOpacity
-                  onPress={goTeamSelection}
-                  style={themed($moreButton)}
-                >
-                  <Ionicons
-                    name="ellipsis-horizontal"
-                    size={20}
-                    color={theme.colors.tint}
-                  />
-                  <Text style={themed($moreButtonText)}>더보기</Text>
-                </TouchableOpacity>
-              )}
             </View>
           )}
         </View>
@@ -365,23 +350,6 @@ const $teamsContainer: ThemedStyle<ViewStyle> = () => ({
   alignItems: "center",
 });
 
-const $moreButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  alignItems: "center",
-  justifyContent: "center",
-  paddingVertical: spacing.sm,
-  paddingHorizontal: spacing.md,
-  borderRadius: 10,
-  borderWidth: 1,
-  borderColor: colors.border,
-  backgroundColor: colors.backgroundAlt,
-});
-
-const $moreButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 12,
-  fontWeight: "600",
-  marginTop: 4,
-});
 
 const $actionList: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.card,

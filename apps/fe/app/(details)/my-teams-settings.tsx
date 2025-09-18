@@ -434,28 +434,26 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         throw new Error(errors[0].message);
       }
 
-      // 로컬에 저장된 상세 정보(좋아한 날짜, 최애 선수) 업데이트
-      const dirtyTeams = teams.filter((t) => t._dirty);
-      if (dirtyTeams.length > 0) {
-        const { errors: detailErrors } = await updateMyTeams({
-          variables: {
-            teams: dirtyTeams.map((team) => ({
-              teamId: team.teamId,
-              favoriteDate: team._tempFavoriteDate || null,
-              favoritePlayerName: team._tempFavoritePlayerName || null,
-              favoritePlayerNumber: team._tempFavoritePlayerNumber ?? null,
-            })),
+      // 선택된 모든 팀의 상세 정보(좋아한 날짜, 최애 선수) 업데이트
+      // 변경사항이 없어도 선택된 팀은 유지되어야 함
+      const { errors: detailErrors } = await updateMyTeams({
+        variables: {
+          teams: selectedTeams.map((team) => ({
+            teamId: team.teamId,
+            favoriteDate: team._tempFavoriteDate || null,
+            favoritePlayerName: team._tempFavoritePlayerName || null,
+            favoritePlayerNumber: team._tempFavoritePlayerNumber ?? null,
+          })),
+        },
+        context: {
+          headers: {
+            authorization: accessToken ? `Bearer ${accessToken}` : "",
           },
-          context: {
-            headers: {
-              authorization: accessToken ? `Bearer ${accessToken}` : "",
-            },
-          },
-        });
+        },
+      });
 
-        if (detailErrors && detailErrors.length > 0) {
-          throw new Error(detailErrors[0].message);
-        }
+      if (detailErrors && detailErrors.length > 0) {
+        throw new Error(detailErrors[0].message);
       }
 
       // 서버 반영 후 재조회 (최신 데이터 동기화)

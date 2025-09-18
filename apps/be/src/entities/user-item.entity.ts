@@ -65,7 +65,11 @@ export class UserItem extends BaseEntity {
    * 예: profile_frame_gold, post_boost_3days
    */
   @Field({ description: '아이템 ID (카탈로그 키)' })
-  @Column({ type: 'varchar', length: 120, comment: '아이템 고유 ID (카탈로그)' })
+  @Column({
+    type: 'varchar',
+    length: 120,
+    comment: '아이템 고유 ID (카탈로그)',
+  })
   itemId!: string;
 
   /**
@@ -112,7 +116,10 @@ export class UserItem extends BaseEntity {
   /**
    * 아이콘 이모지/코드 (캐시)
    */
-  @Field(() => String, { nullable: true, description: '아이콘 (이모지 등) 캐시' })
+  @Field(() => String, {
+    nullable: true,
+    description: '아이콘 (이모지 등) 캐시',
+  })
   @Column({
     type: 'varchar',
     length: 16,
@@ -155,16 +162,31 @@ export class UserItem extends BaseEntity {
    * 확장 메타데이터 (JSON)
    * - 기간 제한, 사용 여부, 남은 지속시간 등 향후 확장 필드
    */
-  @Field(() => String, {
-    nullable: true,
-    description: '확장 메타데이터 (JSON 직렬화 문자열)',
-  })
   @Column({
     type: 'jsonb',
     nullable: true,
     comment: '확장 메타데이터 (기간제, 속성 등)',
   })
   metadata?: Record<string, any> | null;
+
+  /**
+   * GraphQL 에서 metadata 필드를 문자열(JSON)로 안전 반환
+   * - 기존 metadata 객체를 직접 노출하면 "String cannot represent value" 오류 발생
+   * - name: 'metadata' 로 GraphQL 스키마 필드명을 동일하게 유지
+   */
+  @Field(() => String, {
+    nullable: true,
+    name: 'metadata',
+    description: '확장 메타데이터(JSON 직렬 문자열)',
+  })
+  get metadataJson(): string | null {
+    if (this.metadata == null) return null;
+    try {
+      return JSON.stringify(this.metadata);
+    } catch {
+      return null;
+    }
+  }
 
   /**
    * 소유자 관계 (지연 로딩 불필요한 단순 참조)

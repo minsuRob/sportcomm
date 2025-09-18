@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from "react";
-/* TODO(GraphQL 인벤토리 연동):
- * 서버 인벤토리/구매 GraphQL 연동을 위해 아래 추가 import 들이 필요합니다.
- * - useQuery / useMutation
- * - GET_MY_INVENTORY, PURCHASE_ITEM (shop.ts)
- * 현재 요청에서 파일 전체 내용을 확실히 동기화하지 못했으므로
- * 정확한 적용을 위해 최신 파일 본문(라인 번호 포함)을 한번 더 제공해 주세요.
+/**
+ * GraphQL 인벤토리/구매 연동 완료:
+ * - 서버 인벤토리 조회: GET_MY_INVENTORY
+ * - 구매 처리: PURCHASE_ITEM
+ * - 실패 시 기존 포인트 차감 + 로컬 인벤토리 fallback
  */
 import {
   View,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextStyle,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
@@ -20,8 +20,9 @@ import type { ThemedStyle } from "@/lib/theme/types";
 import type { User } from "@/lib/auth";
 import ShopItem from "./ShopItem";
 import AppDialog from "@/components/ui/AppDialog";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { DEDUCT_USER_POINTS } from "@/lib/graphql/admin";
+import { GET_MY_INVENTORY, PURCHASE_ITEM } from "@/lib/graphql/shop";
 import { showToast } from "@/components/CustomToast";
 
 // 상점 아이템 타입 정의
@@ -37,12 +38,134 @@ export interface ShopItemData {
   discount?: number; // 할인율 (0-100)
 }
 
+// 포인트 이력 타입 정의
+export enum PointHistoryType {
+  EARN_ATTENDANCE = "EARN_ATTENDANCE", // 출석체크로 획득
+  EARN_POST = "EARN_POST", // 게시글 작성으로 획득
+  EARN_COMMENT = "EARN_COMMENT", // 댓글 작성으로 획득
+  EARN_CHAT = "EARN_CHAT", // 채팅으로 획득
+  SPEND_SHOP = "SPEND_SHOP", // 상점 구매로 소모
+}
+
+// 포인트 이력 인터페이스
+export interface PointHistoryEntry {
+  id: string;
+  type: PointHistoryType;
+  amount: number; // 포인트 양 (양수: 획득, 음수: 소모)
+  description: string; // 상세 설명
+  createdAt: Date; // 발생 시간
+  referenceId?: string; // 관련 아이템/게시물 ID (옵션)
+}
+
 interface ShopModalProps {
   visible: boolean;
   onClose: () => void;
   currentUser: User | null;
   onPurchase?: (item: ShopItemData) => Promise<void>;
 }
+
+// 포인트 이력 헬퍼 함수들
+const getPointHistoryInfo = (type: PointHistoryType) => {
+  switch (type) {
+    case PointHistoryType.EARN_ATTENDANCE:
+      return {
+        icon: "📅",
+        label: "출석체크",
+        color: "#4CAF50", // 초록색
+        isEarn: true,
+      };
+    case PointHistoryType.EARN_POST:
+      return {
+        icon: "📝",
+        label: "게시글 작성",
+        color: "#2196F3", // 파란색
+        isEarn: true,
+      };
+    case PointHistoryType.EARN_COMMENT:
+      return {
+        icon: "💬",
+        label: "댓글 작성",
+        color: "#FF9800", // 주황색
+        isEarn: true,
+      };
+    case PointHistoryType.EARN_CHAT:
+      return {
+        icon: "🗨️",
+        label: "채팅 참여",
+        color: "#9C27B0", // 보라색
+        isEarn: true,
+      };
+    case PointHistoryType.SPEND_SHOP:
+      return {
+        icon: "🛒",
+        label: "상점 구매",
+        color: "#F44336", // 빨간색
+        isEarn: false,
+      };
+    default:
+      return {
+        icon: "❓",
+        label: "기타",
+        color: "#9E9E9E", // 회색
+        isEarn: true,
+      };
+  }
+};
+
+// 포인트 이력 생성 헬퍼
+const createPointHistoryEntry = (
+  type: PointHistoryType,
+  amount: number,
+  description: string,
+  referenceId?: string,
+): PointHistoryEntry => ({
+  id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  type,
+  amount,
+  description,
+  createdAt: new Date(),
+  referenceId,
+});
+
+// 모의 포인트 이력 데이터 (실제로는 API에서 가져올 것임)
+const getMockPointHistory = (): PointHistoryEntry[] => [
+  createPointHistoryEntry(
+    PointHistoryType.EARN_ATTENDANCE,
+    20,
+    "일일 출석 보상",
+    "attendance_20241201",
+  ),
+  createPointHistoryEntry(
+    PointHistoryType.EARN_POST,
+    10,
+    "게시글 작성 보상",
+    "post_123",
+  ),
+  createPointHistoryEntry(
+    PointHistoryType.EARN_COMMENT,
+    3,
+    "댓글 작성 보상",
+    "comment_456",
+  ),
+  createPointHistoryEntry(
+    PointHistoryType.EARN_CHAT,
+    3,
+    "채팅 참여 보상",
+    "chat_789",
+  ),
+  createPointHistoryEntry(
+    PointHistoryType.SPEND_SHOP,
+    -10,
+    "테스트 상품 구매",
+    "test_item_10p",
+  ),
+  createPointHistoryEntry(
+    PointHistoryType.SPEND_SHOP,
+    -500,
+    "골드 프로필 테두리 구매",
+    "profile_frame_gold",
+  ),
+];
 
 // 사용자가 구매한 아이템 인벤토리 엔트리
 interface InventoryEntry {
@@ -146,6 +269,37 @@ export default function ShopModal({
   const [inventory, setInventory] = useState<Record<string, InventoryEntry>>(
     {},
   ); // 간단한 인메모리 인벤토리 (서버 인벤토리 GraphQL 실패 시 fallback)
+
+  // 포인트 이력 관련 상태
+  const [showPointHistory, setShowPointHistory] = useState(false);
+  const [pointHistory, setPointHistory] = useState<PointHistoryEntry[]>([]);
+
+  // 포인트 이력 핸들러들
+  const handleOpenPointHistory = () => {
+    // 모의 데이터로 초기화 (실제로는 API에서 가져올 것임)
+    setPointHistory(getMockPointHistory());
+    setShowPointHistory(true);
+  };
+
+  const handleClosePointHistory = () => {
+    setShowPointHistory(false);
+  };
+
+  // 포인트 이력 추가 헬퍼 함수 (확장성을 위해 외부에서 호출 가능)
+  const addPointHistory = (
+    type: PointHistoryType,
+    amount: number,
+    description: string,
+    referenceId?: string,
+  ) => {
+    const newEntry = createPointHistoryEntry(
+      type,
+      amount,
+      description,
+      referenceId,
+    );
+    setPointHistory((prev) => [newEntry, ...prev]); // 최신 항목을 맨 위에 추가
+  };
   /* TODO(GraphQL 인벤토리):
    * 아래 형태로 GraphQL 훅을 추가할 예정입니다.
    *
@@ -233,52 +387,88 @@ export default function ShopModal({
     setShowPurchaseConfirmDialog(true);
   };
 
-  // 구매 확인 처리
+  // 구매 확인 처리 (서버 purchaseItem 우선 → 실패 시 fallback)
   const handleConfirmPurchase = async () => {
     if (!selectedItem || !currentUser || !onPurchase) return;
 
     setPurchasingItemId(selectedItem.id);
     setShowPurchaseConfirmDialog(false);
 
+    const finalPrice = selectedItem.discount
+      ? Math.floor(selectedItem.price * (1 - selectedItem.discount / 100))
+      : selectedItem.price;
+
     try {
-      const finalPrice = selectedItem.discount
-        ? Math.floor(selectedItem.price * (1 - selectedItem.discount / 100))
-        : selectedItem.price;
+      let serverSuccess = false;
 
-      // 1. 포인트 차감
-      await deductUserPoints({
-        variables: {
-          userId: currentUser.id,
-          amount: finalPrice,
-          reason: `상점 구매: ${selectedItem.name}`,
-        },
-      });
+      // 1) 서버 purchaseItem 시도
+      if (purchaseItemMutation) {
+        try {
+          const res = await purchaseItemMutation({
+            variables: {
+              itemId: selectedItem.id,
+              quantity: 1,
+            },
+          });
 
-      // 2. 외부 구매 처리 (예: 서버 인벤토리 저장)
-      await onPurchase(selectedItem);
+          if (res?.data?.purchaseItem?.userItem) {
+            serverSuccess = true;
+          }
+        } catch (serverErr) {
+          // 서버 실패 시 fallback 진행
+          serverSuccess = false;
+        }
+      }
 
-      // 3. 로컬 인벤토리 갱신 (백엔드 연동 전 임시)
-      setInventory((prev) => {
-        const exists = prev[selectedItem.id];
-        return {
-          ...prev,
-          [selectedItem.id]: exists
-            ? {
-                ...exists,
-                quantity: exists.quantity + 1,
-                lastPurchasedAt: new Date(),
-              }
-            : {
-                item: selectedItem,
-                quantity: 1,
-                lastPurchasedAt: new Date(),
-              },
-        };
-      });
+      if (!serverSuccess) {
+        // ====== Fallback 절차 ======
+        // A. 포인트 차감 (기존 뮤테이션)
+        await deductUserPoints({
+          variables: {
+            userId: currentUser.id,
+            amount: finalPrice,
+            reason: `상점 구매(fallback): ${selectedItem.name}`,
+          },
+        });
+
+        // B. 외부 구매 처리 (콜백: 포인트 갱신, 토스트 등)
+        await onPurchase(selectedItem);
+
+        // C. 로컬 인벤토리 갱신
+        setInventory((prev) => {
+          const exists = prev[selectedItem.id];
+          return {
+            ...prev,
+            [selectedItem.id]: exists
+              ? {
+                  ...exists,
+                  quantity: exists.quantity + 1,
+                  lastPurchasedAt: new Date(),
+                }
+              : {
+                  item: selectedItem,
+                  quantity: 1,
+                  lastPurchasedAt: new Date(),
+                },
+          };
+        });
+      } else {
+        // 서버 성공 시: refetchInventory 는 onCompleted 에서 호출됨
+        await onPurchase(selectedItem);
+      }
+
+      // 포인트 이력 기록
+      addPointHistory(
+        PointHistoryType.SPEND_SHOP,
+        -finalPrice,
+        `${selectedItem.name} 구매`,
+        selectedItem.id,
+      );
 
       setDialogMessage(`${selectedItem.name}을(를) 성공적으로 구매했습니다!`);
       setShowSuccessDialog(true);
     } catch (error) {
+      console.error("구매 처리 오류:", (error as any)?.message || error);
       setDialogMessage("구매 중 오류가 발생했습니다.");
       setShowErrorDialog(true);
     } finally {
@@ -286,20 +476,74 @@ export default function ShopModal({
     }
   };
 
-  // 인벤토리 목록 (정렬: 최근 구매 순)
+  // ===== GraphQL 인벤토리 연동 =====
+  const {
+    data: serverInvData,
+    loading: loadingServerInventory,
+    refetch: refetchInventory,
+  } = useQuery(GET_MY_INVENTORY, {
+    skip: !visible || !currentUser,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const [purchaseItemMutation, { loading: purchasingViaServer }] = useMutation(
+    PURCHASE_ITEM,
+    {
+      onError: (err) => {
+        // 서버 구매 실패 시 fallback 로직에서 처리
+        console.warn("purchaseItem 서버 실패 → fallback 진행:", err.message);
+      },
+      onCompleted: () => {
+        refetchInventory().catch(() => {});
+      },
+    },
+  );
+
+  // 인벤토리 목록 (정렬: 최근 구매 순) - 서버 우선, 없으면 로컬 fallback
+  /**
+   * 인벤토리 표시에 사용할 정규화 목록
+   * - 서버 데이터(getMyInventory) 우선
+   * - 서버 항목: { itemId, quantity, lastPurchasedAt, icon, rarity, lastPurchasePrice }
+   * - 로컬 fallback: 기존 in-memory 구조 유지
+   */
   const inventoryList = useMemo(() => {
-    // TODO(GraphQL 인벤토리): 서버 데이터(getMyInventory)가 존재하면 그것을 우선 사용
-    // if (myInvData?.getMyInventory) {
-    //   return [...myInvData.getMyInventory].sort(
-    //     (a, b) =>
-    //       new Date(b.lastPurchasedAt).getTime() -
-    //       new Date(a.lastPurchasedAt).getTime(),
-    //   );
-    // }
-    return Object.values(inventory).sort(
-      (a, b) => b.lastPurchasedAt.getTime() - a.lastPurchasedAt.getTime(),
-    );
-  }, [inventory /*, myInvData*/]);
+    if (serverInvData?.getMyInventory?.length) {
+      return serverInvData.getMyInventory
+        .map((raw: any) => {
+          const base = SHOP_ITEMS.find((s) => s.id === raw.itemId);
+          // 서버에 없는(또는 FE 상수에 아직 등록되지 않은) 아이템에 대한 안전한 기본 값
+          const fallback: ShopItemData = base || {
+            id: raw.itemId,
+            name: raw.itemId,
+            description: "등록되지 않은 아이템",
+            price: raw.lastPurchasePrice || 0,
+            category: (raw.category as any) || "decoration",
+            icon: raw.icon || "🎁",
+            rarity: (raw.rarity as any) || "common",
+            isAvailable: true,
+          };
+          return {
+            item: fallback,
+            quantity: raw.quantity || 0,
+            lastPurchasedAt: new Date(raw.lastPurchasedAt),
+          };
+        })
+        .sort(
+          (a: any, b: any) =>
+            b.lastPurchasedAt.getTime() - a.lastPurchasedAt.getTime(),
+        );
+    }
+    // 로컬(in-memory) fallback
+    return Object.values(inventory)
+      .map((v) => ({
+        item: v.item,
+        quantity: v.quantity,
+        lastPurchasedAt: v.lastPurchasedAt,
+      }))
+      .sort(
+        (a, b) => b.lastPurchasedAt.getTime() - a.lastPurchasedAt.getTime(),
+      );
+  }, [inventory, serverInvData]);
 
   // 페이지 형태로 동작: visible이 아니면 렌더링하지 않음
   if (!visible) return null;
@@ -322,8 +566,32 @@ export default function ShopModal({
             </View>
 
             <View style={themed($headerRightGroup)}>
-              {/* 탭 토글 버튼 */}
-              <View style={themed($tabToggleGroup)}>
+              {/* 닫기 (라우터 back) */}
+              <TouchableOpacity
+                onPress={onClose}
+                style={themed($closeIconButton)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.textDim} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* 상점/가방 탭 + 포인트 한 줄 배치 */}
+          <View style={themed($tabAndPointsRow)}>
+            {/* 좌측: 보유 포인트 카드 */}
+            <View style={themed($pointsCardWrapper)}>
+              <View style={themed($balanceCardCompact)}>
+                <Text style={themed($balanceLabel)}>보유 포인트</Text>
+                <Text style={themed($balanceAmount)}>
+                  {currentUser?.points ?? 0}P
+                </Text>
+              </View>
+            </View>
+
+            {/* 중앙: 탭 토글 */}
+            <View style={themed($tabCenterWrapper)}>
+              <View style={themed($tabToggleInline)}>
                 <TouchableOpacity
                   style={[
                     themed($tabToggleButton),
@@ -377,26 +645,21 @@ export default function ShopModal({
                 </TouchableOpacity>
               </View>
 
-              {/* 닫기 (라우터 back) */}
+              {/* 탭 아래 포인트 이력 버튼 (세로 짧게) */}
               <TouchableOpacity
-                onPress={onClose}
-                style={themed($closeIconButton)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={themed($pointHistoryCenterButton)}
+                activeOpacity={0.85}
+                onPress={handleOpenPointHistory}
               >
-                <Ionicons name="close" size={22} color={theme.colors.textDim} />
+                <Ionicons name="sparkles-outline" size={14} color={"white"} />
+                <Text style={themed($pointHistoryCenterButtonText)}>
+                  포인트 이력
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* 포인트 잔액 */}
-          <View style={themed($balanceSection)}>
-            <View style={themed($balanceCard)}>
-              <Text style={themed($balanceLabel)}>보유 포인트</Text>
-              <Text style={themed($balanceAmount)}>
-                {currentUser?.points ?? 0}P
-              </Text>
-            </View>
-          </View>
+          {/* (이전 위치의 포인트 이력 바 제거됨 - 탭 중앙 컬럼 아래로 이동) */}
 
           {/* 상점 전용: 카테고리 탭 */}
           {activeTab === "shop" && (
@@ -448,7 +711,9 @@ export default function ShopModal({
                     key={item.id}
                     item={item}
                     onPurchase={() => handlePurchase(item)}
-                    isPurchasing={purchasingItemId === item.id}
+                    isPurchasing={
+                      purchasingItemId === item.id || purchasingViaServer
+                    }
                     canAfford={
                       (currentUser?.points ?? 0) >=
                       (item.discount
@@ -457,6 +722,27 @@ export default function ShopModal({
                     }
                   />
                 ))}
+              {activeTab === "inventory" && loadingServerInventory && (
+                <View
+                  style={{
+                    paddingVertical: 32,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <ActivityIndicator size="small" color={theme.colors.tint} />
+                  <Text
+                    style={{
+                      marginTop: 12,
+                      color: theme.colors.textDim,
+                      fontSize: 13,
+                      fontWeight: "500",
+                    }}
+                  >
+                    인벤토리를 불러오는 중...
+                  </Text>
+                </View>
+              )}
 
               {activeTab === "inventory" && (
                 <>
@@ -609,6 +895,75 @@ export default function ShopModal({
         confirmText="확인"
         onConfirm={() => setShowErrorDialog(false)}
       />
+
+      {/* 포인트 이력 모달 */}
+      {showPointHistory && (
+        <View style={themed($pointHistoryModalOverlay)}>
+          <View style={themed($pointHistoryModalContent)}>
+            {/* 헤더 */}
+            <View style={themed($pointHistoryHeader)}>
+              <Text style={themed($pointHistoryTitle)}>포인트 이력</Text>
+              <TouchableOpacity
+                onPress={handleClosePointHistory}
+                style={themed($pointHistoryCloseButton)}
+              >
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 이력 목록 */}
+            <ScrollView style={themed($pointHistoryList)}>
+              {pointHistory.length === 0 ? (
+                <View style={themed($emptyHistory)}>
+                  <Ionicons
+                    name="time-outline"
+                    size={48}
+                    color={theme.colors.textDim}
+                  />
+                  <Text style={themed($emptyHistoryText)}>
+                    포인트 이력이 없습니다.
+                  </Text>
+                </View>
+              ) : (
+                pointHistory.map((entry) => {
+                  const info = getPointHistoryInfo(entry.type);
+                  return (
+                    <View key={entry.id} style={themed($historyItem)}>
+                      <View style={themed($historyItemLeft)}>
+                        <Text style={themed($historyIcon)}>{info.icon}</Text>
+                        <View style={themed($historyItemContent)}>
+                          <Text style={themed($historyItemTitle)}>
+                            {info.label}
+                          </Text>
+                          <Text style={themed($historyItemDescription)}>
+                            {entry.description}
+                          </Text>
+                          <Text style={themed($historyItemDate)}>
+                            {entry.createdAt.toLocaleDateString("ko-KR")}{" "}
+                            {entry.createdAt.toLocaleTimeString("ko-KR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text
+                        style={[
+                          themed($historyItemAmount),
+                          { color: info.isEarn ? "#4CAF50" : "#F44336" },
+                        ]}
+                      >
+                        {info.isEarn ? "+" : ""}
+                        {entry.amount}P
+                      </Text>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </>
   );
 }
@@ -664,14 +1019,14 @@ const $subtitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontWeight: "500",
 });
 
-const $tabToggleGroup: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  backgroundColor: colors.backgroundAlt,
-  padding: 4,
-  borderRadius: 24,
-  borderWidth: 1,
-  borderColor: colors.border,
-});
+// const $tabToggleGroup: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+//   flexDirection: "row",
+//   backgroundColor: colors.backgroundAlt,
+//   padding: 4,
+//   borderRadius: 24,
+//   borderWidth: 1,
+//   borderColor: colors.border,
+// }); // 더 이상 사용하지 않음 - 보유 포인트 옆으로 이동됨
 
 const $tabToggleButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
@@ -725,6 +1080,33 @@ const $balanceAmount: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 28,
   fontWeight: "900",
   color: colors.tint,
+});
+
+// 포인트 잔액 + 포인트 이력 50% / 50% 행
+const $balanceAndTabSection: ThemedStyle<ViewStyle> = () => ({
+  display: "none", // 사용 안 함 (이전 레이아웃)
+});
+
+// 상단 풀폭 탭 토글 행
+const $tabToggleFullWidth: ThemedStyle<ViewStyle> = () => ({
+  display: "none", // 사용 안 함
+});
+
+// 기존 balanceSectionHalf 그대로 (좌측 50%)
+
+// 기존 balanceSection 스타일을 재정의 (절반 너비로)
+const $balanceSectionHalf: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1, // 절반 너비 차지
+  paddingHorizontal: 0,
+  paddingVertical: 0,
+});
+
+// 탭 토글 섹션 (절반 너비)
+const $tabToggleSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1, // 절반 너비 차지
+  flexDirection: "row",
+  justifyContent: "center",
+  gap: spacing.xs,
 });
 
 const $categoryTabs: ThemedStyle<ViewStyle> = ({ spacing }) => ({
@@ -894,4 +1276,270 @@ const $inventoryMetaPillText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 11,
   fontWeight: "600",
   color: colors.textDim,
+});
+
+// ====================== 포인트 이력 관련 스타일 ======================
+
+// 인라인 포인트 이력 카드 (우측 50% 박스)
+const $pointHistoryInline: ThemedStyle<ViewStyle> = () => ({
+  display: "none", // 이전 컴팩트 전용으로 대체됨
+});
+
+const $pointSummaryTexts: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  gap: spacing.xs,
+});
+
+const $pointSummaryTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 15,
+  fontWeight: "700",
+  color: colors.text,
+});
+
+const $pointSummarySubtitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 11,
+  color: colors.textDim,
+  fontWeight: "500",
+});
+
+const $pointHistoryOpenBtn: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderRadius: 24,
+});
+
+const $pointHistoryOpenBtnText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 13,
+  fontWeight: "700",
+});
+
+// 포인트 이력 모달
+const $pointHistoryModalOverlay: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: colors.background,
+  zIndex: 1000,
+});
+
+const $pointHistoryModalContent: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  flex: 1,
+  backgroundColor: colors.background,
+  maxWidth: 500,
+  width: "100%",
+  alignSelf: "center",
+});
+
+const $pointHistoryHeader: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingHorizontal: spacing.lg,
+  paddingTop: spacing.lg,
+  paddingBottom: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border,
+});
+
+const $pointHistoryTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 20,
+  fontWeight: "800",
+  color: colors.text,
+});
+
+const $pointHistoryCloseButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  padding: spacing.sm,
+});
+
+const $pointHistoryList: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $emptyHistory: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: spacing.xl,
+});
+
+const $emptyHistoryText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 16,
+  color: colors.textDim,
+  marginTop: 16,
+  textAlign: "center",
+});
+
+const $historyItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingHorizontal: spacing.lg,
+  paddingVertical: spacing.md,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.border + "50",
+});
+
+const $historyItemLeft: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  flex: 1,
+  gap: spacing.md,
+});
+
+const $historyIcon: ThemedStyle<TextStyle> = () => ({
+  fontSize: 24,
+});
+
+const $historyItemContent: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+});
+
+const $historyItemTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "600",
+  color: colors.text,
+  marginBottom: 2,
+});
+
+const $historyItemDescription: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  color: colors.textDim,
+  marginBottom: 2,
+  lineHeight: 16,
+});
+
+const $historyItemDate: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.textDim,
+  fontWeight: "500",
+});
+
+const $historyItemAmount: ThemedStyle<TextStyle> = () => ({
+  fontSize: 16,
+  fontWeight: "700",
+});
+/* ===== 새 레이아웃 추가 스타일 ===== */
+const $tabAndPointsRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "stretch",
+  paddingHorizontal: spacing.lg,
+  paddingTop: spacing.sm,
+  paddingBottom: spacing.md,
+  gap: spacing.md,
+});
+
+const $pointsCardWrapper: ThemedStyle<ViewStyle> = () => ({
+  flex: 1.1,
+});
+
+const $balanceCardCompact: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  backgroundColor: colors.tint + "10",
+  borderRadius: 20,
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.lg,
+  borderWidth: 1,
+  borderColor: colors.tint + "25",
+  alignItems: "flex-start",
+  justifyContent: "center",
+  gap: spacing.xs,
+});
+
+const $tabCenterWrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 0.9,
+  justifyContent: "flex-start",
+  alignItems: "center",
+  flexDirection: "column",
+  gap: spacing.xs,
+});
+
+const $tabToggleInline: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  backgroundColor: colors.backgroundAlt,
+  padding: 4,
+  borderRadius: 28,
+  borderWidth: 1,
+  borderColor: colors.border,
+  gap: spacing.xs,
+});
+
+const $pointHistoryInlineCompact: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  flex: 1,
+  backgroundColor: colors.backgroundAlt,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: colors.border,
+  padding: spacing.md,
+  justifyContent: "center",
+  alignItems: "flex-start",
+  gap: spacing.xs,
+});
+
+const $pointHistoryMiniDesc: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.textDim,
+  fontWeight: "500",
+  letterSpacing: 0.2,
+});
+
+/* ===== 포인트 이력 바 (탭 아래 작은 버튼) ===== */
+const $pointHistoryBar: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  paddingHorizontal: spacing.lg,
+  marginTop: -spacing.xs,
+  marginBottom: spacing.md,
+});
+
+const $pointHistoryBarButton: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs + 2,
+  borderRadius: 18,
+  gap: 6,
+  shadowColor: "#000",
+  shadowOpacity: 0.12,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+});
+
+const $pointHistoryBarText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 13,
+  fontWeight: "700",
+  letterSpacing: 0.3,
+});
+
+/* 탭 아래 세로 정렬용 포인트 이력 버튼 (중앙 컬럼 내부) */
+const $pointHistoryCenterButton: ThemedStyle<ViewStyle> = ({
+  colors,
+  spacing,
+}) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs + 2,
+  borderRadius: 18,
+  gap: 6,
+});
+
+const $pointHistoryCenterButtonText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 13,
+  fontWeight: "700",
+  letterSpacing: 0.3,
 });

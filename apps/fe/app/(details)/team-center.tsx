@@ -55,7 +55,8 @@ export default function TeamCenterScreen(): React.ReactElement {
 
   // 내비게이션 핸들러들
   const goBack = (): void => router.back();
-  const goTeamSelection = (): void => router.push("/(modals)/team-selection");
+  const goTeamSelection = (): void =>
+    router.push("/(modals)/team-selection?origin=team-center"); // origin 파라미터로 복귀 경로 식별
   const goTeamColors = (): void => router.push("/(details)/team-colors-select");
   const goTeamFilter = (): void => router.push("/(details)/team-filter");
   const goMyTeamsSettings = (): void =>

@@ -183,7 +183,7 @@ export default function TeamSelectionScreen() {
       if (teamIds.length > 0) {
         // 색상 적용은 비동기로 처리
         setTimeout(() => {
-          applyTeamColor(teamIds[0], sportsData).catch(error => {
+          applyTeamColor(teamIds[0], sportsData).catch((error) => {
             console.warn("초기 팀 색상 적용 실패:", error);
           });
         }, 100);
@@ -326,7 +326,7 @@ export default function TeamSelectionScreen() {
 
       // 저장 완료 후 최종 팀 색상 적용 (첫 번째 팀 기준)
       if (safeSelectedTeams.length > 0) {
-        applyTeamColor(selectedTeams[0], sportsData).catch(error => {
+        applyTeamColor(selectedTeams[0], sportsData).catch((error) => {
           console.warn("저장 후 팀 색상 적용 실패:", error);
         });
       }
@@ -347,7 +347,17 @@ export default function TeamSelectionScreen() {
         message: `${safeSelectedTeams.length}개 팀이 저장되었습니다.`,
         duration: 2000,
       });
-      router.back();
+      // origin 파라미터에 따라 돌아갈 경로를 명확히 지정
+      if (origin === "profile") {
+        // 온보딩(프로필 설정) 플로우에서 진입한 경우 다시 프로필 설정 모달로
+        router.replace("/(modals)/post-signup-profile");
+      } else if (origin === "team-center") {
+        // 팀 센터에서 진입한 경우 팀 센터 상세 페이지로 복귀
+        router.replace("/(details)/team-center");
+      } else {
+        // 그 외에는 기존 동작 유지 (스택 기반 뒤로가기)
+        router.back();
+      }
     } catch (e) {
       const msg =
         (e as any)?.message || "팀 선택을 저장하는 중 오류가 발생했습니다.";
@@ -560,9 +570,9 @@ export default function TeamSelectionScreen() {
             (isLoading || !currentUser) && { opacity: 0.5 },
           ]}
         >
-        <Text style={themed($saveButtonText)}>
-          {isLoading ? "저장 중..." : "저장 (색상 즉시 적용)"}
-        </Text>
+          <Text style={themed($saveButtonText)}>
+            {isLoading ? "저장 중..." : "저장 (색상 즉시 적용)"}
+          </Text>
         </TouchableOpacity>
       </View>
 

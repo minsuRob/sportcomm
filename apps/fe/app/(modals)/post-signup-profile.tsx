@@ -392,12 +392,12 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       showToast({
         type: "success",
         title: "완료",
-        message: "설정이 완료되었습니다. 피드로 이동합니다.",
+        message: "설정이 완료되었습니다. 팀 설정으로 이동합니다.",
         duration: 1200,
       });
 
-      // 완료 시 피드로 이동
-      router.replace("/feed");
+      // 완료 시 팀 설정으로 이동
+      router.replace("/(details)/my-teams-settings");
     } catch (e: any) {
       showToast({
         type: "error",

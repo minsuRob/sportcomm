@@ -18,4 +18,5 @@ apps/be/uploads/team-logos
 .roo/mcp.json
 apps/fe/cloudflared.log
 *.rel
+*.third
 *.env.dev

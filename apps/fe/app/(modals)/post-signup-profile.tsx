@@ -34,6 +34,7 @@ import {
   APPLY_REFERRAL_CODE,
 } from "@/lib/graphql/admin";
 import { useTeams } from "@/hooks/useTeams";
+import TeamList from "@/components/team/TeamList";
 
 /**
  * 회원가입 직후 경량 프로필 설정 모달
@@ -510,19 +511,20 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               <Text style={themed($selectedTeamsLabel)}>
                 선택된 팀 ({selectedTeams.length})
               </Text>
-              <View style={themed($selectedTeamsList)}>
-                {selectedTeams.map((team) => (
-                  <View key={team.id} style={themed($selectedTeamItem)}>
-                    <TeamLogo
-                      logoUrl={team.logoUrl}
-                      fallbackIcon={team.icon}
-                      teamName={team.name}
-                      size={24}
-                    />
-                    <Text style={themed($selectedTeamName)}>{team.name}</Text>
-                  </View>
-                ))}
-              </View>
+              <TeamList
+                teams={selectedTeams.map(team => ({
+                  id: team.id,
+                  team: {
+                    id: team.id,
+                    name: team.name,
+                    logoUrl: team.logoUrl,
+                    icon: team.icon,
+                  }
+                }))}
+                size={24}
+                horizontal={true}
+                maxItems={5}
+              />
             </View>
           )}
 
@@ -932,30 +934,6 @@ const $selectedTeamsLabel: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 12,
   fontWeight: "600",
   marginBottom: spacing.xs,
-});
-
-const $selectedTeamsList: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: spacing.xs,
-});
-
-const $selectedTeamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: colors.background,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
-  borderRadius: 16,
-  borderWidth: 1,
-  borderColor: colors.border,
-  gap: spacing.xs,
-});
-
-const $selectedTeamName: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 12,
-  fontWeight: "500",
 });
 
 /**

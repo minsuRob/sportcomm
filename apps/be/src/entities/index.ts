@@ -30,6 +30,11 @@ import { PointLottery } from './point-lottery.entity';
 import { LotteryEntry } from './lottery-entry.entity';
 import { Notice } from './notice.entity'; // 공지 엔티티 추가
 import { UserItem, ShopItemCategory, ShopItemRarity } from './user-item.entity'; // 인벤토리 엔티티 추가
+import {
+  PointTransaction,
+  PointTransactionType,
+  PointReferenceType,
+} from './point-transaction.entity'; // 포인트 트랜잭션 엔티티 추가
 
 // 기본 엔티티
 export { BaseEntity } from './base.entity';
@@ -95,8 +100,14 @@ export { UserTeam } from './user-team.entity';
 
 // 공지(Notice) 관련 엔티티
 export { Notice, NoticeCategory, NoticeImportance } from './notice.entity';
-// 인벤토리(UserItem) 관련 엔티티
 export { UserItem, ShopItemCategory, ShopItemRarity } from './user-item.entity';
+export {
+  PointTransaction,
+  PointTransactionType,
+  PointReferenceType,
+} from './point-transaction.entity';
+// 인벤토리(UserItem) 관련 엔티티
+// (중복 제거) 인벤토리(UserItem) 재수출 라인 삭제됨 - 위에서 이미 export 처리 완료
 
 /**
  * 모든 엔티티를 배열로 내보내는 상수
@@ -128,6 +139,7 @@ export const entities = [
   LotteryEntry,
   Notice, // 추가
   UserItem, // 인벤토리
+  PointTransaction, // 포인트 트랜잭션
 ];
 
 /**
@@ -151,6 +163,7 @@ export const tableNames = {
   feedbacks: 'feedbacks',
   notices: 'notices',
   userItems: 'user_items',
+  pointTransactions: 'point_transactions',
 } as const;
 
 /**
@@ -207,6 +220,9 @@ export const entityRelations = {
   Notice: {
     manyToOne: ['author'],
   },
+  PointTransaction: {
+    manyToOne: ['user'],
+  },
 } as const;
 
 /**
@@ -236,4 +252,5 @@ export const entityIndexes = {
   feedbacks: ['submitterId', 'type', 'status', 'priority', 'createdAt'],
   notices: ['createdAt', 'importance', 'pinned', 'highlightBanner'],
   userItems: ['userId', 'itemId', 'createdAt'],
+  pointTransactions: ['userId', 'type', 'createdAt'],
 } as const;

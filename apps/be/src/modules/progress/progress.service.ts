@@ -8,40 +8,34 @@ import {
   DAILY_POINT_LIMITS,
 } from '../../entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  PointTransaction,
+  PointTransactionType,
+  PointReferenceType,
+} from '../../entities/point-transaction.entity';
 
 /**
  * ProgressService
  *
  * 사용자 활동(채팅 메시지 전송, 게시글 작성, 데일리 출석 등)에 따라
- * 포인트와 경험치를 적립하고 레벨 변동 정보를 계산/반환하는 서비스입니다.
+ * 포인트 변동을 처리하는 서비스.
+ * (경험치/레벨 시스템 제거됨 → 포인트 중심)
  *
- * 현재 요구사항:
- * - 채팅 메시지: 5 포인트 / 5 경험치
- * - 게시글 작성: 5 포인트 / 5 경험치
- * - 데일리 출석: 20 포인트 / 20 경험치 (하루 1회)
- *
- * 확장 포인트:
- * 1. 포인트/경험치 비율이 달라져야 하면 USER_PROGRESS_REWARD value를
- *    number → { points: number; exp: number } 구조로 확장
- * 2. 새로운 액션은 UserProgressAction enum + USER_PROGRESS_REWARD 매핑만 추가
- * 3. 이벤트 기반(progress.awarded / progress.levelup) 확장 (배지, 알림, 로그)
- * 4. 고빈도 업데이트(채팅 폭주) 발생 시 현재 save() 대신 쿼리 빌더 UPDATE 사용 고려
+ * 이번 수정 사항:
+ * - 포인트 적립/차감/커스텀 지급 시 point_transactions 테이블에 이력(스냅샷) 기록
+ * - balanceAfter(변동 후 잔액) 저장으로 재계산 필요 최소화
  */
 export interface AwardResult {
   userId: string;
   action: UserProgressAction;
   addedPoints: number;
   totalPoints: number;
-  skipped?: boolean; // 중복 출석 등으로 보상 제외
+  skipped?: boolean;
   timestamp: Date;
-  // === 확장 필드 (커스텀 지급 등) ===
   isCustom?: boolean;
   reason?: string;
 }
 
-/**
- * 사용자 진행도 스냅샷 DTO
- */
 export interface UserProgressSnapshot {
   userId: string;
   points: number;
@@ -52,9 +46,6 @@ export interface UserProgressSnapshot {
   timestamp: Date;
 }
 
-/**
- * 일일 제한 정보 DTO
- */
 export interface DailyLimitsInfo {
   userId: string;
   dailyChatPoints: number;
@@ -73,17 +64,93 @@ export class ProgressService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(PointTransaction)
+    private readonly pointTxRepo: Repository<PointTransaction>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  // ================== 내부 유틸 ==================
+
+  /**
+   * UserProgressAction → PointTransactionType 매핑
+   */
+  private mapActionToTxType(action: UserProgressAction): PointTransactionType {
+    switch (action) {
+      case UserProgressAction.CHAT_MESSAGE:
+        return PointTransactionType.CHAT_MESSAGE;
+      case UserProgressAction.POST_CREATE:
+        return PointTransactionType.POST_CREATE;
+      case UserProgressAction.DAILY_ATTENDANCE:
+        return PointTransactionType.ATTENDANCE;
+      default:
+        return PointTransactionType.ADJUSTMENT;
+    }
+  }
+
+  /**
+   * PointTransaction 생성 및 저장 헬퍼
+   * amount: 양수(적립) / 음수(차감)
+   */
+  private async recordPointTransaction(params: {
+    manager?: Repository<PointTransaction> | any; // 트랜잭션 내 entityManager (선택)
+    userId: string;
+    amount: number;
+    balanceAfter: number;
+    type: PointTransactionType;
+    description?: string;
+    referenceType?: PointReferenceType;
+    referenceId?: string;
+    metadata?: Record<string, any>;
+  }): Promise<PointTransaction> {
+    const {
+      manager,
+      userId,
+      amount,
+      balanceAfter,
+      type,
+      description,
+      referenceType,
+      referenceId,
+      metadata,
+    } = params;
+
+    const repo = manager
+      ? manager.getRepository(PointTransaction)
+      : this.pointTxRepo;
+
+    const entity = repo.create({
+      userId,
+      amount,
+      balanceAfter,
+      type,
+      description,
+      referenceType,
+      referenceId,
+      metadata,
+    });
+
+    return repo.save(entity);
+  }
+
+  /**
+   * 상점 구매 여부 추론 (차감 reason 기반 간단 heuristic)
+   */
+  private guessShopPurchase(reason?: string): boolean {
+    if (!reason) return false;
+    return /상점\s*구매|shop\s*purchase/i.test(reason);
+    // 필요 시 아이템 아이디 패턴 등 추가
+  }
 
   /**
    * 사용자 진행 상태 스냅샷 조회
    */
-  async getUserProgress(userId: string, timezone: string = 'Asia/Seoul'): Promise<UserProgressSnapshot> {
+  async getUserProgress(
+    userId: string,
+    timezone: string = 'Asia/Seoul',
+  ): Promise<UserProgressSnapshot> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
-    // 일일 제한 초기화 필요 시 초기화
     if (user.needsDailyReset(new Date(), timezone)) {
       user.resetDailyLimits(new Date());
       await this.userRepository.save(user);
@@ -103,7 +170,10 @@ export class ProgressService {
   /**
    * 사용자 일일 제한 정보 조회
    */
-  async getDailyLimitsInfo(userId: string, timezone: string = 'Asia/Seoul'): Promise<DailyLimitsInfo> {
+  async getDailyLimitsInfo(
+    userId: string,
+    timezone: string = 'Asia/Seoul',
+  ): Promise<DailyLimitsInfo> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
@@ -111,17 +181,15 @@ export class ProgressService {
     const chatPointLimit = DAILY_POINT_LIMITS[UserProgressAction.CHAT_MESSAGE];
     const postPointLimit = DAILY_POINT_LIMITS[UserProgressAction.POST_CREATE];
 
-    // 일일 제한 초기화 필요 시 초기화
     if (user.needsDailyReset(now, timezone)) {
       user.resetDailyLimits(now);
       await this.userRepository.save(user);
     }
 
-    // 다음 초기화 시간 계산
     const nextReset = new Date(now);
-    nextReset.setHours(6, 0, 0, 0); // 오전 6시
+    nextReset.setHours(6, 0, 0, 0);
     if (now.getHours() >= 6) {
-      nextReset.setDate(nextReset.getDate() + 1); // 다음 날
+      nextReset.setDate(nextReset.getDate() + 1);
     }
 
     return {
@@ -139,9 +207,12 @@ export class ProgressService {
   }
 
   /**
-   * 수동 일일 제한 초기화 (관리자용)
+   * 수동 일일 제한 초기화
    */
-  async resetUserDailyLimits(userId: string, timezone: string = 'Asia/Seoul'): Promise<void> {
+  async resetUserDailyLimits(
+    userId: string,
+    timezone: string = 'Asia/Seoul',
+  ): Promise<void> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
@@ -157,8 +228,7 @@ export class ProgressService {
   }
 
   /**
-   * 액션에 따른 포인트/경험치 적립 (범용 엔드포인트)
-   * - 비즈니스 서비스(채팅, 게시글 등)에서 공통 호출
+   * 범용 액션 포인트 적립 + 트랜잭션 기록
    */
   async awardAction(
     userId: string,
@@ -171,13 +241,11 @@ export class ProgressService {
 
     const beforePoints = user.points || 0;
 
-    // 일일 제한 초기화 필요 시 먼저 초기화
     if (user.needsDailyReset(now, timezone)) {
       user.resetDailyLimits(now);
       await this.userRepository.save(user);
     }
 
-    // 출석 중복 방지
     if (
       action === UserProgressAction.DAILY_ATTENDANCE &&
       !user.canClaimDailyAttendance(now)
@@ -192,8 +260,10 @@ export class ProgressService {
       };
     }
 
-    // 댓글 포인트 일일 제한 체크
-    if (action === UserProgressAction.CHAT_MESSAGE && !user.canSendChatMessage()) {
+    if (
+      action === UserProgressAction.CHAT_MESSAGE &&
+      !user.canSendChatMessage()
+    ) {
       return {
         userId,
         action,
@@ -205,7 +275,6 @@ export class ProgressService {
       };
     }
 
-    // 게시물 포인트 일일 제한 체크
     if (action === UserProgressAction.POST_CREATE && !user.canCreatePost()) {
       return {
         userId,
@@ -219,31 +288,40 @@ export class ProgressService {
     }
 
     const reward = USER_PROGRESS_REWARD[action] ?? 0;
-    if (reward > 0) {
-      // 트랜잭션을 사용하여 안전하게 포인트 업데이트 (레이스 컨디션 방지)
-      await this.userRepository.manager.transaction(async (transactionalEntityManager) => {
-        // 현재 사용자 포인트 조회 및 업데이트
-        await transactionalEntityManager.increment(User, { id: userId }, 'points', reward);
 
-        // 데일리 출석의 경우 lastAttendanceAt도 업데이트
+    if (reward > 0) {
+      await this.userRepository.manager.transaction(async (tem) => {
+        // 포인트 증가
+        await tem.increment(User, { id: userId }, 'points', reward);
+
         if (action === UserProgressAction.DAILY_ATTENDANCE) {
-          await transactionalEntityManager.update(User, { id: userId }, { lastAttendanceAt: now });
+          await tem.update(User, { id: userId }, { lastAttendanceAt: now });
         }
 
-        // 댓글 또는 게시물 작성의 경우 포인트 증가
         if (action === UserProgressAction.CHAT_MESSAGE) {
           user.addChatPoints(reward);
-          await transactionalEntityManager.increment(User, { id: userId }, 'dailyChatPoints', reward);
+          await tem.increment(User, { id: userId }, 'dailyChatPoints', reward);
         } else if (action === UserProgressAction.POST_CREATE) {
           user.addPostPoints(reward);
-          await transactionalEntityManager.increment(User, { id: userId }, 'dailyPostPoints', reward);
+          await tem.increment(User, { id: userId }, 'dailyPostPoints', reward);
         }
 
-        // 로컬 user 객체 업데이트
         user.points = beforePoints + reward;
         if (action === UserProgressAction.DAILY_ATTENDANCE) {
           user.lastAttendanceAt = now;
         }
+
+        // 포인트 트랜잭션 기록
+        await this.recordPointTransaction({
+          manager: tem,
+          userId,
+          amount: reward,
+          balanceAfter: user.points,
+          type: this.mapActionToTxType(action),
+          description: this.buildAutoDescription(action, reward),
+          referenceType: this.resolveReferenceType(action),
+          referenceId: undefined,
+        });
       });
     }
 
@@ -261,33 +339,44 @@ export class ProgressService {
   }
 
   /**
-   * 채팅 메시지 작성 적립
+   * 채팅 메시지 포인트 적립
    */
-  async awardChatMessage(userId: string, timezone: string = 'Asia/Seoul'): Promise<AwardResult> {
-    return this.awardAction(userId, UserProgressAction.CHAT_MESSAGE, new Date(), timezone);
+  async awardChatMessage(
+    userId: string,
+    timezone: string = 'Asia/Seoul',
+  ): Promise<AwardResult> {
+    return this.awardAction(
+      userId,
+      UserProgressAction.CHAT_MESSAGE,
+      new Date(),
+      timezone,
+    );
   }
 
   /**
-   * 게시글 작성 적립
+   * 게시글 작성 포인트 적립
    */
-  async awardPostCreate(userId: string, timezone: string = 'Asia/Seoul'): Promise<AwardResult> {
-    return this.awardAction(userId, UserProgressAction.POST_CREATE, new Date(), timezone);
+  async awardPostCreate(
+    userId: string,
+    timezone: string = 'Asia/Seoul',
+  ): Promise<AwardResult> {
+    return this.awardAction(
+      userId,
+      UserProgressAction.POST_CREATE,
+      new Date(),
+      timezone,
+    );
   }
 
   /**
-   * 데일리 출석 적립 (하루 1회 제한)
+   * 출석 포인트 적립
    */
   async awardDailyAttendance(userId: string): Promise<AwardResult> {
     return this.awardAction(userId, UserProgressAction.DAILY_ATTENDANCE);
   }
 
   /**
-   * 포인트 차감 (상점 구매 등)
-   *
-   * @param userId 대상 사용자
-   * @param amount 차감할 포인트 양
-   * @param reason 차감 사유
-   * @param now 기준 시간
+   * 포인트 차감 + 트랜잭션 기록
    */
   async deductPoints(
     userId: string,
@@ -307,31 +396,43 @@ export class ProgressService {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
-    const currentPoints = user.points || 0;
-    if (currentPoints < amount) {
+    const current = user.points || 0;
+    if (current < amount) {
       return {
         success: false,
-        message: `포인트가 부족합니다. 필요: ${amount}P, 보유: ${currentPoints}P`,
-        remainingPoints: currentPoints,
+        message: `포인트가 부족합니다. 필요: ${amount}P, 보유: ${current}P`,
+        remainingPoints: current,
       };
     }
 
-    // 트랜잭션을 사용하여 안전하게 포인트 차감 (레이스 컨디션 방지)
-    await this.userRepository.manager.transaction(async (transactionalEntityManager) => {
-      // 포인트 차감
-      await transactionalEntityManager.decrement(User, { id: userId }, 'points', amount);
+    await this.userRepository.manager.transaction(async (tem) => {
+      await tem.decrement(User, { id: userId }, 'points', amount);
+      user.points = current - amount;
 
-      // 이벤트 발행
+      // 트랜잭션 타입 결정
+      const txType = this.guessShopPurchase(reason)
+        ? PointTransactionType.SHOP_PURCHASE
+        : PointTransactionType.ADJUSTMENT;
+
+      await this.recordPointTransaction({
+        manager: tem,
+        userId,
+        amount: -amount, // 차감이므로 음수 기록
+        balanceAfter: user.points,
+        type: txType,
+        description: reason || '포인트 차감',
+        referenceType: this.guessShopPurchase(reason)
+          ? PointReferenceType.SHOP_ITEM
+          : undefined,
+      });
+
       this.eventEmitter.emit('progress.deducted', {
         userId,
         deductedPoints: amount,
-        remainingPoints: currentPoints - amount,
+        remainingPoints: user.points,
         reason,
         timestamp: now,
       });
-
-      // 로컬 객체 업데이트
-      user.points = currentPoints - amount;
     });
 
     return {
@@ -342,17 +443,7 @@ export class ProgressService {
   }
 
   /**
-   * 커스텀 포인트/경험치 지급
-   *
-   * - 사유(reason)와 함께 임의 양 지급
-   * - 기존 enum 구조 유지 위해 action 필드는 임의 값(CHAT_MESSAGE) 사용,
-   *   isCustom=true 로 커스텀 지급 여부를 식별
-   * - 향후 UserProgressAction에 CUSTOM 추가 시 action 교체 가능
-   *
-   * @param userId 대상 사용자
-   * @param amount 지급 양 (포인트=경험치 동일 비율)
-   * @param reason 지급 사유 (로그/이벤트 메타데이터)
-   * @param now 기준 시간
+   * 커스텀 포인트 지급 (관리자 보상, 환불 등)
    */
   async awardCustom(
     userId: string,
@@ -364,7 +455,7 @@ export class ProgressService {
       const snapshot = await this.getUserProgress(userId);
       return {
         userId,
-        action: UserProgressAction.CHAT_MESSAGE,
+        action: UserProgressAction.CHAT_MESSAGE, // placeholder
         addedPoints: 0,
         totalPoints: snapshot.points,
         skipped: true,
@@ -377,12 +468,27 @@ export class ProgressService {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
-    user.points = (user.points || 0) + amount;
-    await this.userRepository.save(user);
+    const before = user.points || 0;
+
+    await this.userRepository.manager.transaction(async (tem) => {
+      await tem.increment(User, { id: userId }, 'points', amount);
+      user.points = before + amount;
+
+      await this.recordPointTransaction({
+        manager: tem,
+        userId,
+        amount,
+        balanceAfter: user.points,
+        type: PointTransactionType.ADJUSTMENT,
+        description: reason || '커스텀 지급',
+        referenceType: PointReferenceType.SYSTEM,
+        metadata: { isCustom: true, reason },
+      });
+    });
 
     const result: AwardResult = {
       userId,
-      action: UserProgressAction.CHAT_MESSAGE,
+      action: UserProgressAction.CHAT_MESSAGE, // enum 확장 전까지 임시 사용
       addedPoints: amount,
       totalPoints: user.points,
       skipped: false,
@@ -395,14 +501,50 @@ export class ProgressService {
     return result;
   }
 
-  /**
-   * (헬퍼) 액션별 기본 보상 값 조회
-   */
   getRewardValue(action: UserProgressAction): number {
     return USER_PROGRESS_REWARD[action] ?? 0;
+  }
+
+  // ================== 부가 설명/가독성 위한 헬퍼 ==================
+
+  /**
+   * 액션별 자동 설명 문자열
+   */
+  private buildAutoDescription(
+    action: UserProgressAction,
+    reward: number,
+  ): string {
+    switch (action) {
+      case UserProgressAction.CHAT_MESSAGE:
+        return `채팅 메시지 작성 +${reward}P`;
+      case UserProgressAction.POST_CREATE:
+        return `게시글 작성 +${reward}P`;
+      case UserProgressAction.DAILY_ATTENDANCE:
+        return `출석 체크 +${reward}P`;
+      default:
+        return `포인트 적립 +${reward}P`;
+    }
+  }
+
+  /**
+   * 액션 → 참조 타입 추론
+   */
+  private resolveReferenceType(
+    action: UserProgressAction,
+  ): PointReferenceType | undefined {
+    switch (action) {
+      case UserProgressAction.CHAT_MESSAGE:
+        return PointReferenceType.CHAT_MESSAGE;
+      case UserProgressAction.POST_CREATE:
+        return PointReferenceType.POST;
+      case UserProgressAction.DAILY_ATTENDANCE:
+        return PointReferenceType.ATTENDANCE;
+      default:
+        return undefined;
+    }
   }
 }
 
 /*
-커밋 메세지: feat(progress): 커스텀 포인트/경험치 지급 메서드 awardCustom 추가
+커밋 메세지: feat(progress): 포인트 적립/차감/커스텀 지급 시 PointTransaction 이력 기록 추가
 */

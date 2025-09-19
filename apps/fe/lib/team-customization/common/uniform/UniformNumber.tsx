@@ -51,7 +51,7 @@ export const UniformNumber: React.FC<UniformNumberProps> = ({
   // 폰트별 최적화된 테두리 두께 계산
   const getOptimizedThickness = (baseThickness: number) => {
     // SpaceGrotesk-SemiBold는 더 얇은 폰트이므로 테두리를 더 얇게 조정
-    const fontMultiplier = 0.7; // 더 얇은 테두리를 위한 배율 감소
+    const fontMultiplier = 1.5; // 더 얇은 테두리를 위한 배율 감소
     // 폰트 사이즈에 따른 추가 조정 (큰 폰트일수록 상대적으로 테두리가 얇아 보임)
     const sizeMultiplier = fontSize > 50 ? 0.9 : fontSize > 30 ? 0.8 : 0.7;
     return Math.max(0.5, Math.round(baseThickness * fontMultiplier * sizeMultiplier * 10) / 10);

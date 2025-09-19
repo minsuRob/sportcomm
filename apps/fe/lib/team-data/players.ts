@@ -2265,7 +2265,7 @@ export function deriveTeamSlug(teamName?: string | null): TeamId | null {
   if (n.includes("삼성") || n.includes("samsung")) return TEAM_IDS.SAMSUNG;
   if (n.includes("기아") || n.includes("kia")) return TEAM_IDS.KIA;
   if (n.includes("ssg") || n.includes("landers") || n.includes("랜더스")) return TEAM_IDS.SSG;
-  if (n.includes("lg") && (n.includes("트윈스") || n.includes("twins"))) return TEAM_IDS.LG;
+  if (n.includes("lg") || (n.includes("트윈스") || n.includes("twins"))) return TEAM_IDS.LG;
   if (n.includes("롯데") || n.includes("lotte") || n.includes("giants")) return TEAM_IDS.LOTTE;
   if (n.includes("다이노스") || n.includes("dinos") || n.includes("nc")) return TEAM_IDS.NC;
   if (n.includes("위즈") || n.includes("wiz") || n === "kt") return TEAM_IDS.KT;

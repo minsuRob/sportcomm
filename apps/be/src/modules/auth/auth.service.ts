@@ -317,12 +317,19 @@ export class AuthService {
     userId: string,
     updateData: Partial<Pick<User, 'nickname' | 'bio' | 'profileImageUrl' | 'age'>>,
   ): Promise<User> {
-    // 닉네임 변경 시 중복 확인
+    // 닉네임 입력 보정 (공백 제거)
+    if (typeof updateData.nickname === 'string') {
+      updateData.nickname = updateData.nickname.trim();
+      if (updateData.nickname.length === 0) {
+        delete updateData.nickname; // 빈 닉네임은 업데이트 대상에서 제외
+      }
+    }
+
+    // 닉네임 변경 시 자기 자신과 동일한지, 중복인지 확인
     if (updateData.nickname) {
       const existingUser = await this.userRepository.findOne({
         where: { nickname: updateData.nickname },
       });
-
       if (existingUser && existingUser.id !== userId) {
         throw new ConflictException('이미 사용 중인 닉네임입니다.');
       }

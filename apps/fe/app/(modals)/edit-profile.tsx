@@ -42,7 +42,7 @@ export default function EditProfileScreen() {
 
   // 상태 관리
   // 전역 AuthContext에서 사용자 정보 사용 (로컬 currentUser 상태 제거)
-  const { user: currentUser, updateUser, reloadUser } = useAuth();
+  const { user: currentUser, updateUser, reloadUser, accessToken } = useAuth();
   const [profileImage, setProfileImage] = useState<string>("");
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
@@ -415,18 +415,20 @@ export default function EditProfileScreen() {
             nickname: name.trim(),
             bio: bio.trim(),
             profileImageUrl: profileImage,
-            age: age, // 나이 필드 추가
+            age: age,
           },
         },
+        fetchPolicy: "no-cache",
       });
 
       if (result.data?.updateProfile) {
-        // AuthContext를 통한 사용자 정보 업데이트 (권장)
+        // 서버에서 반환한 최신 사용자 정보로 로컬 세션 동기화
+        const updated = result.data.updateProfile as Partial<User>;
         await updateUser({
-          nickname: name.trim(),
-          bio: bio.trim(),
-          profileImageUrl: profileImage,
-          age, // 나이 필드도 업데이트
+          nickname: updated.nickname ?? name.trim(),
+          bio: updated.bio ?? bio.trim(),
+          profileImageUrl: updated.profileImageUrl ?? profileImage,
+          age: typeof updated.age === "number" ? updated.age : age,
         });
 
         showToast({
@@ -436,7 +438,8 @@ export default function EditProfileScreen() {
           duration: 3000,
         });
 
-        router.back();
+        // 프로필 편집 완료 후 프로필 화면으로 이동
+        router.replace("/(app)/profile");
       }
     } catch (error) {
       console.error("프로필 업데이트 오류:", error);

@@ -192,7 +192,7 @@ const mapGraphQLTeamIdToLocalTeamId = (graphQLTeamId: string): TeamId => {
 
   // 매핑 실패 시 로그로 확인
   if (!result) {
-    console.warn("팀 ID 매핑 실패:", graphQLTeamId, "-> 기본값(doosan) 사용");
+    // console.warn("팀 ID 매핑 실패:", graphQLTeamId, "-> 기본값(doosan) 사용");
   }
 
   return result || TEAM_IDS.DOOSAN; // 기본값
@@ -343,16 +343,16 @@ export default function TeamSelectionScreen() {
   // --- 팀 선택/재선택 (my-teams-settings.tsx 패턴 적용) ---
   const handleTeamSelect = useCallback((teamId: string) => {
     // 디버깅: 실제 팀 ID 확인
-    console.log("=== 팀 선택 디버깅 ===");
-    console.log("GraphQL Team ID:", teamId);
+    // console.log("=== 팀 선택 디버깅 ===");
+    // console.log("GraphQL Team ID:", teamId);
 
-    const mappedTeamId = mapGraphQLTeamIdToLocalTeamId(teamId);
-    console.log("매핑된 로컬 Team ID:", mappedTeamId);
+    // const mappedTeamId = mapGraphQLTeamIdToLocalTeamId(teamId);
+    // console.log("매핑된 로컬 Team ID:", mappedTeamId);
 
     // 실제 선수 데이터 확인
-    const { getPlayersByTeam } = require("@/lib/team-data/players");
-    const players = getPlayersByTeam(mappedTeamId);
-    console.log(`매핑된 팀(${mappedTeamId})의 선수 수:`, players.length);
+    // const { getPlayersByTeam } = require("@/lib/team-data/players");
+    // const players = getPlayersByTeam(mappedTeamId);
+    // console.log(`매핑된 팀(${mappedTeamId})의 선수 수:`, players.length);
 
     setTeams((prev) => {
       const existingTeam = prev.find((t) => t.teamId === teamId);
@@ -360,7 +360,9 @@ export default function TeamSelectionScreen() {
 
       if (isAlreadySelected) {
         // 이미 선택된 팀이면 → 아무것도 하지 않음 (재선택은 설정 팝오버에서 처리)
-        return prev;
+        return prev.filter((t) => t.teamId !== teamId);
+        // return prev;
+
       } else {
         // 새로 선택하는 경우
         const teamData = sportsData?.sports

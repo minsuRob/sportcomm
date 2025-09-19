@@ -42,7 +42,7 @@ const DEFAULT_SUCCESS_HIDE_MS = 1200;
 const DEFAULT_ERROR_HIDE_MS = 4500;
 
 // 하이브리드 퍼센트 매핑 상수
-const PREP_MAX = 50; // 준비 단계 최대(가짜)
+const PREP_MAX = 5; // 준비 단계 최대(가짜)
 const UPLOAD_MAX = 90; // 업로드 단계 종료(실제 업로드 → 스케일된 최종)
 const FINAL_MIN = 90; // 최종 단계 시작
 const FINAL_DURATION_MS = 600; // 90 → 100 애니메이션 시간
@@ -123,7 +123,7 @@ const UploadTaskBar: React.FC<UploadTaskBarProps> = ({
         setDisplayedProgress((prev) => {
           const cap = isComposite ? 90 : UPLOAD_MAX; // 자동 증가는 업로드 상한까지만
           if (prev >= cap) return prev;
-          const inc = Math.floor(Math.random() * 6) + 3; // 3~8 사이 랜덤 증가
+          const inc = Math.floor(Math.random() * 3) + 3; // 3~8 사이 랜덤 증가
           const next = Math.min(prev + inc, cap);
           displayedProgressRef.current = next;
           // 증가 후 시간 갱신 (다음 1초 대기)

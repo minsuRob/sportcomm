@@ -1174,7 +1174,7 @@ const $socialButtonContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 
 const $continueButton: ThemedStyle<ViewStyle> = ({ colors }) => ({
   // 메인 액션: 검은색(또는 텍스트 컬러) 배경의 두꺼운 필 버튼
-  backgroundColor: colors.text,
+  backgroundColor: colors.tint,
   borderRadius: 28,
   height: 52,
   justifyContent: "center",

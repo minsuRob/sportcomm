@@ -491,16 +491,16 @@ export default function AuthScreen() {
       console.log(`🔄 ${provider} 소셜 로그인 시작`);
 
       // 현재: 모든 소셜 로그인(구글, 애플)을 "곧 지원 예정"으로 처리
-      setDialog({
-        visible: true,
-        title: "알림",
-        description: `${provider === "google" ? "Google" : "Apple"} 로그인은 곧 지원 예정입니다.`,
-      });
-      return;
+      // setDialog({
+      //   visible: true,
+      //   title: "알림",
+      //   description: `${provider === "google" ? "Google" : "Apple"} 로그인은 곧 지원 예정입니다.`,
+      // });
+      // return;
 
       // ==================== 기존 구글 로그인 구현 코드 ====================
       // TODO: 추후 소셜 로그인 구현 시 아래 주석 해제하여 사용
-      /*
+      // /*
       // 1. 리다이렉트 URL 설정 (웹/모바일 환경에 따라 다름)
       const redirectTo =
         typeof window !== "undefined" && window.location?.origin
@@ -519,7 +519,7 @@ export default function AuthScreen() {
       // - Supabase Auth의 onAuthStateChange로 세션 변경 감지
       // - 사용자 정보 백엔드 동기화
       // - 로그인 성공 후 메인 화면으로 이동
-      */
+      // */
 
       // ==================== Apple 로그인 구현 계획 ====================
       /*

@@ -155,13 +155,7 @@ export class FindPostsInput {
   @Max(100, { message: '페이지 크기는 100 이하여야 합니다.' })
   limit?: number;
 
-  @Field(() => String, {
-    nullable: true,
-    description: '커서 기반 페이지네이션용 커서 (createdAt.timestamp)',
-  })
-  @IsOptional()
-  @IsString({ message: '커서는 문자열이어야 합니다.' })
-  cursor?: string;
+  // 커서 기반 페이지네이션 제거
 
   @Field(() => [String], {
     nullable: true,
@@ -238,17 +232,7 @@ export class PostsResponse {
   @Field(() => Boolean, { description: '다음 페이지 존재 여부' })
   hasNext: boolean;
 
-  @Field(() => String, {
-    nullable: true,
-    description: '커서 기반 페이지네이션용 다음 커서'
-  })
-  nextCursor?: string;
-
-  @Field(() => String, {
-    nullable: true,
-    description: '커서 기반 페이지네이션용 이전 커서'
-  })
-  previousCursor?: string;
+  // 커서 필드 제거
 }
 
 /**
@@ -421,7 +405,7 @@ export class PostsResolver {
     const options: FindPostsOptions = {
       page: findPostsInput?.page || 1,
       limit: findPostsInput?.limit || 10,
-      cursor: findPostsInput?.cursor,
+      // cursor 제거
       authorId: findPostsInput?.authorId,
       publicOnly: findPostsInput?.publicOnly || !user, // 비로그인 사용자는 공개 게시물만 조회
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
@@ -432,21 +416,7 @@ export class PostsResolver {
 
     const response = await this.postsService.findAll(options, user?.id);
 
-    // DataLoader를 사용하여 좋아요/북마크 상태 로드 (N+1 문제 해결)
-    if (response.posts.length > 0 && user) {
-      const postIds = response.posts.map(post => post.id);
-
-      // 좋아요 상태 로드
-      const likedMap = await this.postsService.loadLikedStatusForPosts(postIds, user.id);
-      // 북마크 상태 로드
-      const bookmarkedMap = await this.postsService.loadBookmarkedStatusForPosts(postIds, user.id);
-
-      // 각 게시물에 상태 설정
-      response.posts.forEach(post => {
-        post.isLiked = likedMap.get(post.id) || false;
-        post.isBookmarked = bookmarkedMap.get(post.id) || false;
-      });
-    }
+    // 배치 상태 로딩 제거: 필요 시 각 필드 리졸버가 개별 조회 수행
 
     return response;
   }

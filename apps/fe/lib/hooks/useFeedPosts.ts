@@ -102,7 +102,7 @@ interface FeedDataResponse {
   blockedUsers?: string[];
 }
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 6;
 const STORAGE_KEY = "selected_team_filter";
 
 /**
@@ -598,7 +598,7 @@ export function useFeedPosts() {
   ]);
 
   /**
-   * 추가 로드 (커서 기반 페이지네이션)
+   * 추가 로드 (페이지 기반 단순화)
    */
   const handleLoadMore = useCallback(() => {
     if (!filterInitialized || !mountedRef.current) return;
@@ -606,85 +606,28 @@ export function useFeedPosts() {
     if (isAuthenticated) {
       if (authFetching || !authData?.posts?.hasNext) return;
 
-      // 커서 기반 페이지네이션 사용 (nextCursor가 있으면 사용)
-      const nextCursor = authData.posts.nextCursor;
-      if (nextCursor) {
-        console.log('🔄 [LoadMore] Using cursor-based pagination:', nextCursor);
-        void authFetchMore({
-          variables: {
-            input: {
-              cursor: nextCursor,
-              limit: PAGE_SIZE,
-              teamIds: selectedTeamIds,
-            },
-            includeBlockedUsers: shouldLoadBlockedUsers,
+      const nextPage = (authData?.posts?.page ?? 0) + 1;
+      void authFetchMore({
+        variables: {
+          input: {
+            page: nextPage,
+            limit: PAGE_SIZE,
+            teamIds: selectedTeamIds,
           },
-          updateQuery: (prev, { fetchMoreResult }) => {
-            if (!fetchMoreResult) return prev;
-            return {
-              ...fetchMoreResult,
-              posts: {
-                ...fetchMoreResult.posts,
-                posts: [
-                  ...(prev.posts?.posts || []),
-                  ...(fetchMoreResult.posts?.posts || []),
-                ],
-              },
-            };
-          },
-        });
-      } else {
-        // 레거시 페이지네이션 fallback
-        const nextPage = (authData?.posts?.page ?? 0) + 1;
-        console.log('📄 [LoadMore] Using legacy pagination:', nextPage);
-        void authFetchMore({
-          variables: {
-            input: {
-              page: nextPage,
-              limit: PAGE_SIZE,
-              teamIds: selectedTeamIds,
-            },
-            includeBlockedUsers: shouldLoadBlockedUsers,
-          },
-          updateQuery: (prev, { fetchMoreResult }) => fetchMoreResult ?? prev,
-        });
-      }
+          includeBlockedUsers: shouldLoadBlockedUsers,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => fetchMoreResult ?? prev,
+      });
     } else {
       if (publicFetching || !publicData?.posts?.hasNext) return;
 
-      // 커서 기반 페이지네이션 사용
-      const nextCursor = publicData.posts.nextCursor;
-      if (nextCursor) {
-        console.log('🔄 [LoadMore] Using cursor-based pagination for guest:', nextCursor);
-        void publicFetchMore({
-          variables: {
-            input: { cursor: nextCursor, limit: PAGE_SIZE, teamIds: null },
-          },
-          updateQuery: (prev, { fetchMoreResult }) => {
-            if (!fetchMoreResult) return prev;
-            return {
-              ...fetchMoreResult,
-              posts: {
-                ...fetchMoreResult.posts,
-                posts: [
-                  ...(prev.posts?.posts || []),
-                  ...(fetchMoreResult.posts?.posts || []),
-                ],
-              },
-            };
-          },
-        });
-      } else {
-        // 레거시 페이지네이션 fallback
-        const nextPage = (publicData?.posts?.page ?? 0) + 1;
-        console.log('📄 [LoadMore] Using legacy pagination for guest:', nextPage);
-        void publicFetchMore({
-          variables: {
-            input: { page: nextPage, limit: PAGE_SIZE, teamIds: null },
-          },
-          updateQuery: (prev, { fetchMoreResult }) => fetchMoreResult ?? prev,
-        });
-      }
+      const nextPage = (publicData?.posts?.page ?? 0) + 1;
+      void publicFetchMore({
+        variables: {
+          input: { page: nextPage, limit: PAGE_SIZE, teamIds: null },
+        },
+        updateQuery: (prev, { fetchMoreResult }) => fetchMoreResult ?? prev,
+      });
     }
   }, [
     authData,

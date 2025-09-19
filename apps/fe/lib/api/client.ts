@@ -108,28 +108,12 @@ export const client = new ApolloClient({
           },
           sports: { merge: (_, incoming) => incoming },
           posts: {
-            // 커서 기반 페이지네이션 지원을 위한 캐시 키 설정
-            keyArgs: ["input", ["authorId", "teamIds", "publicOnly", "cursor"]],
+            // 단순 페이지 기반 병합
+            keyArgs: ["input", ["authorId", "teamIds", "publicOnly", "page"]],
             merge(existing, incoming, { args }) {
-              // 커서 기반 페이지네이션 처리
-              if (args?.input?.cursor) {
-                // 커서가 있으면 기존 데이터에 추가
-                console.log('🔄 [Cache] Merging cursor-based pagination');
-                return {
-                  ...incoming,
-                  posts: [...(existing?.posts || []), ...(incoming.posts || [])],
-                  nextCursor: incoming.nextCursor,
-                  previousCursor: incoming.previousCursor,
-                };
-              }
-
-              // 일반 페이지네이션
               if (!existing || args?.input?.page === 1) {
-                console.log('📝 [Cache] Setting first page data');
                 return incoming;
               }
-
-              console.log('📄 [Cache] Merging paginated data');
               return {
                 ...incoming,
                 posts: [...(existing.posts || []), ...(incoming.posts || [])],

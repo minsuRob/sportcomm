@@ -10,7 +10,6 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ProgressService } from '../progress/progress.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import * as DataLoader from 'dataloader';
 import { Post } from '../../entities/post.entity';
 import { PostVersion } from '../../entities/post-version.entity';
 import { PostLike } from '../../entities/post-like.entity';
@@ -70,8 +69,7 @@ export interface FindPostsOptions {
   page?: number;
   /** 페이지 크기 */
   limit?: number;
-  /** 커서 기반 페이지네이션용 커서 */
-  cursor?: string;
+  // 커서 기반 페이지네이션 제거
   /** 작성자 ID 필터 */
   authorId?: string;
   /** 공개 게시물만 조회 */
@@ -104,10 +102,7 @@ export interface PostsResponse {
   hasPrevious: boolean;
   /** 다음 페이지 존재 여부 */
   hasNext: boolean;
-  /** 다음 페이지 커서 */
-  nextCursor?: string;
-  /** 이전 페이지 커서 */
-  previousCursor?: string;
+  // 커서 정보 제거 (중간 규모 최적화 단순화)
 }
 
 /**
@@ -239,23 +234,10 @@ export class PostsService {
    * @returns 게시물 목록과 페이지네이션 정보
    */
   async findAll(options: FindPostsOptions = {}, userId?: string): Promise<PostsResponse> {
-    // 캐시 키 생성 (사용자별 + 필터별로 구분)
-    const cacheKey = this.generateCacheKey(options, userId);
-
-    // 캐시에서 데이터 확인
-    try {
-      const cachedResult = await this.cacheManager.get<PostsResponse>(cacheKey);
-      if (cachedResult) {
-        console.log(`📖 [Cache] Hit for key: ${cacheKey}`);
-        return cachedResult;
-      }
-    } catch (error) {
-      console.warn(`⚠️ [Cache] Failed to get cached data:`, error);
-    }
     const {
       page = 1,
       limit = 10,
-      cursor,
+      // cursor 제거
       authorId,
       publicOnly = false,
       sortBy = 'createdAt',
@@ -264,27 +246,8 @@ export class PostsService {
       teamIds,
     } = options;
 
-    // 커서 기반 페이지네이션 처리
-    let skip = (page - 1) * limit;
-    let cursorTimestamp: Date | null = null;
-
-    if (cursor) {
-      try {
-        // 커서를 timestamp로 변환 (형식: "2024-01-01T00:00:00.000Z")
-        cursorTimestamp = new Date(cursor);
-        if (isNaN(cursorTimestamp.getTime())) {
-          cursorTimestamp = null;
-        }
-      } catch (error) {
-        console.warn('Invalid cursor format:', cursor);
-        cursorTimestamp = null;
-      }
-    }
-
-    // 커서가 있으면 offset 계산 무시
-    if (cursorTimestamp) {
-      skip = 0;
-    }
+    // 오프셋 기반 페이지네이션 (단순, 안정적)
+    const skip = (page - 1) * limit;
 
     // 쿼리 빌더 생성 (최적화 버전)
     // N+1 문제 해결을 위해 관계 데이터는 별도 로드
@@ -317,20 +280,7 @@ export class PostsService {
       queryBuilder.andWhere('post.teamId IN (:...teamIds)', { teamIds });
     }
 
-    // 커서 기반 페이지네이션 조건 적용
-    if (cursorTimestamp) {
-      if (sortOrder === 'DESC') {
-        // 최신순: 커서보다 이전 게시물들 (createdAt < cursor)
-        queryBuilder.andWhere('post.createdAt < :cursorTimestamp', {
-          cursorTimestamp,
-        });
-      } else {
-        // 오래된순: 커서보다 이후 게시물들 (createdAt > cursor)
-        queryBuilder.andWhere('post.createdAt > :cursorTimestamp', {
-          cursorTimestamp,
-        });
-      }
-    }
+    // 커서 조건 제거
 
     // 정렬 적용
     queryBuilder.orderBy(`post.${sortBy}`, sortOrder);
@@ -338,15 +288,8 @@ export class PostsService {
     // 고정 게시물 우선 정렬
     queryBuilder.addOrderBy('post.isPinned', 'DESC');
 
-    // 총 개수 조회 (커서 기반일 때는 대략적인 값 사용)
-    let total: number;
-    if (cursorTimestamp) {
-      // 커서 기반 페이지네이션에서는 정확한 total 계산이 비효율적
-      // 대략적인 값으로 처리하거나, 필요시 별도 쿼리로 계산
-      total = await queryBuilder.getCount();
-    } else {
-      total = await queryBuilder.getCount();
-    }
+    // 총 개수 조회 (단순)
+    const total = await queryBuilder.getCount();
 
     // 페이지네이션 적용 및 데이터 조회
     const posts = await queryBuilder.skip(skip).take(limit).getMany();
@@ -367,20 +310,6 @@ export class PostsService {
     const hasPrevious = page > 1;
     const hasNext = page < totalPages;
 
-    // 커서 정보 계산
-    let nextCursor: string | undefined;
-    let previousCursor: string | undefined;
-
-    if (posts.length > 0) {
-      // 다음 페이지 커서: 마지막 게시물의 createdAt
-      const lastPost = posts[posts.length - 1];
-      nextCursor = lastPost.createdAt.toISOString();
-
-      // 이전 페이지 커서: 첫 번째 게시물의 createdAt
-      const firstPost = posts[0];
-      previousCursor = firstPost.createdAt.toISOString();
-    }
-
     const result = {
       posts,
       total,
@@ -389,18 +318,7 @@ export class PostsService {
       totalPages,
       hasPrevious,
       hasNext,
-      nextCursor,
-      previousCursor,
     };
-
-    // 결과를 캐시에 저장 (5분 TTL)
-    try {
-      await this.cacheManager.set(cacheKey, result, 300000); // 5분 = 300,000ms
-      console.log(`💾 [Cache] Saved result for key: ${cacheKey}`);
-    } catch (error) {
-      console.warn(`⚠️ [Cache] Failed to save cached data:`, error);
-    }
-
     return result;
   }
 
@@ -981,35 +899,7 @@ export class PostsService {
    * @param userId - 사용자 ID
    * @returns 캐시 키
    */
-  private generateCacheKey(options: FindPostsOptions, userId?: string): string {
-    const {
-      page = 1,
-      limit = 10,
-      cursor,
-      authorId,
-      publicOnly = false,
-      sortBy = 'createdAt',
-      sortOrder = 'DESC',
-      search,
-      teamIds,
-    } = options;
-
-    // 캐시 키 구성 요소들
-    const components = [
-      'posts',
-      userId || 'guest', // 사용자별 캐시 분리
-      `page:${page}`,
-      `limit:${limit}`,
-      cursor ? `cursor:${cursor}` : 'no-cursor',
-      authorId ? `author:${authorId}` : 'all-authors',
-      `public:${publicOnly}`,
-      `sort:${sortBy}-${sortOrder}`,
-      search ? `search:${search}` : 'no-search',
-      teamIds ? `teams:${teamIds.sort().join(',')}` : 'all-teams',
-    ];
-
-    return components.join(':');
-  }
+  // 캐시 키 로직 제거 (서버 캐시 미사용)
 
   /**
    * DataLoader를 사용한 태그 로드 (N+1 문제 해결)

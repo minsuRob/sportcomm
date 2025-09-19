@@ -581,7 +581,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               value={ageText}
               onChangeText={handleAgeChange}
               keyboardType="numeric"
-              placeholder="나이를 입력하세요 (1~120)"
+              placeholder="나이를 입력하세요"
               placeholderTextColor={theme.colors.textDim}
               maxLength={3}
             />

@@ -521,6 +521,28 @@ export default function PostSignupProfileScreen(): React.ReactElement {
                     logoUrl: team.logoUrl,
                     icon: team.icon,
                   },
+                  // user.myTeams에서 해당 팀의 teamRegistrationOrder 가져오기
+                  teamRegistrationOrder: (() => {
+                    const foundUserTeam = user?.myTeams?.find(
+                      (userTeam) => userTeam.teamId === team.id || userTeam.team?.id === team.id
+                    );
+                    console.log('🔍 TeamList teamRegistrationOrder debug:', {
+                      teamId: team.id,
+                      teamName: team.name,
+                      foundUserTeam: foundUserTeam ? {
+                        id: foundUserTeam.id,
+                        teamId: foundUserTeam.teamId,
+                        teamRegistrationOrder: foundUserTeam.teamRegistrationOrder,
+                        hasTeam: !!foundUserTeam.team
+                      } : null,
+                      allMyTeams: user?.myTeams?.map(mt => ({
+                        teamId: mt.teamId,
+                        teamRegistrationOrder: mt.teamRegistrationOrder,
+                        teamName: mt.team?.name
+                      }))
+                    });
+                    return foundUserTeam?.teamRegistrationOrder;
+                  })(),
                 }))}
                 size={24}
                 horizontal={true}

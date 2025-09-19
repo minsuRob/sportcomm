@@ -46,6 +46,7 @@ export const USER_TEAM_FRAGMENT = gql`
     favoriteDate
     favoritePlayerName
     favoritePlayerNumber
+    teamRegistrationOrder
     createdAt
     team {
       ...TeamInfo
@@ -234,6 +235,7 @@ export interface UserTeam {
   favoriteDate?: string;
   favoritePlayerName?: string;
   favoritePlayerNumber?: number;
+  teamRegistrationOrder?: number;
   createdAt: string;
   team: Team;
 }

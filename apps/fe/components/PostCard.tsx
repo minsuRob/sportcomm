@@ -76,6 +76,8 @@ export interface User {
     // 백엔드 UserTeam.favoritePlayerName / favoritePlayerNumber 매핑
     favoritePlayerName?: string;
     favoritePlayerNumber?: number;
+    // 팀 등록 순번 (1부터 시작)
+    teamRegistrationOrder?: number;
   }[];
   // 호환성을 위한 추가 필드들
   authorTeams?: {

@@ -30,6 +30,7 @@ const SYNC_USER_MUTATION = gql`
         favoriteDate
         favoritePlayerName
         favoritePlayerNumber
+        teamRegistrationOrder
         experience
         level
         experienceToNextLevel
@@ -67,6 +68,7 @@ const UPDATE_USER_PROFILE_MUTATION = gql`
         favoriteDate
         favoritePlayerName
         favoritePlayerNumber
+        teamRegistrationOrder
         experience
         level
         experienceToNextLevel
@@ -104,6 +106,7 @@ const GET_CURRENT_USER_INFO_QUERY = gql`
         favoriteDate
         favoritePlayerName
         favoritePlayerNumber
+        teamRegistrationOrder
         experience
         level
         experienceToNextLevel

@@ -623,7 +623,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={themed($settingButton)}
               onPress={() => openPhotoCardSelector(item.teamId)}
               activeOpacity={0.85}
@@ -636,7 +636,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
               <Text style={themed($settingText)} numberOfLines={1}>
                 {photoLabel}
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
       );

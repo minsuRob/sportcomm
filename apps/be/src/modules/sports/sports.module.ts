@@ -5,6 +5,7 @@ import { SportsService } from './sports.service';
 import { SportsResolver } from './sports.resolver';
 import { TeamsService } from './teams.service';
 import { TeamsResolver } from './teams.resolver';
+import { UserTeamResolver } from './user-team.resolver';
 import { TeamsMutationResolver } from './teams.mutation';
 
 /**
@@ -21,6 +22,7 @@ import { TeamsMutationResolver } from './teams.mutation';
     TeamsService,
     TeamsResolver,
     TeamsMutationResolver,
+    UserTeamResolver,
   ],
   exports: [SportsService, TeamsService],
 })

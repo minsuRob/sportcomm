@@ -517,7 +517,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
             year: "numeric",
             month: "short",
           })
-        : "날짜 선택";
+        : "좋아한 날짜";
 
       const playerLabel = item._tempFavoritePlayerName
         ? `${item._tempFavoritePlayerName} (#${item._tempFavoritePlayerNumber ?? "?"})`
@@ -590,7 +590,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
                 size={16}
                 color={theme.colors.tint}
               />
-              <Text style={themed($settingText)} numberOfLines={1}>
+              <Text style={themed($settingText)}>
                 {dateLabel}
               </Text>
             </TouchableOpacity>
@@ -1072,7 +1072,7 @@ const $settingButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderWidth: 1,
   borderColor: colors.border,
   gap: spacing.xs,
-  maxWidth: "32%",
+  maxWidth: "34%",
   flexGrow: 1,
 });
 

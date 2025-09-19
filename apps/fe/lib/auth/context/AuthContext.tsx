@@ -8,6 +8,7 @@ import React, {
   useState,
   PropsWithChildren,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { User as LocalUser } from "@/lib/auth";
 import { getSession, saveSession, clearSession } from "@/lib/auth"; // 기존 세션 유틸 (스토리지 + 이벤트 브로드캐스트)
 import {
@@ -43,6 +44,11 @@ export interface AuthContextValue {
   /** 마지막으로 사용자 정보를 성공적으로 동기화한 시각 */
   lastSyncedAt: Date | null;
 }
+
+/**
+ * 선택된 팀 필터 스토리지 키
+ */
+const SELECTED_TEAM_FILTER_KEY = "selected_team_filter";
 
 /**
  * 내부 Context 생성
@@ -278,10 +284,19 @@ export function AuthProvider({
    * 로그아웃
    * - clearSession 호출 (스토리지 + 이벤트)
    * - Supabase signOut (token-manager signOut 내장)
+   * - selected_team_filter AsyncStorage 제거
    */
   const signOut = useCallback(async () => {
     setIsLoading(true);
     try {
+      // 로그아웃 시 선택된 팀 필터 제거
+      try {
+        await AsyncStorage.removeItem(SELECTED_TEAM_FILTER_KEY);
+        // log("selected_team_filter AsyncStorage에서 제거됨");
+      } catch (storageError) {
+        log("팀 필터 제거 실패:", (storageError as any)?.message);
+      }
+
       await clearSession(); // 내부에서 logout 이벤트 브로드캐스트
       await supabaseSignOut();
       setUser(null);

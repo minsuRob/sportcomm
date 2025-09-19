@@ -14,6 +14,7 @@
 
 import { supabase } from "../supabase/client";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { EnhancedUserSyncService } from "./enhanced-user-sync";
 import { AuthStore } from "../store/auth-store";
 
@@ -47,6 +48,11 @@ function isValidSubscription(
     typeof (value as any).unsubscribe === "function"
   );
 }
+
+/**
+ * 선택된 팀 필터 스토리지 키
+ */
+const SELECTED_TEAM_FILTER_KEY = "selected_team_filter";
 
 /**
  * Supabase Auth 이벤트 리스너 클래스 (Singleton-like static)
@@ -226,6 +232,15 @@ export class AuthEventListener {
    */
   private static async handleSignedOut(): Promise<void> {
     //console.log("👋 사용자 로그아웃 감지");
+
+    // 로그아웃 시 선택된 팀 필터 초기화
+    try {
+      await AsyncStorage.removeItem(SELECTED_TEAM_FILTER_KEY);
+      // console.log("🗑️ 로그아웃: selected_team_filter AsyncStorage에서 제거됨");
+    } catch (error) {
+      console.warn("⚠️ 로그아웃 시 팀 필터 제거 실패:", error);
+    }
+
     EnhancedUserSyncService.resetSyncState();
   }
 

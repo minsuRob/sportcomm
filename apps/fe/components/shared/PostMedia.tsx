@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Image,
@@ -8,6 +8,8 @@ import {
   ViewStyle,
   ImageStyle,
   TextStyle,
+  Modal,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
@@ -44,6 +46,11 @@ export default function PostMedia({
   variant = "feed",
 }: PostMediaProps) {
   const { themed, theme } = useAppTheme();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  // 이미지 자세히 보기 모달 상태
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
 
   /**
    * 유효 미디어 (image 또는 video) - 최대 4개만 표시
@@ -83,12 +90,35 @@ export default function PostMedia({
     transformUrl(item.thumbnailUrl || item.url);
 
   /**
+   * 이미지 클릭 핸들러
+   */
+  const handleImagePress = (item: Media) => {
+    // 이미지만 모달로 표시 (비디오는 제외)
+    if (item.type === "image" || item.type === "IMAGE") {
+      setSelectedMedia(item);
+      setImageModalVisible(true);
+    }
+  };
+
+  /**
+   * 모달 닫기 핸들러
+   */
+  const handleCloseModal = () => {
+    setImageModalVisible(false);
+    setSelectedMedia(null);
+  };
+
+  /**
    * Feed 변형: 첫 번째 항목만 (이미지/비디오 구분 없이)
    */
   const renderFeed = () => {
     const first = unifiedMedia[0];
     return (
-      <View style={themed($singleWrapper)}>
+      <TouchableOpacity
+        style={themed($singleWrapper)}
+        onPress={() => handleImagePress(first)}
+        activeOpacity={0.9}
+      >
         <Image
           source={{ uri: getDisplayUrl(first) }}
           style={themed($feedSingleImage)}
@@ -99,7 +129,7 @@ export default function PostMedia({
             <Ionicons name="play" size={32} color="white" />
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -116,7 +146,11 @@ export default function PostMedia({
     if (count === 1) {
       const item = unifiedMedia[0];
       return (
-        <View style={themed($singleWrapper)}>
+        <TouchableOpacity
+          style={themed($singleWrapper)}
+          onPress={() => handleImagePress(item)}
+          activeOpacity={0.9}
+        >
           <Image
             source={{ uri: getDisplayUrl(item) }}
             style={themed($detailSingle)}
@@ -127,7 +161,7 @@ export default function PostMedia({
               <Ionicons name="play" size={40} color="white" />
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       );
     }
 
@@ -135,7 +169,12 @@ export default function PostMedia({
       return (
         <View style={themed($row)}>
           {unifiedMedia.map((item) => (
-            <View key={item.id} style={themed($halfItemWrapper)}>
+            <TouchableOpacity
+              key={item.id}
+              style={themed($halfItemWrapper)}
+              onPress={() => handleImagePress(item)}
+              activeOpacity={0.9}
+            >
               <Image
                 source={{ uri: getDisplayUrl(item) }}
                 style={themed($halfItemImage)}
@@ -146,7 +185,7 @@ export default function PostMedia({
                   <Ionicons name="play" size={28} color="white" />
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       );
@@ -161,7 +200,12 @@ export default function PostMedia({
         contentContainerStyle={themed($detailMediaScrollContent)}
       >
         {unifiedMedia.map((item, index) => (
-          <View key={item.id} style={themed($scrollItemWrapper)}>
+          <TouchableOpacity
+            key={item.id}
+            style={themed($scrollItemWrapper)}
+            onPress={() => handleImagePress(item)}
+            activeOpacity={0.9}
+          >
             <Image
               source={{ uri: getDisplayUrl(item) }}
               style={[
@@ -175,7 +219,7 @@ export default function PostMedia({
                 <Ionicons name="play" size={24} color="white" />
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     );
@@ -183,16 +227,50 @@ export default function PostMedia({
 
   const content = variant === "feed" ? renderFeed() : renderDetail();
 
-  return onPress ? (
-    <TouchableOpacity
-      style={themed($container)}
-      activeOpacity={0.9}
-      onPress={onPress}
-    >
+  return (
+    <View style={themed($container)}>
       {content}
-    </TouchableOpacity>
-  ) : (
-    <View style={themed($container)}>{content}</View>
+
+      {/* 이미지 자세히 보기 모달 */}
+      <Modal
+        visible={imageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseModal}
+      >
+        <TouchableOpacity
+          style={themed($modalOverlay)}
+          activeOpacity={1}
+          onPress={handleCloseModal}
+        >
+          <View style={themed($modalContent)}>
+            {/* 닫기 버튼 */}
+            <TouchableOpacity
+              style={themed($closeButton)}
+              onPress={handleCloseModal}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+
+            {/* 확대된 이미지 */}
+            {selectedMedia && (
+              <Image
+                source={{ uri: getDisplayUrl(selectedMedia) }}
+                style={[
+                  themed($modalImage),
+                  {
+                    width: Math.min(screenWidth * 0.9, screenHeight * 0.7),
+                    height: Math.min(screenWidth * 0.9, screenHeight * 0.7),
+                  },
+                ]}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
   );
 }
 
@@ -343,4 +421,35 @@ const $moreText: ThemedStyle<TextStyle> = () => ({
   color: "white",
   fontSize: 22,
   fontWeight: "700",
+});
+
+/* 모달 스타일 */
+const $modalOverlay: ThemedStyle<ViewStyle> = () => ({
+  flex: 1,
+  backgroundColor: "rgba(0, 0, 0, 0.8)",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $modalContent: ThemedStyle<ViewStyle> = () => ({
+  position: "relative",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $modalImage: ThemedStyle<ImageStyle> = () => ({
+  borderRadius: 12,
+});
+
+const $closeButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  position: "absolute",
+  top: -spacing.xl,
+  right: -spacing.sm,
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: "rgba(0, 0, 0, 0.6)",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 10,
 });

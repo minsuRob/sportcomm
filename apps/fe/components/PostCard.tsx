@@ -167,14 +167,14 @@ const getFirstPlayerInfo = (teamName: string): { name: string; number: string } 
     const teamId = deriveTeamSlug(teamName);
 
     if (!teamId) {
-      return { name: teamName, number: "40" }; // TeamId를 찾지 못하면 기본값 반환
+      return { name: "허구연", number: "40" }; // TeamId를 찾지 못하면 기본값 반환
     }
 
     // TeamId로 선수 목록 가져오기
     const players = getPlayersByTeam(teamId);
 
     if (players.length === 0) {
-      return { name: teamName, number: "40" }; // 선수가 없으면 기본값 반환
+      return { name: "허구연", number: "40" }; // 선수가 없으면 기본값 반환
     }
 
     // 첫 번째 선수의 정보 반환
@@ -185,7 +185,7 @@ const getFirstPlayerInfo = (teamName: string): { name: string; number: string } 
     };
   } catch (error) {
     console.warn("팀 선수 데이터 조회 실패:", error);
-    return { name: teamName, number: "40" }; // 에러 발생 시 기본값 반환
+    return { name: "허구연", number: "40" }; // 에러 발생 시 기본값 반환
   }
 };
 

@@ -428,7 +428,10 @@ export default function FeedScreen() {
           />
 
           {/* FeedList 아래에 AdFit 광고 배너 (adUnit은 env 또는 기본값 사용) */}
-          <AdFitBanner style={{ width: 320, height: 50 }} />
+          {/* <AdFitBanner style={{ width: 320, height: 50 }} /> */}
+          {/* <AdFitBanner width={320} height={50} /> */}
+          <AdFitBanner />
+
         </>
       ) : (
         <ChatRoomList

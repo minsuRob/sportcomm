@@ -46,7 +46,7 @@ import { extractTeams, createUserMeta } from "@/lib/utils/userMeta";
 import { StrokedText } from "@/lib/utils/StrokedText";
 import { UniformPlaceholder } from "@/lib/team-customization/common/uniform/UniformPlaceholder";
 import { useTeamCustomization } from "@/lib/team-customization";
-import { formatDateTime } from "@/lib/utils/dateUtils";
+import { formatDateTime, formatTimeAgo } from "@/lib/utils/dateUtils";
 import { deriveTeamSlug, getPlayersByTeam } from "@/lib/team-data/players";
 
 
@@ -911,7 +911,8 @@ const PostCard = React.memo(function PostCard({
                   style={themed($timeTap)}
                 >
                   <StrokedText
-                    content={formatDateTime(post.createdAt)}
+                    // content={formatDateTime(post.createdAt)}
+                    content={formatTimeAgo(post.createdAt)}
                     fontSize={13}
                     lineHeight={16}
                     numberOfLines={1}

@@ -25,27 +25,29 @@ export abstract class BaseEntity {
   id: string;
 
   /**
-   * 엔티티 생성 시간
+   * 엔티티 생성 시간 (UTC)
    * 레코드가 처음 생성될 때 자동으로 설정됩니다.
+   * 항상 UTC로 저장되어 시간대 문제를 방지합니다.
    */
-  @Field({ description: '생성 일시' })
+  @Field({ description: '생성 일시 (UTC)' })
   @CreateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
-    comment: '생성일시',
+    type: 'timestamp with time zone',
+    default: () => 'CURRENT_TIMESTAMP(6) AT TIME ZONE \'UTC\'',
+    comment: '생성일시 (UTC)',
   })
   createdAt: Date;
 
   /**
-   * 엔티티 최종 수정 시간
+   * 엔티티 최종 수정 시간 (UTC)
    * 레코드가 업데이트될 때마다 자동으로 갱신됩니다.
+   * 항상 UTC로 저장되어 시간대 문제를 방지합니다.
    */
-  @Field({ description: '수정 일시' })
+  @Field({ description: '수정 일시 (UTC)' })
   @UpdateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
-    onUpdate: 'CURRENT_TIMESTAMP(6)',
-    comment: '수정일시',
+    type: 'timestamp with time zone',
+    default: () => 'CURRENT_TIMESTAMP(6) AT TIME ZONE \'UTC\'',
+    onUpdate: 'CURRENT_TIMESTAMP(6) AT TIME ZONE \'UTC\'',
+    comment: '수정일시 (UTC)',
   })
   updatedAt: Date;
 

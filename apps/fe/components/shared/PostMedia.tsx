@@ -9,12 +9,21 @@ import {
   ImageStyle,
   TextStyle,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+/* 상위(PostDetailContent 등)에서 thumbnailUrl 해석을 끝내고 내려주므로
+   여기서는 최적화 URL 생성 로직을 의존하지 않는다 (표시 전용 컴포넌트). */
+
+/**
+ * Media 인터페이스
+ * - thumbnailUrl: 비디오의 썸네일 지원 (이미지에도 존재할 수 있음)
+ */
 export interface Media {
   id: string;
   url: string;
-  type: "IMAGE" | "VIDEO" | "image" | "video"; // 서버와 클라이언트 타입 모두 지원
+  type: "IMAGE" | "VIDEO" | "image" | "video";
+  thumbnailUrl?: string;
 }
 
 interface PostMediaProps {
@@ -24,86 +33,126 @@ interface PostMediaProps {
 }
 
 /**
- * 게시물 미디어 공통 컴포넌트
- * 피드와 상세 페이지에서 다른 레이아웃으로 미디어를 표시
+ * PostMedia
+ * - 이미지와 비디오를 통합 처리
+ * - 최대 4개(이미지+비디오 혼합) 그리드 지원
+ * - 비디오는 상위에서 전달된 thumbnailUrl(또는 fallback url)을 그대로 사용 (이 컴포넌트는 표현 전용)
  */
 export default function PostMedia({
   media,
   onPress,
   variant = "feed",
 }: PostMediaProps) {
-  const { themed } = useAppTheme();
+  const { themed, theme } = useAppTheme();
 
-  const imageMedia = media.filter(
-    (item) => item.type === "image" || item.type === "IMAGE",
-  );
-  const imageCount = imageMedia.length;
+  /**
+   * 유효 미디어 (image 또는 video) - 최대 4개만 표시
+   */
+  const unifiedMedia = media
+    .filter(
+      (m) =>
+        m &&
+        (m.type === "image" ||
+          m.type === "IMAGE" ||
+          m.type === "video" ||
+          m.type === "VIDEO"),
+    )
+    .slice(0, 4);
 
-  if (imageCount === 0) {
-    //console.log("이미지가 없어서 null 반환");
-    return null;
-  }
+  if (unifiedMedia.length === 0) return null;
 
-  // URL 변환 함수 (localhost를 환경변수 URL로 변경)
-  const transformImageUrl = (url: string) => {
+  /**
+   * URL 변환 (localhost 등 환경별 처리 필요 시 확장)
+   */
+  const transformUrl = (url: string) => {
+    if (typeof url !== "string") return "";
     if (url.startsWith("http://localhost:3000")) {
-      const apiUrl = "http://localhost:3000";
-      return url.replace("http://localhost:3000", apiUrl);
+      return url.replace("http://localhost:3000", "http://localhost:3000");
     }
     return url;
   };
 
-  /**
-   * 피드용 미디어 렌더링 - 첫 번째 이미지만 표시
-   */
-  const renderFeedMediaGrid = () => {
-    const imageUrl = transformImageUrl(imageMedia[0].url);
-    //console.log("렌더링할 이미지 URL:", imageUrl);
+  // (썸네일 해석 로직은 상위 컨테이너로 이동됨: 여기서는 순수 표시만 담당)
 
-    // 피드에서는 항상 첫 번째 이미지만 표시
+  /**
+   * 실제 표시용 URL
+   * - 비디오는 getVideoThumbnailUrl() 사용
+   * - 이미지는 thumbnailUrl 우선, 없으면 원본
+   */
+  const getDisplayUrl = (item: Media) =>
+    transformUrl(item.thumbnailUrl || item.url);
+
+  /**
+   * Feed 변형: 첫 번째 항목만 (이미지/비디오 구분 없이)
+   */
+  const renderFeed = () => {
+    const first = unifiedMedia[0];
     return (
-      <Image
-        source={{ uri: imageUrl }}
-        style={themed($feedMediaImage)}
-        resizeMode="cover"
-        onLoad={() => {}} //console.log("이미지 로드 성공:", imageUrl)}
-        onError={(error) =>
-          console.error("이미지 로드 실패:", error.nativeEvent.error)
-        }
-      />
+      <View style={themed($singleWrapper)}>
+        <Image
+          source={{ uri: getDisplayUrl(first) }}
+          style={themed($feedSingleImage)}
+          resizeMode="cover"
+        />
+        {(first.type === "video" || first.type === "VIDEO") && (
+          <View style={themed($playOverlay)}>
+            <Ionicons name="play" size={32} color="white" />
+          </View>
+        )}
+      </View>
     );
   };
 
   /**
-   * 상세 페이지용 미디어 렌더링 (스크롤 가능)
+   * Detail 변형: 개수별 레이아웃
+   * 1개: 단일 큰 이미지
+   * 2개: 2열
+   * 3~4개: 2x2 그리드
+   * 4개 초과 시 (slice로 4개 제한) +N 표시는 지금 요구사항엔 없음 -> 필요 시 확장
    */
-  const renderDetailMedia = () => {
-    if (imageCount === 1) {
+  const renderDetail = () => {
+    const count = unifiedMedia.length;
+
+    if (count === 1) {
+      const item = unifiedMedia[0];
       return (
-        <Image
-          source={{ uri: transformImageUrl(imageMedia[0].url) }}
-          style={themed($detailMediaImage)}
-          resizeMode="cover"
-        />
+        <View style={themed($singleWrapper)}>
+          <Image
+            source={{ uri: getDisplayUrl(item) }}
+            style={themed($detailSingle)}
+            resizeMode="cover"
+          />
+          {(item.type === "video" || item.type === "VIDEO") && (
+            <View style={themed($playOverlay)}>
+              <Ionicons name="play" size={40} color="white" />
+            </View>
+          )}
+        </View>
       );
     }
 
-    if (imageCount === 2) {
+    if (count === 2) {
       return (
-        <View style={themed($detailMediaGrid)}>
-          {imageMedia.map((item) => (
-            <Image
-              key={item.id}
-              source={{ uri: transformImageUrl(item.url) }}
-              style={themed($detailMediaImageHalf)}
-              resizeMode="cover"
-            />
+        <View style={themed($row)}>
+          {unifiedMedia.map((item) => (
+            <View key={item.id} style={themed($halfItemWrapper)}>
+              <Image
+                source={{ uri: getDisplayUrl(item) }}
+                style={themed($halfItemImage)}
+                resizeMode="cover"
+              />
+              {(item.type === "video" || item.type === "VIDEO") && (
+                <View style={themed($playOverlaySmall)}>
+                  <Ionicons name="play" size={28} color="white" />
+                </View>
+              )}
+            </View>
           ))}
         </View>
       );
     }
 
-    // 3개 이상 - 스크롤 가능한 그리드
+    // 3개 이상 - 가로 스크롤 가능한 썸네일 리스트
     return (
       <ScrollView
         horizontal
@@ -111,118 +160,112 @@ export default function PostMedia({
         style={themed($detailMediaScrollView)}
         contentContainerStyle={themed($detailMediaScrollContent)}
       >
-        {imageMedia.map((item, index) => (
-          <Image
-            key={item.id}
-            source={{ uri: transformImageUrl(item.url) }}
-            style={[
-              themed($detailMediaImageScroll),
-              index === imageMedia.length - 1 && { marginRight: 0 },
-            ]}
-            resizeMode="cover"
-          />
+        {unifiedMedia.map((item, index) => (
+          <View key={item.id} style={themed($scrollItemWrapper)}>
+            <Image
+              source={{ uri: getDisplayUrl(item) }}
+              style={[
+                themed($detailMediaImageScroll),
+                index === unifiedMedia.length - 1 && { marginRight: 0 },
+              ]}
+              resizeMode="cover"
+            />
+            {(item.type === "video" || item.type === "VIDEO") && (
+              <View style={themed($playOverlayTiny)}>
+                <Ionicons name="play" size={24} color="white" />
+              </View>
+            )}
+          </View>
         ))}
       </ScrollView>
     );
   };
 
-  const MediaContent =
-    variant === "feed" ? renderFeedMediaGrid() : renderDetailMedia();
+  const content = variant === "feed" ? renderFeed() : renderDetail();
 
   return onPress ? (
     <TouchableOpacity
       style={themed($container)}
-      onPress={onPress}
       activeOpacity={0.9}
+      onPress={onPress}
     >
-      {MediaContent}
+      {content}
     </TouchableOpacity>
   ) : (
-    <View style={themed($container)}>{MediaContent}</View>
+    <View style={themed($container)}>{content}</View>
   );
 }
 
-// --- 스타일 정의 ---
+/* ================= 스타일 정의 ================= */
+
 const $container: ThemedStyle<ViewStyle> = () => ({
   position: "relative",
   width: "100%",
-  // detail 변형에서는 자식 콘텐츠(이미지/그리드)의 높이에 맞춰 자동 확장되도록 height 제거
 });
 
-// 피드용 스타일
-const $feedMediaImage: ThemedStyle<ImageStyle> = ({ colors }) => ({
+/* Feed 단일 */
+const $singleWrapper: ThemedStyle<ViewStyle> = () => ({
+  position: "relative",
+  width: "100%",
+});
+
+const $feedSingleImage: ThemedStyle<ImageStyle> = ({ colors }) => ({
   width: "100%",
   height: 200,
   backgroundColor: colors.separator,
+  borderRadius: 12,
 });
 
-const $feedMediaGrid: ThemedStyle<ViewStyle> = () => ({
-  flexDirection: "row",
-  height: 224,
-  gap: 2,
-});
-
-const $feedMediaImageHalf: ThemedStyle<ImageStyle> = ({ colors }) => ({
-  flex: 1,
-  height: "100%",
-  borderRadius: 8,
-  backgroundColor: colors.separator,
-});
-
-const $feedMediaRightColumn: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-  gap: 2,
-});
-
-const $feedMediaImageQuarter: ThemedStyle<ImageStyle> = ({ colors }) => ({
-  flex: 1,
-  borderRadius: 8,
-  backgroundColor: colors.separator,
-});
-
-const $feedMediaRow: ThemedStyle<ViewStyle> = () => ({
-  flex: 1,
-  flexDirection: "row",
-  gap: 2,
-});
-
-const $moreImagesOverlay: ThemedStyle<ViewStyle> = () => ({
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0, 0, 0, 0.6)",
-  justifyContent: "center",
-  alignItems: "center",
-  borderRadius: 8,
-});
-
-const $moreImagesText: ThemedStyle<TextStyle> = () => ({
-  color: "white",
-  fontSize: 18,
-  fontWeight: "bold",
-});
-
-// 상세 페이지용 스타일
-const $detailMediaImage: ThemedStyle<ImageStyle> = ({ spacing }) => ({
+/* Detail - Single */
+const $detailSingle: ThemedStyle<ImageStyle> = ({ colors }) => ({
   width: "100%",
   height: 300,
   borderRadius: 12,
-  marginBottom: spacing.sm,
+  backgroundColor: colors.separator,
 });
 
-const $detailMediaGrid: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+/* 2개 레이아웃 */
+const $row: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   gap: spacing.xs,
 });
 
-const $detailMediaImageHalf: ThemedStyle<ImageStyle> = () => ({
+const $halfItemWrapper: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
-  height: 200,
+  position: "relative",
   borderRadius: 12,
+  overflow: "hidden",
+  backgroundColor: colors.separator,
 });
 
+const $halfItemImage: ThemedStyle<ImageStyle> = () => ({
+  width: "100%",
+  height: 200,
+});
+
+/* 2x2 그리드 (3~4) */
+const $gridWrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  gap: spacing.xs,
+});
+
+const $gridItem: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: "48.5%", // 두 칼럼 균등
+  aspectRatio: 1,
+  position: "relative",
+  borderRadius: 12,
+  overflow: "hidden",
+  backgroundColor: colors.separator,
+});
+
+const $gridItemImage: ThemedStyle<ImageStyle> = () => ({
+  width: "100%",
+  height: "100%",
+});
+
+/* 3개 이상 스크롤 레이아웃 스타일 */
 const $detailMediaScrollView: ThemedStyle<ViewStyle> = () => ({
   height: 250,
 });
@@ -231,9 +274,73 @@ const $detailMediaScrollContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingRight: spacing.md,
 });
 
-const $detailMediaImageScroll: ThemedStyle<ImageStyle> = ({ spacing }) => ({
+const $scrollItemWrapper: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  position: "relative",
+  marginRight: spacing.sm,
+  borderRadius: 12,
+  overflow: "hidden",
+  backgroundColor: colors.separator,
+});
+
+const $detailMediaImageScroll: ThemedStyle<ImageStyle> = () => ({
   width: 200,
   height: 250,
   borderRadius: 12,
-  marginRight: spacing.sm,
+});
+
+/* 오버레이 공통 */
+const $playOverlayBase = (size: number): ViewStyle => ({
+  position: "absolute",
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "rgba(0,0,0,0.35)",
+  borderRadius: size / 2,
+});
+
+const $playOverlay: ThemedStyle<ViewStyle> = () => ({
+  ...$playOverlayBase(80),
+  width: 80,
+  height: 80,
+  top: "50%",
+  left: "50%",
+  marginLeft: -40,
+  marginTop: -40,
+});
+
+const $playOverlaySmall: ThemedStyle<ViewStyle> = () => ({
+  ...$playOverlayBase(56),
+  width: 56,
+  height: 56,
+  top: "50%",
+  left: "50%",
+  marginLeft: -28,
+  marginTop: -28,
+});
+
+const $playOverlayTiny: ThemedStyle<ViewStyle> = () => ({
+  ...$playOverlayBase(48),
+  width: 48,
+  height: 48,
+  top: "50%",
+  left: "50%",
+  marginLeft: -24,
+  marginTop: -24,
+});
+
+/* (추후 확장) +N 표시 오버레이 */
+const $moreOverlay: ThemedStyle<ViewStyle> = () => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0,0,0,0.55)",
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $moreText: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 22,
+  fontWeight: "700",
 });

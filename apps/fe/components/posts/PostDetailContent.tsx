@@ -23,6 +23,7 @@ import PostMedia from "@/components/shared/PostMedia";
 import PostActions from "@/components/shared/PostActions";
 import CommentSection from "@/components/CommentSection";
 import ReportModal from "@/components/ReportModal";
+import { selectOptimizedImageUrl } from "@/lib/image"; // 비디오 썸네일(최적화) 해석을 위한 유틸
 
 /**
  * 재사용 가능한 게시물 상세 컨텐츠 컴포넌트
@@ -128,6 +129,35 @@ export function PostDetailContent({
   // effective post (상세 데이터 우선, 없으면 초기 데이터)
   const post = fetchedPost || normalizedInitialPost;
   const isPartial = !fetchedPost && !!normalizedInitialPost;
+
+  /**
+   * 미디어 썸네일/비디오 썸네일 정규화
+   * - 책임 분리: PostMedia 는 "표현 전용"으로 유지하고 썸네일 결정은 컨테이너(PostDetailContent)에서 수행
+   * - 비디오 항목:
+   *    1) m.thumbnailUrl 존재 시 사용
+   *    2) selectOptimizedImageUrl("thumbnails") 시도
+   *    3) 실패 시 원본 URL fallback
+   * - 이미지 항목:
+   *    1) m.thumbnailUrl || m.url
+   */
+  const normalizedMediaForDisplay = useMemo(() => {
+    if (!post?.media) return [];
+    return post.media.map((m: any) => {
+      const isVideo = m.type === "video" || m.type === "VIDEO";
+      let thumbnailUrl = m.thumbnailUrl;
+      if (isVideo && !thumbnailUrl) {
+        const optimized =
+          selectOptimizedImageUrl(
+            { id: m.id, url: m.url } as any,
+            "thumbnails",
+          ) || undefined;
+        thumbnailUrl = optimized || m.url;
+      } else if (!isVideo) {
+        thumbnailUrl = thumbnailUrl || m.url;
+      }
+      return { ...m, thumbnailUrl };
+    });
+  }, [post?.media]);
 
   // 좋아요 / 팔로우 / 북마크 등 상호작용 상태 & 핸들러 (초기값에 initialPost 반영)
   const {
@@ -376,7 +406,7 @@ export function PostDetailContent({
           {/* 미디어 */}
           {post.media?.length > 0 && (
             <View style={themed($mediaSection)}>
-              <PostMedia media={post.media} variant="detail" />
+              <PostMedia media={normalizedMediaForDisplay} variant="detail" />
             </View>
           )}
 

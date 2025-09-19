@@ -173,18 +173,20 @@ export class PostsService {
       content,
       isPublic,
       authorId,
-      authorTeams: JSON.stringify(authorTeams.map((ut) => ({
-        id: ut.team.id,
-        name: ut.team.name,
-        logoUrl: ut.team.logoUrl,
-        icon: ut.team.icon,
-      }))),
       viewCount: 0,
       likeCount: 0,
       commentCount: 0,
       shareCount: 0,
       isPinned: false,
     });
+
+    // JSON 필드는 별도로 할당하여 타입 문제 해결 (타입 어서션 사용)
+    (post as any).authorTeams = JSON.stringify(authorTeams.map((ut) => ({
+      id: ut.team.id,
+      name: ut.team.name,
+      logoUrl: ut.team.logoUrl,
+      icon: ut.team.icon,
+    })));
 
     // 게시물 저장
     const savedPost = await this.postRepository.save(post);

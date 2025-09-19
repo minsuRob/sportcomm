@@ -47,6 +47,7 @@ import { StrokedText } from "@/lib/utils/StrokedText";
 import { UniformPlaceholder } from "@/lib/team-customization/common/uniform/UniformPlaceholder";
 import { useTeamCustomization } from "@/lib/team-customization";
 import { formatDateTime } from "@/lib/utils/dateUtils";
+import { deriveTeamSlug, getPlayersByTeam } from "@/lib/team-data/players";
 
 
 // expo-video는 조건부로 import (웹에서 문제 발생 방지)
@@ -154,6 +155,48 @@ export interface PostCardProps {
 }
 
 // --- 유틸리티 함수 ---
+
+/**
+ * 팀 이름으로부터 첫 번째 선수의 정보를 가져오는 헬퍼 함수
+ * @param teamName 팀 이름 (예: "두산", "한화")
+ * @returns 첫 번째 선수의 이름과 등번호 정보 객체
+ */
+const getFirstPlayerInfo = (teamName: string): { name: string; number: string } => {
+  try {
+    // 팀 이름으로부터 TeamId 유추
+    const teamId = deriveTeamSlug(teamName);
+
+    if (!teamId) {
+      return { name: teamName, number: "40" }; // TeamId를 찾지 못하면 기본값 반환
+    }
+
+    // TeamId로 선수 목록 가져오기
+    const players = getPlayersByTeam(teamId);
+
+    if (players.length === 0) {
+      return { name: teamName, number: "40" }; // 선수가 없으면 기본값 반환
+    }
+
+    // 첫 번째 선수의 정보 반환
+    const firstPlayer = players[0];
+    return {
+      name: firstPlayer.name,
+      number: String(firstPlayer.number)
+    };
+  } catch (error) {
+    console.warn("팀 선수 데이터 조회 실패:", error);
+    return { name: teamName, number: "40" }; // 에러 발생 시 기본값 반환
+  }
+};
+
+/**
+ * 팀 이름으로부터 첫 번째 선수의 이름만 가져오는 헬퍼 함수 (하위 호환성 유지)
+ * @param teamName 팀 이름 (예: "두산", "한화")
+ * @returns 첫 번째 선수의 이름 또는 팀 이름 (fallback)
+ */
+const getFirstPlayerName = (teamName: string): string => {
+  return getFirstPlayerInfo(teamName).name;
+};
 
 
 /**
@@ -754,12 +797,12 @@ const PostCard = React.memo(function PostCard({
                 <UniformPlaceholder
                   text={
                     post.author.myTeams?.find((t) => t.team.id === post.teamId)
-                      ?.favoritePlayerName || "니퍼트"
+                      ?.favoritePlayerName || getFirstPlayerName(teamName)
                   }
-                  number={String(
+                  number={
                     post.author.myTeams?.find((t) => t.team.id === post.teamId)
-                      ?.favoritePlayerNumber ?? "40",
-                  )}
+                      ?.favoritePlayerNumber?.toString() || getFirstPlayerInfo(teamName).number
+                  }
                   mainColor={teamColors.uniformText}
                   subColor={teamColors.uniformNumberText}
                   outlineColor={teamColors.uniformDecoration}

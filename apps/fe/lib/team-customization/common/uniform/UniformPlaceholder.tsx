@@ -24,8 +24,8 @@ interface UniformPlaceholderProps {
  * 유니폼 스타일의 빈 미디어 플레이스홀더를 제공합니다.
  */
 export const UniformPlaceholder: React.FC<UniformPlaceholderProps> = ({
-  text = "김택연",
-  number = "63",
+  text,
+  number,
   mainColor,
   subColor,
   outlineColor,

@@ -250,7 +250,9 @@ export function PostDetailContent({
    */
   const HeaderComponent = useMemo(() => {
     const titleNode = (
-      <Text style={themed($headerTitle)}>{t(TRANSLATION_KEYS.POST_TITLE)}</Text>
+      <Text style={themed($headerTitle)} numberOfLines={1}>
+        {post?.title}
+      </Text>
     );
 
     if (variant === "modal") {
@@ -307,7 +309,7 @@ export function PostDetailContent({
         </TouchableOpacity>
       </View>
     );
-  }, [variant, themed, theme.colors, t, handleRefresh, refreshing, onClose]);
+  }, [variant, themed, theme.colors, t, handleRefresh, refreshing, onClose, post?.title]);
 
   /**
    * 로딩 상태 렌더

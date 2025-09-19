@@ -626,6 +626,11 @@ export default function ProfileScreen({
                         </Text>
                       </Text>
                     )}
+                    {/* 경험치 표시 */}
+                    <Text style={themed($experienceText)}>
+                      {" "}
+                      {userTeam.experience || 0} EXP
+                    </Text>
                   </Text>
                 </View>
               ))}
@@ -877,6 +882,12 @@ const $teamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 11,
   fontWeight: "400",
   color: colors.textDim,
+});
+
+const $experienceText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  fontWeight: "500",
+  color: colors.tint,
 });
 
 const $noTeamText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({

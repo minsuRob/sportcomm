@@ -83,8 +83,10 @@ import { NotificationToast } from "@/components/notifications";
 import { showToast } from "@/components/CustomToast";
 
 import FeedHeader from "@/components/feed/FeedHeader";
+import { onRefresh } from "@/lib/refresh/refreshBus";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
+import UploadTaskBar from "../../components/upload/UploadTaskBar";
 
 import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
 import { useAuth } from "@/lib/auth/context/AuthContext";
@@ -148,6 +150,18 @@ export default function FeedScreen() {
       });
     }
   }, [lastError]);
+  /**
+   * 글로벌 RefreshBus 'feed' 키 트리거 수신
+   * - 다른 모듈(게시글 업로드 완료 등)에서 triggerRefresh('feed') 호출 시 피드 새로고침
+   * - 확장: 향후 여러 키 추가 시 동일 패턴 복제 또는 배열 기반 구독 유틸 작성 가능
+   */
+  useEffect(() => {
+    const unsubscribe = onRefresh("feed", () => {
+      // 내부 훅에서 제공하는 refresh 핸들 호출
+      refresh();
+    });
+    return () => unsubscribe();
+  }, [refresh]);
 
   const handleLoginSuccess = () => {
     setAuthModalVisible(false);
@@ -267,6 +281,7 @@ export default function FeedScreen() {
         onClose={() => setAuthModalVisible(false)}
         onLoginSuccess={handleLoginSuccess}
       />
+      <UploadTaskBar position="top" />
 
       {/* 헤더 (탭 슬라이더 포함) */}
       <FeedHeader
@@ -400,11 +415,11 @@ export default function FeedScreen() {
             onFeedRefresh={refresh}
             ListHeaderComponent={
               // currentUser ? (
-                <StorySection
-                  teamIds={teamIds}
-                  currentUser={currentUser}
-                  feedPosts={posts}
-                />
+              <StorySection
+                teamIds={teamIds}
+                currentUser={currentUser}
+                feedPosts={posts}
+              />
               // ) : null
             }
             ListFooterComponent={
@@ -413,7 +428,7 @@ export default function FeedScreen() {
           />
 
           {/* FeedList 아래에 AdFit 광고 배너 (adUnit은 env 또는 기본값 사용) */}
-          <AdFitBanner width={320} height={50} />
+          <AdFitBanner style={{ width: 320, height: 50 }} />
         </>
       ) : (
         <ChatRoomList
@@ -579,7 +594,7 @@ const $myTeamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",
-  bottom: spacing.xl,
+  bottom: spacing.xl + 20,
   right: spacing.md,
   width: 56,
   height: 56,

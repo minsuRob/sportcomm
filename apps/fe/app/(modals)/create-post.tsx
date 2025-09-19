@@ -45,6 +45,12 @@ import {
   SelectedVideo,
 } from "@/lib/api/videoUpload";
 import { UploadProgress } from "@/lib/api/common";
+import {
+  createUploadTask,
+  updateUploadTask,
+  finalizeUploadTask,
+} from "@/lib/upload/uploadTaskStore";
+import { triggerRefresh } from "@/lib/refresh/refreshBus";
 import TrendyCreatePostSection from "@/components/createPost/TrendyCreatePostSection";
 import CreativeCreatePostSection from "@/components/createPost/CreativeCreatePostSection";
 import TagInput from "@/components/createPost/TagInput";
@@ -90,13 +96,7 @@ export default function CreatePostScreen() {
   const { t } = useTranslation();
 
   // 추천 태그 목록 (실제로는 API에서 가져와야 함)
-  const popularTags = [
-    "자유",
-    "선수",
-    "경기정보",
-    "팀뉴스",
-    "경기후기",
-  ];
+  const popularTags = ["자유", "선수", "경기정보", "팀뉴스", "경기후기"];
 
   // 상태 관리
   const [layoutVariant, setLayoutVariant] = useState<
@@ -135,7 +135,7 @@ export default function CreatePostScreen() {
   });
 
   // 인증 상태 감시: 비로그인 시 다이얼로그 표시 (전역 AuthProvider 사용)
-  
+
   // TODO : 다 로드 되고 검증해야할듯.
 
   // React.useEffect(() => {
@@ -431,6 +431,8 @@ export default function CreatePostScreen() {
 
   /**
    * 게시물 작성 핸들러 (이미지 포함)
+   * - 요구사항: 업로드(쿼리 호출 시작) 즉시 피드로 이동하고 전역 업로드 바에서 진행률 표시
+   * - 구현: 글로벌 uploadTask 생성 후 router.replace 로 피드 전환, 이후 백그라운드에서 진행률 업데이트
    */
   const handleSubmit = async () => {
     if (!currentUser) {
@@ -477,6 +479,25 @@ export default function CreatePostScreen() {
     setUploadProgress("");
     setUploadPercentage(0);
 
+    // 글로벌 업로드 태스크 생성 (피드 전환 후에도 진행률 표시)
+    const taskId = createUploadTask({
+      type: "post",
+      title: title.trim(),
+      initialMessage: "게시물 준비 중...",
+      meta: {
+        hasMedia: selectedImages.length + selectedVideos.length > 0,
+        imageCount: selectedImages.length,
+        videoCount: selectedVideos.length,
+      },
+    });
+
+    // 업로드 시작과 동시에 피드로 이동 (모달 닫힘)
+    try {
+      router.replace("/(app)/feed");
+    } catch (navError) {
+      console.warn("피드 이동 실패(무시 가능):", navError);
+    }
+
     try {
       // 게시물 생성 입력 데이터 준비
       const postInput = {
@@ -488,10 +509,10 @@ export default function CreatePostScreen() {
       };
 
       //console.log("게시물 생성 시작:", {
-        // title: postInput.title,
-        // teamId: postInput.teamId,
-        // hasImages: selectedImages.length > 0,
-        // imageCount: selectedImages.length,
+      // title: postInput.title,
+      // teamId: postInput.teamId,
+      // hasImages: selectedImages.length > 0,
+      // imageCount: selectedImages.length,
       // });
 
       let createdPost;
@@ -570,7 +591,9 @@ export default function CreatePostScreen() {
           files: allFiles,
           onProgress: (progress: UploadProgress) => {
             setUploadPercentage(progress.percentage);
-            setUploadProgress(`미디어 업로드 중... ${progress.percentage}%`);
+            const msg = `미디어 업로드 중... ${progress.percentage}%`;
+            setUploadProgress(msg);
+            updateUploadTask(taskId, progress.percentage, msg);
           },
         });
       } else {
@@ -614,8 +637,14 @@ export default function CreatePostScreen() {
         // 사용자 정보 새로고침 실패해도 게시물 작성이 성공했으므로 계속 진행
       }
 
-      // 피드로 돌아가기
-      router.back();
+      // 업로드 성공 (이미 피드 화면에 있으므로 별도 네비게이션 불필요)
+      finalizeUploadTask(taskId, true);
+      // 글로벌 RefreshBus 를 통해 피드 새로고침 트리거
+      triggerRefresh("feed", {
+        reason: "post_upload_completed",
+        source: "create-post",
+        meta: { postId: createdPost?.id },
+      });
     } catch (error) {
       console.error("게시물 작성 오류:", error);
 
@@ -630,6 +659,9 @@ export default function CreatePostScreen() {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
+
+      // 글로벌 업로드 태스크 실패 반영
+      finalizeUploadTask(taskId, false, errorMessage);
 
       showToast({
         type: "error",
@@ -902,7 +934,6 @@ export default function CreatePostScreen() {
         {/* 태그 입력 영역 (모던) */}
         {
           <View style={themed($tagSection)}>
-            
             <TagInput
               tags={tags}
               onTagsChange={setTags}
@@ -1050,12 +1081,22 @@ const $typeSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingVertical: spacing.md,
 });
 
-
-
 const $sectionHeader: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
   justifyContent: "space-between",
   alignItems: "center",
+});
+
+/**
+ * 섹션 제목 스타일
+ * - 다양한 섹션(팀 선택, 제목, 내용 등) 공통 타이틀에 사용
+ * - 컴포넌트 상단에서 themed($sectionTitle) 형태로 참조
+ */
+const $sectionTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 14,
+  fontWeight: "700",
+  color: colors.text,
+  marginBottom: 8,
 });
 
 const $addTeamButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

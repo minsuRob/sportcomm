@@ -1237,8 +1237,9 @@ const $profileName: ThemedStyle<TextStyle> = () => ({
 
 const $autoplayIndicator: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
-  top: spacing.sm,
-  right: spacing.sm,
+  bottom: spacing.sm,
+  left: '50%',
+  transform: [{ translateX: -50 }],
   backgroundColor: "rgba(0, 0, 0, 0.8)",
   borderRadius: 12,
   paddingHorizontal: spacing.xs,

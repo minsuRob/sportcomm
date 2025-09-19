@@ -173,12 +173,12 @@ export class PostsService {
       content,
       isPublic,
       authorId,
-      authorTeams: authorTeams.map((ut) => ({
+      authorTeams: JSON.stringify(authorTeams.map((ut) => ({
         id: ut.team.id,
         name: ut.team.name,
         logoUrl: ut.team.logoUrl,
         icon: ut.team.icon,
-      })),
+      }))),
       viewCount: 0,
       likeCount: 0,
       commentCount: 0,

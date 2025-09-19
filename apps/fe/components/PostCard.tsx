@@ -862,12 +862,26 @@ const PostCard = React.memo(function PostCard({
                       }
 
                       // 3) author.authorTeams (백워드 호환)
-                      const authorTeams = anyPost?.author?.authorTeams;
-                      if (Array.isArray(authorTeams)) {
-                        const found2 = authorTeams.find(
-                          (t: any) => t?.id === post.teamId && t?.logoUrl,
-                        );
-                        if (found2?.logoUrl) return found2.logoUrl;
+                      const authorTeamsRaw = anyPost?.author?.authorTeams;
+                      if (authorTeamsRaw) {
+                        let authorTeams: any[] = [];
+                        try {
+                          if (Array.isArray(authorTeamsRaw)) {
+                            authorTeams = authorTeamsRaw;
+                          } else if (typeof authorTeamsRaw === "string") {
+                            const parsed = JSON.parse(authorTeamsRaw);
+                            authorTeams = Array.isArray(parsed) ? parsed : [];
+                          }
+                        } catch (error) {
+                          console.warn("authorTeams 파싱 실패:", error);
+                        }
+
+                        if (authorTeams.length > 0) {
+                          const found2 = authorTeams.find(
+                            (t: any) => t?.id === post.teamId && t?.logoUrl,
+                          );
+                          if (found2?.logoUrl) return found2.logoUrl;
+                        }
                       }
 
                       // 4) 모든 경로 실패 시 undefined -> UserAvatar 내부 기본 person 아이콘
@@ -1008,10 +1022,24 @@ const PostCard = React.memo(function PostCard({
                   const authorTeams = extractTeams(post.author, 3);
 
                   // 팀 정보가 없으면 post.authorTeams 사용 (기존 호환성)
+                  let fallbackTeams: any[] = [];
+                  if (authorTeams.length === 0 && post.authorTeams) {
+                    try {
+                      if (Array.isArray(post.authorTeams)) {
+                        fallbackTeams = post.authorTeams.slice(0, 3);
+                      } else if (typeof post.authorTeams === "string") {
+                        const parsed = JSON.parse(post.authorTeams);
+                        fallbackTeams = Array.isArray(parsed) ? parsed.slice(0, 3) : [];
+                      }
+                    } catch (error) {
+                      console.warn("post.authorTeams 파싱 실패:", error);
+                    }
+                  }
+
                   const teamsToShow =
                     authorTeams.length > 0
                       ? authorTeams
-                      : post.authorTeams?.slice(0, 3) || [];
+                      : fallbackTeams;
 
                   return teamsToShow.map((team) => (
                     <View key={team.id} style={themed($teamLogoWrapper)}>

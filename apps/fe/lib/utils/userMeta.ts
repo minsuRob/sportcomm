@@ -96,8 +96,21 @@ export function extractTeams(
   }
 
   // 2. authorTeams 필드가 있는 경우
-  if (user.authorTeams && Array.isArray(user.authorTeams)) {
-    return user.authorTeams.slice(0, maxCount);
+  if (user.authorTeams) {
+    let authorTeams: TeamInfo[] = [];
+
+    try {
+      if (Array.isArray(user.authorTeams)) {
+        authorTeams = user.authorTeams;
+      } else if (typeof user.authorTeams === "string") {
+        const parsed = JSON.parse(user.authorTeams);
+        authorTeams = Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (error) {
+      console.warn("authorTeams 파싱 실패:", error);
+    }
+
+    return authorTeams.slice(0, maxCount);
   }
 
   return [];

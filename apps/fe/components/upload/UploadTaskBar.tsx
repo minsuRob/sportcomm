@@ -15,17 +15,19 @@ import {
 } from "@/lib/upload/uploadTaskStore";
 
 /**
- * UploadTaskBar
+ * UploadTaskBar (하이브리드 진행률 표시)
  *
- * 전역 업로드(게시글 작성, 이미지/비디오 업로드 등) 진행 상황을
- * 피드 화면 상단(또는 하단)에 고정된 진행 바(progress bar) 형태로 표시하는 컴포넌트.
+ * 혼합형(추천) 전략 구현:
+ *  1) 준비(PENDING): 0% -> 50% 구간을 시간 기반(가짜) 진행률로 자연스럽게 채움
+ *  2) 업로드(UPLOADING): 실제 업로드 progress(0~100)를 50%~90% 구간에 매핑
+ *  3) 최종 처리(SUCCESS 초기): 90% -> 100% 짧은 애니메이션 (DB 등록/최종 확인)
  *
- * 변경 사항(간소화):
- *  - success / error 상태는 더 이상 activeTask 로 선택하지 않음
- *    → 완료/실패 즉시 진행 바 비표시 (무한 업데이트 루프 차단 목적)
+ * 에러(ERROR): 진행률 고정, 메시지 표시
  *
- * 사용 예:
- *   <UploadTaskBar position="top" />
+ * 표시 규칙:
+ *  - 내부 displayedProgress 로 계산된 "표시용 퍼센트" 사용
+ *  - 실제 task.progress 는 네트워크 업로드 구간만 반영
+ *  - 성공 후 약간의 마무리 애니메이션 후 바 자동 제거
  */
 export interface UploadTaskBarProps {
   position?: "top" | "bottom";
@@ -39,6 +41,14 @@ export interface UploadTaskBarProps {
 const DEFAULT_SUCCESS_HIDE_MS = 1200;
 const DEFAULT_ERROR_HIDE_MS = 4500;
 
+// 하이브리드 퍼센트 매핑 상수
+const PREP_MAX = 50; // 준비 단계 최대(가짜)
+const UPLOAD_MAX = 90; // 업로드 단계 종료(실제 업로드 → 스케일된 최종)
+const FINAL_MIN = 90; // 최종 단계 시작
+const FINAL_DURATION_MS = 600; // 90 → 100 애니메이션 시간
+const PREP_INTERVAL_MS = 250; // 준비 단계 증가 간격
+const PREP_STEP = 6; // 준비 단계 증가 폭 (최대 PREP_MAX 까지)
+
 const UploadTaskBar: React.FC<UploadTaskBarProps> = ({
   position = "top",
   onRetry,
@@ -48,11 +58,8 @@ const UploadTaskBar: React.FC<UploadTaskBarProps> = ({
   errorAutoHideMs = DEFAULT_ERROR_HIDE_MS,
 }) => {
   const rawTasks = useActiveUploadTasks();
-  /**
-   * 메모이제이션 가드:
-   * 동일한 내용(길이/각 항목 id, status, progress)이면 새로운 배열 참조라도
-   * 렌더 트리를 다시 돌리지 않도록 stableTasks 로 고정
-   */
+
+  // === 안정화된 tasks (불필요 렌더 방지) ===
   const [stableTasks, setStableTasks] = useState(rawTasks);
   const lastSignatureRef = useRef<string>("");
 
@@ -68,28 +75,226 @@ const UploadTaskBar: React.FC<UploadTaskBarProps> = ({
 
   const tasks = stableTasks;
 
-  /**
-   * 표시할 단일 활성 태스크 선정
-   * - 오직 pending | uploading 상태만 표시 (success/error 제외)
-   */
+  // === 활성 태스크 선택 (success / error 도 표시: success 는 100% 애니메이션 후 제거) ===
   const activeTask = useMemo<UploadTask | undefined>(() => {
     if (pickTaskStrategy) return pickTaskStrategy(tasks);
     if (tasks.length === 0) return undefined;
     return [...tasks]
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .find((t) => t.status === "pending" || t.status === "uploading");
+      .find(
+        (t) =>
+          t.status === "pending" ||
+          t.status === "uploading" ||
+          t.status === "success" ||
+          t.status === "error",
+      );
   }, [tasks, pickTaskStrategy]);
 
-  // (success/error 상태를 제외했으므로 자동 제거 타이머는 사실상 동작하지 않음 - 보수적 유지)
-  // success / error 상태는 activeTask 에 포함되지 않으므로 자동 제거 타이머 제거
+  // composite 모드: 외부(생성 로직)에서 압축+업로드 혼합 퍼센트(0~99)를 직접 전달
+  const isComposite = !!activeTask?.meta?.composite;
 
-  // 애니메이션 값
-  const progressAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  // === 내부 표시용 진행률 상태 (0~100) ===
+  const [displayedProgress, setDisplayedProgress] = useState(0);
+  const displayedProgressRef = useRef(0);
 
+  // 마지막 외부(실제) 진행률 업데이트 시간 기록 (자동 증가 트리거용)
+  const lastExternalUpdateRef = useRef<number>(Date.now());
+
+  // displayedProgress 값이 변경될 때마다 최신 시간 기록
+  useEffect(() => {
+    lastExternalUpdateRef.current = Date.now();
+  }, [displayedProgress]);
+
+  /**
+   * 진행률 정체(auto-stall handling)
+   * - pending 또는 uploading 상태에서 1초 동안 표시 퍼센트 변화가 없으면
+   *   1초마다 +5%씩 자동 증가 (최대 composite 모드는 90%, 일반은 UPLOAD_MAX)
+   * - 실제 업로드 이벤트가 다시 들어오면 자동 증가는 중단(타이머는 유지되지만 조건 불충족)
+   */
+  useEffect(() => {
+    if (!activeTask) return;
+    if (!(activeTask.status === "pending" || activeTask.status === "uploading"))
+      return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      // 1초 이상 정체된 경우에만 증가
+      if (now - lastExternalUpdateRef.current >= 1000) {
+        setDisplayedProgress((prev) => {
+          const cap = isComposite ? 90 : UPLOAD_MAX; // 자동 증가는 업로드 상한까지만
+          if (prev >= cap) return prev;
+          const inc = Math.floor(Math.random() * 6) + 3; // 3~8 사이 랜덤 증가
+          const next = Math.min(prev + inc, cap);
+          displayedProgressRef.current = next;
+          // 증가 후 시간 갱신 (다음 1초 대기)
+          lastExternalUpdateRef.current = Date.now();
+          return next;
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeTask, isComposite]);
+
+  // 준비 단계 가짜 진행 타이머
+  useEffect(() => {
+    if (!activeTask) return;
+    if (activeTask.status !== "pending") return;
+    const id = setInterval(() => {
+      setDisplayedProgress((prev) => {
+        if (prev >= PREP_MAX) return prev;
+        const next = Math.min(prev + PREP_STEP, PREP_MAX);
+        displayedProgressRef.current = next;
+        return next;
+      });
+    }, PREP_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [activeTask]);
+
+  // 업로드 단계
+  // - composite 모드: task.progress 값을 그대로(상승만) 사용 (0~99)
+  // - 일반 모드: 실제 업로드 퍼센트를 PREP_MAX~UPLOAD_MAX 로 매핑
+  useEffect(() => {
+    if (!activeTask) return;
+    if (activeTask.status !== "uploading") return;
+
+    if (isComposite) {
+      setDisplayedProgress((prev) => {
+        const next = Math.max(prev, Math.min(activeTask.progress, 99));
+        displayedProgressRef.current = next;
+        return next;
+      });
+      return;
+    }
+
+    const scaled =
+      PREP_MAX +
+      ((UPLOAD_MAX - PREP_MAX) * Math.min(activeTask.progress, 100)) / 100;
+
+    setDisplayedProgress((prev) => {
+      const next = Math.max(prev, Math.min(scaled, UPLOAD_MAX));
+      displayedProgressRef.current = next;
+      return next;
+    });
+  }, [activeTask?.progress, activeTask?.status, activeTask, isComposite]);
+
+  // 성공 단계 처리 (순차 상승: 낮은 퍼센트 → 중간 스테이지 → 최종 100%)
+  // 빠르게 success 가 도착(업로드 이벤트가 1~2회만 발생)해도 90% 또는 100%로 점프하지 않고
+  // 단계별(예: 15%→35%→55%→70%→85%→90%→100%)로 자연스럽게 상승
+  useEffect(() => {
+    if (!activeTask) return;
+    if (activeTask.status !== "success") return;
+
+    let cancelled = false;
+    let current = displayedProgressRef.current;
+
+    // 너무 낮으면 최소 시작점 보정 (0~5% 구간 보이기 위함)
+    if (current < 5) {
+      current = 5;
+      setDisplayedProgress(current);
+      displayedProgressRef.current = current;
+    }
+
+    // 이미 90 이상이면 바로 최종 애니메이션만
+    if (current >= FINAL_MIN) {
+      runFinalTo100();
+      return;
+    }
+
+    // 현재 진행도에 따라 중간 스테이지 배열 생성 (유연 확장 가능)
+    const stages: number[] = [];
+    // 목표 중간 스테이지들 (중간 값들은 필요 시 튜닝 가능)
+    const candidateStages = [15, 35, 55, 70, 85, 90];
+    for (const s of candidateStages) {
+      if (s > current && s < FINAL_MIN) {
+        stages.push(s);
+      }
+    }
+    // FINAL_MIN(90)은 runFinalTo100 직전에 도달하도록 마지막에 포함
+    if (stages[stages.length - 1] !== FINAL_MIN && FINAL_MIN > current) {
+      stages.push(FINAL_MIN);
+    }
+
+    const PER_STAGE_DURATION = 180; // 각 스테이지 전환 시간 (ms)
+    let stageIndex = 0;
+
+    function animateStage(target: number, cb: () => void) {
+      const startVal = displayedProgressRef.current;
+      const startTime = Date.now();
+      const duration = PER_STAGE_DURATION;
+
+      const step = () => {
+        if (cancelled) return;
+        const elapsed = Date.now() - startTime;
+        const ratio = Math.min(elapsed / duration, 1);
+        // easeOutQuad
+        const eased = 1 - (1 - ratio) * (1 - ratio);
+        const value = startVal + (target - startVal) * eased;
+        setDisplayedProgress(value);
+        displayedProgressRef.current = value;
+        if (ratio < 1) {
+          requestAnimationFrame(step);
+        } else {
+          cb();
+        }
+      };
+      requestAnimationFrame(step);
+    }
+
+    function runStages() {
+      if (cancelled) return;
+      if (stageIndex >= stages.length) {
+        runFinalTo100();
+        return;
+      }
+      const nextTarget = stages[stageIndex++];
+      animateStage(nextTarget, runStages);
+    }
+
+    function runFinalTo100() {
+      if (cancelled) return;
+      const start = Math.max(displayedProgressRef.current, FINAL_MIN);
+      const startTime = Date.now();
+      const duration = FINAL_DURATION_MS;
+      const step = () => {
+        if (cancelled) return;
+        const elapsed = Date.now() - startTime;
+        const ratio = Math.min(elapsed / duration, 1);
+        const value = start + (100 - start) * ratio;
+        setDisplayedProgress(value);
+        displayedProgressRef.current = value;
+        if (ratio < 1) {
+          requestAnimationFrame(step);
+        } else {
+          setTimeout(() => {
+            if (!cancelled) removeUploadTask(activeTask.id);
+          }, successAutoHideMs);
+        }
+      };
+      requestAnimationFrame(step);
+    }
+
+    runStages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTask, successAutoHideMs]);
+
+  // 에러 상태: 일정 시간 후 자동 제거
+  useEffect(() => {
+    if (!activeTask) return;
+    if (activeTask.status !== "error") return;
+    const timer = setTimeout(() => {
+      removeUploadTask(activeTask.id);
+    }, errorAutoHideMs);
+    return () => clearTimeout(timer);
+  }, [activeTask, errorAutoHideMs]);
+
+  // 화면 표시 여부
   const visible = !!activeTask && (visibleOverride ?? true);
-
-  // 표시/숨김 애니메이션
+  // 페이드 애니메이션
+  const opacityAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(opacityAnim, {
       toValue: visible ? 1 : 0,
@@ -98,30 +303,28 @@ const UploadTaskBar: React.FC<UploadTaskBarProps> = ({
     }).start();
   }, [visible, opacityAnim]);
 
-  // 진행률 애니메이션
-  useEffect(() => {
-    if (!activeTask) return;
-    Animated.timing(progressAnim, {
-      toValue: activeTask.progress,
-      duration: 250,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: false,
-    }).start();
-  }, [activeTask, progressAnim]);
-
   if (!visible || !activeTask) return null;
 
-  const isError = activeTask.status === "error";
+  const isPending = activeTask.status === "pending";
+  const isUploading = activeTask.status === "uploading";
   const isSuccess = activeTask.status === "success";
-  const isUploading =
-    activeTask.status === "pending" || activeTask.status === "uploading";
+  const isError = activeTask.status === "error";
 
+  // 바 색상
   const barColor = isError ? "#ff4d4f" : isSuccess ? "#00C853" : "#4185F4";
 
-  const progressWidth = progressAnim.interpolate({
-    inputRange: [0, 100],
-    outputRange: ["0%", "100%"],
-  });
+  // 메시지 (하이브리드 단계별)
+  let phaseMessage: string;
+  if (isPending) phaseMessage = "준비 중...";
+  // else if (isUploading) phaseMessage = activeTask.message || "업로드 중...";
+  else if (isUploading) phaseMessage = "업로드 중...";
+  else if (isSuccess) phaseMessage = "최종 등록 중...";
+  else if (isError) phaseMessage = activeTask.errorMessage || "업로드 실패";
+  else phaseMessage = activeTask.message || "처리 중...";
+
+  const shownPercent = isError
+    ? Math.round(displayedProgressRef.current) // 실패 시 현재 표시 유지
+    : Math.round(displayedProgress);
 
   const containerPositionStyle =
     position === "top" ? styles.positionTop : styles.positionBottom;
@@ -145,13 +348,12 @@ const UploadTaskBar: React.FC<UploadTaskBarProps> = ({
             {activeTask.title || "업로드 작업"}
           </Text>
           <View style={styles.rightArea}>
-            {isUploading && (
-              <Text style={styles.percentText}>
-                {Math.round(activeTask.progress)}%
-              </Text>
+            {!isSuccess && !isError && (
+              <Text style={styles.percentText}>{shownPercent}%</Text>
             )}
-            {/* success/error 는 activeTask 에서 제외되므로 일반적으로 도달하지 않음 (안전상 남김) */}
-            {isSuccess && <Text style={styles.successText}>완료</Text>}
+            {isSuccess && (
+              <Text style={styles.successText}>{shownPercent}%</Text>
+            )}
             {isError && <Text style={styles.errorText}>실패</Text>}
             {isError && onRetry && (
               <TouchableOpacity
@@ -170,21 +372,19 @@ const UploadTaskBar: React.FC<UploadTaskBarProps> = ({
           </View>
         </View>
 
-        {(activeTask.message || activeTask.errorMessage) && (
-          <Text
-            style={[styles.message, isError ? styles.messageError : undefined]}
-            numberOfLines={1}
-          >
-            {activeTask.errorMessage || activeTask.message}
-          </Text>
-        )}
+        <Text
+          style={[styles.message, isError ? styles.messageError : undefined]}
+          numberOfLines={1}
+        >
+          {phaseMessage}
+        </Text>
 
         <View style={styles.progressBarBackground}>
-          <Animated.View
+          <View
             style={[
               styles.progressBarFill,
               {
-                width: progressWidth,
+                width: `${Math.min(shownPercent, 100)}%`,
                 backgroundColor: barColor,
               },
             ]}
@@ -195,6 +395,7 @@ const UploadTaskBar: React.FC<UploadTaskBarProps> = ({
   );
 };
 
+// 스타일 정의
 const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",

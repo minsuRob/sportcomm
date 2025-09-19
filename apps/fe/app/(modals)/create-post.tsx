@@ -488,6 +488,7 @@ export default function CreatePostScreen() {
         hasMedia: selectedImages.length + selectedVideos.length > 0,
         imageCount: selectedImages.length,
         videoCount: selectedVideos.length,
+        composite: true, // 하이브리드(압축+업로드) 진행률 계산 플래그
       },
     });
 
@@ -516,9 +517,35 @@ export default function CreatePostScreen() {
       // });
 
       let createdPost;
+      // === 복합(progress) 계산을 위한 가중치 ===
+      const PREP_WEIGHT = 0.3; // 미디어 준비/압축 비중 (30%)
+      const UPLOAD_WEIGHT = 0.6; // 실제 네트워크 업로드 비중 (60%)
+      // 남은 10% 는 finalize(DB 등록) 단계 (UploadTaskBar success 애니메이션)
+      const totalMedia = selectedImages.length + selectedVideos.length;
+      let prepCompleted = 0;
+      let latestPrepPercent = 0; // 0~(PREP_WEIGHT*100)
+      const calcComposite = (uploadPercent: number) => {
+        const uploadPortion = uploadPercent * UPLOAD_WEIGHT; // 0~60
+        const composite = Math.min(
+          99,
+          Math.round(latestPrepPercent + uploadPortion),
+        );
+        return composite;
+      };
+      const updatePrepProgress = () => {
+        if (totalMedia === 0) return;
+        latestPrepPercent = Math.min(
+          PREP_WEIGHT * 100,
+          Math.round((++prepCompleted / totalMedia) * PREP_WEIGHT * 100),
+        );
+        updateUploadTask(
+          taskId,
+          Math.min(99, latestPrepPercent),
+          `미디어 준비 중... ${latestPrepPercent}%`,
+        );
+      };
 
       // 미디어가 있는 경우 파일과 함께 게시물 생성
-      const totalMedia = selectedImages.length + selectedVideos.length;
       if (totalMedia > 0) {
         setUploadProgress("미디어 업로드 중...");
 
@@ -527,6 +554,8 @@ export default function CreatePostScreen() {
 
         // 이미지 처리
         for (const [index, image] of selectedImages.entries()) {
+          // 준비(압축/변환) 단계 진행률 업데이트
+          updatePrepProgress();
           if (isWeb()) {
             // 웹 환경: data URL을 File 객체로 변환
             const response = await fetch(image.uri);
@@ -566,6 +595,8 @@ export default function CreatePostScreen() {
 
         // 동영상 처리
         for (const [index, video] of selectedVideos.entries()) {
+          // 준비(압축/변환) 단계 진행률 업데이트
+          updatePrepProgress();
           if (isWeb()) {
             // 웹 환경: data URL을 File 객체로 변환
             const response = await fetch(video.uri);
@@ -590,10 +621,12 @@ export default function CreatePostScreen() {
           ...postInput,
           files: allFiles,
           onProgress: (progress: UploadProgress) => {
-            setUploadPercentage(progress.percentage);
-            const msg = `미디어 업로드 중... ${progress.percentage}%`;
+            // 실제 업로드 퍼센트(0~100)를 가중치 스케일에 맞게 혼합
+            const compositePercent = calcComposite(progress.percentage / 100);
+            setUploadPercentage(compositePercent);
+            const msg = `업로드 중... ${compositePercent}%`;
             setUploadProgress(msg);
-            updateUploadTask(taskId, progress.percentage, msg);
+            updateUploadTask(taskId, compositePercent, msg);
           },
         });
       } else {
@@ -638,6 +671,7 @@ export default function CreatePostScreen() {
       }
 
       // 업로드 성공 (이미 피드 화면에 있으므로 별도 네비게이션 불필요)
+      // 최종 단계: 90~100% 구간은 UploadTaskBar 에서 success 애니메이션으로 처리
       finalizeUploadTask(taskId, true);
       // 글로벌 RefreshBus 를 통해 피드 새로고침 트리거
       triggerRefresh("feed", {

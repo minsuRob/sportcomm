@@ -14,8 +14,19 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
+import { isWeb } from "@/lib/platform";
 /* 상위(PostDetailContent 등)에서 thumbnailUrl 해석을 끝내고 내려주므로
    여기서는 최적화 URL 생성 로직을 의존하지 않는다 (표시 전용 컴포넌트). */
+
+// expo-video는 조건부로 import (웹에서 문제 발생 방지)
+let Video: any = null;
+try {
+  if (!isWeb()) {
+    Video = require("expo-video").Video;
+  }
+} catch (error) {
+  console.warn("expo-video를 로드할 수 없습니다:", error);
+}
 
 /**
  * Media 인터페이스
@@ -51,6 +62,10 @@ export default function PostMedia({
   // 이미지 자세히 보기 모달 상태
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
+
+  // 동영상 자세히 보기 모달 상태
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<Media | null>(null);
 
   /**
    * 유효 미디어 (image 또는 video) - 최대 4개만 표시
@@ -90,22 +105,31 @@ export default function PostMedia({
     transformUrl(item.thumbnailUrl || item.url);
 
   /**
-   * 이미지 클릭 핸들러
+   * 미디어 클릭 핸들러
    */
-  const handleImagePress = (item: Media) => {
-    // 이미지만 모달로 표시 (비디오는 제외)
+  const handleMediaPress = (item: Media) => {
     if (item.type === "image" || item.type === "IMAGE") {
+      // 이미지 모달 표시
       setSelectedMedia(item);
       setImageModalVisible(true);
+    } else if (item.type === "video" || item.type === "VIDEO") {
+      // 동영상 모달 표시
+      setSelectedVideo(item);
+      setVideoModalVisible(true);
     }
   };
 
   /**
-   * 모달 닫기 핸들러
+   * 모달 닫기 핸들러들
    */
-  const handleCloseModal = () => {
+  const handleCloseImageModal = () => {
     setImageModalVisible(false);
     setSelectedMedia(null);
+  };
+
+  const handleCloseVideoModal = () => {
+    setVideoModalVisible(false);
+    setSelectedVideo(null);
   };
 
   /**
@@ -116,7 +140,7 @@ export default function PostMedia({
     return (
       <TouchableOpacity
         style={themed($singleWrapper)}
-        onPress={() => handleImagePress(first)}
+        onPress={() => handleMediaPress(first)}
         activeOpacity={0.9}
       >
         <Image
@@ -148,7 +172,7 @@ export default function PostMedia({
       return (
         <TouchableOpacity
           style={themed($singleWrapper)}
-          onPress={() => handleImagePress(item)}
+          onPress={() => handleMediaPress(item)}
           activeOpacity={0.9}
         >
           <Image
@@ -172,7 +196,7 @@ export default function PostMedia({
             <TouchableOpacity
               key={item.id}
               style={themed($halfItemWrapper)}
-              onPress={() => handleImagePress(item)}
+              onPress={() => handleMediaPress(item)}
               activeOpacity={0.9}
             >
               <Image
@@ -203,7 +227,7 @@ export default function PostMedia({
           <TouchableOpacity
             key={item.id}
             style={themed($scrollItemWrapper)}
-            onPress={() => handleImagePress(item)}
+            onPress={() => handleMediaPress(item)}
             activeOpacity={0.9}
           >
             <Image
@@ -236,18 +260,18 @@ export default function PostMedia({
         visible={imageModalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={handleCloseModal}
+        onRequestClose={handleCloseImageModal}
       >
         <TouchableOpacity
           style={themed($modalOverlay)}
           activeOpacity={1}
-          onPress={handleCloseModal}
+          onPress={handleCloseImageModal}
         >
           <View style={themed($modalContent)}>
             {/* 닫기 버튼 */}
             <TouchableOpacity
               style={themed($closeButton)}
-              onPress={handleCloseModal}
+              onPress={handleCloseImageModal}
               activeOpacity={0.8}
             >
               <Ionicons name="close" size={28} color="white" />
@@ -266,6 +290,76 @@ export default function PostMedia({
                 ]}
                 resizeMode="contain"
               />
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 동영상 자세히 보기 모달 */}
+      <Modal
+        visible={videoModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseVideoModal}
+      >
+        <TouchableOpacity
+          style={themed($modalOverlay)}
+          activeOpacity={1}
+          onPress={handleCloseVideoModal}
+        >
+          <View style={themed($modalContent)}>
+            {/* 닫기 버튼 */}
+            <TouchableOpacity
+              style={themed($closeButton)}
+              onPress={handleCloseVideoModal}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+
+            {/* 동영상 플레이어 */}
+            {selectedVideo && (
+              <View style={themed($videoModalContainer)}>
+                {isWeb() ? (
+                  // 웹 환경: HTML5 video 플레이어
+                  <video
+                    src={selectedVideo.url}
+                    controls
+                    autoPlay
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      maxWidth: Math.min(screenWidth * 0.9, 800),
+                      maxHeight: Math.min(screenHeight * 0.8, 600),
+                      borderRadius: 12,
+                    }}
+                  />
+                ) : Video ? (
+                  // 모바일 환경: expo-video 전체화면 플레이어
+                  <Video
+                    source={{ uri: selectedVideo.url }}
+                    style={{
+                      width: Math.min(screenWidth * 0.9, screenHeight * 0.7),
+                      height: Math.min(screenWidth * 0.9, screenHeight * 0.7),
+                      borderRadius: 12,
+                    }}
+                    useNativeControls
+                    resizeMode="contain"
+                    isLooping={false}
+                    isMuted={false}
+                    shouldPlay={true}
+                    presentationStyle="fullscreen"
+                  />
+                ) : (
+                  // 폴백: 비디오를 재생할 수 없음
+                  <View style={themed($videoFallback)}>
+                    <Ionicons name="videocam" size={48} color="white" />
+                    <Text style={themed($videoFallbackText)}>
+                      동영상을 재생할 수 없습니다
+                    </Text>
+                  </View>
+                )}
+              </View>
             )}
           </View>
         </TouchableOpacity>
@@ -452,4 +546,26 @@ const $closeButton: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   justifyContent: "center",
   alignItems: "center",
   zIndex: 10,
+});
+
+/* 동영상 모달 스타일 */
+const $videoModalContainer: ThemedStyle<ViewStyle> = () => ({
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $videoFallback: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  width: 300,
+  height: 200,
+  backgroundColor: colors.backgroundDim,
+  borderRadius: 12,
+  justifyContent: "center",
+  alignItems: "center",
+});
+
+const $videoFallbackText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 16,
+  marginTop: 12,
+  textAlign: "center",
 });

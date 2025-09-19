@@ -13,7 +13,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { Portal } from "@rn-primitives/portal";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth/context/AuthContext";
-import Toast from "react-native-toast-message";
+import { showToast } from "@/components/CustomToast";
 
 export interface ProfileContextPopoverProps {
   visible: boolean;
@@ -54,20 +54,18 @@ export default function ProfileContextPopover({
   const handleLogout = async (): Promise<void> => {
     try {
       await signOut();
-      Toast.show({
+      showToast({
         type: "success",
-        text1: "로그아웃 성공",
-        text2: "로그아웃이 완료되었습니다.",
-        position: "bottom",
+        title: "로그아웃 성공",
+        message: "로그아웃이 완료되었습니다.",
       });
       router.push("/auth");
     } catch (error) {
       console.error("로그아웃 중 오류 발생:", error);
-      Toast.show({
+      showToast({
         type: "error",
-        text1: "로그아웃 실패",
-        text2: "로그아웃 처리 중 오류가 발생했습니다.",
-        position: "bottom",
+        title: "로그아웃 실패",
+        message: "로그아웃 처리 중 오류가 발생했습니다.",
       });
     }
   };

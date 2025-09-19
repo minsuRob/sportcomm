@@ -16,7 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuth } from "@/lib/auth/context/AuthContext";
-import Toast from "react-native-toast-message";
+import { showToast } from "@/components/CustomToast";
 
 /**
  * 안드로이드에서 LayoutAnimation 활성화
@@ -54,20 +54,18 @@ export default function SettingsScreen() {
   const handleLogout = async (): Promise<void> => {
     try {
       await signOut();
-      Toast.show({
+      showToast({
         type: "success",
-        text1: "로그아웃 성공",
-        text2: "로그아웃이 완료되었습니다.",
-        position: "bottom",
+        title: "로그아웃 성공",
+        message: "로그아웃이 완료되었습니다.",
       });
       router.push("/feed");
     } catch (error) {
       console.error("로그아웃 중 오류 발생:", error);
-      Toast.show({
+      showToast({
         type: "error",
-        text1: "로그아웃 실패",
-        text2: "로그아웃 처리 중 오류가 발생했습니다.",
-        position: "bottom",
+        title: "로그아웃 실패",
+        message: "로그아웃 처리 중 오류가 발생했습니다.",
       });
     }
   };

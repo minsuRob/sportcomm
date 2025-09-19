@@ -423,11 +423,6 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
 
       const { errors } = await updateMyTeamsPriority({
         variables: { teamIds: orderedTeamIds },
-        context: {
-          headers: {
-            authorization: accessToken ? `Bearer ${accessToken}` : "",
-          },
-        },
       });
 
       if (errors && errors.length > 0) {
@@ -444,11 +439,6 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
             favoritePlayerName: team._tempFavoritePlayerName || null,
             favoritePlayerNumber: team._tempFavoritePlayerNumber ?? null,
           })),
-        },
-        context: {
-          headers: {
-            authorization: accessToken ? `Bearer ${accessToken}` : "",
-          },
         },
       });
 

@@ -485,11 +485,6 @@ export default function TeamSelectionScreen() {
             favoritePlayerNumber: team._tempFavoritePlayerNumber ?? null,
           })),
         },
-        context: {
-          headers: {
-            authorization: accessToken ? `Bearer ${accessToken}` : "",
-          },
-        },
       });
 
       if (errors && errors.length > 0) {

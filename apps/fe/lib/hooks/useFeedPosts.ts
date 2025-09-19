@@ -11,6 +11,7 @@ import {
 import type { Post } from "@/components/PostCard";
 import type { PostType } from "@/lib/supabase/types";
 import { getCurrentSession, isTokenValid } from "@/lib/auth/token-manager";
+import { useAuth } from "@/lib/auth/context/AuthContext";
 
 /**
  * 변경 요약 (게스트 지원):
@@ -227,6 +228,9 @@ const GET_POSTS = gql`
  * - 게스트: 팀 필터/차단 목록 없이 전체 공개 게시물
  */
 export function useFeedPosts() {
+  // Google OAuth 로그인 후 myTeams 기반 selected_team_filter 설정을 위해 사용
+  const { user: currentUser } = useAuth();
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[] | null>(null);
@@ -343,64 +347,45 @@ export function useFeedPosts() {
 
         networkRequestCount.current = 1;
 
-        // 1. 저장된 팀 필터
+        // 1. 저장된 팀 필터 확인
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        let savedIds: string[] | null = null;
+
         if (saved && isMounted) {
-          const savedIds = JSON.parse(saved);
-          setSelectedTeamIds(savedIds.length > 0 ? savedIds : null);
-          setPerformanceMetrics((prev) => ({
-            ...prev,
-            networkRequests: {
-              ...prev.networkRequests,
-              cacheHits: prev.networkRequests.cacheHits + 1,
-            },
-            timing: {
-              ...prev.timing,
-              filterInitTime: Date.now() - filterInitStartTime,
-            },
-          }));
-          return;
+          savedIds = JSON.parse(saved);
+          savedIds = savedIds && savedIds.length > 0 ? savedIds : null;
         }
 
-        // 2. myTeams 사용
-        let teamsToUse = authData?.myTeams || myTeamsCache.current;
-        if (!teamsToUse) {
-          try {
-            const { data: re } = await authRefetch();
-            teamsToUse = re?.myTeams || [];
-            networkRequestCount.current++;
-          } catch (e) {
-            console.warn("My Teams 로드 실패:", e);
-            teamsToUse = [];
-            setPerformanceMetrics((prev) => ({
-              ...prev,
-              networkRequests: {
-                ...prev.networkRequests,
-                cacheMisses: prev.networkRequests.cacheMisses + 1,
-              },
-            }));
+        // 2. Google OAuth 로그인 등으로 처음 로그인한 경우 myTeams 기반으로 필터 설정
+        // (저장된 필터가 없고, 사용자의 myTeams가 있는 경우)
+        if (!savedIds && currentUser?.myTeams && currentUser.myTeams.length > 0 && isMounted) {
+          const myTeamIds = currentUser.myTeams
+            .filter((team: any) => team?.team?.id) // 유효한 팀만 필터링
+            .map((team: any) => team.team.id);
+
+          if (myTeamIds.length > 0) {
+            savedIds = myTeamIds;
+            // 로컬 스토리지에 저장하여 다음 로그인 시에도 유지
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(myTeamIds));
+            console.log("🔄 Google OAuth 로그인 후 myTeams 기반 필터 설정:", myTeamIds);
           }
-        } else {
-          setPerformanceMetrics((prev) => ({
-            ...prev,
-            optimization: {
-              ...prev.optimization,
-              redundantCallsPrevented:
-                prev.optimization.redundantCallsPrevented + 1,
-            },
-          }));
         }
 
-        if (teamsToUse && isMounted) {
-          myTeamsCache.current = teamsToUse;
-          const ids = teamsToUse.map((ut) => ut.team.id);
-          const teamIds = ids.length > 0 ? ids : null;
-          setSelectedTeamIds(teamIds);
-          await AsyncStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(teamIds || []),
-          );
+        if (isMounted) {
+          setSelectedTeamIds(savedIds);
         }
+
+        setPerformanceMetrics((prev) => ({
+          ...prev,
+          networkRequests: {
+            ...prev.networkRequests,
+            cacheHits: prev.networkRequests.cacheHits + (saved ? 1 : 0),
+          },
+          timing: {
+            ...prev.timing,
+            filterInitTime: Date.now() - filterInitStartTime,
+          },
+        }));
       } catch (e) {
         console.error("필터 초기화 실패:", e);
         if (isMounted) setSelectedTeamIds(null);
@@ -427,7 +412,7 @@ export function useFeedPosts() {
     return () => {
       isMounted = false;
     };
-  }, [filterInitialized, authData?.myTeams, isAuthenticated, authRefetch]);
+  }, [filterInitialized, authData?.myTeams, isAuthenticated, authRefetch, currentUser]);
 
   useEffect(() => {
     if (!filterInitialized || !mountedRef.current) return;

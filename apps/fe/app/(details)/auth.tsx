@@ -490,44 +490,47 @@ export default function AuthScreen() {
     try {
       console.log(`🔄 ${provider} 소셜 로그인 시작`);
 
-      // 현재: 모든 소셜 로그인(구글, 애플)을 "곧 지원 예정"으로 처리
-      // setDialog({
-      //   visible: true,
-      //   title: "알림",
-      //   description: `${provider === "google" ? "Google" : "Apple"} 로그인은 곧 지원 예정입니다.`,
-      // });
-      // return;
+      if (provider === "google") {
+        // ==================== Google OAuth 로그인 ====================
+        // 1. 리다이렉트 URL 설정 (웹/모바일 환경에 따라 다름)
+        const redirectTo =
+          typeof window !== "undefined" && window.location?.origin
+            ? window.location.origin  // 웹 환경
+            : "myapp://auth-callback"; // 모바일 앱 환경
 
-      // ==================== 기존 구글 로그인 구현 코드 ====================
-      // TODO: 추후 소셜 로그인 구현 시 아래 주석 해제하여 사용
-      // /*
-      // 1. 리다이렉트 URL 설정 (웹/모바일 환경에 따라 다름)
-      const redirectTo =
-        typeof window !== "undefined" && window.location?.origin
-          ? window.location.origin  // 웹 환경
-          : "myapp://auth-callback"; // 모바일 앱 환경
+        // 2. Supabase Auth를 통한 Google OAuth 로그인
+        const { error } = await SupabaseAuthService.signInWithGoogle(redirectTo);
 
-      // 2. Supabase Auth를 통한 Google OAuth 로그인
-      const { error } = await SupabaseAuthService.signInWithGoogle(redirectTo);
+        // 3. 에러 처리
+        if (error) {
+          throw error;
+        }
 
-      // 3. 에러 처리
-      if (error) {
-        throw error;
+        // 4. 성공 시 추가 처리 (세션 확인, 사용자 정보 동기화 등)
+        // - Supabase Auth의 onAuthStateChange로 세션 변경 감지
+        // - 사용자 정보 백엔드 동기화
+        // - 로그인 성공 후 메인 화면으로 이동
+        console.log("✅ Google OAuth 로그인 시작됨 - 리다이렉트 대기 중");
+
+        return;
+      } else if (provider === "apple") {
+        // Apple 로그인은 아직 구현되지 않음
+        setDialog({
+          visible: true,
+          title: "알림",
+          description: "Apple 로그인은 곧 지원 예정입니다.",
+          confirmText: "확인",
+        });
+        return;
       }
 
-      // 4. 성공 시 추가 처리 (세션 확인, 사용자 정보 동기화 등)
-      // - Supabase Auth의 onAuthStateChange로 세션 변경 감지
-      // - 사용자 정보 백엔드 동기화
-      // - 로그인 성공 후 메인 화면으로 이동
-      // */
-
-      // ==================== Apple 로그인 구현 계획 ====================
-      /*
-      // Apple 로그인의 경우:
-      // 1. @invertase/react-native-apple-authentication 라이브러리 사용
-      // 2. Apple Developer Console에서 서비스 ID 및 키 설정
-      // 3. Supabase Auth의 signInWithIdToken 또는 커스텀 OAuth 사용
-      */
+      // 기타 소셜 로그인 (현재 지원하지 않음)
+      setDialog({
+        visible: true,
+        title: "알림",
+        description: `${provider} 로그인은 곧 지원 예정입니다.`,
+        confirmText: "확인",
+      });
 
     } catch (error: any) {
       console.error(`${provider} 로그인 실패:`, error);

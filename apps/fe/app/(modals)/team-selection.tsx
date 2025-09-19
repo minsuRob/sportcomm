@@ -647,7 +647,7 @@ export default function TeamSelectionScreen() {
                     )}
                   </View>
                 </TouchableOpacity>
-                {isSelected ? (
+                {/* {isSelected ? (
                   <TouchableOpacity
                     style={[
                       themed($teamSettingsButton),
@@ -674,7 +674,7 @@ export default function TeamSelectionScreen() {
                   </TouchableOpacity>
                 ) : (
                   <View style={themed($teamSettingsPlaceholder)} />
-                )}
+                )} */}
               </View>
             );
           })}

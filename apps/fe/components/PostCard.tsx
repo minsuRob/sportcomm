@@ -834,7 +834,7 @@ const PostCard = React.memo(function PostCard({
                 />
               </TouchableOpacity>
 
-              {/* 닉네임/시간 세로 정렬, 팔로우 버튼을 오른쪽에 배치 */}
+              {/* 닉네임/시간 세로 정렬, 팔로우 버튼을 날짜 아래에 배치 */}
               <View style={themed($profileInfoColumn)}>
                 <TouchableOpacity
                   onPress={() =>
@@ -880,33 +880,34 @@ const PostCard = React.memo(function PostCard({
                     teamColors={teamColors}
                   />
                 </TouchableOpacity>
+                {/* 팔로우 버튼을 날짜 아래에 배치 */}
+                {currentUser && currentUser.id !== post.author.id && (
+                  <TouchableOpacity
+                    style={[
+                      themed($followButtonCompact),
+                      isFollowing && themed($followButtonActive),
+                    ]}
+                    onPress={handleFollowToggle}
+                    disabled={followLoading}
+                    activeOpacity={0.8}
+                  >
+                    {followLoading ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <Ionicons
+                          name={isFollowing ? "person-remove" : "person-add"}
+                          size={10}
+                          color="white"
+                        />
+                        <Text style={themed($followButtonTextCompact)}>
+                          {isFollowing ? "언팔로우" : "팔로우"}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
-              {currentUser && currentUser.id !== post.author.id && (
-                <TouchableOpacity
-                  style={[
-                    themed($followButton),
-                    isFollowing && themed($followButtonActive),
-                  ]}
-                  onPress={handleFollowToggle}
-                  disabled={followLoading}
-                  activeOpacity={0.8}
-                >
-                  {followLoading ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <>
-                      <Ionicons
-                        name={isFollowing ? "person-remove" : "person-add"}
-                        size={12}
-                        color="white"
-                      />
-                      <Text style={themed($followButtonText)}>
-                        {isFollowing ? "언팔로우" : "팔로우"}
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
             </View>
 
             {/* 카테고리 배지와 더보기 버튼을 포함하는 컨테이너 */}
@@ -1280,6 +1281,22 @@ const $followButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   gap: spacing.xxxs,
 });
 
+const $followButtonCompact: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: colors.tint,
+  paddingHorizontal: spacing.xs,
+  paddingVertical: 2,
+  borderRadius: 12,
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.15,
+  shadowRadius: 2,
+  elevation: 2,
+  gap: spacing.xxxs,
+  marginTop: 4,
+  alignSelf: "flex-start",
+});
+
 const $followButtonActive: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.textDim,
 });
@@ -1289,6 +1306,13 @@ const $followButtonText: ThemedStyle<TextStyle> = () => ({
   fontSize: 11,
   fontWeight: "600",
   letterSpacing: 0.2,
+});
+
+const $followButtonTextCompact: ThemedStyle<TextStyle> = () => ({
+  color: "white",
+  fontSize: 12,
+  fontWeight: "600",
+  letterSpacing: 0.1,
 });
 
 // 카테고리 배지와 더보기 버튼 컨테이너 - 오른쪽 위

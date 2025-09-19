@@ -278,6 +278,23 @@ export class ChatService {
         console.error('[Progress] 채팅 메시지 적립 실패:', err?.message || err),
       );
 
+    // === 팀별 경험치 적립 처리 ===
+    // 팀 채팅방인 경우 해당 팀에 경험치 부여
+    if (chatRoom.teamId) {
+      this.progressService
+        .awardTeamExperienceForChat(userId, chatRoom.teamId, savedMessage.id)
+        .catch((err) =>
+          console.error('[Progress] 팀 경험치 적립 실패:', err?.message || err),
+        );
+    } else {
+      // 공용 채팅방인 경우 사용자의 모든 팀에 경험치 부여 (선택사항)
+      // this.progressService
+      //   .awardExperienceToAllUserTeams(userId, UserProgressAction.CHAT_MESSAGE, savedMessage.id, 'CHAT_MESSAGE')
+      //   .catch((err) =>
+      //     console.error('[Progress] 전체 팀 경험치 적립 실패:', err?.message || err),
+      //   );
+    }
+
     return messageWithRelations;
   }
 

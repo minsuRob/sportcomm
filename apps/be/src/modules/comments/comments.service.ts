@@ -9,6 +9,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Comment } from '../../entities/comment.entity';
 import { Post } from '../../entities/post.entity';
 import { CreateCommentInput } from './dto/create-comment.input';
+import { ProgressService } from '../progress/progress.service';
 
 /**
  * 댓글 서비스
@@ -23,6 +24,7 @@ export class CommentsService {
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly progressService: ProgressService,
   ) {}
 
   /**
@@ -105,6 +107,22 @@ export class CommentsService {
         authorId: post.authorId,
       });
     }
+
+    // 포인트/경험치 적립 (댓글 작성 액션)
+    // 실패하더라도 댓글 생성 흐름에 영향을 주지 않도록 예외는 로깅 후 무시
+    this.progressService
+      ?.awardChatMessage(userId)
+      .catch((err) =>
+        console.error('[Progress] 댓글 작성 적립 실패:', err?.message || err),
+      );
+
+    // 팀별 경험치 적립 (댓글이 달린 게시물의 팀에 경험치 부여)
+    // 댓글 작성 시 해당 팀에 3점 경험치 적립
+    this.progressService
+      ?.awardTeamExperienceForComment(userId, post.teamId, savedComment.id)
+      .catch((err) =>
+        console.error('[Progress] 팀 경험치 적립 실패:', err?.message || err),
+      );
 
     return commentWithAuthor;
   }

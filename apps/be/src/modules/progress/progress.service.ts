@@ -13,6 +13,11 @@ import {
   PointTransactionType,
   PointReferenceType,
 } from '../../entities/point-transaction.entity';
+import {
+  UserTeam,
+  TeamExperienceTransaction,
+  TeamExperienceTransactionType,
+} from '../../entities/user-team.entity';
 
 /**
  * ProgressService
@@ -59,6 +64,61 @@ export interface DailyLimitsInfo {
   timezone: string;
 }
 
+export interface TeamExperienceResult {
+  userTeamId: string;
+  userId: string;
+  teamId: string;
+  action: UserProgressAction;
+  experienceGained: number;
+  previousLevel: number;
+  newLevel: number;
+  levelUp: boolean;
+  totalExperience: number;
+  timestamp: Date;
+  transaction?: TeamExperienceTransaction;
+}
+
+export interface TeamLevelInfo {
+  userTeamId: string;
+  teamId: string;
+  currentLevel: number;
+  currentExperience: number;
+  experienceToNext: number;
+  levelProgressRatio: number;
+  nextLevelThreshold: number;
+  isMaxLevel: boolean;
+}
+
+/**
+ * 경험치 보상 설정
+ * 새로운 액션이나 보상 비율 변경이 필요할 때 이 설정만 수정하면 됩니다.
+ */
+export const TEAM_EXPERIENCE_REWARDS: Record<UserProgressAction, number> = {
+  [UserProgressAction.CHAT_MESSAGE]: 3,     // 채팅 메시지: 3 경험치
+  [UserProgressAction.POST_CREATE]: 10,     // 게시물 작성: 10 경험치
+  [UserProgressAction.DAILY_ATTENDANCE]: 20, // 출석 체크: 20 경험치
+};
+
+/**
+ * 팀 경험치 보상 정책
+ * 향후 다양한 보상 정책을 추가할 수 있습니다.
+ */
+export interface TeamExperienceRewardPolicy {
+  baseExperience: number;           // 기본 경험치
+  multiplier?: number;              // 승수 (예: 프리미엄 사용자용)
+  bonusConditions?: string[];       // 보너스 조건
+  maxDailyExperience?: number;      // 일일 최대 경험치 제한
+}
+
+/**
+ * 확장 가능한 보상 시스템을 위한 인터페이스
+ */
+export interface RewardSystem {
+  type: 'experience' | 'points' | 'items' | 'custom';
+  calculateReward(action: UserProgressAction, context?: any): Promise<number>;
+  applyReward(userId: string, teamId: string, amount: number, context?: any): Promise<void>;
+}
+
 @Injectable()
 export class ProgressService {
   constructor(
@@ -66,6 +126,8 @@ export class ProgressService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(PointTransaction)
     private readonly pointTxRepo: Repository<PointTransaction>,
+    @InjectRepository(UserTeam)
+    private readonly userTeamRepository: Repository<UserTeam>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -505,8 +567,6 @@ export class ProgressService {
     return USER_PROGRESS_REWARD[action] ?? 0;
   }
 
-  // ================== 부가 설명/가독성 위한 헬퍼 ==================
-
   /**
    * 액션별 자동 설명 문자열
    */
@@ -542,6 +602,481 @@ export class ProgressService {
       default:
         return undefined;
     }
+  }
+
+  // ================== 팀 경험치 관리 ==================
+
+  /**
+   * 사용자-팀 관계 조회 (없으면 생성)
+   */
+  private async findOrCreateUserTeam(
+    userId: string,
+    teamId: string,
+  ): Promise<UserTeam> {
+    let userTeam = await this.userTeamRepository.findOne({
+      where: { userId, teamId },
+      relations: ['user', 'team'],
+    });
+
+    if (!userTeam) {
+      userTeam = this.userTeamRepository.create({
+        userId,
+        teamId,
+        experience: 0,
+        priority: 0,
+        notificationEnabled: true,
+      });
+      await this.userTeamRepository.save(userTeam);
+
+      // 관계 재로딩
+      userTeam = await this.userTeamRepository.findOne({
+        where: { id: userTeam.id },
+        relations: ['user', 'team'],
+      });
+    }
+
+    return userTeam!;
+  }
+
+  /**
+   * 사용자의 모든 팀 경험치 정보 조회
+   */
+  async getUserTeamExperiences(userId: string): Promise<TeamLevelInfo[]> {
+    const userTeams = await this.userTeamRepository.find({
+      where: { userId },
+      relations: ['user', 'team'],
+    });
+
+    return userTeams.map(userTeam => {
+      const levelInfo = userTeam.getDetailedLevelInfo();
+      return {
+        userTeamId: userTeam.id,
+        teamId: userTeam.teamId,
+        currentLevel: levelInfo.currentLevel,
+        currentExperience: levelInfo.currentExperience,
+        experienceToNext: levelInfo.experienceToNext,
+        levelProgressRatio: levelInfo.levelProgressRatio,
+        nextLevelThreshold: levelInfo.nextLevelThreshold,
+        isMaxLevel: levelInfo.isMaxLevel,
+      };
+    });
+  }
+
+  /**
+   * 특정 팀의 경험치 정보 조회
+   */
+  async getTeamExperienceInfo(
+    userId: string,
+    teamId: string,
+  ): Promise<TeamLevelInfo | null> {
+    const userTeam = await this.userTeamRepository.findOne({
+      where: { userId, teamId },
+      relations: ['user', 'team'],
+    });
+
+    if (!userTeam) return null;
+
+    const levelInfo = userTeam.getDetailedLevelInfo();
+    return {
+      userTeamId: userTeam.id,
+      teamId: userTeam.teamId,
+      currentLevel: levelInfo.currentLevel,
+      currentExperience: levelInfo.currentExperience,
+      experienceToNext: levelInfo.experienceToNext,
+      levelProgressRatio: levelInfo.levelProgressRatio,
+      nextLevelThreshold: levelInfo.nextLevelThreshold,
+      isMaxLevel: levelInfo.isMaxLevel,
+    };
+  }
+
+  /**
+   * 팀 경험치 적립 (범용) - 확장된 버전
+   */
+  async awardTeamExperience(
+    userId: string,
+    teamId: string,
+    action: UserProgressAction,
+    referenceId?: string,
+    referenceType?: 'POST' | 'COMMENT' | 'CHAT_MESSAGE' | 'ATTENDANCE',
+    policy?: TeamExperienceRewardPolicy,
+  ): Promise<TeamExperienceResult> {
+    const userTeam = await this.findOrCreateUserTeam(userId, teamId);
+    const timestamp = new Date();
+
+    // 보상 정책 적용
+    const baseExperience = TEAM_EXPERIENCE_REWARDS[action] ?? 0;
+    const finalExperience = this.applyRewardPolicy(baseExperience, policy);
+
+    // 경험치 적립 실행
+    const experienceResult = userTeam.addExperience(finalExperience);
+
+    // DB 업데이트
+    await this.userTeamRepository.save(userTeam);
+
+    // 트랜잭션 생성
+    const transaction = userTeam.createExperienceTransaction(
+      action,
+      referenceType,
+      referenceId,
+      `보상 정책 적용: ${policy ? JSON.stringify(policy) : '기본'}`,
+    );
+
+    const result: TeamExperienceResult = {
+      userTeamId: userTeam.id,
+      userId,
+      teamId,
+      action,
+      experienceGained: experienceResult.experienceGained,
+      previousLevel: experienceResult.previousLevel,
+      newLevel: experienceResult.newLevel,
+      levelUp: experienceResult.levelUp,
+      totalExperience: experienceResult.totalExperience,
+      timestamp,
+      transaction,
+    };
+
+    // 이벤트 발행
+    this.eventEmitter.emit('progress.teamExperienceAwarded', result);
+
+    return result;
+  }
+
+  /**
+   * 보상 정책 적용 헬퍼
+   */
+  private applyRewardPolicy(baseExperience: number, policy?: TeamExperienceRewardPolicy): number {
+    if (!policy) return baseExperience;
+
+    let finalExperience = baseExperience;
+
+    // 승수 적용
+    if (policy.multiplier && policy.multiplier !== 1) {
+      finalExperience *= policy.multiplier;
+    }
+
+    // 보너스 조건 확인 (향후 확장 가능)
+    if (policy.bonusConditions && policy.bonusConditions.length > 0) {
+      // 예: 특정 조건 만족 시 추가 경험치
+      finalExperience += policy.bonusConditions.length * 2; // 간단한 보너스
+    }
+
+    // 일일 최대 제한 적용 (향후 확장 가능)
+    if (policy.maxDailyExperience) {
+      finalExperience = Math.min(finalExperience, policy.maxDailyExperience);
+    }
+
+    return Math.floor(finalExperience);
+  }
+
+  /**
+   * 채팅 메시지 팀 경험치 적립
+   */
+  async awardTeamExperienceForChat(
+    userId: string,
+    teamId: string,
+    messageId?: string,
+  ): Promise<TeamExperienceResult> {
+    return this.awardTeamExperience(
+      userId,
+      teamId,
+      UserProgressAction.CHAT_MESSAGE,
+      messageId,
+      'CHAT_MESSAGE',
+    );
+  }
+
+  /**
+   * 게시물 작성 팀 경험치 적립
+   */
+  async awardTeamExperienceForPost(
+    userId: string,
+    teamId: string,
+    postId?: string,
+  ): Promise<TeamExperienceResult> {
+    return this.awardTeamExperience(
+      userId,
+      teamId,
+      UserProgressAction.POST_CREATE,
+      postId,
+      'POST',
+    );
+  }
+
+  /**
+   * 댓글 작성 팀 경험치 적립
+   */
+  async awardTeamExperienceForComment(
+    userId: string,
+    teamId: string,
+    commentId?: string,
+  ): Promise<TeamExperienceResult> {
+    return this.awardTeamExperience(
+      userId,
+      teamId,
+      UserProgressAction.CHAT_MESSAGE, // 댓글도 채팅과 동일하게 3점
+      commentId,
+      'COMMENT',
+    );
+  }
+
+  /**
+   * 출석 체크 팀 경험치 적립
+   */
+  async awardTeamExperienceForAttendance(
+    userId: string,
+    teamId: string,
+    attendanceId?: string,
+  ): Promise<TeamExperienceResult> {
+    return this.awardTeamExperience(
+      userId,
+      teamId,
+      UserProgressAction.DAILY_ATTENDANCE,
+      attendanceId,
+      'ATTENDANCE',
+    );
+  }
+
+  /**
+   * 다중 팀 경험치 적립 (사용자의 모든 팀에 동시에 적용)
+   */
+  async awardExperienceToAllUserTeams(
+    userId: string,
+    action: UserProgressAction,
+    referenceId?: string,
+    referenceType?: 'POST' | 'COMMENT' | 'CHAT_MESSAGE' | 'ATTENDANCE',
+  ): Promise<TeamExperienceResult[]> {
+    const userTeams = await this.userTeamRepository.find({
+      where: { userId },
+      relations: ['user', 'team'],
+    });
+
+    const results: TeamExperienceResult[] = [];
+
+    for (const userTeam of userTeams) {
+      const result = await this.awardTeamExperience(
+        userId,
+        userTeam.teamId,
+        action,
+        referenceId,
+        referenceType,
+      );
+      results.push(result);
+    }
+
+    return results;
+  }
+
+  /**
+   * 팀 경험치 리더보드 조회
+   */
+  async getTeamExperienceLeaderboard(
+    teamId: string,
+    limit: number = 20,
+  ): Promise<Array<{
+    userTeamId: string;
+    userId: string;
+    nickname: string;
+    experience: number;
+    level: number;
+    rank: number;
+  }>> {
+    const userTeams = await this.userTeamRepository.find({
+      where: { teamId },
+      relations: ['user'],
+      order: { experience: 'DESC' },
+      take: limit,
+    });
+
+    return userTeams.map((userTeam, index) => ({
+      userTeamId: userTeam.id,
+      userId: userTeam.userId,
+      nickname: userTeam.user?.nickname || 'Unknown',
+      experience: userTeam.experience || 0,
+      level: userTeam.level,
+      rank: index + 1,
+    }));
+  }
+
+  // ================== 확장성 지원 ==================
+
+  /**
+   * 새로운 액션 등록 및 보상 설정
+   * 런타임에 새로운 액션을 추가할 수 있습니다.
+   */
+  registerNewTeamAction(actionKey: string, experienceReward: number): void {
+    // 런타임에 새로운 액션 등록 (실제로는 별도 설정 파일이나 DB에서 관리)
+    console.log(`새로운 팀 액션 등록: ${actionKey} -> ${experienceReward} 경험치`);
+    // 향후 확장을 위한 플레이스홀더
+  }
+
+  /**
+   * 확장 가능한 보상 시스템 팩토리
+   */
+  createRewardSystem(config: {
+    type: 'experience' | 'points' | 'items';
+    baseMultiplier?: number;
+    customRules?: any[];
+  }): RewardSystem {
+    return {
+      type: config.type,
+      calculateReward: async (action: UserProgressAction, context?: any): Promise<number> => {
+        const baseReward = TEAM_EXPERIENCE_REWARDS[action] ?? 0;
+        const multiplier = config.baseMultiplier ?? 1;
+
+        // 커스텀 규칙 적용 (향후 확장)
+        let finalReward = baseReward * multiplier;
+
+        if (config.customRules) {
+          // 예: 특정 조건에 따른 추가 계산
+          config.customRules.forEach(rule => {
+            // 규칙 기반 계산 로직
+          });
+        }
+
+        return Math.floor(finalReward);
+      },
+
+      applyReward: async (userId: string, teamId: string, amount: number, context?: any): Promise<void> => {
+        switch (config.type) {
+          case 'experience':
+            await this.awardTeamExperience(userId, teamId, UserProgressAction.CHAT_MESSAGE); // 기본 액션 사용
+            break;
+          case 'points':
+            await this.awardAction(userId, UserProgressAction.CHAT_MESSAGE);
+            break;
+          case 'items':
+            // 아이템 보상 로직 (향후 구현)
+            console.log(`아이템 보상: ${amount}개 지급`);
+            break;
+          default:
+            console.log(`커스텀 보상 적용: ${amount}`);
+        }
+      },
+    };
+  }
+
+  /**
+   * 일괄 보상 처리 (여러 사용자/팀에 동시에 적용)
+   * 대량 데이터 처리 시 성능 최적화
+   */
+  async batchAwardTeamExperience(
+    rewards: Array<{
+      userId: string;
+      teamId: string;
+      action: UserProgressAction;
+      referenceId?: string;
+      referenceType?: 'POST' | 'COMMENT' | 'CHAT_MESSAGE' | 'ATTENDANCE';
+      policy?: TeamExperienceRewardPolicy;
+    }>,
+  ): Promise<TeamExperienceResult[]> {
+    const results: TeamExperienceResult[] = [];
+
+    // 트랜잭션으로 묶어서 처리 (성능 및 일관성 보장)
+    await this.userTeamRepository.manager.transaction(async (tem) => {
+      for (const reward of rewards) {
+        try {
+          const result = await this.awardTeamExperience(
+            reward.userId,
+            reward.teamId,
+            reward.action,
+            reward.referenceId,
+            reward.referenceType,
+            reward.policy,
+          );
+          results.push(result);
+        } catch (error) {
+          console.error(`배치 보상 처리 실패 (${reward.userId}):`, error);
+          // 개별 실패는 전체 배치를 중단하지 않음
+        }
+      }
+    });
+
+    return results;
+  }
+
+  /**
+   * 보상 정책 템플릿
+   * 자주 사용되는 보상 정책을 미리 정의
+   */
+  getRewardPolicyTemplates(): Record<string, TeamExperienceRewardPolicy> {
+    return {
+      standard: {
+        baseExperience: 0, // 기본값 사용
+        multiplier: 1,
+      },
+      premium: {
+        baseExperience: 0,
+        multiplier: 1.5, // 프리미엄 사용자 50% 추가
+      },
+      beginner: {
+        baseExperience: 0,
+        multiplier: 1.2, // 초보자 20% 추가
+      },
+      event: {
+        baseExperience: 0,
+        multiplier: 2, // 이벤트 기간 2배
+        bonusConditions: ['event_active'],
+      },
+      limited: {
+        baseExperience: 0,
+        multiplier: 1,
+        maxDailyExperience: 50, // 일일 최대 50 경험치
+      },
+    };
+  }
+
+  /**
+   * 동적 보상 계산 (컨텍스트 기반)
+   */
+  calculateDynamicReward(
+    action: UserProgressAction,
+    context: {
+      userLevel?: number;
+      teamLevel?: number;
+      timeOfDay?: number;
+      isWeekend?: boolean;
+      userRole?: string;
+      customFactors?: Record<string, any>;
+    } = {},
+  ): number {
+    const baseReward = TEAM_EXPERIENCE_REWARDS[action] ?? 0;
+    let multiplier = 1;
+
+    // 사용자 레벨에 따른 조정
+    if (context.userLevel && context.userLevel < 5) {
+      multiplier *= 1.2; // 초보자 보너스
+    }
+
+    // 팀 레벨에 따른 조정
+    if (context.teamLevel && context.teamLevel > 10) {
+      multiplier *= 0.9; // 고레벨 팀은 약간 감소
+    }
+
+    // 시간대에 따른 조정 (예: 야간 활동 보너스)
+    if (context.timeOfDay && (context.timeOfDay < 6 || context.timeOfDay > 22)) {
+      multiplier *= 1.1;
+    }
+
+    // 주말 보너스
+    if (context.isWeekend) {
+      multiplier *= 1.15;
+    }
+
+    // 역할별 조정
+    if (context.userRole === 'premium') {
+      multiplier *= 1.3;
+    }
+
+    // 커스텀 팩터 적용
+    if (context.customFactors) {
+      Object.values(context.customFactors).forEach((factor: any) => {
+        if (typeof factor === 'number' && factor > 0 && factor < 5) {
+          multiplier *= factor;
+        }
+      });
+    }
+
+    return Math.floor(baseReward * multiplier);
   }
 }
 

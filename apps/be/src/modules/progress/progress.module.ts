@@ -4,6 +4,7 @@ import { ProgressService } from './progress.service';
 import { ProgressResolver } from './progress.resolver';
 import { User } from '../../entities/user.entity';
 import { PointTransaction } from '../../entities/point-transaction.entity';
+import { UserTeam } from '../../entities/user-team.entity';
 
 /**
  * ProgressModule
@@ -23,8 +24,8 @@ import { PointTransaction } from '../../entities/point-transaction.entity';
  */
 @Module({
   imports: [
-    // 포인트 적립/차감 및 트랜잭션 이력 작성을 위해 User, PointTransaction 엔티티 주입
-    TypeOrmModule.forFeature([User, PointTransaction]),
+    // 포인트 적립/차감 및 트랜잭션 이력 작성을 위해 User, PointTransaction, UserTeam 엔티티 주입
+    TypeOrmModule.forFeature([User, PointTransaction, UserTeam]),
   ],
   providers: [ProgressService, ProgressResolver],
   exports: [

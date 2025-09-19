@@ -215,6 +215,14 @@ export class PostsService {
         console.error('[Progress] 게시글 작성 적립 실패:', err?.message || err),
       );
 
+    // 팀별 경험치 적립 (게시물이 작성된 팀에 경험치 부여)
+    // 게시물 작성 시 해당 팀에 10점 경험치 적립
+    this.progressService
+      ?.awardTeamExperienceForPost(authorId, teamId, savedPost.id)
+      .catch((err) =>
+        console.error('[Progress] 팀 경험치 적립 실패:', err?.message || err),
+      );
+
     // 작성자 정보와 함께 반환
     return await this.findById(savedPost.id);
   }

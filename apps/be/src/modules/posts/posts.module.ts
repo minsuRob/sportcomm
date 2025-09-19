@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
-import { CacheModule } from '@nestjs/cache-manager';
 import { PostsService } from './posts.service';
 import { MediaModule } from '../media/media.module';
 import { BookmarkModule } from '../bookmarks/bookmark.module';
@@ -43,12 +42,6 @@ import { PostCreatedHandler } from './events/handlers/post-created.handler';
   imports: [
     // CQRS 모듈
     CqrsModule,
-
-    // 캐시 모듈 (CacheInterceptor 의 CACHE_MANAGER 의존성 제공)
-    CacheModule.register({
-      ttl: 300, // 기본 TTL (개별 @CacheTTL 로 override 가능)
-      max: 100, // 메모리 캐시 최대 항목 수 (LRU)
-    }),
 
     // 게시물 관련 엔티티를 위한 TypeORM 모듈
     TypeOrmModule.forFeature([

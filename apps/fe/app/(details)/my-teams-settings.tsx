@@ -730,9 +730,9 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
           <Text style={themed($sectionTitle)}>팀 선택</Text>
           <Text style={themed($selectionHelperText)}>
             {selectedTeams.length}개의 팀이 선택되었습니다.{" "}
-            {remainingSlots > 0
+            {/* {remainingSlots > 0
               ? `${remainingSlots}개의 팀을 더 선택할 수 있습니다.`
-              : "최대 팀 수를 모두 선택했습니다."}
+              : "최대 팀 수를 모두 선택했습니다."} */}
             {"\n"}이미 선택된 팀을 다시 선택하면 우선순위가 맨 뒤로 이동합니다.
           </Text>
 
@@ -1072,7 +1072,7 @@ const $settingButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   borderWidth: 1,
   borderColor: colors.border,
   gap: spacing.xs,
-  maxWidth: "34%",
+  maxWidth: "35%",
   flexGrow: 1,
 });
 

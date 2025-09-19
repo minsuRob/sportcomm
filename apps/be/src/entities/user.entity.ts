@@ -443,12 +443,18 @@ export class User {
    * 사용자 성별
    * 선택적 필드입니다. M: 남성, F: 여성, O: 기타
    */
+  /**
+   * 사용자 성별
+   * 선택적 필드이지만, 기본값은 'O'(기타)로 설정됩니다.
+   * M: 남성, F: 여성, O: 기타
+   */
   @Field(() => GenderCode, { nullable: true, description: '사용자 성별' })
   @Column({
     type: 'enum',
     enum: GenderCode,
     nullable: true,
-    comment: '사용자 성별 (M: 남성, F: 여성, O: 기타)',
+    default: GenderCode.O,
+    comment: '사용자 성별 (M: 남성, F: 여성, O: 기타). 기본값: O(기타)',
   })
   @IsOptional()
   @IsEnum(GenderCode, { message: '올바른 성별을 선택해주세요.' })

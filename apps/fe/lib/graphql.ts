@@ -26,6 +26,7 @@ export const GET_FEED_DATA = gql`
         content
         createdAt
         teamId
+        authorTeams
         team {
           id
           name
@@ -149,6 +150,7 @@ export const GET_POSTS = gql`
         content
         createdAt
         teamId
+        authorTeams
         team {
           id
           name
@@ -497,6 +499,7 @@ export const GET_USER_POSTS = gql`
         content
         createdAt
         teamId
+        authorTeams
         viewCount
         likeCount
         commentCount
@@ -877,6 +880,7 @@ export const GET_STORY_POSTS = gql`
         content
         createdAt
         teamId
+        authorTeams
         viewCount
         likeCount
         commentCount

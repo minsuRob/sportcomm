@@ -51,6 +51,7 @@ interface GqlPost {
   createdAt: string;
   type: PostType;
   teamId: string;
+  authorTeams?: string | { id: string; name: string; logoUrl?: string; icon: string }[];
   team: {
     id: string;
     name: string;
@@ -79,6 +80,35 @@ interface GqlPost {
     id: string;
     nickname: string;
     profileImageUrl?: string;
+    myTeams?: Array<{
+      id: string;
+      userId: string;
+      teamId: string;
+      priority?: number;
+      favoriteDate?: string | null;
+      favoritePlayerName?: string | null;
+      favoritePlayerNumber?: number | null;
+      experience?: number;
+      level?: number;
+      experienceToNextLevel?: number;
+      levelProgressRatio?: number;
+      createdAt?: string;
+      team: {
+        id: string;
+        name: string;
+        code?: string;
+        color?: string;
+        mainColor?: string;
+        subColor?: string;
+        darkMainColor?: string;
+        darkSubColor?: string;
+        icon: string;
+        logoUrl?: string;
+        description?: string | null;
+        sortOrder?: number;
+        isActive?: boolean;
+      };
+    }>;
   };
   media: Array<{ id: string; url: string; type: "image" | "video" }>;
   comments: Array<{ id: string }>;
@@ -118,6 +148,7 @@ const GET_POSTS = gql`
         createdAt
         type
         teamId
+        authorTeams
         isLiked
         isBookmarked
         viewCount
@@ -127,6 +158,36 @@ const GET_POSTS = gql`
           id
           nickname
           profileImageUrl
+          myTeams {
+            id
+            userId
+            teamId
+            priority
+            notificationEnabled
+            favoriteDate
+            favoritePlayerName
+            favoritePlayerNumber
+            experience
+            level
+            experienceToNextLevel
+            levelProgressRatio
+            createdAt
+            team {
+              id
+              name
+              code
+              color
+              mainColor
+              subColor
+              darkMainColor
+              darkSubColor
+              icon
+              logoUrl
+              description
+              sortOrder
+              isActive
+            }
+          }
         }
         media {
           id
@@ -460,6 +521,17 @@ export function useFeedPosts() {
             ...p,
             isMock: false,
             media: p.media || [],
+            // 서버 스키마에서는 authorTeams가 String(JSON)일 수 있으므로 안전 파싱
+            authorTeams: (() => {
+              try {
+                if (Array.isArray((p as any).authorTeams)) return (p as any).authorTeams as any;
+                if (typeof (p as any).authorTeams === "string") {
+                  const parsed = JSON.parse((p as any).authorTeams);
+                  return Array.isArray(parsed) ? parsed : undefined;
+                }
+              } catch {}
+              return undefined;
+            })(),
           }) as Post,
       );
 

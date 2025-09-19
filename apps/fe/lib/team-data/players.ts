@@ -55,6 +55,12 @@ export interface PlayerRecord {
 // -------------------------------------------------------
 const DOOSAN_PLAYERS: PlayerRecord[] = [
   {
+    id: "doosan-63-kim-taekyeon",
+    teamId: TEAM_IDS.DOOSAN,
+    name: "김택연",
+    number: 63,
+  },
+  {
     id: "doosan-1-park-chiguk",
     teamId: TEAM_IDS.DOOSAN,
     name: "박치국",
@@ -188,12 +194,6 @@ const DOOSAN_PLAYERS: PlayerRecord[] = [
     number: 62,
   },
   {
-    id: "doosan-63-kim-taekyeon",
-    teamId: TEAM_IDS.DOOSAN,
-    name: "김택연",
-    number: 63,
-  },
-  {
     id: "doosan-65-yun-taeho",
     teamId: TEAM_IDS.DOOSAN,
     name: "윤태호",
@@ -230,6 +230,13 @@ const DOOSAN_PLAYERS: PlayerRecord[] = [
 // -------------------------------------------------------
 const LG_PLAYERS: PlayerRecord[] = [
   {
+    id: "lg-2-moon-bokyung",
+    teamId: TEAM_IDS.LG,
+    name: "문보경",
+    number: 2,
+    position: "IF",
+  },
+  {
     id: "lg-1-im-changgyu",
     teamId: TEAM_IDS.LG,
     name: "임찬규",
@@ -264,13 +271,6 @@ const LG_PLAYERS: PlayerRecord[] = [
     teamId: TEAM_IDS.LG,
     name: "오지환",
     number: 10,
-    position: "IF",
-  },
-  {
-    id: "lg-2-moon-bokyung",
-    teamId: TEAM_IDS.LG,
-    name: "문보경",
-    number: 2,
     position: "IF",
   },
   {
@@ -348,6 +348,13 @@ const LG_PLAYERS: PlayerRecord[] = [
 // -------------------------------------------------------
 const HANWHA_PLAYERS: PlayerRecord[] = [
   // 투수
+  {
+    id: "hanwha-99-ryu-hyun-jin",
+    teamId: TEAM_IDS.HANWHA,
+    name: "류현진",
+    number: 99,
+    position: "P",
+  },
   {
     id: "hanwha-1-mun-dongju",
     teamId: TEAM_IDS.HANWHA,
@@ -444,13 +451,6 @@ const HANWHA_PLAYERS: PlayerRecord[] = [
     teamId: TEAM_IDS.HANWHA,
     name: "조동욱",
     number: 68,
-    position: "P",
-  },
-  {
-    id: "hanwha-99-ryu-hyun-jin",
-    teamId: TEAM_IDS.HANWHA,
-    name: "류현진",
-    number: 99,
     position: "P",
   },
   // 포수
@@ -588,6 +588,13 @@ const HANWHA_PLAYERS: PlayerRecord[] = [
 // SSG 랜더스 선수 데이터 (제공 명단 기반)
 // -------------------------------------------------------
 const SSG_PLAYERS: PlayerRecord[] = [
+  {
+    id: "ssg-14-choi-jeong",
+    teamId: TEAM_IDS.SSG,
+    name: "최정",
+    number: 14,
+    position: "IF",
+  },
   // 투수
   {
     id: "ssg-19-jo-byeonghyeon",
@@ -746,13 +753,6 @@ const SSG_PLAYERS: PlayerRecord[] = [
     position: "IF",
   },
   {
-    id: "ssg-14-choi-jeong",
-    teamId: TEAM_IDS.SSG,
-    name: "최정",
-    number: 14,
-    position: "IF",
-  },
-  {
     id: "ssg-18-go-myeongjun",
     teamId: TEAM_IDS.SSG,
     name: "고명준",
@@ -815,6 +815,13 @@ const SSG_PLAYERS: PlayerRecord[] = [
 // KT 위즈 선수 데이터 (제공 명단 기반)
 // -------------------------------------------------------
 const KT_PLAYERS: PlayerRecord[] = [
+  {
+    id: "kt-23-ahn-hyeonmin",
+    teamId: TEAM_IDS.KT,
+    name: "안현민",
+    number: 23,
+    position: "OF",
+  },
   // 투수
   {
     id: "kt-1-go-youngpyo",
@@ -1023,13 +1030,6 @@ const KT_PLAYERS: PlayerRecord[] = [
     position: "OF",
   },
   {
-    id: "kt-23-ahn-hyeonmin",
-    teamId: TEAM_IDS.KT,
-    name: "안현민",
-    number: 23,
-    position: "OF",
-  },
-  {
     id: "kt-33-lee-jeonghun",
     teamId: TEAM_IDS.KT,
     name: "이정훈",
@@ -1056,6 +1056,13 @@ const KT_PLAYERS: PlayerRecord[] = [
 // 삼성 라이온즈 선수 데이터 (제공 명단 기반)
 // -------------------------------------------------------
 const SAMSUNG_PLAYERS: PlayerRecord[] = [
+  {
+    id: "samsung-18-won-taein",
+    teamId: TEAM_IDS.SAMSUNG,
+    name: "원태인",
+    number: 18,
+    position: "P",
+  },
   // 투수
   {
     id: "samsung-1-lee-hoseong",
@@ -1069,13 +1076,6 @@ const SAMSUNG_PLAYERS: PlayerRecord[] = [
     teamId: TEAM_IDS.SAMSUNG,
     name: "최원태",
     number: 3,
-    position: "P",
-  },
-  {
-    id: "samsung-18-won-taein",
-    teamId: TEAM_IDS.SAMSUNG,
-    name: "원태인",
-    number: 18,
     position: "P",
   },
   {
@@ -1299,6 +1299,13 @@ const SAMSUNG_PLAYERS: PlayerRecord[] = [
 const LOTTE_PLAYERS: PlayerRecord[] = [
   // 투수
   {
+    id: "lotte-34-kim-wonjoong",
+    teamId: TEAM_IDS.LOTTE,
+    name: "김원중",
+    number: 34,
+    position: "P",
+  },
+  {
     id: "lotte-19-kim-ganghyun",
     teamId: TEAM_IDS.LOTTE,
     name: "김강현",
@@ -1324,13 +1331,6 @@ const LOTTE_PLAYERS: PlayerRecord[] = [
     teamId: TEAM_IDS.LOTTE,
     name: "감보아",
     number: 32,
-    position: "P",
-  },
-  {
-    id: "lotte-34-kim-wonjoong",
-    teamId: TEAM_IDS.LOTTE,
-    name: "김원중",
-    number: 34,
     position: "P",
   },
   {
@@ -1525,6 +1525,13 @@ const LOTTE_PLAYERS: PlayerRecord[] = [
 // -------------------------------------------------------
 const NC_PLAYERS: PlayerRecord[] = [
   // 투수
+  {
+    id: "nc-37-park-gunwoo",
+    teamId: TEAM_IDS.NC,
+    name: "박건우",
+    number: 37,
+    position: "OF",
+  },
   {
     id: "nc-3-riley",
     teamId: TEAM_IDS.NC,
@@ -1739,13 +1746,6 @@ const NC_PLAYERS: PlayerRecord[] = [
     position: "OF",
   },
   {
-    id: "nc-37-park-gunwoo",
-    teamId: TEAM_IDS.NC,
-    name: "박건우",
-    number: 37,
-    position: "OF",
-  },
-  {
     id: "nc-55-lee-useong",
     teamId: TEAM_IDS.NC,
     name: "이우성",
@@ -1758,6 +1758,13 @@ const NC_PLAYERS: PlayerRecord[] = [
 // KIA 타이거즈 선수 데이터 (제공 명단 기반)
 // -------------------------------------------------------
 const KIA_PLAYERS: PlayerRecord[] = [
+  {
+    id: "kia-5-kim-doyoung",
+    teamId: TEAM_IDS.KIA,
+    name: "김도영",
+    number: 5,
+    position: "IF",
+  },
   // 투수
   {
     id: "kia-6-lee-seongwon",
@@ -1999,6 +2006,13 @@ const KIA_PLAYERS: PlayerRecord[] = [
 // 키움 히어로즈 선수 데이터 (제공 명단 기반)
 // -------------------------------------------------------
 const KIWOOM_PLAYERS: PlayerRecord[] = [
+  {
+    id: "kiwoom-24-song-seongmun",
+    teamId: TEAM_IDS.KIWOOM,
+    name: "송성문",
+    number: 24,
+    position: "IF",
+  },
   // 투수
   {
     id: "kiwoom-8-kim-seongmin",
@@ -2126,13 +2140,6 @@ const KIWOOM_PLAYERS: PlayerRecord[] = [
     teamId: TEAM_IDS.KIWOOM,
     name: "김태진",
     number: 1,
-    position: "IF",
-  },
-  {
-    id: "kiwoom-24-song-seongmun",
-    teamId: TEAM_IDS.KIWOOM,
-    name: "송성문",
-    number: 24,
     position: "IF",
   },
   {

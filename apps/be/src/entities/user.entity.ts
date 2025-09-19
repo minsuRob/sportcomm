@@ -71,7 +71,7 @@ export const DAILY_POINT_LIMITS: Record<UserProgressAction, number> = {
  * 일일 제한 초기화 시간 설정
  * 매일 몇 시에 포인트 제한이 초기화되는지 설정
  */
-export const DAILY_RESET_HOUR = 6;
+export const DAILY_RESET_HOUR = 0;
 
 /**
  * 시간대별 UTC 오프셋 설정 (시간 단위)
@@ -641,6 +641,47 @@ export class User {
   }
 
   /**
+   * 출석체크 포인트 지급 및 일일 제한 초기화 처리
+   *
+   * 사용 예시:
+   * ```typescript
+   * const user = await userRepository.findOne({ where: { id: userId } });
+   * const pointsEarned = user.claimDailyAttendance();
+   *
+   * if (pointsEarned > 0) {
+   *   await userRepository.save(user); // 변경사항 저장
+   *   console.log(`${pointsEarned}포인트를 지급했습니다.`);
+   * } else {
+   *   console.log('오늘은 이미 출석체크를 완료했습니다.');
+   * }
+   * ```
+   *
+   * @param now 현재 시간 (기본값: new Date())
+   * @param timezone 시간대 (기본값: 'Asia/Seoul')
+   * @returns 지급된 포인트 수량 (실패 시 0)
+   */
+  claimDailyAttendance(now: Date = new Date(), timezone: string = 'Asia/Seoul'): number {
+    // 출석체크 가능 여부 확인
+    if (!this.canClaimDailyAttendance(now)) {
+      return 0; // 이미 오늘 출석체크 했음
+    }
+
+    // 일일 제한 초기화 필요 여부 확인 및 처리
+    if (this.needsDailyReset(now, timezone)) {
+      this.resetDailyLimits(now);
+    }
+
+    // 출석체크 포인트 지급
+    const attendancePoints = USER_PROGRESS_REWARD[UserProgressAction.DAILY_ATTENDANCE];
+    this.points += attendancePoints;
+
+    // 마지막 출석 시간 업데이트
+    this.lastAttendanceAt = now;
+
+    return attendancePoints;
+  }
+
+  /**
    * 일일 제한 초기화 필요 여부 확인
    * 지정된 시간대 기준으로 매일 특정 시각에 초기화
    * 다른 나라 시간대 지원을 위해 timezone 파라미터 추가
@@ -667,23 +708,40 @@ export class User {
   }
 
   /**
-   * 댓글 작성 가능 여부 확인 (포인트 제한 기반)
+   * 일일 제한 초기화 실행 (필요한 경우에만)
+   * 액션 수행 전에 호출하여 일일 제한을 최신 상태로 유지
    */
-  canSendChatMessage(): boolean {
+  ensureDailyReset(now: Date = new Date(), timezone: string = 'Asia/Seoul'): void {
+    if (this.needsDailyReset(now, timezone)) {
+      this.resetDailyLimits(now);
+    }
+  }
+
+  /**
+   * 댓글 작성 가능 여부 확인 (포인트 제한 기반, 일일 제한 초기화 자동 포함)
+   */
+  canSendChatMessage(timezone: string = 'Asia/Seoul'): boolean {
+    // 일일 제한 초기화 확인 및 실행
+    this.validateAndResetDailyLimits(new Date(), timezone);
     return (this.dailyChatPoints || 0) < DAILY_POINT_LIMITS[UserProgressAction.CHAT_MESSAGE];
   }
 
   /**
-   * 게시물 작성 가능 여부 확인 (포인트 제한 기반)
+   * 게시물 작성 가능 여부 확인 (포인트 제한 기반, 일일 제한 초기화 자동 포함)
    */
-  canCreatePost(): boolean {
+  canCreatePost(timezone: string = 'Asia/Seoul'): boolean {
+    // 일일 제한 초기화 확인 및 실행
+    this.validateAndResetDailyLimits(new Date(), timezone);
     return (this.dailyPostPoints || 0) < DAILY_POINT_LIMITS[UserProgressAction.POST_CREATE];
   }
 
   /**
-   * 댓글 포인트 추가 및 검증
+   * 댓글 포인트 추가 및 검증 (일일 제한 초기화 자동 포함)
    */
-  addChatPoints(points: number = USER_PROGRESS_REWARD[UserProgressAction.CHAT_MESSAGE]): boolean {
+  addChatPoints(points: number = USER_PROGRESS_REWARD[UserProgressAction.CHAT_MESSAGE], timezone: string = 'Asia/Seoul'): boolean {
+    // 일일 제한 초기화 확인 및 실행
+    this.validateAndResetDailyLimits(new Date(), timezone);
+
     const currentPoints = this.dailyChatPoints || 0;
     if (currentPoints + points > DAILY_POINT_LIMITS[UserProgressAction.CHAT_MESSAGE]) {
       return false; // 제한 초과
@@ -693,9 +751,12 @@ export class User {
   }
 
   /**
-   * 게시물 포인트 추가 및 검증
+   * 게시물 포인트 추가 및 검증 (일일 제한 초기화 자동 포함)
    */
-  addPostPoints(points: number = USER_PROGRESS_REWARD[UserProgressAction.POST_CREATE]): boolean {
+  addPostPoints(points: number = USER_PROGRESS_REWARD[UserProgressAction.POST_CREATE], timezone: string = 'Asia/Seoul'): boolean {
+    // 일일 제한 초기화 확인 및 실행
+    this.validateAndResetDailyLimits(new Date(), timezone);
+
     const currentPoints = this.dailyPostPoints || 0;
     if (currentPoints + points > DAILY_POINT_LIMITS[UserProgressAction.POST_CREATE]) {
       return false; // 제한 초과
@@ -773,6 +834,14 @@ export class User {
    */
   private getTimezoneOffset(timezone: string): number {
     return TIMEZONE_OFFSETS[timezone] || 0;
+  }
+
+  /**
+   * 출석체크 및 액션 수행 전 일일 제한 검증 및 초기화
+   * 모든 포인트 관련 액션 수행 전에 호출하여 최신 상태 유지
+   */
+  validateAndResetDailyLimits(now: Date = new Date(), timezone: string = 'Asia/Seoul'): void {
+    this.ensureDailyReset(now, timezone);
   }
 
   /**

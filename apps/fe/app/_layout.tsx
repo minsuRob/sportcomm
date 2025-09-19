@@ -7,7 +7,7 @@ import { StatusBar } from "expo-status-bar";
 import * as React from "react";
 import Toast from "react-native-toast-message";
 import CustomToast from "@/components/CustomToast";
-import { ApolloProvider } from "@apollo/client";
+import { ApolloProvider, gql } from "@apollo/client";
 import GlobalWebLayout from "@/components/layout/GlobalWebLayout";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import SafeAreaWrapper from "@/components/SafeAreaWrapper";
@@ -61,7 +61,33 @@ export default function RootLayout() {
     // 앱의 핵심 서비스들을 초기화합니다.
     const initializeApp = async () => {
       try {
-        // 병렬로 초기화 실행
+        // Prefetch: 최신 글 일부를 먼저 캐시에 적재하여 첫 렌더 가속화
+        const PREFETCH_POSTS = gql`
+          query PrefetchPosts($input: FindPostsInput) {
+            posts(input: $input) {
+              posts {
+                id
+                title
+                content
+                createdAt
+                teamId
+                isLiked
+                isBookmarked
+                viewCount
+                likeCount
+                commentCount
+                author { id nickname profileImageUrl }
+                media { id url type }
+                team { id name logoUrl }
+                tags { id name }
+              }
+              page
+              hasNext
+            }
+          }
+        `;
+
+        // 병렬로 초기화 실행 (Prefetch 포함)
         await Promise.all([
           initializeI18n(),
           initializeSupabase(),
@@ -84,6 +110,14 @@ export default function RootLayout() {
               handleNotificationResponse(r, router);
             },
           }),
+          // 인증 여부와 무관하게 공개 피드 위주로 소량 Prefetch
+          client
+            .query({
+              query: PREFETCH_POSTS,
+              variables: { input: { page: 1, limit: 5, teamIds: null } },
+              fetchPolicy: "network-only",
+            })
+            .catch(() => undefined),
         ]);
 
         // --- DEBUG: Supabase 세션 상태 확인 ---

@@ -22,7 +22,9 @@ import { showToast } from "@/components/CustomToast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import TeamLogo from "@/components/TeamLogo";
 import FavoriteMonthPicker from "@/components/team/FavoriteMonthPicker";
+import FavoritePlayerSelector from "@/components/team/FavoritePlayerSelector";
 import TeamSettingsPopover from "@/components/team/TeamSettingsPopover";
+import { TEAM_IDS, type TeamId, deriveTeamSlug } from "@/lib/team-data/players";
 import {
   GET_SPORTS,
   GET_MY_TEAMS,
@@ -47,6 +49,155 @@ import {
 import { markPostSignupStepDone, PostSignupStep } from "@/lib/auth/post-signup";
 const { width: screenWidth } = Dimensions.get("window");
 
+/**
+ * 로컬 팀 관리용 타입 (my-teams-settings.tsx 패턴 적용)
+ */
+interface EditableTeam {
+  teamId: string;
+  team: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+    icon?: string;
+    color?: string;
+  };
+  _dirty?: boolean;
+  _tempFavoriteDate?: string | null;
+  _tempFavoritePlayerName?: string | null;
+  _tempFavoritePlayerNumber?: number | null;
+  _selected: boolean;
+}
+
+/**
+ * GraphQL 팀 ID를 로컬 TEAM_IDS로 변환하는 헬퍼 함수
+ * @param graphQLTeamId GraphQL에서 받은 팀 ID
+ * @returns 로컬 TEAM_IDS 값 또는 기본값 (doosan)
+ */
+const mapGraphQLTeamIdToLocalTeamId = (graphQLTeamId: string): TeamId => {
+  // 팀 이름이나 코드에 따라 매핑
+  const teamNameMappings: Record<string, TeamId> = {
+    // ID 기반 매핑 (GraphQL ID가 로컬 ID와 같은 경우)
+    [TEAM_IDS.DOOSAN]: TEAM_IDS.DOOSAN,
+    [TEAM_IDS.LG]: TEAM_IDS.LG,
+    [TEAM_IDS.SSG]: TEAM_IDS.SSG,
+    [TEAM_IDS.KT]: TEAM_IDS.KT,
+    [TEAM_IDS.SAMSUNG]: TEAM_IDS.SAMSUNG,
+    [TEAM_IDS.LOTTE]: TEAM_IDS.LOTTE,
+    [TEAM_IDS.NC]: TEAM_IDS.NC,
+    [TEAM_IDS.KIA]: TEAM_IDS.KIA,
+    [TEAM_IDS.KIWOOM]: TEAM_IDS.KIWOOM,
+    [TEAM_IDS.HANWHA]: TEAM_IDS.HANWHA,
+
+    // === 두산 베어스 ===
+    "두산": TEAM_IDS.DOOSAN,
+    "doosan-bears": TEAM_IDS.DOOSAN,
+    "doosan bears": TEAM_IDS.DOOSAN,
+    "bears": TEAM_IDS.DOOSAN,
+    "ob": TEAM_IDS.DOOSAN, // OB 베어스
+    "doosanbearers": TEAM_IDS.DOOSAN,
+    "두산 베어스": TEAM_IDS.DOOSAN,
+    "두산베어스": TEAM_IDS.DOOSAN,
+
+    // === LG 트윈스 ===
+    "LG": TEAM_IDS.LG,
+    "lg-twins": TEAM_IDS.LG,
+    "lg twins": TEAM_IDS.LG,
+    "twins": TEAM_IDS.LG,
+    "엘지": TEAM_IDS.LG,
+    "lg트윈스": TEAM_IDS.LG,
+    "엘지 트윈스": TEAM_IDS.LG,
+
+    // === SSG 랜더스 ===
+    "SSG": TEAM_IDS.SSG,
+    "ssg-landers": TEAM_IDS.SSG,
+    "ssg landers": TEAM_IDS.SSG,
+    "landers": TEAM_IDS.SSG,
+    "에스에스지": TEAM_IDS.SSG,
+    "ssg랜더스": TEAM_IDS.SSG,
+    "sk": TEAM_IDS.SSG, // 이전 SK 와이번스
+    "에스에스지 랜더스": TEAM_IDS.SSG,
+
+    // === KT 위즈 ===
+    "KT": TEAM_IDS.KT,
+    "kt-wiz": TEAM_IDS.KT,
+    "kt wiz": TEAM_IDS.KT,
+    "wiz": TEAM_IDS.KT,
+    "케이티": TEAM_IDS.KT,
+    "kt위즈": TEAM_IDS.KT,
+    "케이티 위즈": TEAM_IDS.KT,
+
+    // === 삼성 라이온즈 ===
+    "삼성": TEAM_IDS.SAMSUNG,
+    "samsung-lions": TEAM_IDS.SAMSUNG,
+    "samsung lions": TEAM_IDS.SAMSUNG,
+    "lions": TEAM_IDS.SAMSUNG,
+    "삼성라이온즈": TEAM_IDS.SAMSUNG,
+    "삼성 라이온즈": TEAM_IDS.SAMSUNG,
+    "samsung라이온즈": TEAM_IDS.SAMSUNG,
+
+    // === 롯데 자이언츠 ===
+    "롯데": TEAM_IDS.LOTTE,
+    "lotte-giants": TEAM_IDS.LOTTE,
+    "lotte giants": TEAM_IDS.LOTTE,
+    "giants": TEAM_IDS.LOTTE,
+    "롯데자이언츠": TEAM_IDS.LOTTE,
+    "롯데 자이언츠": TEAM_IDS.LOTTE,
+    "lotte자이언츠": TEAM_IDS.LOTTE,
+
+    // === NC 다이노스 ===
+    "NC": TEAM_IDS.NC,
+    "nc-dinos": TEAM_IDS.NC,
+    "nc dinos": TEAM_IDS.NC,
+    "dinos": TEAM_IDS.NC,
+    "엔씨": TEAM_IDS.NC,
+    "nc다이노스": TEAM_IDS.NC,
+    "엔씨 다이노스": TEAM_IDS.NC,
+
+    // === KIA 타이거즈 ===
+    "KIA": TEAM_IDS.KIA,
+    "kia-tigers": TEAM_IDS.KIA,
+    "kia tigers": TEAM_IDS.KIA,
+    "tigers": TEAM_IDS.KIA,
+    "기아": TEAM_IDS.KIA,
+    "kia타이거즈": TEAM_IDS.KIA,
+    "해태": TEAM_IDS.KIA, // 이전 해태 타이거즈
+    "기아 타이거즈": TEAM_IDS.KIA,
+
+    // === 키움 히어로즈 ===
+    "키움": TEAM_IDS.KIWOOM,
+    "kiwoom-heroes": TEAM_IDS.KIWOOM,
+    "kiwoom heroes": TEAM_IDS.KIWOOM,
+    "heroes": TEAM_IDS.KIWOOM,
+    "넥센": TEAM_IDS.KIWOOM, // 이전 넥센 히어로즈
+    "우리": TEAM_IDS.KIWOOM, // 이전 우리 히어로즈
+    "히어로즈": TEAM_IDS.KIWOOM,
+    "키움 히어로즈": TEAM_IDS.KIWOOM,
+
+    // === 한화 이글스 ===
+    "한화": TEAM_IDS.HANWHA,
+    "hanwha-eagles": TEAM_IDS.HANWHA,
+    "hanwha eagles": TEAM_IDS.HANWHA,
+    "eagles": TEAM_IDS.HANWHA,
+    "한화이글스": TEAM_IDS.HANWHA,
+    "한화 이글스": TEAM_IDS.HANWHA,
+    "한화eagles": TEAM_IDS.HANWHA,
+    "hanwhaeagles": TEAM_IDS.HANWHA,
+  };
+
+  // 대소문자 구분 없이 매핑 시도
+  const normalizedId = graphQLTeamId.toLowerCase().trim();
+
+  const result = teamNameMappings[normalizedId] ||
+                 teamNameMappings[graphQLTeamId];
+
+  // 매핑 실패 시 로그로 확인
+  if (!result) {
+    console.warn("팀 ID 매핑 실패:", graphQLTeamId, "-> 기본값(doosan) 사용");
+  }
+
+  return result || TEAM_IDS.DOOSAN; // 기본값
+};
+
 export default function TeamSelectionScreen() {
   const { themed, theme, setTeamColorOverride } = useAppTheme();
   const router = useRouter();
@@ -58,20 +209,20 @@ export default function TeamSelectionScreen() {
     updateUser,
   } = useAuth();
 
-  // --- 로컬 UI 상태 ---
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-
-  // selectedTeams가 항상 배열이 되도록 보장
-  const safeSelectedTeams = Array.isArray(selectedTeams) ? selectedTeams : [];
-  const [teamFavoriteDates, setTeamFavoriteDates] = useState<
-    Record<string, string>
-  >({});
-  const [teamFavoritePlayers, setTeamFavoritePlayers] = useState<
-    Record<string, { name?: string; number?: number }>
-  >({});
+  // --- 로컬 UI 상태 (my-teams-settings.tsx 패턴 적용) ---
+  const [teams, setTeams] = useState<EditableTeam[]>([]);
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
+
+  // --- 계산된 값들 ---
+  const selectedTeams = useMemo(
+    () => teams.filter((t) => t._selected),
+    [teams],
+  );
+  const safeSelectedTeams = selectedTeams.map((t) => t.teamId);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
+  const [showPlayerSelector, setShowPlayerSelector] = useState(false);
+  const [pendingTeamId, setPendingTeamId] = useState<TeamId | null>(null);
+  const [pendingOriginalTeamId, setPendingOriginalTeamId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<{
     top: number;
@@ -128,7 +279,9 @@ export default function TeamSelectionScreen() {
     myTeamsData,
     teamColorTeamId: null, // team-selection에서는 teamColorTeamId를 사용하지 않음
     selectedTeamId: safeSelectedTeams[0] || null, // 첫 번째 선택된 팀
-    setTeamColorOverride,
+    setTeamColorOverride: async (color: string) => {
+      setTeamColorOverride(color);
+    },
   });
 
   // --- 인증 상태 감시 ---
@@ -145,45 +298,27 @@ export default function TeamSelectionScreen() {
     }
   }, [isAuthenticated, router]);
 
-  // --- myTeamsData 로컬 상태 반영 ---
+  // --- myTeamsData 로컬 상태 반영 (EditableTeam[]로 변환) ---
   useEffect(() => {
     if (!myTeamsData?.myTeams) return;
     try {
-      const teamIds: string[] = [];
-      const favoriteDates: Record<string, string> = {};
-      const favoritePlayers: Record<
-        string,
-        { name?: string; number?: number }
-      > = {};
+      const mappedTeams: EditableTeam[] = myTeamsData.myTeams.map((ut) => ({
+        teamId: ut.teamId,
+        team: ut.team,
+        _dirty: false,
+        _tempFavoriteDate: ut.favoriteDate || null,
+        _tempFavoritePlayerName: (ut as any).favoritePlayerName || null,
+        _tempFavoritePlayerNumber: (ut as any).favoritePlayerNumber ?? null,
+        _selected: true, // myTeams에 있는 팀들은 모두 선택된 상태
+      }));
 
-      myTeamsData.myTeams.forEach((ut) => {
-        if (!ut.team) return;
-        teamIds.push(ut.team.id);
-
-        if (ut.favoriteDate) {
-          favoriteDates[ut.team.id] = ut.favoriteDate;
-        }
-        if (
-          (ut as any).favoritePlayerName ||
-          (ut as any).favoritePlayerNumber !== undefined
-        ) {
-          // API 설계 상 optional field 이므로 any 캐스팅
-          favoritePlayers[ut.team.id] = {
-            name: (ut as any).favoritePlayerName,
-            number: (ut as any).favoritePlayerNumber,
-          };
-        }
-      });
-
-      setSelectedTeams(teamIds);
-      setTeamFavoriteDates(favoriteDates);
-      setTeamFavoritePlayers(favoritePlayers);
+      setTeams(mappedTeams);
 
       // 초기 로딩 시 선택된 첫 번째 팀의 색상 적용
-      if (teamIds.length > 0) {
+      if (mappedTeams.length > 0) {
         // 색상 적용은 비동기로 처리
         setTimeout(() => {
-          applyTeamColor(teamIds[0], sportsData).catch(error => {
+          applyTeamColor(mappedTeams[0].teamId, sportsData).catch((error) => {
             console.warn("초기 팀 색상 적용 실패:", error);
           });
         }, 100);
@@ -205,28 +340,55 @@ export default function TeamSelectionScreen() {
     }
   }, [myTeamsError, isAuthenticated]);
 
-  // --- 팀 선택/해제 ---
-  const handleTeamSelect = (teamId: string) => {
-    // 관련 날짜 제거 로직은 기존 유지
-    setSelectedTeams((prev) => {
-      let updatedTeams = prev;
+  // --- 팀 선택/재선택 (my-teams-settings.tsx 패턴 적용) ---
+  const handleTeamSelect = useCallback((teamId: string) => {
+    // 디버깅: 실제 팀 ID 확인
+    console.log("=== 팀 선택 디버깅 ===");
+    console.log("GraphQL Team ID:", teamId);
 
-      if (safeSelectedTeams.includes(teamId)) {
-        // 해제 → 관련 날짜 제거
-        setTeamFavoriteDates((p) => {
-          const next = { ...p };
-          // 날짜 제거
-          delete next[teamId];
-          return next;
-        });
-        setShowSettings(false);
+    const mappedTeamId = mapGraphQLTeamIdToLocalTeamId(teamId);
+    console.log("매핑된 로컬 Team ID:", mappedTeamId);
+
+    // 실제 선수 데이터 확인
+    const { getPlayersByTeam } = require("@/lib/team-data/players");
+    const players = getPlayersByTeam(mappedTeamId);
+    console.log(`매핑된 팀(${mappedTeamId})의 선수 수:`, players.length);
+
+    setTeams((prev) => {
+      const existingTeam = prev.find((t) => t.teamId === teamId);
+      const isAlreadySelected = existingTeam?._selected || false;
+
+      if (isAlreadySelected) {
+        // 이미 선택된 팀이면 → 아무것도 하지 않음 (재선택은 설정 팝오버에서 처리)
+        return prev;
+      } else {
+        // 새로 선택하는 경우
+        const teamData = sportsData?.sports
+          ?.flatMap((s) => s.teams)
+          ?.find((t) => t.id === teamId);
+
+        if (!teamData) {
+          console.warn("팀 데이터를 찾을 수 없음:", teamId);
+          return prev;
+        }
+
+        const newTeam: EditableTeam = {
+          teamId: teamId,
+          team: teamData,
+          _dirty: false,
+          _tempFavoriteDate: null,
+          _tempFavoritePlayerName: null,
+          _tempFavoritePlayerNumber: null,
+          _selected: true,
+        };
+
+        return [...prev, newTeam];
       }
-
-      // 공유 hook을 사용한 팀 선택 처리 (색상 적용 포함)
-      updatedTeams = handleTeamSelection(teamId, prev, sportsData);
-      return updatedTeams;
     });
-  };
+
+    // 공유 hook을 사용한 팀 선택 처리 (색상 적용 포함)
+    handleTeamSelection(teamId, safeSelectedTeams, sportsData);
+  }, [safeSelectedTeams, sportsData]);
 
   // --- 팀 설정 팝오버 열기 ---
   const openTeamSettings = (
@@ -234,27 +396,42 @@ export default function TeamSelectionScreen() {
     pageX: number = 0,
     pageY: number = 0,
   ) => {
-    setPendingTeamId(teamId);
+    console.log("=== openTeamSettings 디버깅 ===");
+    console.log("받은 원본 GraphQL teamId:", teamId);
+    const mappedTeamId = mapGraphQLTeamIdToLocalTeamId(teamId);
+    console.log("매핑된 로컬 teamId:", mappedTeamId);
+    setPendingTeamId(mappedTeamId); // 변환된 teamId 저장
+    setPendingOriginalTeamId(teamId); // 원본 teamId도 저장
     setShowCalendar(false);
     setShowSettings(true);
     setSettingsAnchor({ top: pageY + 8, left: pageX - 110 });
   };
 
-  // --- 팬이 된 날짜 선택 ---
+  // --- 팬이 된 날짜 선택 (로컬 상태 저장) ---
   const handleFavoriteDateSelect = (favoriteDate: string) => {
-    if (pendingTeamId) {
-      setTeamFavoriteDates((prev) => ({
-        ...prev,
-        [pendingTeamId]: favoriteDate,
-      }));
-    }
+    if (!pendingOriginalTeamId) return;
+
+    setTeams((prev) =>
+      prev.map((t) =>
+        t.teamId === pendingOriginalTeamId
+          ? {
+              ...t,
+              _tempFavoriteDate: favoriteDate,
+              _dirty: t._dirty || t._tempFavoriteDate !== favoriteDate,
+            }
+          : t,
+      ),
+    );
+
     setPendingTeamId(null);
+    setPendingOriginalTeamId(null);
     setShowCalendar(false);
   };
 
   // --- 캘린더 취소 ---
   const handleCalendarCancel = () => {
     setPendingTeamId(null);
+    setPendingOriginalTeamId(null);
     setShowCalendar(false);
   };
 
@@ -301,11 +478,11 @@ export default function TeamSelectionScreen() {
     try {
       const { errors } = await updateMyTeams({
         variables: {
-          teams: safeSelectedTeams.map((teamId) => ({
-            teamId,
-            favoriteDate: teamFavoriteDates[teamId] || null,
-            favoritePlayerName: teamFavoritePlayers[teamId]?.name || null,
-            favoritePlayerNumber: teamFavoritePlayers[teamId]?.number ?? null,
+          teams: selectedTeams.map((team) => ({
+            teamId: team.teamId,
+            favoriteDate: team._tempFavoriteDate || null,
+            favoritePlayerName: team._tempFavoritePlayerName || null,
+            favoritePlayerNumber: team._tempFavoritePlayerNumber ?? null,
           })),
         },
         context: {
@@ -325,8 +502,8 @@ export default function TeamSelectionScreen() {
       await updateUser({ myTeams: newMyTeams } as any);
 
       // 저장 완료 후 최종 팀 색상 적용 (첫 번째 팀 기준)
-      if (safeSelectedTeams.length > 0) {
-        applyTeamColor(selectedTeams[0], sportsData).catch(error => {
+      if (selectedTeams.length > 0) {
+        applyTeamColor(selectedTeams[0].teamId, sportsData).catch((error) => {
           console.warn("저장 후 팀 색상 적용 실패:", error);
         });
       }
@@ -341,13 +518,31 @@ export default function TeamSelectionScreen() {
         console.warn("팀 필터 AsyncStorage 저장 실패:", (e as any)?.message);
       }
 
+      // 로컬 상태 _dirty 플래그 초기화
+      setTeams((prev) =>
+        prev.map((t) => ({
+          ...t,
+          _dirty: false,
+        })),
+      );
+
       showToast({
         type: "success",
         title: "저장 완료",
-        message: `${safeSelectedTeams.length}개 팀이 저장되었습니다.`,
+        message: `${selectedTeams.length}개 팀이 저장되었습니다.`,
         duration: 2000,
       });
-      router.back();
+      // origin 파라미터에 따라 돌아갈 경로를 명확히 지정
+      if (origin === "profile") {
+        // 온보딩(프로필 설정) 플로우에서 진입한 경우 다시 프로필 설정 모달로
+        router.replace("/(modals)/post-signup-profile");
+      } else if (origin === "team-center") {
+        // 팀 센터에서 진입한 경우 팀 센터 상세 페이지로 복귀
+        router.replace("/(details)/team-center");
+      } else {
+        // 그 외에는 기존 동작 유지 (스택 기반 뒤로가기)
+        router.back();
+      }
     } catch (e) {
       const msg =
         (e as any)?.message || "팀 선택을 저장하는 중 오류가 발생했습니다.";
@@ -369,18 +564,20 @@ export default function TeamSelectionScreen() {
   };
 
   // --- 팀별 그리드 구성 ---
-  const renderTeamGrid = (teams: Team[]) => {
+  const renderTeamGrid = useCallback((graphQLTeams: Team[]) => {
     const teamsPerRow = 3;
     const rows: React.ReactElement[] = [];
 
-    for (let i = 0; i < teams.length; i += teamsPerRow) {
-      const rowTeams = teams.slice(i, i + teamsPerRow);
+    for (let i = 0; i < graphQLTeams.length; i += teamsPerRow) {
+      const rowTeams = graphQLTeams.slice(i, i + teamsPerRow);
 
       rows.push(
         <View key={`row-${i}`} style={themed($teamRow)}>
           {rowTeams.map((team) => {
             const teamId = team.id;
             const isSelected = safeSelectedTeams.includes(teamId);
+            // 선택된 팀의 로컬 상태 정보 가져오기
+            const editableTeam = teams.find((t) => t.teamId === teamId);
             const priorityInfo = getPriorityBasedSelection(teamId);
             return (
               <View key={teamId} style={themed($teamItemColumn)}>
@@ -425,13 +622,13 @@ export default function TeamSelectionScreen() {
                       {team.name}
                       {priorityInfo.isPrimaryTeam && " ⭐"}
                     </Text>
-                    {isSelected && teamFavoriteDates[teamId] && (
+                    {isSelected && editableTeam?._tempFavoriteDate && (
                       <Text
                         style={themed($teamCardDate)}
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
-                        {new Date(teamFavoriteDates[teamId]).toLocaleDateString(
+                        {new Date(editableTeam._tempFavoriteDate).toLocaleDateString(
                           "ko-KR",
                           {
                             year: "numeric",
@@ -439,6 +636,16 @@ export default function TeamSelectionScreen() {
                           },
                         )}
                         ~
+                      </Text>
+                    )}
+                    {isSelected && editableTeam?._tempFavoritePlayerName && (
+                      <Text
+                        style={themed($teamCardPlayer)}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {editableTeam._tempFavoritePlayerName}
+                        {editableTeam._tempFavoritePlayerNumber && ` (#${editableTeam._tempFavoritePlayerNumber})`}
                       </Text>
                     )}
                   </View>
@@ -485,7 +692,7 @@ export default function TeamSelectionScreen() {
       );
     }
     return rows;
-  };
+  }, [teams, safeSelectedTeams, theme.colors.tint, theme.colors.text, theme.colors.border, theme.colors.card, themed]);
 
   // --- 스포츠 목록 / 현재 선택 스포츠 ---
   const sports = sportsData?.sports || [];
@@ -560,9 +767,9 @@ export default function TeamSelectionScreen() {
             (isLoading || !currentUser) && { opacity: 0.5 },
           ]}
         >
-        <Text style={themed($saveButtonText)}>
-          {isLoading ? "저장 중..." : "저장 (색상 즉시 적용)"}
-        </Text>
+          <Text style={themed($saveButtonText)}>
+            {isLoading ? "저장 중..." : "저장 (색상 즉시 적용)"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -656,7 +863,11 @@ export default function TeamSelectionScreen() {
       {/* 팀 설정 팝오버 */}
       <TeamSettingsPopover
         visible={showSettings && !!pendingTeamId}
-        onClose={() => setShowSettings(false)}
+        onClose={() => {
+          setShowSettings(false);
+          setPendingTeamId(null);
+          setPendingOriginalTeamId(null);
+        }}
         anchorStyle={
           settingsAnchor
             ? {
@@ -670,38 +881,11 @@ export default function TeamSelectionScreen() {
           setShowSettings(false);
           setShowCalendar(true);
         }}
-        teamId={pendingTeamId || undefined}
-        onSelectFavoritePlayer={async (player) => {
-          if (!pendingTeamId) return;
-          const updatedPlayers = {
-            ...teamFavoritePlayers,
-            [pendingTeamId]: {
-              name: player.name,
-              number: player.number,
-            },
-          };
-          setTeamFavoritePlayers(updatedPlayers);
-          // 즉시 서버 반영 (선택 기능: 실패 시 롤백은 생략)
-          try {
-            await updateMyTeams({
-              variables: {
-                teams: safeSelectedTeams.map((teamId) => ({
-                  teamId,
-                  favoriteDate: teamFavoriteDates[teamId] || null,
-                  favoritePlayerName: updatedPlayers[teamId]?.name || null,
-                  favoritePlayerNumber: updatedPlayers[teamId]?.number ?? null,
-                })),
-              },
-              context: {
-                headers: {
-                  authorization: accessToken ? `Bearer ${accessToken}` : "",
-                },
-              },
-            });
-          } catch (e) {
-            console.warn("최애 선수 즉시 저장 실패:", (e as any)?.message);
-          }
+        onSelectFavoritePlayer={() => {
+          setShowSettings(false);
+          setShowPlayerSelector(true);
         }}
+        teamId={pendingTeamId || undefined}
       />
 
       {/* 팬이 된 날짜 선택 Month Picker */}
@@ -710,7 +894,9 @@ export default function TeamSelectionScreen() {
         onClose={handleCalendarCancel}
         onSelect={handleFavoriteDateSelect}
         selectedDate={
-          pendingTeamId ? teamFavoriteDates[pendingTeamId] : undefined
+          pendingOriginalTeamId
+            ? teams.find((t) => t.teamId === pendingOriginalTeamId)?._tempFavoriteDate || undefined
+            : undefined
         }
         teamName={
           pendingTeamId && sportsData
@@ -726,6 +912,40 @@ export default function TeamSelectionScreen() {
                 .find((t) => t.id === pendingTeamId)?.color
             : theme.colors.tint
         }
+      />
+
+      {/* 최애 선수 선택 팝업 */}
+      <FavoritePlayerSelector
+        visible={showPlayerSelector}
+        onClose={() => {
+          setShowPlayerSelector(false);
+          setPendingTeamId(null);
+          setPendingOriginalTeamId(null);
+        }}
+        teamId={pendingTeamId || TEAM_IDS.DOOSAN}
+        onSelect={(player) => {
+          if (!pendingOriginalTeamId) return;
+
+          setTeams((prev) =>
+            prev.map((t) =>
+              t.teamId === pendingOriginalTeamId
+                ? {
+                    ...t,
+                    _tempFavoritePlayerName: player.name,
+                    _tempFavoritePlayerNumber: player.number,
+                    _dirty:
+                      t._dirty ||
+                      t._tempFavoritePlayerName !== player.name ||
+                      t._tempFavoritePlayerNumber !== player.number,
+                  }
+                : t,
+            ),
+          );
+
+          setShowPlayerSelector(false);
+          setPendingTeamId(null);
+          setPendingOriginalTeamId(null);
+        }}
       />
     </View>
   );
@@ -890,6 +1110,14 @@ const $teamCardDate: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
   textAlign: "center",
   marginTop: 2,
+});
+
+const $teamCardPlayer: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 10,
+  color: colors.tint,
+  textAlign: "center",
+  marginTop: 1,
+  fontWeight: "600",
 });
 
 const $teamSettingsButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

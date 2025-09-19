@@ -34,7 +34,7 @@ export interface FavoritePlayerSelectorProps {
   title?: string; // 커스텀 타이틀 (없으면 기본)
 }
 
-const GRID_COLUMNS = 3; // 한 줄에 표시할 컬럼 수 (반응형 확장 필요 시 계산 로직 도입)
+const GRID_COLUMNS = 3; // 한 줄에 표시할 컬럼 수 (3명씩 표시)
 
 export default function FavoritePlayerSelector({
   visible,
@@ -59,10 +59,24 @@ export default function FavoritePlayerSelector({
 
   // 팀별 선수 목록 (정렬: 등번호 ASC)
   const players = useMemo(
-    () =>
-      getPlayersByTeam(teamId)
+    () => {
+
+      // teamId 유효성 검증
+      if (!teamId) {
+        console.warn("teamId가 유효하지 않습니다:", teamId);
+        return [];
+      }
+
+      const teamPlayers = getPlayersByTeam(teamId);
+
+      if (teamPlayers.length === 0) {
+        console.warn(`팀 "${teamId}"의 선수 데이터를 찾을 수 없습니다.`);
+      }
+
+      return teamPlayers
         .slice()
-        .sort((a, b) => a.number - b.number),
+        .sort((a, b) => a.number - b.number);
+    },
     [teamId],
   );
 
@@ -209,7 +223,7 @@ const $container: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   maxHeight: "85%",
   backgroundColor: colors.background,
   borderRadius: 18,
-  padding: spacing.lg,
+  padding: spacing.sm,
   shadowColor: "#000",
   shadowOpacity: 0.25,
   shadowRadius: 12,
@@ -288,16 +302,16 @@ const $emptyText: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $grid: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   flexWrap: "wrap",
-  justifyContent: "space-between",
-  rowGap: spacing.md,
-  columnGap: spacing.md,
+  justifyContent: "space-around",
+  paddingHorizontal: spacing.sm,
 });
 
 const $cell: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  // React Native 환경 호환을 위해 calc 제거, 퍼센트 기반 flexBasis 활용
-  flexBasis: `${100 / GRID_COLUMNS}%`,
+  // 3열 그리드를 위해 flex 사용 (가장 안정적인 방법)
+  flex: 1,
   maxWidth: `${100 / GRID_COLUMNS}%`,
-  minWidth: 100,
+  minWidth: 90,
+  margin: spacing.xs,
   paddingVertical: spacing.md,
   paddingHorizontal: spacing.sm,
   borderWidth: 1,

@@ -210,12 +210,8 @@ export class TeamsService {
     // 새로운 팀 선택 생성
     const userTeams: UserTeam[] = [];
     for (let i = 0; i < teamsData.length; i++) {
-      const {
-        teamId,
-        favoriteDate,
-        favoritePlayerName,
-        favoritePlayerNumber,
-      } = teamsData[i];
+      const { teamId, favoriteDate, favoritePlayerName, favoritePlayerNumber } =
+        teamsData[i];
 
       // 팀 존재 확인 및 조회
       const team = await this.findById(teamId);
@@ -297,5 +293,82 @@ export class TeamsService {
 
     team.logoUrl = logoUrl;
     return await this.teamsRepository.save(team);
+  }
+
+  /**
+   * 사용자의 선택된 팀 우선순위(priority)만 일괄 업데이트
+   * - 기존 user_teams 레코드는 삭제하지 않고 priority 필드만 수정
+   * - 모든 선택된 팀에 대해 0..n-1 범위의 priority 가 연속적으로 전달되어야 함
+   * - 전달된 목록 수와 실제 사용자 팀 수가 다르면 오류
+   * @param userId 사용자 ID
+   * @param priorities 팀 ID / priority 목록
+   */
+  async updateUserTeamsPriority(
+    userId: string,
+    priorities: { teamId: string; priority: number }[],
+  ): Promise<UserTeam[]> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    // 사용자 현재 팀 목록 조회
+    const userTeams = await this.userTeamsRepository.find({
+      where: { user: { id: userId } },
+      relations: ['team'],
+      order: { priority: 'ASC', createdAt: 'ASC' },
+    });
+
+    if (userTeams.length === 0) {
+      return [];
+    }
+
+    if (userTeams.length !== priorities.length) {
+      throw new BadRequestException(
+        '전달된 우선순위 목록과 현재 선택된 팀 수가 일치하지 않습니다.',
+      );
+    }
+
+    // 중복 teamId 체크
+    const uniq = new Set(priorities.map((p) => p.teamId));
+    if (uniq.size !== priorities.length) {
+      throw new BadRequestException(
+        '우선순위 목록에 중복된 팀 ID가 존재합니다.',
+      );
+    }
+
+    // priority 값 검증 (0..n-1 이어야 함)
+    const expected = new Set(
+      Array.from({ length: priorities.length }, (_, i) => i),
+    );
+    for (const p of priorities) {
+      if (!expected.has(p.priority)) {
+        throw new BadRequestException(
+          'priority 값은 0부터 (선택된 팀 수 - 1) 사이의 정수여야 합니다.',
+        );
+      }
+    }
+
+    // teamId -> priority 매핑
+    const map = new Map(priorities.map((p) => [p.teamId, p.priority]));
+
+    // 모든 현재 팀이 요청 목록에 존재하는지 확인
+    for (const ut of userTeams) {
+      if (!map.has(ut.teamId)) {
+        throw new BadRequestException(
+          `요청 우선순위 목록에 팀 ${ut.teamId} 가 누락되었습니다.`,
+        );
+      }
+    }
+
+    // priority 적용
+    for (const ut of userTeams) {
+      ut.priority = map.get(ut.teamId)!;
+    }
+
+    await this.userTeamsRepository.save(userTeams);
+
+    // 정렬 후 반환
+    return userTeams.sort((a, b) => a.priority - b.priority);
   }
 }

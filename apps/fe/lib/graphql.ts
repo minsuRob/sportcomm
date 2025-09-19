@@ -940,10 +940,127 @@ export const GET_STORY_POSTS = gql`
  * 닉네임 중복 확인 쿼리
  */
 export const CHECK_NICKNAME_AVAILABILITY = gql`
-  query CheckNicknameAvailability(\$nickname: String!, \$excludeUserId: String) {
-    checkNicknameAvailability(nickname: \$nickname, excludeUserId: \$excludeUserId) {
+  query CheckNicknameAvailability($nickname: String!, $excludeUserId: String) {
+    checkNicknameAvailability(
+      nickname: $nickname
+      excludeUserId: $excludeUserId
+    ) {
       available
       message
+    }
+  }
+`;
+
+/**
+ * 포인트 트랜잭션(본인) 조회
+ * - cursor 기반 페이지네이션
+ * - 필터: type / isEarn / isSpend / 기간(from~to)
+ */
+export const GET_MY_POINT_TRANSACTIONS = gql`
+  query GetMyPointTransactions(
+    $limit: Int = 20
+    $cursor: String
+    $type: PointTransactionType
+    $isEarn: Boolean
+    $isSpend: Boolean
+    $from: DateTime
+    $to: DateTime
+  ) {
+    getMyPointTransactions(
+      limit: $limit
+      cursor: $cursor
+      type: $type
+      isEarn: $isEarn
+      isSpend: $isSpend
+      from: $from
+      to: $to
+    ) {
+      items {
+        id
+        createdAt
+        amount
+        balanceAfter
+        type
+        description
+        referenceType
+        referenceId
+        metadata
+      }
+      limit
+      hasNext
+      nextCursor
+    }
+  }
+`;
+
+/**
+ * 특정 사용자(관리자 또는 본인) 포인트 트랜잭션 조회
+ */
+export const GET_POINT_TRANSACTIONS = gql`
+  query GetPointTransactions(
+    $userId: ID!
+    $limit: Int = 20
+    $cursor: String
+    $type: PointTransactionType
+    $isEarn: Boolean
+    $isSpend: Boolean
+    $from: DateTime
+    $to: DateTime
+  ) {
+    getPointTransactions(
+      userId: $userId
+      limit: $limit
+      cursor: $cursor
+      type: $type
+      isEarn: $isEarn
+      isSpend: $isSpend
+      from: $from
+      to: $to
+    ) {
+      items {
+        id
+        createdAt
+        amount
+        balanceAfter
+        type
+        description
+        referenceType
+        referenceId
+        metadata
+      }
+      limit
+      hasNext
+      nextCursor
+    }
+  }
+`;
+
+/**
+ * 관리자 수동 포인트 가/감 조정 (양수=적립, 음수=차감)
+ */
+export const ADMIN_RECORD_POINT_ADJUSTMENT = gql`
+  mutation AdminRecordPointAdjustment(
+    $targetUserId: ID!
+    $amount: Int!
+    $description: String
+  ) {
+    adminRecordPointAdjustment(
+      targetUserId: $targetUserId
+      amount: $amount
+      description: $description
+    ) {
+      transaction {
+        id
+        createdAt
+        amount
+        balanceAfter
+        type
+        description
+        referenceType
+        referenceId
+        metadata
+      }
+      balanceAfter
     }
   }
 `;

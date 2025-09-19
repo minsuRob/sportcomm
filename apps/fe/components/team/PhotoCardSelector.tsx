@@ -78,6 +78,7 @@ export interface PhotoCardSelectorProps {
   visible: boolean;
   onClose: () => void;
   onSelectCard: (cardId: string) => void;
+  teamId?: string; // 향후 팀별 포토카드 필터링을 위한 팀 ID
 }
 
 interface CustomizationOptions {
@@ -95,6 +96,7 @@ export default function PhotoCardSelector({
   visible,
   onClose,
   onSelectCard,
+  teamId, // 향후 사용 예정
 }: PhotoCardSelectorProps) {
   const { themed, theme } = useAppTheme();
   const [isModalVisible, setModalVisible] = useState(false);

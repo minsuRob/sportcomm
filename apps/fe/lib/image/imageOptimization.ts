@@ -300,9 +300,55 @@ export const selectOptimizedImageUrl = (
   media: MediaItem | null | undefined,
   mediaOptType: string,
 ) => {
-  if (!media) return undefined;
-  const delimiter = "/public/";
-  let url = `${media?.url.split(delimiter)[0] + delimiter}/${mediaOptType}/${media.id}.webp`;
+  // 기본 유효성 검증
+  if (!media || !media.url || !media.id) {
+    console.warn('Invalid media object:', media);
+    return undefined;
+  }
 
-  return normalizeUrl(url);
+  // URL이 유효한지 확인
+  if (typeof media.url !== 'string' || media.url.trim() === '') {
+    console.warn('Invalid media URL:', media.url);
+    return undefined;
+  }
+
+  // mediaOptType 유효성 검증
+  if (typeof mediaOptType !== 'string' || mediaOptType.trim() === '') {
+    console.warn('Invalid mediaOptType:', mediaOptType);
+    return undefined;
+  }
+
+  const delimiter = "/public/";
+
+  // URL에 delimiter가 포함되어 있는지 확인
+  if (!media.url.includes(delimiter)) {
+    console.warn('URL does not contain expected delimiter:', media.url);
+    // delimiter가 없으면 원본 URL을 그대로 반환
+    return media.url;
+  }
+
+  try {
+    // URL 생성 시도
+    const urlParts = media.url.split(delimiter);
+    if (urlParts.length < 2) {
+      console.warn('URL split failed:', media.url);
+      return media.url; // fallback to original URL
+    }
+
+    const baseUrl = urlParts[0];
+    const optimizedUrl = `${baseUrl}${delimiter}${mediaOptType}/${media.id}.webp`;
+
+    // 생성된 URL이 유효한지 확인
+    new URL(optimizedUrl); // URL 유효성 검증
+
+    return normalizeUrl(optimizedUrl);
+  } catch (error) {
+    console.warn('Failed to generate optimized URL:', error, {
+      originalUrl: media.url,
+      mediaId: media.id,
+      mediaOptType,
+    });
+    // 에러 발생 시 원본 URL 반환
+    return media.url;
+  }
 };

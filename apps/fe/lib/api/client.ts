@@ -95,16 +95,52 @@ export const client = new ApolloClient({
       Query: {
         fields: {
           search: { merge: false },
-          myTeams: { merge: false },
+          myTeams: {
+            merge: false,
+            read(existing) {
+              // 캐시된 myTeams 데이터가 있으면 사용
+              if (existing) {
+                console.log('📖 [Cache] Reading cached myTeams');
+                return existing;
+              }
+              return existing;
+            },
+          },
           sports: { merge: (_, incoming) => incoming },
           posts: {
-            keyArgs: ["input", ["authorId", "type"]],
+            // 단순 페이지 기반 병합
+            keyArgs: ["input", ["authorId", "teamIds", "publicOnly", "page"]],
             merge(existing, incoming, { args }) {
-              if (!existing || args?.input?.page === 1) return incoming;
+              if (!existing || args?.input?.page === 1) {
+                return incoming;
+              }
               return {
                 ...incoming,
                 posts: [...(existing.posts || []), ...(incoming.posts || [])],
               };
+            },
+            read(existing, { args }) {
+              // 캐시된 데이터가 있으면 먼저 확인
+              if (existing && existing.posts?.length > 0) {
+                console.log('📖 [Cache] Reading cached posts data');
+                return existing;
+              }
+              return existing;
+            },
+          },
+        },
+      },
+      // Post 엔티티에 대한 캐시 정책
+      Post: {
+        fields: {
+          isLiked: {
+            read(existing) {
+              return existing ?? false;
+            },
+          },
+          isBookmarked: {
+            read(existing) {
+              return existing ?? false;
             },
           },
         },

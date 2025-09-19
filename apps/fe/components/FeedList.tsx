@@ -1,11 +1,12 @@
 import React, { useCallback, useMemo } from "react";
 import { FlatList, View, Text, ViewStyle, TextStyle, ActivityIndicator } from "react-native";
 import PostCard, { Post } from "./PostCard"; // Import PostCard and the Post type from it
+import PostCardSkeleton from "./PostCardSkeleton";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useTranslation, TRANSLATION_KEYS } from "@/lib/i18n/useTranslation";
 import { isWeb } from "@/lib/platform";
-import { getFlatListOptimizationProps } from "@/lib/platform/optimization";
+import { getFeedFlatListOptimizationProps } from "@/lib/platform/optimization";
 
 interface FeedListProps {
   posts: Post[];
@@ -87,8 +88,8 @@ export default function FeedList({
   // 로딩 상태 확인 (fetching 중이고 posts가 비어있는 경우)
   const isLoading = fetching && posts.length === 0;
 
-  // 플랫폼별 성능 최적화 설정
-  const optimizationProps = useMemo(() => getFlatListOptimizationProps(), []);
+  // 플랫폼별 성능 최적화 설정 (피드 전용)
+  const optimizationProps = useMemo(() => getFeedFlatListOptimizationProps(), []);
 
   // 성능 최적화를 위한 FlatList props 메모이제이션
   const flatListProps = useMemo(
@@ -123,14 +124,17 @@ export default function FeedList({
     ],
   );
 
-  // 로딩 상태일 때 로딩 컴포넌트 표시
+  // 로딩 상태일 때 스켈레톤 UI 표시
   if (isLoading) {
     return (
-      <View style={themed($loadingContainer)}>
-        <ActivityIndicator size="large" color={theme.colors.tint} />
-        <Text style={themed($loadingText)}>
-          {loadingText || "피드를 불러오는 중..."}
-        </Text>
+      <View style={themed($skeletonContainer)}>
+        <PostCardSkeleton count={6} />
+        <View style={themed($loadingIndicator)}>
+          <ActivityIndicator size="large" color={theme.colors.tint} />
+          <Text style={themed($loadingText)}>
+            {loadingText || "피드를 불러오는 중..."}
+          </Text>
+        </View>
       </View>
     );
   }
@@ -176,6 +180,19 @@ const $loadingText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
   color: colors.textDim,
   marginTop: spacing.sm,
+});
+
+// 스켈레톤 UI 관련 스타일
+const $skeletonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  paddingVertical: spacing.md,
+});
+
+const $loadingIndicator: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: spacing.xl,
+  paddingHorizontal: spacing.md,
 });
 
 // 웹 전용 스타일들

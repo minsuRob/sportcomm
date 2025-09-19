@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { CacheModule } from '@nestjs/cache-manager';
 import { join } from 'path';
 import { parse } from 'pg-connection-string';
 
@@ -27,6 +28,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ProgressModule } from './modules/progress/progress.module'; // 포인트/경험치 Progress 모듈 추가
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { NoticesModule } from './modules/notices/notices.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { PointsModule } from './modules/points/points.module'; // 포인트 트랜잭션 모듈 추가
 
 /**
  * 메인 애플리케이션 모듈
@@ -50,6 +53,13 @@ import { NoticesModule } from './modules/notices/notices.module';
       envFilePath: ['.env.local', '.env'],
       cache: true,
       expandVariables: true,
+    }),
+
+    // Redis 캐시 모듈 (메모리 캐시 사용)
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 300000, // 5분 (기본 TTL)
+      max: 1000, // 최대 캐시 항목 수
     }),
 
     // TypeORM 데이터베이스 설정
@@ -285,6 +295,8 @@ import { NoticesModule } from './modules/notices/notices.module';
     ProgressModule, // Progress 모듈 추가
     FeedbackModule, // 피드백 모듈 추가
     NoticesModule, // 공지 모듈 추가
+    InventoryModule, // 인벤토리 모듈 추가
+    PointsModule, // 포인트 트랜잭션 모듈 추가
   ],
 
   // 컨트롤러 및 서비스

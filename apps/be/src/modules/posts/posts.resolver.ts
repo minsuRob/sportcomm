@@ -136,7 +136,7 @@ export class UpdatePostInput {
 export class FindPostsInput {
   @Field(() => Int, {
     nullable: true,
-    description: '페이지 번호 (기본값: 1)',
+    description: '페이지 번호 (기본값: 1) - 레거시 호환용',
     defaultValue: 1,
   })
   @IsOptional()
@@ -154,6 +154,8 @@ export class FindPostsInput {
   @Min(1, { message: '페이지 크기는 1 이상이어야 합니다.' })
   @Max(100, { message: '페이지 크기는 100 이하여야 합니다.' })
   limit?: number;
+
+  // 커서 기반 페이지네이션 제거
 
   @Field(() => [String], {
     nullable: true,
@@ -229,6 +231,8 @@ export class PostsResponse {
 
   @Field(() => Boolean, { description: '다음 페이지 존재 여부' })
   hasNext: boolean;
+
+  // 커서 필드 제거
 }
 
 /**
@@ -384,7 +388,9 @@ export class PostsResolver {
   }
 
   /**
-   * 게시물 목록 조회
+   * 게시물 목록 조회 (최적화 버전)
+   * DataLoader를 사용하여 N+1 문제 해결
+   * 서비스 레벨 캐시 적용으로 성능 향상
    *
    * @param user - 현재 사용자 (선택적)
    * @param findPostsInput - 조회 옵션
@@ -399,6 +405,7 @@ export class PostsResolver {
     const options: FindPostsOptions = {
       page: findPostsInput?.page || 1,
       limit: findPostsInput?.limit || 10,
+      // cursor 제거
       authorId: findPostsInput?.authorId,
       publicOnly: findPostsInput?.publicOnly || !user, // 비로그인 사용자는 공개 게시물만 조회
       sortBy: (findPostsInput?.sortBy as any) || 'createdAt',
@@ -407,7 +414,11 @@ export class PostsResolver {
       teamIds: findPostsInput?.teamIds,
     };
 
-    return await this.postsService.findAll(options);
+    const response = await this.postsService.findAll(options, user?.id);
+
+    // 배치 상태 로딩 제거: 필요 시 각 필드 리졸버가 개별 조회 수행
+
+    return response;
   }
 
   /**

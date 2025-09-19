@@ -10,6 +10,7 @@ import { json } from 'express';
 import { ensureDir } from 'fs-extra';
 import { DataSource } from 'typeorm';
 import * as helmet from 'helmet';
+import * as compression from 'compression';
 // morgan 패키지가 설치되지 않았으므로 임시로 제거
 // import * as morgan from 'morgan';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -55,6 +56,19 @@ async function bootstrap() {
 
     // 요청 로깅 미들웨어 설정 (morgan 패키지 설치 후 활성화)
     // app.use(morgan('dev'));
+
+    // 데이터 압축 미들웨어 적용 (성능 최적화)
+    app.use(compression({
+      level: 6, // 압축 레벨 (1-9, 기본값: 6)
+      threshold: 1024, // 1KB 이상의 응답만 압축
+      filter: (req, res) => {
+        // 특정 경로는 압축하지 않음
+        if (req.path.startsWith('/uploads/')) {
+          return false;
+        }
+        return compression.filter(req, res);
+      },
+    }));
 
     // 간단한 로깅 미들웨어 구현
     app.use((req, res, next) => {

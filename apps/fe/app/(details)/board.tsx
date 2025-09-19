@@ -175,7 +175,7 @@ export default function BoardScreen() {
               <View style={themed($thumbnailContainer)}>
                 <Image
                   source={{
-                    uri: selectOptimizedImageUrl(imageMedia, "thumbnails"),
+                    uri: selectOptimizedImageUrl(imageMedia, "thumbnails") || imageMedia?.url,
                   }}
                   style={themed($thumbnail)}
                   resizeMode="cover"

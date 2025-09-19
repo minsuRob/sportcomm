@@ -9,6 +9,7 @@ import {
   TextStyle,
   Animated,
   Easing,
+  ActivityIndicator,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
@@ -1016,14 +1017,27 @@ export default function AuthScreen() {
             </TouchableOpacity>
           )} */}
 
+         
+
           <Button
             size="lg"
             style={themed($continueButton)}
             onPress={handleContinue}
             disabled={loginLoading || registerLoading || !isRegisterButtonEnabled()}
           >
-            <Text style={themed($continueButtonText)}>계속</Text>
+            <Text style={themed($continueButtonText)}>
+              {loginLoading ? "로그인 중..." : registerLoading ? "회원가입 중..." : "계속"}
+            </Text>
           </Button>
+           {/* 로딩 표시 */}
+           {(loginLoading || registerLoading) && (
+            <View style={themed($loadingContainer)}>
+              <ActivityIndicator size="small" color={theme.colors.tint} />
+              <Text style={themed($loadingText)}>
+                {loginLoading ? "로그인 중..." : "회원가입 중..."}
+              </Text>
+            </View>
+          )}
 
           <View style={themed($toggleContainer)}>
             <Text style={themed($toggleText)}>
@@ -1276,4 +1290,19 @@ const $saveText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $disabledText: ThemedStyle<TextStyle> = ({ colors }) => ({
   color: colors.textDim,
+});
+
+const $loadingContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: spacing.md,
+  paddingVertical: spacing.sm,
+});
+
+const $loadingText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text,
+  fontSize: 14,
+  fontWeight: "500",
+  marginLeft: 8,
 });

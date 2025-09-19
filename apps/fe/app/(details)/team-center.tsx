@@ -15,7 +15,7 @@ import { useQuery } from "@apollo/client";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { GET_MY_TEAMS, type GetMyTeamsResult } from "@/lib/graphql/teams";
-import TeamLogo from "@/components/TeamLogo";
+import TeamList from "@/components/team/TeamList";
 
 /**
  * Team Center (상세 페이지)
@@ -43,21 +43,23 @@ export default function TeamCenterScreen(): React.ReactElement {
     fetchPolicy: "cache-and-network",
   });
 
-  // 상단 요약에 보여줄 팀 배열 (최대 6개)
+  // 상단 요약에 보여줄 팀 배열 (모든 팀 표시)
   const topTeams = useMemo(() => {
     const teams = myTeamsData?.myTeams ?? [];
-    // priority 오름차순 정렬 후 상위 6개만
-    const sorted = [...teams].sort(
+    // priority 오름차순 정렬 (모든 팀 표시)
+    return [...teams].sort(
       (a, b) => (a.priority ?? 999) - (b.priority ?? 999),
     );
-    return sorted.slice(0, 6);
   }, [myTeamsData]);
 
   // 내비게이션 핸들러들
   const goBack = (): void => router.back();
-  const goTeamSelection = (): void => router.push("/(modals)/team-selection");
+  const goTeamSelection = (): void =>
+    router.push("/(modals)/team-selection?origin=team-center"); // origin 파라미터로 복귀 경로 식별
   const goTeamColors = (): void => router.push("/(details)/team-colors-select");
   const goTeamFilter = (): void => router.push("/(details)/team-filter");
+  const goMyTeamsSettings = (): void =>
+    router.push("/(details)/my-teams-settings");
 
   return (
     <SafeAreaView style={themed($container)}>
@@ -113,39 +115,9 @@ export default function TeamCenterScreen(): React.ReactElement {
               </TouchableOpacity>
             </View>
           ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={themed($teamsRow)}
-            >
-              {topTeams.map((userTeam) => (
-                <View key={userTeam.id} style={themed($teamLogoWrapper)}>
-                  <TeamLogo
-                    logoUrl={userTeam.team.logoUrl}
-                    fallbackIcon={userTeam.team.icon}
-                    teamName={userTeam.team.name}
-                    size={36}
-                  />
-                  <Text style={themed($teamName)} numberOfLines={1}>
-                    {userTeam.team.name}
-                  </Text>
-                </View>
-              ))}
-              {/* 더보기 버튼 */}
-              {myTeamsData.myTeams.length > topTeams.length && (
-                <TouchableOpacity
-                  onPress={goTeamSelection}
-                  style={themed($moreButton)}
-                >
-                  <Ionicons
-                    name="ellipsis-horizontal"
-                    size={20}
-                    color={theme.colors.tint}
-                  />
-                  <Text style={themed($moreButtonText)}>더보기</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
+            <View style={themed($teamsContainer)}>
+              <TeamList teams={topTeams} />
+            </View>
           )}
         </View>
 
@@ -226,6 +198,34 @@ export default function TeamCenterScreen(): React.ReactElement {
               <Text style={themed($actionTitle)}>앱 색상 (내 팀 기반)</Text>
               <Text style={themed($actionDesc)}>
                 선택한 팀의 대표 색상으로 앱의 포인트 컬러를 맞춰보세요.
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={theme.colors.textDim}
+              style={themed($chevron)}
+            />
+          </TouchableOpacity>
+
+          {/* My Teams 상세설정 */}
+          <TouchableOpacity
+            style={themed($actionItem)}
+            onPress={goMyTeamsSettings}
+            accessibilityRole="button"
+            accessibilityLabel="My Teams 상세설정 페이지 열기"
+          >
+            <View style={themed($actionIcon)}>
+              <Ionicons
+                name="settings-outline"
+                size={20}
+                color={theme.colors.tint}
+              />
+            </View>
+            <View style={themed($actionMeta)}>
+              <Text style={themed($actionTitle)}>My Teams 상세설정</Text>
+              <Text style={themed($actionDesc)}>
+                순서 변경 및 날짜·최애선수·포토카드 인라인 설정.
               </Text>
             </View>
             <Ionicons
@@ -345,41 +345,11 @@ const $primaryButtonText: ThemedStyle<TextStyle> = () => ({
   fontWeight: "700",
 });
 
-const $teamsRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $teamsContainer: ThemedStyle<ViewStyle> = () => ({
   flexDirection: "row",
   alignItems: "center",
-  gap: spacing.md,
 });
 
-const $teamLogoWrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  alignItems: "center",
-  width: 72,
-});
-
-const $teamName: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 11,
-  marginTop: 6,
-  textAlign: "center",
-});
-
-const $moreButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  alignItems: "center",
-  justifyContent: "center",
-  paddingVertical: spacing.sm,
-  paddingHorizontal: spacing.md,
-  borderRadius: 10,
-  borderWidth: 1,
-  borderColor: colors.border,
-  backgroundColor: colors.backgroundAlt,
-});
-
-const $moreButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text,
-  fontSize: 12,
-  fontWeight: "600",
-  marginTop: 4,
-});
 
 const $actionList: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   backgroundColor: colors.card,

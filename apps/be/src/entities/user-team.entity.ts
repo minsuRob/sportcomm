@@ -9,9 +9,39 @@ import {
 } from 'typeorm';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { BaseEntity } from './base.entity';
-import { User } from './user.entity';
+import { User, UserProgressAction, USER_PROGRESS_REWARD } from './user.entity';
 import { Team } from './team.entity';
 import { LevelUtil } from '../utils/level.util';
+
+/**
+ * 팀 경험치 트랜잭션 타입
+ * 팀별 경험치 변동 원인을 표준화하여 추적/분석에 사용
+ */
+export enum TeamExperienceTransactionType {
+  CHAT_MESSAGE = 'CHAT_MESSAGE',          // 채팅 메시지 작성
+  POST_CREATE = 'POST_CREATE',            // 게시물 작성
+  DAILY_ATTENDANCE = 'DAILY_ATTENDANCE',  // 출석 체크
+  SYSTEM_ADJUSTMENT = 'SYSTEM_ADJUSTMENT', // 관리자 수동 조정
+}
+
+/**
+ * 팀 경험치 트랜잭션 인터페이스
+ * 경험치 변동 내역을 기록하기 위한 표준 구조
+ */
+export interface TeamExperienceTransaction {
+  userTeamId: string;
+  type: TeamExperienceTransactionType;
+  experienceGained: number;
+  previousExperience: number;
+  newExperience: number;
+  previousLevel: number;
+  newLevel: number;
+  levelUp: boolean;
+  description?: string;
+  referenceType?: 'POST' | 'COMMENT' | 'CHAT_MESSAGE' | 'ATTENDANCE';
+  referenceId?: string;
+  metadata?: Record<string, any>;
+}
 
 /**
  * 사용자-팀 관계 엔티티
@@ -195,5 +225,341 @@ export class UserTeam extends BaseEntity {
    */
   toString(): string {
     return `${this.user?.nickname || 'Unknown'} -> ${this.team?.name || 'Unknown Team'}`;
+  }
+
+  // === 경험치 관리 메서드 ===
+
+  /**
+   * 경험치 추가 및 레벨업 정보 반환
+   * @param experience 추가할 경험치 양
+   * @returns 레벨업 정보
+   */
+  addExperience(experience: number): {
+    previousLevel: number;
+    newLevel: number;
+    levelUp: boolean;
+    experienceGained: number;
+    totalExperience: number;
+  } {
+    const safeExp = Math.max(0, Math.floor(experience));
+    const previousLevel = this.level;
+    const previousExperience = this.experience || 0;
+
+    this.experience = previousExperience + safeExp;
+    const newLevel = this.level;
+
+    return {
+      previousLevel,
+      newLevel,
+      levelUp: newLevel > previousLevel,
+      experienceGained: safeExp,
+      totalExperience: this.experience,
+    };
+  }
+
+  /**
+   * 채팅 메시지 작성으로 경험치 적립
+   * @returns 레벨업 정보
+   */
+  earnExperienceForChat(): {
+    previousLevel: number;
+    newLevel: number;
+    levelUp: boolean;
+    experienceGained: number;
+    totalExperience: number;
+  } {
+    const expGain = USER_PROGRESS_REWARD[UserProgressAction.CHAT_MESSAGE];
+    return this.addExperience(expGain);
+  }
+
+  /**
+   * 게시물 작성으로 경험치 적립
+   * @returns 레벨업 정보
+   */
+  earnExperienceForPost(): {
+    previousLevel: number;
+    newLevel: number;
+    levelUp: boolean;
+    experienceGained: number;
+    totalExperience: number;
+  } {
+    const expGain = USER_PROGRESS_REWARD[UserProgressAction.POST_CREATE];
+    return this.addExperience(expGain);
+  }
+
+  /**
+   * 출석 체크로 경험치 적립
+   * @returns 레벨업 정보
+   */
+  earnExperienceForAttendance(): {
+    previousLevel: number;
+    newLevel: number;
+    levelUp: boolean;
+    experienceGained: number;
+    totalExperience: number;
+  } {
+    const expGain = USER_PROGRESS_REWARD[UserProgressAction.DAILY_ATTENDANCE];
+    return this.addExperience(expGain);
+  }
+
+  /**
+   * 사용자 액션에 따른 경험치 적립 (범용 메서드)
+   * @param action 사용자 액션 타입
+   * @returns 레벨업 정보
+   */
+  earnExperienceForAction(action: UserProgressAction): {
+    previousLevel: number;
+    newLevel: number;
+    levelUp: boolean;
+    experienceGained: number;
+    totalExperience: number;
+  } {
+    const expGain = USER_PROGRESS_REWARD[action];
+    return this.addExperience(expGain);
+  }
+
+  /**
+   * 경험치 증가 시뮬레이션 (실제 적용 전 미리보기)
+   * @param additionalExperience 추가될 경험치
+   * @returns 시뮬레이션 결과
+   */
+  simulateExperienceGain(additionalExperience: number): {
+    previousLevel: number;
+    newLevel: number;
+    levelUp: boolean;
+    experienceGained: number;
+    currentExperience: number;
+    projectedExperience: number;
+    toNextBefore: number;
+    toNextAfter: number;
+  } {
+    const safeExp = Math.max(0, Math.floor(additionalExperience));
+    const currentExp = this.experience || 0;
+    const previousLevel = this.level;
+
+    const simulation = LevelUtil.simulateAddExperience(currentExp, safeExp);
+
+    return {
+      previousLevel,
+      newLevel: simulation.newLevel,
+      levelUp: simulation.levelUp,
+      experienceGained: safeExp,
+      currentExperience: currentExp,
+      projectedExperience: simulation.newExperience,
+      toNextBefore: simulation.toNextBefore,
+      toNextAfter: simulation.toNextAfter,
+    };
+  }
+
+  /**
+   * 레벨업 보상 정보 계산
+   * @param fromLevel 이전 레벨
+   * @param toLevel 새로운 레벨
+   * @returns 보상 정보
+   */
+  calculateLevelUpRewards(fromLevel: number, toLevel: number): {
+    levelGained: number;
+    bonusPoints?: number;
+    unlockedFeatures?: string[];
+  } {
+    const levelGained = toLevel - fromLevel;
+
+    // 레벨업 보상 로직 (필요에 따라 확장)
+    const rewards = {
+      levelGained,
+      bonusPoints: levelGained * 10, // 레벨당 10 포인트 보너스
+      unlockedFeatures: levelGained >= 5 ? ['프리미엄 기능 해제'] : [],
+    };
+
+    return rewards;
+  }
+
+  /**
+   * 현재 팀 레벨의 상세 정보
+   * @returns 레벨 상세 정보
+   */
+  getDetailedLevelInfo(): {
+    currentLevel: number;
+    currentExperience: number;
+    experienceToNext: number;
+    levelProgressRatio: number;
+    nextLevelThreshold: number;
+    isMaxLevel: boolean;
+  } {
+    const currentExp = this.experience || 0;
+    const currentLevel = this.level;
+    const nextThreshold = LevelUtil.getExperienceThreshold(currentLevel + 1);
+    const currentThreshold = LevelUtil.getExperienceThreshold(currentLevel);
+
+    return {
+      currentLevel,
+      currentExperience: currentExp,
+      experienceToNext: Math.max(0, nextThreshold - currentExp),
+      levelProgressRatio: currentLevel >= LevelUtil.LEVEL_THRESHOLDS.length - 1 ? 1 :
+        Math.min(1, Math.max(0, (currentExp - currentThreshold) / (nextThreshold - currentThreshold))),
+      nextLevelThreshold: nextThreshold,
+      isMaxLevel: currentLevel >= LevelUtil.LEVEL_THRESHOLDS.length - 1,
+    };
+  }
+
+  // === 트랜잭션 생성 팩토리 메서드 ===
+
+  /**
+   * 경험치 트랜잭션 생성 (채팅 메시지)
+   * @param referenceId 관련 채팅 메시지 ID (선택사항)
+   * @param description 설명 (선택사항)
+   * @returns 트랜잭션 객체
+   */
+  createChatExperienceTransaction(
+    referenceId?: string,
+    description?: string,
+  ): TeamExperienceTransaction {
+    const previousExp = this.experience || 0;
+    const previousLevel = this.level;
+    const expGain = USER_PROGRESS_REWARD[UserProgressAction.CHAT_MESSAGE];
+
+    return {
+      userTeamId: this.id,
+      type: TeamExperienceTransactionType.CHAT_MESSAGE,
+      experienceGained: expGain,
+      previousExperience: previousExp,
+      newExperience: previousExp + expGain,
+      previousLevel,
+      newLevel: LevelUtil.calculateLevel(previousExp + expGain),
+      levelUp: LevelUtil.calculateLevel(previousExp + expGain) > previousLevel,
+      description: description || `채팅 메시지 작성으로 ${expGain} 경험치 획득`,
+      referenceType: 'CHAT_MESSAGE',
+      referenceId,
+    };
+  }
+
+  /**
+   * 경험치 트랜잭션 생성 (게시물 작성)
+   * @param referenceId 관련 게시물 ID (선택사항)
+   * @param description 설명 (선택사항)
+   * @returns 트랜잭션 객체
+   */
+  createPostExperienceTransaction(
+    referenceId?: string,
+    description?: string,
+  ): TeamExperienceTransaction {
+    const previousExp = this.experience || 0;
+    const previousLevel = this.level;
+    const expGain = USER_PROGRESS_REWARD[UserProgressAction.POST_CREATE];
+
+    return {
+      userTeamId: this.id,
+      type: TeamExperienceTransactionType.POST_CREATE,
+      experienceGained: expGain,
+      previousExperience: previousExp,
+      newExperience: previousExp + expGain,
+      previousLevel,
+      newLevel: LevelUtil.calculateLevel(previousExp + expGain),
+      levelUp: LevelUtil.calculateLevel(previousExp + expGain) > previousLevel,
+      description: description || `게시물 작성으로 ${expGain} 경험치 획득`,
+      referenceType: 'POST',
+      referenceId,
+    };
+  }
+
+  /**
+   * 경험치 트랜잭션 생성 (출석 체크)
+   * @param referenceId 관련 출석 기록 ID (선택사항)
+   * @param description 설명 (선택사항)
+   * @returns 트랜잭션 객체
+   */
+  createAttendanceExperienceTransaction(
+    referenceId?: string,
+    description?: string,
+  ): TeamExperienceTransaction {
+    const previousExp = this.experience || 0;
+    const previousLevel = this.level;
+    const expGain = USER_PROGRESS_REWARD[UserProgressAction.DAILY_ATTENDANCE];
+
+    return {
+      userTeamId: this.id,
+      type: TeamExperienceTransactionType.DAILY_ATTENDANCE,
+      experienceGained: expGain,
+      previousExperience: previousExp,
+      newExperience: previousExp + expGain,
+      previousLevel,
+      newLevel: LevelUtil.calculateLevel(previousExp + expGain),
+      levelUp: LevelUtil.calculateLevel(previousExp + expGain) > previousLevel,
+      description: description || `출석 체크로 ${expGain} 경험치 획득`,
+      referenceType: 'ATTENDANCE',
+      referenceId,
+    };
+  }
+
+  /**
+   * 범용 경험치 트랜잭션 생성
+   * @param action 액션 타입
+   * @param referenceType 참조 타입
+   * @param referenceId 참조 ID
+   * @param description 설명
+   * @param metadata 추가 메타데이터
+   * @returns 트랜잭션 객체
+   */
+  createExperienceTransaction(
+    action: UserProgressAction,
+    referenceType?: 'POST' | 'COMMENT' | 'CHAT_MESSAGE' | 'ATTENDANCE',
+    referenceId?: string,
+    description?: string,
+    metadata?: Record<string, any>,
+  ): TeamExperienceTransaction {
+    const previousExp = this.experience || 0;
+    const previousLevel = this.level;
+    const expGain = USER_PROGRESS_REWARD[action];
+
+    let transactionType: TeamExperienceTransactionType;
+    switch (action) {
+      case UserProgressAction.CHAT_MESSAGE:
+        transactionType = TeamExperienceTransactionType.CHAT_MESSAGE;
+        break;
+      case UserProgressAction.POST_CREATE:
+        transactionType = TeamExperienceTransactionType.POST_CREATE;
+        break;
+      case UserProgressAction.DAILY_ATTENDANCE:
+        transactionType = TeamExperienceTransactionType.DAILY_ATTENDANCE;
+        break;
+      default:
+        transactionType = TeamExperienceTransactionType.SYSTEM_ADJUSTMENT;
+    }
+
+    return {
+      userTeamId: this.id,
+      type: transactionType,
+      experienceGained: expGain,
+      previousExperience: previousExp,
+      newExperience: previousExp + expGain,
+      previousLevel,
+      newLevel: LevelUtil.calculateLevel(previousExp + expGain),
+      levelUp: LevelUtil.calculateLevel(previousExp + expGain) > previousLevel,
+      description: description || `${action}으로 ${expGain} 경험치 획득`,
+      referenceType,
+      referenceId,
+      metadata,
+    };
+  }
+
+  // === 정적 팩토리 메서드 ===
+
+  /**
+   * 경험치 트랜잭션 생성을 위한 정적 팩토리
+   * @param userTeam UserTeam 인스턴스
+   * @param action 액션 타입
+   * @param referenceType 참조 타입
+   * @param referenceId 참조 ID
+   * @param description 설명
+   * @returns 트랜잭션 객체
+   */
+  static createTransaction(
+    userTeam: UserTeam,
+    action: UserProgressAction,
+    referenceType?: 'POST' | 'COMMENT' | 'CHAT_MESSAGE' | 'ATTENDANCE',
+    referenceId?: string,
+    description?: string,
+  ): TeamExperienceTransaction {
+    return userTeam.createExperienceTransaction(action, referenceType, referenceId, description);
   }
 }

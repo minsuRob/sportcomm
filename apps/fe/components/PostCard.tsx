@@ -251,6 +251,7 @@ const PostCard = React.memo(function PostCard({
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [showVideoControls, setShowVideoControls] = useState(false);
   const [isVideoVisible, setIsVideoVisible] = useState(false);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoContainerRef = useRef<View | null>(null);
   const [videoTouched, setVideoTouched] = useState(false);
@@ -611,6 +612,10 @@ const PostCard = React.memo(function PostCard({
                       muted={true}
                       loop={false}
                       controls={videoTouched || showVideoControls}
+                      onLoadedMetadata={(e) => {
+                        const duration = (e.target as HTMLVideoElement).duration;
+                        setVideoDuration(duration);
+                      }}
                       onClick={handleVideoPress}
                       onPlay={() => setIsVideoPlaying(true)}
                       onPause={() => setIsVideoPlaying(false)}
@@ -626,6 +631,11 @@ const PostCard = React.memo(function PostCard({
                       shouldPlay={isVideoVisible}
                       positionMillis={0}
                       progressUpdateIntervalMillis={500}
+                      onLoad={(status) => {
+                        if (status.durationMillis) {
+                          setVideoDuration(status.durationMillis / 1000);
+                        }
+                      }}
                       onPlaybackStatusUpdate={(status: any) => {
                         if (status.isLoaded) {
                           setIsVideoPlaying(status.isPlaying);
@@ -664,10 +674,8 @@ const PostCard = React.memo(function PostCard({
                   <View style={themed($videoDurationBadge)}>
                     <Ionicons name="videocam" size={12} color="white" />
                     <Text style={themed($videoDurationText)}>
-                      {videoMedia[0]
-                        ? `${Math.floor(((videoMedia[0] as any).duration || 0) / 60)}:${Math.floor(
-                            ((videoMedia[0] as any).duration || 0) % 60,
-                          )
+                      {videoDuration > 0
+                        ? `${Math.floor(videoDuration / 60)}:${Math.floor(videoDuration % 60)
                             .toString()
                             .padStart(2, "0")}`
                         : "00:00"}
@@ -1237,8 +1245,9 @@ const $profileName: ThemedStyle<TextStyle> = () => ({
 
 const $autoplayIndicator: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: "absolute",
-  top: spacing.sm,
-  right: spacing.sm,
+  bottom: spacing.sm,
+  left: '50%',
+  transform: [{ translateX: -50 }],
   backgroundColor: "rgba(0, 0, 0, 0.8)",
   borderRadius: 12,
   paddingHorizontal: spacing.xs,

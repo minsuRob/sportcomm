@@ -290,6 +290,20 @@ export default function NoticeDetailScreen() {
             )}
           </View>
 
+          {/* 상단 우측 액션: 공지 전체보기 (아이콘 버튼) */}
+          <View style={themed($topRightActionRow)}>
+            <TouchableOpacity
+              onPress={() => router.push("/(details)/notice")}
+              style={themed($allNoticesIconBtn)}
+              accessibilityLabel="공지 전체 목록 보기"
+              accessibilityRole="button"
+              activeOpacity={0.7}
+            >
+              <Ionicons name="list" size={16} color={theme.colors.text} />
+              <Text style={themed($allNoticesIconBtnText)}>목록</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* 제목 */}
           <Text style={themed($title)}>{notice.title}</Text>
 
@@ -346,16 +360,7 @@ export default function NoticeDetailScreen() {
             </View>
           )}
 
-          <TouchableOpacity
-            style={themed($allNoticesButton)}
-            onPress={() => router.push("/(details)/notice")}
-            accessibilityRole="button"
-            accessibilityLabel="공지 전체 목록 보기"
-            activeOpacity={0.8}
-          >
-            <Ionicons name="list" size={16} color="#fff" />
-            <Text style={themed($allNoticesButtonText)}>공지 전체보기</Text>
-          </TouchableOpacity>
+          {/* (이전 큰 CTA 버튼 제거: 상단 우측 아이콘으로 대체) */}
 
           <View style={themed($bottomSpace)} />
         </ScrollView>
@@ -593,25 +598,29 @@ const $tagText: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 /**
- * 공지 전체보기 버튼 스타일
- * - 피드 이동과 구분되는 명확한 Call-To-Action
+ * 공지 전체보기 상단 우측 아이콘 버튼 (메타 아이콘 크기와 통일)
  */
-const $allNoticesButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+const $topRightActionRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  justifyContent: "flex-end",
+  marginBottom: spacing.xs,
+});
+
+const $allNoticesIconBtn: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "center",
-  backgroundColor: colors.tint,
-  paddingHorizontal: spacing.lg,
-  paddingVertical: spacing.sm,
-  borderRadius: 10,
-  marginTop: spacing.md,
-  gap: spacing.xs,
+  paddingHorizontal: spacing.sm,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: colors.backgroundAlt,
+  gap: spacing.xxs,
 });
 
-const $allNoticesButtonText: ThemedStyle<TextStyle> = () => ({
-  color: "white",
-  fontSize: 14,
-  fontWeight: "700",
+const $allNoticesIconBtnText: ThemedStyle<TextStyle> = ({ colors }) => ({
+  fontSize: 12,
+  fontWeight: "600",
+  color: colors.text,
 });
 
 const $bottomSpace: ThemedStyle<ViewStyle> = ({ spacing }) => ({

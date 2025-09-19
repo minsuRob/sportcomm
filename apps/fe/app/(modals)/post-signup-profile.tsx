@@ -104,7 +104,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
   //   const run = async (): Promise<void> => {
   //     // 비인증 상태이거나, post-signup이 필요하지 않으면 접근 불가 → 피드로
   //     console.log("isAuthenticated", isAuthenticated);
-      
+
   //     if (!isAuthenticated) {
   //       router.replace("/(app)/feed");
   //       return;
@@ -494,7 +494,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
         extraHeight={100}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={themed($subtitle)}>{subtitle}</Text>
+        {/*<Text style={themed($subtitle)}>{subtitle}</Text>*/}
 
         {/* 팀 선택 */}
         <View style={themed($section)}>
@@ -502,7 +502,8 @@ export default function PostSignupProfileScreen(): React.ReactElement {
             팀 선택 <Text style={themed($requiredText)}>(필수)</Text>
           </Text>
           <Text style={themed($helper)}>
-            최애 팀을 1개 이상 선택해야 합니다. 선택 시, 맞춤 피드가 구성 됩니다.
+            최애 팀을 1개 이상 선택해야 합니다. 선택 시, 맞춤 피드가 구성
+            됩니다.
           </Text>
 
           {/* 선택된 팀 정보 표시 */}
@@ -512,14 +513,14 @@ export default function PostSignupProfileScreen(): React.ReactElement {
                 선택된 팀 ({selectedTeams.length})
               </Text>
               <TeamList
-                teams={selectedTeams.map(team => ({
+                teams={selectedTeams.map((team) => ({
                   id: team.id,
                   team: {
                     id: team.id,
                     name: team.name,
                     logoUrl: team.logoUrl,
                     icon: team.icon,
-                  }
+                  },
                 }))}
                 size={24}
                 horizontal={true}
@@ -661,7 +662,6 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           <Text style={themed($helper)}>
             {"추천인 코드를 입력하면 서로에게 50 포인트가 지급됩니다."}
             {"\n추후에 내 프로필에서 등록 가능합니다."}
-
           </Text>
         </View>
 
@@ -837,7 +837,6 @@ const $primaryButtonText: ThemedStyle<TextStyle> = ({ colors }) => ({
 const $saveButtonContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginTop: spacing.xl,
   marginBottom: spacing.lg,
-
 });
 
 // === 추천인 코드 관련 스타일 ===

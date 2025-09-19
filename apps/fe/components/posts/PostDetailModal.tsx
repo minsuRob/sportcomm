@@ -12,6 +12,7 @@ import {
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { PostDetailContent } from "./PostDetailContent";
+import { isWeb } from "@/lib/platform";
 
 /**
  * PostDetailModal
@@ -153,6 +154,17 @@ const $sheet: ThemedStyle<ViewStyle> = ({ colors }) => ({
   shadowRadius: 12,
   // Android elevation
   elevation: 12,
+
+  // 웹 환경에서 최대 폭 제한 및 중앙 정렬 (GlobalWebLayout 과 동일한 640px 기준)
+  ...(isWeb() && {
+    maxWidth: 640,
+    width: "100%",
+    alignSelf: "center",
+    marginHorizontal: 16,
+    paddingHorizontal: 20, // 웹에서 좌우 여백 추가 (내용이 가장자리와 붙는 문제 해결)
+    paddingTop: 4,
+    paddingBottom: 8,
+  }),
 });
 
 const $handleWrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({

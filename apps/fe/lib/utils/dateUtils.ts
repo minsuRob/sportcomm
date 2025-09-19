@@ -43,14 +43,17 @@ const parseUTCDate = (utcString: string): Date => {
 /**
  * UTC 시간을 브라우저 로컬 시간대로 변환하는 헬퍼 함수
  * JavaScript의 Date 객체는 UTC 시간을 자동으로 로컬 시간대로 변환합니다.
- * @param utcString UTC ISO 문자열
+ * 백엔드에서 UTC로 저장된 시간을 정확히 로컬 시간대로 변환합니다.
+ * @param utcString UTC ISO 문자열 (Z 접미사 있거나 없음)
  * @returns 브라우저 로컬 시간대의 Date 객체
  */
 const parseLocalTime = (utcString: string): Date => {
-  // UTC 시간을 파싱하여 브라우저의 로컬 시간대로 자동 변환
+  // 백엔드에서 UTC로 저장된 시간을 정확히 파싱
+  // UTC 시간을 로컬 시간대로 자동 변환
   if (utcString.endsWith('Z')) {
     return new Date(utcString);
   } else {
+    // Z가 없는 경우 UTC로 간주하고 Z 추가
     return new Date(utcString + 'Z');
   }
 };

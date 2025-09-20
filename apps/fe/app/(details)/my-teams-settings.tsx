@@ -471,7 +471,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
                 <View style={themed($badgesRow)}>
                   {isPrimary && (
                     <View style={[themed($badge), themed($primaryBadge)]}>
-                      <Text style={themed($badgeText)}>주 팀</Text>
+                      <Text style={themed($badgeText)}>최애 팀</Text>
                     </View>
                   )}
                   {dirty && (
@@ -579,7 +579,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     <SafeAreaView style={themed($container)}>
       {/* 헤더 (post-signup-profile 스타일 적용) */}
       <View style={themed($header)}>
-        <Text style={themed($headerTitle)}>My Teams 상세설정</Text>
+        <Text style={themed($headerTitle)}>응원팀 상세설정</Text>
         <TouchableOpacity
           onPress={handleSave}
           disabled={!isDirty || updatingPriority || updatingDetails}
@@ -619,14 +619,20 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
             startIndex={0}
             onRemove={handleUnselectTeam}
           />
+          <Text style={themed($selectionHelperText)}>
+            {/* {selectedTeams.length}개의 팀이 선택되었습니다.{"\n"} */}
+            이미 선택된 팀을 다시 선택하면 우선순위가 맨 뒤로 이동합니다.{"\n"}
+            첫번째 선택된 팀으로 <Text style={{ textDecorationLine: "underline", color: theme.colors.tint }}>디자인 테마 색깔</Text>이 변경 됩니다.
+          </Text>
         </View>
 
         {/* 팀 선택 영역 */}
         <View style={themed($sectionBlock)}>
-          <Text style={themed($sectionTitle)}>팀 선택</Text>
+          <Text style={themed($sectionTitle)}>상세 선택</Text>
           <Text style={themed($selectionHelperText)}>
-            {selectedTeams.length}개의 팀이 선택되었습니다.{"\n"}
-            이미 선택된 팀을 다시 선택하면 우선순위가 맨 뒤로 이동합니다.
+            {/* {selectedTeams.length}개의 팀이 선택되었습니다.{"\n"} */}
+            피드 게시 시, 최애 선수의 <Text style={{ textDecorationLine: "underline", color: theme.colors.tint }}>등번호 및 이름</Text>이 표시 됩니다. {"\n"}
+            좋아한 날짜 선택 시 날짜가 기록 됩니다.
           </Text>
 
           <View style={themed($chipsWrap)}>
@@ -804,7 +810,7 @@ const $sectionBlock: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 const $sectionTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 15,
   fontWeight: "700",
-  color: colors.text,
+  color: colors.tint,
   marginBottom: 8,
 });
 

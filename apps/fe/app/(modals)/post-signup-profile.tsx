@@ -540,10 +540,11 @@ export default function PostSignupProfileScreen(): React.ReactElement {
         {/* 팀 선택 */}
         <View style={themed($section)}>
           <Text style={themed($label)}>
-            응원 팀 선택 <Text style={themed($requiredText)}>(필수)</Text>
+            응원팀 선택 <Text style={themed($requiredText)}>(필수)</Text>
           </Text>
           <Text style={themed($helper)}>
-            응원 팀을 1개 이상 선택해야 하며, 맞춤 피드가 구성 됩니다.
+            {"응원팀을 1개 이상 선택해야 하며, 맞춤 피드가 구성 됩니다."}
+            {"\n응원팀은 3개까지 피드(담벼락🧱)에 뱃지로 표시 됩니다."}
           </Text>
 
           {/* 선택된 팀 정보 표시 */}

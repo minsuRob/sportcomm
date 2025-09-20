@@ -139,9 +139,9 @@ export default function TeamCenterScreen(): React.ReactElement {
               />
             </View>
             <View style={themed($actionMeta)}>
-              <Text style={themed($actionTitle)}>My Team 선택/관리</Text>
+              <Text style={themed($actionTitle)}>응원팀 선택/관리</Text>
               <Text style={themed($actionDesc)}>
-                응원할 팀을 선택하고 최애 선수, 팬이 된 날짜 등을 설정해요.
+                응원할 팀을 선택하세요.
               </Text>
             </View>
             <Ionicons
@@ -181,7 +181,7 @@ export default function TeamCenterScreen(): React.ReactElement {
           </TouchableOpacity>
 
           {/* 앱 색상 (내 팀 기반) */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={themed($actionItem)}
             onPress={goTeamColors}
             accessibilityRole="button"
@@ -206,7 +206,7 @@ export default function TeamCenterScreen(): React.ReactElement {
               color={theme.colors.textDim}
               style={themed($chevron)}
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* My Teams 상세설정 */}
           <TouchableOpacity
@@ -223,9 +223,9 @@ export default function TeamCenterScreen(): React.ReactElement {
               />
             </View>
             <View style={themed($actionMeta)}>
-              <Text style={themed($actionTitle)}>My Teams 상세설정</Text>
+              <Text style={themed($actionTitle)}>응원팀 상세설정</Text>
               <Text style={themed($actionDesc)}>
-                순서 변경 및 날짜·최애선수·포토카드 인라인 설정.
+                순서 변경 및 날짜·최애선수 설정
               </Text>
             </View>
             <Ionicons

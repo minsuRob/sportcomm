@@ -55,16 +55,16 @@ interface InventoryEntry {
 
 // 상점 아이템 목록 (실제로는 API에서 가져올 데이터)
 export const SHOP_ITEMS: ShopItemData[] = [
-  {
-    id: "profile_frame_gold",
-    name: " ",
-    description: "프로필에 고급스러운 골드 테두리를 추가합니다",
-    price: 500,
-    category: "decoration",
-    icon: "🏆",
-    rarity: "epic",
-    isAvailable: true,
-  },
+  // {
+  //   id: "profile_frame_gold",
+  //   name: " ",
+  //   description: "프로필에 고급스러운 골드 테두리를 추가합니다",
+  //   price: 500,
+  //   category: "decoration",
+  //   icon: "🏆",
+  //   rarity: "epic",
+  //   isAvailable: true,
+  // },
   {
     id: "post_boost_3days",
     name: "채팅방 공지",

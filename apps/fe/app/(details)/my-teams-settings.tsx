@@ -1059,9 +1059,9 @@ const $bottomBar: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   right: 0,
   bottom: 0,
   padding: spacing.md,
-  backgroundColor: colors.card + "F0",
-  borderTopWidth: 1,
-  borderTopColor: colors.border,
+  // backgroundColor: colors.card + "F0",
+  // borderTopWidth: 1,
+  // borderTopColor: colors.border,
 });
 
 const $bottomSaveButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({

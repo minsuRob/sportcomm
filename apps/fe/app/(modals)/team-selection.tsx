@@ -764,7 +764,7 @@ export default function TeamSelectionScreen() {
           ]}
         >
           <Text style={themed($saveButtonText)}>
-            {isLoading ? "저장 중..." : "저장 (색상 즉시 적용)"}
+            {isLoading ? "저장 중..." : "저장"}
           </Text>
         </TouchableOpacity>
       </View>

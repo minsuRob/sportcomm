@@ -433,7 +433,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       showToast({
         type: "success",
         title: "완료",
-        message: "설정이 완료되었습니다. 팀 설정으로 이동합니다.",
+        message: "설정이 완료되었습니다. 팀 상세 설정으로 이동합니다.",
         duration: 1200,
       });
 
@@ -520,7 +520,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               saving ? { color: theme.colors.textDim } : undefined,
             ]}
           >
-            완료
+            확인
           </Text>
         </TouchableOpacity>
       </View>
@@ -540,11 +540,10 @@ export default function PostSignupProfileScreen(): React.ReactElement {
         {/* 팀 선택 */}
         <View style={themed($section)}>
           <Text style={themed($label)}>
-            팀 선택 <Text style={themed($requiredText)}>(필수)</Text>
+            응원 팀 선택 <Text style={themed($requiredText)}>(필수)</Text>
           </Text>
           <Text style={themed($helper)}>
-            최애 팀을 1개 이상 선택해야 합니다. 선택 시, 맞춤 피드가 구성
-            됩니다.
+            응원 팀을 1개 이상 선택해야 하며, 맞춤 피드가 구성 됩니다.
           </Text>
 
           {/* 선택된 팀 정보 표시 */}
@@ -751,7 +750,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
                   size={16}
                   color={theme.colors.tint}
                 />
-                <Text style={themed($primaryButtonText)}>완료</Text>
+                <Text style={themed($primaryButtonText)}>확인</Text>
               </>
             )}
           </TouchableOpacity>

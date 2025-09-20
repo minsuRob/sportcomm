@@ -96,7 +96,7 @@ export default function CreatePostScreen() {
   const { t } = useTranslation();
 
   // 추천 태그 목록 (실제로는 API에서 가져와야 함)
-  const popularTags = ["자유", "선수", "경기정보", "팀뉴스", "경기후기"];
+  const popularTags = ["자유", "선수", "경기정보", "팀뉴스", /*"경기후기"*/];
 
   // 상태 관리
   const [layoutVariant, setLayoutVariant] = useState<
@@ -469,7 +469,7 @@ export default function CreatePostScreen() {
       showToast({
         type: "error",
         title: "팀 선택 필요",
-        message: "응원할 팀을 선택해주세요.",
+        message: "게시 할 팀을 선택해주세요.",
         duration: 3000,
       });
       return;
@@ -789,12 +789,12 @@ export default function CreatePostScreen() {
         enableOnAndroid={true}
       >
         {/* 사용자 정보 */}
-        <View style={themed($userSection)}>
+        {/* <View style={themed($userSection)}>
           <Text style={themed($username)}>{currentUser.nickname}</Text>
           <Text style={themed($userHandle)}>
             @{currentUser.nickname.toLowerCase()}
           </Text>
-        </View>
+        </View> */}
 
         {/* 응원할 팀 선택 */}
         {layoutVariant === "modern" && (
@@ -1524,5 +1524,5 @@ const $emptyHintText: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $tagSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.md,
+  // paddingVertical: spacing.md,
 });

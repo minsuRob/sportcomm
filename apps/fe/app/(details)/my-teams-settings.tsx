@@ -15,7 +15,6 @@ import {
   ViewStyle,
   TextStyle,
   RefreshControl,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@apollo/client";
@@ -40,44 +39,26 @@ import TeamLogo from "@/components/TeamLogo";
 import PriorityTeamList from "@/components/team/PriorityTeamList";
 import { showToast } from "@/components/CustomToast";
 
-/** =========================================
- *  변경 개요 (드래그 → 탭 기반 우선순위)
- *  -----------------------------------------
- *  1. 기존 DraggableFlatList 제거
- *  2. 상단 "팀 순번" 바에서 선택된 팀 우선순위를 원형 버튼으로 표시
- *     - X 버튼으로 선택 해제 가능
- *  3. "팀 선택" 영역에 (선택되지 않은) My Team 목록을 칩 형태로 표시
- *     - 탭하면 우선순위 맨 뒤에 추가
- *     - 이미 선택된 칩을 다시 탭하면 맨 뒤로 이동 (요구사항)
- *  4. 팀 상세 카드는 선택된 팀만 순번대로 출력 (기존 디자인 유지)
- *  5. 순번 및 상세 설정(날짜 / 선수 / 포토카드)은 저장 버튼 누르기 전까지 로컬에만 반영
- *  6. 저장 시 UPDATE_MY_TEAMS_PRIORITY 호출 → priority(순서)만 일괄 전송
- *  7. Dirty 판단:
- *      - 순서 변경
- *      - 선택 / 해제
- *      - 상세 설정 변경
- *  8. 최대 5개 팀 유지 (기존 정책 가정). 선택 수 안내 문구 표시.
- *  ========================================= */
-
-/** 로컬 편집용 타입 확장
- *  - GraphQL 타입 모듈 해석 실패 시(diagnostics)에도 컴파일 가능하도록
- *    실제로 사용하는 필드를 명시적으로 선언
- *  - 서버 스키마 변경 시 여기 필드도 함께 유지/보수 필요
+/**
+ * 변경 개요:
+ * - 헤더 영역을 post-signup-profile.tsx 의 헤더 구조/스타일과 유사하게 단순 텍스트 버튼 스타일로 변경
+ *   (우측 캡슐형 배경 버튼 → 텍스트 버튼, 타이틀 색상 tint 적용, padding 조정)
+ * - 저장 버튼 상태 문구: "저장" / "저장 중..."
+ * - 비활성화 시 색상 textDim 적용
  */
+
+/** 로컬 편집용 타입 확장 */
 interface EditableUserTeam extends UserTeam {
-  /* ==== 로컬 확장 필드 (UserTeam 기본 필드 확장) ==== */
   _dirty?: boolean;
   _tempFavoriteDate?: string | null;
   _tempFavoritePlayerName?: string | null;
   _tempFavoritePlayerNumber?: number | null;
   _tempPhotoCardId?: string | null;
-  /** 탭 기반 선택 여부 (선택된 팀만 우선순위/상세 설정 노출) */
   _selected: boolean;
-  /** 최초 로딩 시의 priority (Dirty 판단 보조) */
   _initialPriority?: number | null;
 }
 
-/** 최대 선택 가능 팀 수 (정책 가정) */
+/** 최대 선택 가능 팀 수 */
 const MAX_TEAMS = 5;
 
 export default function MyTeamsSettingsScreen(): React.ReactElement {
@@ -119,7 +100,6 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
   /** 초기 데이터 → 로컬 구조로 매핑 */
   useEffect(() => {
     if (myTeamsData?.myTeams) {
-      // priority 오름차순 정렬
       const sorted = [...myTeamsData.myTeams].sort(
         (a, b) => (a.priority ?? 999) - (b.priority ?? 999),
       );
@@ -133,11 +113,10 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
             ? t.favoritePlayerNumber
             : null,
         _tempPhotoCardId: null,
-        _selected: typeof t.priority === "number", // priority 존재하면 선택된 것으로 처리
+        _selected: typeof t.priority === "number",
         _initialPriority: t.priority ?? null,
       }));
       setTeams(mapped);
-      // 최초 선택 순서 저장
       initialSelectedOrderRef.current = mapped
         .filter((t) => t._selected)
         .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999))
@@ -145,30 +124,23 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     }
   }, [myTeamsData]);
 
-  /** 선택된 팀들을 현재 우선순위 순서로 계산 */
+  /** 선택된 팀 (priority 오름차순) */
   const selectedTeams = useMemo(
     () =>
       teams
         .filter((t) => t._selected)
-        .sort((a, b) => {
-          // priority 값이 현재 로컬에서 재사용되지만, 안전하게 index 기반도 허용
-          return (a.priority ?? 999) - (b.priority ?? 999);
-        }),
+        .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)),
     [teams],
   );
 
-  /** 선택되지 않은 팀 목록 */
+  /** 선택되지 않은 팀 */
   const unselectedTeams = useMemo(
     () => teams.filter((t) => !t._selected),
     [teams],
   );
 
-  /** 전체 Dirty 판단
-   *  - 선택/해제/순서 변경
-   *  - 상세 값 변경 (_tempFavoriteDate, _tempFavoritePlayerName 등)
-   */
+  /** Dirty 판단 */
   const isDirty = useMemo(() => {
-    // (1) 선택 상태 변경 (선택 해제되었거나 새로 선택된 경우)
     const initialSet = new Set(initialSelectedOrderRef.current);
     const currentSelectedIds = selectedTeams.map((t) => t.teamId);
 
@@ -179,14 +151,12 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         (origId) => !currentSelectedIds.includes(origId),
       );
 
-    // (2) 순서 변경
     const orderChanged =
       !selectionChanged &&
       initialSelectedOrderRef.current.some(
         (teamId, idx) => teamId !== currentSelectedIds[idx],
       );
 
-    // (3) 상세 값 변경 (좋아한 날짜, 최애 선수 등)
     const detailsChanged = teams.some((team) => team._dirty);
 
     return selectionChanged || orderChanged || detailsChanged;
@@ -216,9 +186,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
           ? {
               ...t,
               _tempFavoriteDate: date,
-              _dirty:
-                t._dirty ||
-                t._tempFavoriteDate !== date,
+              _dirty: t._dirty || t._tempFavoriteDate !== date,
             }
           : t,
       ),
@@ -229,8 +197,8 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
 
   /** 최애 선수 선택 */
   const openPlayerSelector = (teamId: string, teamName: string) => {
-    setActiveTeamId(teamId as TeamId); // UUID로 저장용 ID 설정
-    setActiveTeamName(teamName); // 팀 이름으로 선수 검색용
+    setActiveTeamId(teamId as TeamId);
+    setActiveTeamName(teamName);
     setPlayerSelectorVisible(true);
   };
 
@@ -259,7 +227,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     setPlayerSelectorVisible(false);
   };
 
-  /** 포토카드 선택 (서버 반영 X) */
+  /** 포토카드 선택 (Mock 로컬만) */
   const openPhotoCardSelector = (teamId: string) => {
     setActiveTeamId(teamId as TeamId);
     setPhotoCardSelectorVisible(true);
@@ -278,111 +246,65 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     setPhotoCardSelectorVisible(false);
   };
 
-  /** 팀 선택 / 재선택 (맨 뒤 이동) */
+  /** 팀 선택 / 재선택 (재선택 시 맨 뒤 이동) */
   const handleSelectTeam = useCallback(
     (teamId: string) => {
       setTeams((prev) => {
-        // 현재 선택된 목록
         const selected = prev
           .filter((t) => t._selected)
           .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
 
         const isAlreadySelected = selected.some((t) => t.teamId === teamId);
-
         let newSelectedOrder: EditableUserTeam[];
 
         if (isAlreadySelected) {
-          // 재선택 → 맨 뒤 이동
           newSelectedOrder = [
             ...selected.filter((t) => t.teamId !== teamId),
             selected.find((t) => t.teamId === teamId)!,
           ];
         } else {
-          // 새 선택 → 마지막에 추가 (최대 수 제한)
-          if (selected.length >= MAX_TEAMS) {
-            showToast({
-              type: "warning",
-              title: "선택 제한",
-              message: `최대 ${MAX_TEAMS}개 팀까지 선택 가능합니다.`,
-              duration: 2200,
-            });
-            return prev;
-          }
+            if (selected.length >= MAX_TEAMS) {
+              showToast({
+                type: "warning",
+                title: "선택 제한",
+                message: `최대 ${MAX_TEAMS}개 팀까지 선택 가능합니다.`,
+                duration: 2200,
+              });
+              return prev;
+            }
           const newTeam = prev.find((t) => t.teamId === teamId);
           if (!newTeam) return prev;
           newSelectedOrder = [...selected, { ...newTeam, _selected: true }];
         }
 
-        // priority 재할당
         newSelectedOrder = newSelectedOrder.map((t, idx) => ({
           ...t,
-          priority: idx,
-        }));
+            priority: idx,
+          }));
 
-        // 전체 목록 재구성
         return prev
           .map((t) => {
             const replaced = newSelectedOrder.find(
               (n) => n.teamId === t.teamId,
             );
             if (replaced) return replaced;
-            if (isAlreadySelected && t.teamId === teamId) {
-              // 재선택 케이스에서 이미 replaced 처리됨
-              return t;
-            }
-            // 새 선택이 아닌 기존 팀
-            if (!replaced && t.teamId === teamId && !isAlreadySelected) {
-              // 새로 선택된 팀이었는데 newSelectedOrder 에 이미 반영됨 -> 여기 안옴
-              return t;
-            }
-            // 선택되지 않은 팀은 priority 제거
-            return {
-              ...t,
-              _selected:
-                !!t._selected && t._selected && t.priority !== undefined
-                  ? t._selected
-                  : t._selected,
-              priority: t._selected ? t.priority : t.priority,
-            };
+            return !newSelectedOrder.some((s) => s.teamId === t.teamId)
+              ? { ...t, _selected: false, priority: null }
+              : t;
           })
           .map((t) =>
-            newSelectedOrder.find((s) => s.teamId === t.teamId)
+            newSelectedOrder.some((s) => s.teamId === t.teamId)
               ? { ...t, _selected: true }
-              : {
-                  ...t,
-                  _selected:
-                    t._selected &&
-                    newSelectedOrder.some((s) => s.teamId === t.teamId),
-                },
-          )
-          .map((t) => {
-            // 선택되지 않은 팀 처리
-            if (!newSelectedOrder.some((s) => s.teamId === t.teamId)) {
-              return {
-                ...t,
-                _selected:
-                  t._selected &&
-                  newSelectedOrder.some((s) => s.teamId === t.teamId),
-              };
-            }
-            return t;
-          })
-          .map((t) => {
-            // 선택되지 않은 팀 priority 제거
-            if (!newSelectedOrder.some((s) => s.teamId === t.teamId)) {
-              return { ...t, priority: null };
-            }
-            return t;
-          });
+              : t,
+          );
       });
     },
     [setTeams],
   );
 
-  /** 선택해제 (X 버튼) */
+  /** 선택 해제 */
   const handleUnselectTeam = useCallback((teamId: string) => {
     setTeams((prev) => {
-      // 해당 팀 제외 후 재정렬
       const remaining = prev
         .filter((t) => t._selected && t.teamId !== teamId)
         .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999))
@@ -390,11 +312,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
 
       return prev.map((t) => {
         if (t.teamId === teamId) {
-          return {
-            ...t,
-            _selected: false,
-            priority: null,
-          };
+          return { ...t, _selected: false, priority: null };
         }
         const updated = remaining.find((r) => r.teamId === t.teamId);
         return updated ? updated : t;
@@ -405,7 +323,6 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
   /** 저장 */
   const handleSave = useCallback(async () => {
     if (updatingPriority || updatingDetails || !isDirty) return;
-
     if (!currentUser) {
       showToast({
         type: "error",
@@ -415,22 +332,13 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
       });
       return;
     }
-
     try {
-      // 현재 선택된 팀 순서대로 priority payload 구성
-      // teamIds 배열(현재 순서)만 서버로 전달하여 priority를 경량 업데이트
       const orderedTeamIds = selectedTeams.map((t) => t.teamId);
-
       const { errors } = await updateMyTeamsPriority({
         variables: { teamIds: orderedTeamIds },
       });
+      if (errors && errors.length > 0) throw new Error(errors[0].message);
 
-      if (errors && errors.length > 0) {
-        throw new Error(errors[0].message);
-      }
-
-      // 선택된 모든 팀의 상세 정보(좋아한 날짜, 최애 선수) 업데이트
-      // 변경사항이 없어도 선택된 팀은 유지되어야 함
       const { errors: detailErrors } = await updateMyTeams({
         variables: {
           teams: selectedTeams.map((team) => ({
@@ -441,26 +349,20 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
           })),
         },
       });
-
-      if (detailErrors && detailErrors.length > 0) {
+      if (detailErrors && detailErrors.length > 0)
         throw new Error(detailErrors[0].message);
-      }
 
-      // 서버 반영 후 재조회 (최신 데이터 동기화)
       const refetched = await refetchMyTeams({ fetchPolicy: "network-only" });
       const newMyTeams = refetched?.data?.myTeams || [];
       await updateUser({ myTeams: newMyTeams } as any);
 
-      // 첫 번째 팀의 색상을 자동으로 앱 테마에 적용
       if (selectedTeams.length > 0) {
         const firstTeam = selectedTeams[0];
         try {
           const teamSlug = deriveTeamSlug(firstTeam.team.name);
-          await setTeamColorOverride(firstTeam.teamId, teamSlug);
-          // console.log(`첫 번째 팀(${firstTeam.team.name}) 색상을 앱 테마에 적용했습니다.`);
+            await setTeamColorOverride(firstTeam.teamId, teamSlug);
         } catch (colorError) {
           console.warn("팀 색상 설정 실패:", colorError);
-          // 색상 설정 실패해도 저장 성공으로 처리
         }
       }
 
@@ -471,10 +373,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         duration: 1800,
       });
 
-      // 초기 순서 갱신
       initialSelectedOrderRef.current = orderedTeamIds;
-
-      // 로컬 priority / dirty 초기화
       setTeams((prev) =>
         prev.map((t) => {
           const updated = newMyTeams.find((n) => n.teamId === t.teamId);
@@ -484,7 +383,8 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
               priority: updated.priority,
               _tempFavoriteDate: updated.favoriteDate || null,
               _tempFavoritePlayerName: (updated as any).favoritePlayerName || null,
-              _tempFavoritePlayerNumber: (updated as any).favoritePlayerNumber ?? null,
+              _tempFavoritePlayerNumber:
+                (updated as any).favoritePlayerNumber ?? null,
               _dirty: false,
               _selected: true,
               _initialPriority: updated.priority ?? null,
@@ -536,9 +436,9 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         ? `${item._tempFavoritePlayerName} (#${item._tempFavoritePlayerNumber ?? "?"})`
         : "최애 선수";
 
-      const photoLabel = item._tempPhotoCardId
-        ? `포토카드 #${item._tempPhotoCardId}`
-        : "포토카드";
+      // const photoLabel = item._tempPhotoCardId
+      //   ? `포토카드 #${item._tempPhotoCardId}`
+      //   : "포토카드";
 
       return (
         <View
@@ -548,9 +448,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
             dirty && { borderColor: theme.colors.tint },
           ]}
         >
-          {/* 헤더 */}
           <View style={themed($teamHeaderRow)}>
-            {/* (드래그 핸들 제거) → 빈 영역 배치 or 아이콘 변경 */}
             <View style={themed($placeholderHandle)}>
               <Ionicons
                 name="analytics-outline"
@@ -591,7 +489,6 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
             </View>
           </View>
 
-          {/* 설정 버튼 행 */}
           <View style={themed($settingsRow)}>
             <TouchableOpacity
               style={themed($settingButton)}
@@ -603,27 +500,14 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
                 size={16}
                 color={theme.colors.tint}
               />
-              <Text style={themed($settingText)}>
-                {dateLabel}
-              </Text>
+              <Text style={themed($settingText)}>{dateLabel}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={themed($settingButton)}
-              onPress={() => {
-                const supportedIds = Object.values(TEAM_IDS) as string[];
-                // if (!supportedIds.includes(item.teamId)) {
-                //   showToast({
-                //     type: "warning",
-                //     title: "지원 예정",
-                //     message:
-                //       "해당 팀은 최애 선수 선택이 아직 지원되지 않습니다.",
-                //     duration: 2200,
-                //   });
-                //   return;
-                // }
-                openPlayerSelector(item.teamId, item.team.name);  
-              }}
+              onPress={() =>
+                openPlayerSelector(item.teamId, item.team.name)
+              }
               activeOpacity={0.85}
             >
               <Ionicons
@@ -636,7 +520,8 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
               </Text>
             </TouchableOpacity>
 
-            {/* <TouchableOpacity
+            {/* 향후 포토카드 기능 재활성화 시 사용
+            <TouchableOpacity
               style={themed($settingButton)}
               onPress={() => openPhotoCardSelector(item.teamId)}
               activeOpacity={0.85}
@@ -663,7 +548,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
       <SafeAreaView style={themed($container)}>
         <View style={themed($centerFill)}>
           <ActivityIndicator size="large" color={theme.colors.tint} />
-          <Text style={themed($loadingText)}>내 팀 정보를 불러오는 중...</Text>
+            <Text style={themed($loadingText)}>내 팀 정보를 불러오는 중...</Text>
         </View>
       </SafeAreaView>
     );
@@ -687,30 +572,28 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     );
   }
 
-  /** 선택 가능 잔여 수 */
-  const remainingSlots = MAX_TEAMS - selectedTeams.length;
+  /** 선택 가능 잔여 수 (UI 에서는 현재 안내문 일부 비활성) */
+  // const remainingSlots = MAX_TEAMS - selectedTeams.length;
 
   return (
     <SafeAreaView style={themed($container)}>
-      {/* 헤더 */}
+      {/* 헤더 (post-signup-profile 스타일 적용) */}
       <View style={themed($header)}>
         <Text style={themed($headerTitle)}>My Teams 상세설정</Text>
         <TouchableOpacity
           onPress={handleSave}
           disabled={!isDirty || updatingPriority || updatingDetails}
-          style={[
-            themed($saveButton),
-            (!isDirty || updatingPriority || updatingDetails) && { opacity: 0.45 },
-          ]}
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons
-            name="save-outline"
-            size={18}
-            color="#fff"
-            style={{ marginRight: 4 }}
-          />
-          <Text style={themed($saveButtonText)}>
-            {updatingPriority || updatingDetails ? "저장 중..." : "변경사항 저장"}
+          <Text
+            style={[
+              themed($saveText),
+              (!isDirty || updatingPriority || updatingDetails) &&
+                themed($saveTextDisabled),
+            ]}
+          >
+            {updatingPriority || updatingDetails ? "저장 중..." : "저장"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -742,29 +625,18 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         <View style={themed($sectionBlock)}>
           <Text style={themed($sectionTitle)}>팀 선택</Text>
           <Text style={themed($selectionHelperText)}>
-            {selectedTeams.length}개의 팀이 선택되었습니다.{" "}
-            {/* {remainingSlots > 0
-              ? `${remainingSlots}개의 팀을 더 선택할 수 있습니다.`
-              : "최대 팀 수를 모두 선택했습니다."} */}
-            {"\n"}이미 선택된 팀을 다시 선택하면 우선순위가 맨 뒤로 이동합니다.
+            {selectedTeams.length}개의 팀이 선택되었습니다.{"\n"}
+            이미 선택된 팀을 다시 선택하면 우선순위가 맨 뒤로 이동합니다.
           </Text>
 
           <View style={themed($chipsWrap)}>
-            {/* 선택된 팀도 칩으로 노출 (비활성화) / 요구사항: 이미 선택된 것 비활성 */}
             {teams.map((t) => {
               const isSelected = t._selected;
               return (
                 <TouchableOpacity
                   key={t.teamId}
                   style={[themed($teamChip), isSelected && { opacity: 0.35 }]}
-                  onPress={() => {
-                    if (isSelected) {
-                      // 재선택 → 맨 뒤 이동
-                      handleSelectTeam(t.teamId);
-                    } else {
-                      handleSelectTeam(t.teamId);
-                    }
-                  }}
+                  onPress={() => handleSelectTeam(t.teamId)}
                   disabled={!t._selected && selectedTeams.length >= MAX_TEAMS}
                   activeOpacity={0.7}
                 >
@@ -782,7 +654,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
           </View>
         </View>
 
-        {/* 팀 상세 카드 (선택된 팀만) */}
+        {/* 팀 상세 카드 */}
         <View style={themed($cardsWrapper)}>
           {selectedTeams.map((t, idx) => renderTeamCard(t, idx))}
           {selectedTeams.length === 0 && (
@@ -822,7 +694,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         }
       />
 
-      {/* 최애 선수 선택 (지원 팀만) */}
+      {/* 최애 선수 선택 */}
       <FavoritePlayerSelector
         visible={playerSelectorVisible}
         onClose={() => {
@@ -830,10 +702,18 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
           setActiveTeamId(null);
           setActiveTeamName(null);
         }}
-        teamId={activeTeamName ? deriveTeamSlug(activeTeamName) || TEAM_IDS.DOOSAN : TEAM_IDS.DOOSAN}
+        teamId={
+          activeTeamName
+            ? deriveTeamSlug(activeTeamName) || TEAM_IDS.DOOSAN
+            : TEAM_IDS.DOOSAN
+        }
         onSelect={(p) => handleSelectPlayer(p)}
-        initialSelectedPlayerId={undefined} // 현재 선택된 선수 하이라이트는 나중에 구현
-        title={activeTeamName ? `${activeTeamName} 최애 선수 선택` : "최애 선수 선택"}
+        initialSelectedPlayerId={undefined}
+        title={
+          activeTeamName
+            ? `${activeTeamName} 최애 선수 선택`
+            : "최애 선수 선택"
+        }
       />
 
       {/* 포토카드 선택 (Mock) */}
@@ -846,7 +726,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         onSelectCard={(cardId) => handleSelectPhotoCard(cardId)}
       />
 
-      {/* 하단 고정 저장 바 */}
+      {/* 하단 고정 저장 바 (Dirty 시 표시) */}
       {isDirty && !updatingPriority && !updatingDetails && (
         <View style={themed($bottomBar)}>
           <TouchableOpacity
@@ -860,7 +740,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         </View>
       )}
 
-      {/* 글로벌 저장 진행 오버레이 */}
+      {/* 저장 진행 오버레이 */}
       {(updatingPriority || updatingDetails) && (
         <View style={themed($overlay)}>
           <ActivityIndicator size="large" color={theme.colors.tint} />
@@ -880,37 +760,32 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   backgroundColor: colors.background,
 });
 
+/** post-signup-profile 스타일 참고한 헤더 */
 const $header: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
+  paddingVertical: spacing.lg,
   borderBottomWidth: 1,
   borderBottomColor: colors.border,
-  backgroundColor: colors.card,
-  zIndex: 10,
+  backgroundColor: colors.background,
 });
 
 const $headerTitle: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 18,
   fontWeight: "700",
-  color: colors.text,
+  color: colors.tint,
 });
 
-const $saveButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: colors.tint,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  borderRadius: 10,
-});
-
-const $saveButtonText: ThemedStyle<TextStyle> = () => ({
-  color: "#fff",
-  fontWeight: "700",
+const $saveText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 14,
+  color: colors.tint,
+  fontWeight: "600",
+});
+
+const $saveTextDisabled: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.textDim,
 });
 
 const $mainScroll: ThemedStyle<ViewStyle> = () => ({
@@ -937,7 +812,6 @@ const $emptyHelperText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
   color: colors.textDim,
 });
-
 
 const $selectionHelperText: ThemedStyle<TextStyle> = ({ colors }) => ({
   fontSize: 12,
@@ -1190,4 +1064,13 @@ const $overlayText: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
 });
 
-// (끝) 파일 마지막 - 커밋 메시지 제거됨
+/**
+ * 설명:
+ * - 헤더를 post-signup-profile.tsx 스타일로 단순화 (타이틀 tint, 우측 텍스트 버튼)
+ * - 기존 캡슐형 저장 버튼 제거 후 상태별 색상 처리
+ * - 나머지 비즈니스 로직(팀 선택/우선순위/저장)은 기존 유지
+ *
+ * 유지보수 포인트:
+ * - post-signup-profile 헤더 스타일이 추후 공통 컴포넌트화 된다면 해당 부분 추출 고려
+ * - 저장 로직(setTeamColorOverride) 실패 시에도 성공 UX 유지
+ */

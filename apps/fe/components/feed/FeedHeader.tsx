@@ -96,7 +96,7 @@ export default function FeedHeader({
           </View>
         </View>
 
-        {/* {tabs && tabs.length > 0 && (
+        {tabs && tabs.length > 0 && currentUser && (
           <View style={themed($tabCenterOverlay)} pointerEvents="box-none">
             <View style={themed($tabInlineCenter)} pointerEvents="auto">
               <TabSlider
@@ -108,7 +108,7 @@ export default function FeedHeader({
               />
             </View>
           </View>
-        )} */}
+        )}
 
         <View style={themed($headerRight)}>
           <TouchableOpacity
@@ -245,7 +245,7 @@ const $headerRow: ThemedStyle<ViewStyle> = () => ({
 
 const $tabCenterOverlay: ThemedStyle<ViewStyle> = () => ({
   position: "absolute",
-  left: 0,
+  left: 20,
   right: 0,
   top: 0,
   bottom: 0,

@@ -680,7 +680,16 @@ export default function AuthScreen() {
             <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
           </TouchableOpacity>
 
-          <Text style={themed($headerLogoTitle)}>Sportalk</Text>
+          <View style={themed($logoRow)}>
+          <Text style={themed($logoText)}>sp</Text>
+          <Ionicons
+            name="baseball"
+            size={16}
+            color={theme.colors.teamMain ?? theme.colors.tint}
+            style={themed($baseballIcon) as any}
+          />
+          <Text style={themed($logoText)}>rtalk</Text>
+        </View>
 
           <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
             <Ionicons
@@ -799,7 +808,20 @@ export default function AuthScreen() {
           <Ionicons name="arrow-back" color={theme.colors.text} size={24} />
         </TouchableOpacity>
 
-        <Text style={themed($headerLogoTitle)}>{isLogin ? "Sportalk" : "회원가입"}</Text>
+        {isLogin ? (
+          <View style={themed($logoRow)}>
+            <Text style={themed($logoText)}>sp</Text>
+            <Ionicons
+              name="baseball"
+              size={16}
+              color={theme.colors.teamMain ?? theme.colors.tint}
+              style={themed($baseballIcon) as any}
+            />
+            <Text style={themed($logoText)}>rtalk</Text>
+          </View>
+        ) : (
+          <Text style={themed($headerTitle)}>회원가입</Text>
+        )}
 
         <View style={themed($headerRight)}>
           <TouchableOpacity onPress={toggleTheme} style={themed($themeToggleButton)}>
@@ -1084,14 +1106,23 @@ const $mainContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $logoText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  fontSize: 30, // typography.fontSize["3xl"] 대신 직접 값 사용
-  fontFamily: "TTTogether",
-  fontWeight: "500",
-  textAlign: "center",
+  fontSize: 18,
+  fontWeight: "900",
   color: colors.teamMain ?? colors.tint,
   // 웹/네이티브 모두 동일 키(TTTogether) 사용
-  // fontFamily: "TTTogether",
-  marginBottom: 32,
+  fontFamily: "TTTogether",
+});
+
+const $baseballIcon: ThemedStyle<ViewStyle> = () => ({
+  marginTop: 5,
+  marginLeft: -4,
+  marginRight: -4,
+});
+
+const $logoRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  gap: spacing?.xxs ?? 4,
 });
 
 const $inputContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

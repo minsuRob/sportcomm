@@ -19,7 +19,7 @@ export default function ListFooter({ loading, error }: ListFooterProps) {
     return (
       <View style={themed($listFooter)}>
         <Text style={{ color: theme.colors.error }}>
-          데이터를 불러오는데 실패했습니다.
+          {/* 데이터를 불러오는데 실패했습니다. */}
         </Text>
       </View>
     );

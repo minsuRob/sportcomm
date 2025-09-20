@@ -39,14 +39,12 @@ export interface ShopItemData {
   discount?: number; // 할인율 (0-100)
 }
 
-
 interface ShopModalProps {
   visible: boolean;
   onClose: () => void;
   currentUser: User | null;
   onPurchase?: (item: ShopItemData) => Promise<void>;
 }
-
 
 // 사용자가 구매한 아이템 인벤토리 엔트리
 interface InventoryEntry {
@@ -440,8 +438,9 @@ export default function ShopModal({
           </View>
 
           {/* 상점/가방 탭 + 포인트 한 줄 배치 */}
-          <View style={themed($tabAndPointsRow)}>
-            {/* 좌측: 보유 포인트 카드 */}
+          {/* 보유 포인트 + 상점/가방 탭 + 포인트 이력 (단일 행) */}
+          <View style={themed($balanceRow)}>
+            {/* 좌측: 포인트 카드 */}
             <View style={themed($pointsCardWrapper)}>
               <View style={themed($balanceCardCompact)}>
                 <Text style={themed($balanceLabel)}>보유 포인트</Text>
@@ -451,8 +450,8 @@ export default function ShopModal({
               </View>
             </View>
 
-            {/* 중앙: 탭 토글 */}
-            <View style={themed($tabCenterWrapper)}>
+            {/* 우측: 탭 + 포인트 이력 (세로 스택) */}
+            <View style={themed($rightStack)}>
               <View style={themed($tabToggleInline)}>
                 <TouchableOpacity
                   style={[
@@ -507,20 +506,18 @@ export default function ShopModal({
                 </TouchableOpacity>
               </View>
 
+              <TouchableOpacity
+                style={themed($pointHistoryInlineButton)}
+                activeOpacity={0.85}
+                onPress={handleOpenPointHistory}
+              >
+                <Ionicons name="sparkles-outline" size={14} color={"white"} />
+                <Text style={themed($pointHistoryInlineButtonText)}>
+                  포인트 이력
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-
-          {/* 포인트 이력 버튼 */}
-          <TouchableOpacity
-            style={themed($pointHistoryCenterButton)}
-            activeOpacity={0.85}
-            onPress={handleOpenPointHistory}
-          >
-            <Ionicons name="sparkles-outline" size={14} color={"white"} />
-            <Text style={themed($pointHistoryCenterButtonText)}>
-              포인트 이력
-            </Text>
-          </TouchableOpacity>
 
           {/* 상점 전용: 카테고리 탭 */}
           {activeTab === "shop" && (
@@ -1078,7 +1075,7 @@ const $inventoryMetaPillText: ThemedStyle<TextStyle> = ({ colors }) => ({
 });
 
 /* ===== 새 레이아웃 추가 스타일 ===== */
-const $tabAndPointsRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $balanceRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flexDirection: "row",
   alignItems: "stretch",
   paddingHorizontal: spacing.lg,
@@ -1088,7 +1085,7 @@ const $tabAndPointsRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $pointsCardWrapper: ThemedStyle<ViewStyle> = () => ({
-  flex: 1.1,
+  flex: 1,
 });
 
 const $balanceCardCompact: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
@@ -1098,16 +1095,16 @@ const $balanceCardCompact: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   paddingHorizontal: spacing.lg,
   borderWidth: 1,
   borderColor: colors.tint + "25",
+  flex: 1,
   alignItems: "flex-start",
   justifyContent: "center",
   gap: spacing.xs,
 });
 
-const $tabCenterWrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({
-  flex: 0.9,
-  justifyContent: "flex-start",
-  alignItems: "center",
-  flexDirection: "column",
+const $rightStack: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flex: 1,
+  alignItems: "stretch",
+  justifyContent: "space-between",
   gap: spacing.xs,
 });
 
@@ -1121,25 +1118,24 @@ const $tabToggleInline: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   gap: spacing.xs,
 });
 
-/* 탭 아래 세로 정렬용 포인트 이력 버튼 (중앙 컬럼 내부) */
-const $pointHistoryCenterButton: ThemedStyle<ViewStyle> = ({
+const $pointHistoryInlineButton: ThemedStyle<ViewStyle> = ({
   colors,
   spacing,
 }) => ({
   flexDirection: "row",
   alignItems: "center",
+  justifyContent: "center",
   backgroundColor: colors.tint,
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.xs + 2,
+  paddingVertical: spacing.sm, // 높이 절반 수준으로 축소
   borderRadius: 18,
-  gap: 6,
+  gap: spacing.xs,
+  minWidth: 110,
 });
 
-const $pointHistoryCenterButtonText: ThemedStyle<TextStyle> = () => ({
+const $pointHistoryInlineButtonText: ThemedStyle<TextStyle> = () => ({
   color: "white",
   fontSize: 13,
   fontWeight: "700",
   letterSpacing: 0.3,
 });
-
-

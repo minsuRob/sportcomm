@@ -293,7 +293,7 @@ export default function TeamSelectionScreen() {
         message: "로그인이 필요한 기능입니다.",
         duration: 2000,
       });
-      setTimeout(() => router.back(), 600);
+      setTimeout(() => router.replace("/(app)/feed"), 600);
     }
   }, [isAuthenticated, router]);
 
@@ -454,7 +454,7 @@ export default function TeamSelectionScreen() {
   const handleSave = async () => {
     if (isLoading) return;
     if (!checkAuthentication()) {
-      setTimeout(() => router.back(), 600);
+      setTimeout(() => router.replace("/(app)/feed"), 600);
       return;
     }
     if (!currentUser) {
@@ -554,7 +554,7 @@ export default function TeamSelectionScreen() {
         duration: 3000,
       });
       if (isAuth) {
-        setTimeout(() => router.back(), 800);
+        setTimeout(() => router.replace("/(app)/feed"), 800);
       }
     }
   };
@@ -701,7 +701,7 @@ export default function TeamSelectionScreen() {
         <Text style={themed($errorText)}>{authError}</Text>
         <TouchableOpacity
           style={themed($retryButton)}
-          onPress={() => router.back()}
+          onPress={() => router.replace("/(app)/feed")}
         >
           <Text style={themed($retryButtonText)}>닫기</Text>
         </TouchableOpacity>

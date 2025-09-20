@@ -597,7 +597,7 @@ const $myTeamDays: ThemedStyle<TextStyle> = ({ colors }) => ({
 
 const $createPostButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",
-  bottom: spacing.xl + 20,
+  bottom: spacing.xl + 30,
   right: spacing.md,
   width: 56,
   height: 56,

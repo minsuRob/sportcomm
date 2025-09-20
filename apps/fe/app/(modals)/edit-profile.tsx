@@ -993,7 +993,7 @@ const avatarUrl =
         </View>
 
         {/* 나의 팀 섹션 */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={themed($section)}
           onPress={() => router.push("/(modals)/team-selection")}
         >
@@ -1008,10 +1008,10 @@ const avatarUrl =
               />
             </View>
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         {/* 비공개 프로필 섹션 */}
-        <View style={themed($section)}>
+        {/* <View style={themed($section)}>
           <View style={themed($privateRow)}>
             <View style={themed($privateInfo)}>
               <Text style={themed($sectionTitle)}>비공개 프로필</Text>
@@ -1032,7 +1032,7 @@ const avatarUrl =
               }
             />
           </View>
-        </View>
+        </View> */}
 
         {/* 추천인 코드 섹션 */}
         <View style={themed($section)}>

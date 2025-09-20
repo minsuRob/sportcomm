@@ -196,7 +196,7 @@ export const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
     };
 
     return merged;
-  }, [themeContext, appColor, teamColorTeamId]);
+  }, [themeContext, appColor, teamColorTeamId, teamColorKey]);
 
   // imperative theming (외부 스코프에서 스타일 참조 가능하도록)
   useEffect(() => {

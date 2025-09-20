@@ -15,6 +15,7 @@ import TeamLogo from "@/components/TeamLogo";
 import { useAppTheme } from "@/lib/theme/context";
 import type { ThemedStyle } from "@/lib/theme/types";
 import { useAuth } from "@/lib/auth/context/AuthContext";
+import { deriveTeamSlug } from "@/lib/team-data/players";
 import { showToast } from "@/components/CustomToast";
 import {
   quickUpdateAgeAndGender,
@@ -43,7 +44,7 @@ import TeamList from "@/components/team/TeamList";
  * - 비고: GraphQL 경로를 우회하여 빠른 UX 제공
  */
 export default function PostSignupProfileScreen(): React.ReactElement {
-  const { themed, theme } = useAppTheme();
+  const { themed, theme, setTeamColorOverride } = useAppTheme();
   const router = useRouter();
   const { user, isAuthenticated, reloadUser } = useAuth();
 
@@ -321,8 +322,22 @@ export default function PostSignupProfileScreen(): React.ReactElement {
   const handleSave = async (): Promise<void> => {
     if (saving || isApplyingReferral) return;
 
-    // 팀 선택 필수 검증
-    if (selectedTeams.length === 0) {
+    // 팀 선택 모달에서 팀을 선택한 후 user 정보가 업데이트되었는지 확인하기 위해 새로고침
+    try {
+      await reloadUser({ force: true });
+    } catch (error) {
+      console.warn("사용자 정보 새로고침 실패:", error);
+    }
+
+    // 팀 선택 필수 검증 (새로고침된 user.myTeams를 기반으로 다시 계산)
+    let currentSelectedTeams: any[] = [];
+    if (user?.myTeams?.length && getTeamById) {
+      currentSelectedTeams = user.myTeams
+        .map((userTeam: any) => getTeamById(userTeam.teamId || userTeam))
+        .filter((team) => team !== undefined);
+    }
+
+    if (currentSelectedTeams.length === 0) {
       showToast({
         type: "error",
         title: "팀 선택 필요",
@@ -384,6 +399,32 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           // 추천인 코드 적용 실패 시에도 계속 진행
           console.warn("추천인 코드 적용 실패했지만 프로필 저장은 계속 진행");
         }
+      }
+
+      // 첫 번째 팀의 색상을 자동으로 앱 테마에 적용
+      if (currentSelectedTeams.length > 0) {
+        const firstTeam = currentSelectedTeams[0];
+        if (firstTeam) {
+          try {
+            // team.code를 우선적으로 사용, 없으면 deriveTeamSlug 사용
+            const teamKey = firstTeam.code || deriveTeamSlug(firstTeam.name);
+
+            // teamKey가 유효한 값일 때만 색상 설정
+            if (teamKey && teamKey !== null) {
+              await setTeamColorOverride(firstTeam.id, teamKey);
+              // console.log(`첫 번째 팀(${firstTeam.name}) 색상을 앱 테마에 적용했습니다. teamKey: ${teamKey}`);
+            } else {
+              console.warn(`팀 색상 설정 실패: 유효하지 않은 teamKey. teamName: ${firstTeam.name}, teamCode: ${firstTeam.code}, teamKey: ${teamKey}`);
+            }
+          } catch (colorError) {
+            console.warn("팀 색상 설정 실패:", colorError);
+            // 색상 설정 실패해도 저장 성공으로 처리
+          }
+        } else {
+          console.warn("팀 색상 설정 실패: firstTeam이 undefined입니다.");
+        }
+      } else {
+        console.warn("팀 색상 설정 실패: currentSelectedTeams가 비어있습니다.");
       }
 
       // post-signup: 프로필 단계 완료 플래그 저장

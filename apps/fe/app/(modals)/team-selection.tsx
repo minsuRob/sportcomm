@@ -273,14 +273,13 @@ export default function TeamSelectionScreen() {
     applyTeamColor,
     handleTeamSelection,
     getPriorityBasedSelection,
-    deriveTeamSlug,
     findTeamById,
   } = useTeamColorSelection({
     myTeamsData,
     teamColorTeamId: null, // team-selection에서는 teamColorTeamId를 사용하지 않음
     selectedTeamId: safeSelectedTeams[0] || null, // 첫 번째 선택된 팀
-    setTeamColorOverride: async (color: string) => {
-      setTeamColorOverride(color);
+    setTeamColorOverride: async (teamId: string | null, teamKey: string | null) => {
+      await setTeamColorOverride(teamId, teamKey);
     },
   });
 

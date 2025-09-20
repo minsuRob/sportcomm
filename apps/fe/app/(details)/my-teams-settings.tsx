@@ -81,7 +81,7 @@ interface EditableUserTeam extends UserTeam {
 const MAX_TEAMS = 5;
 
 export default function MyTeamsSettingsScreen(): React.ReactElement {
-  const { themed, theme } = useAppTheme();
+  const { themed, theme, setTeamColorOverride } = useAppTheme();
   const { user: currentUser, accessToken, updateUser } = useAuth();
 
   // --- GraphQL: 내 팀 목록 조회 ---
@@ -204,7 +204,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
 
   /** 좋아한 날짜 선택 */
   const openMonthPicker = (teamId: string) => {
-    setActiveTeamId(teamId);
+    setActiveTeamId(teamId as TeamId);
     setMonthPickerVisible(true);
   };
 
@@ -229,7 +229,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
 
   /** 최애 선수 선택 */
   const openPlayerSelector = (teamId: string, teamName: string) => {
-    setActiveTeamId(teamId); // UUID로 저장용 ID 설정
+    setActiveTeamId(teamId as TeamId); // UUID로 저장용 ID 설정
     setActiveTeamName(teamName); // 팀 이름으로 선수 검색용
     setPlayerSelectorVisible(true);
   };
@@ -261,7 +261,7 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
 
   /** 포토카드 선택 (서버 반영 X) */
   const openPhotoCardSelector = (teamId: string) => {
-    setActiveTeamId(teamId);
+    setActiveTeamId(teamId as TeamId);
     setPhotoCardSelectorVisible(true);
   };
 
@@ -450,6 +450,19 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
       const refetched = await refetchMyTeams({ fetchPolicy: "network-only" });
       const newMyTeams = refetched?.data?.myTeams || [];
       await updateUser({ myTeams: newMyTeams } as any);
+
+      // 첫 번째 팀의 색상을 자동으로 앱 테마에 적용
+      if (selectedTeams.length > 0) {
+        const firstTeam = selectedTeams[0];
+        try {
+          const teamSlug = deriveTeamSlug(firstTeam.team.name);
+          await setTeamColorOverride(firstTeam.teamId, teamSlug);
+          // console.log(`첫 번째 팀(${firstTeam.team.name}) 색상을 앱 테마에 적용했습니다.`);
+        } catch (colorError) {
+          console.warn("팀 색상 설정 실패:", colorError);
+          // 색상 설정 실패해도 저장 성공으로 처리
+        }
+      }
 
       showToast({
         type: "success",

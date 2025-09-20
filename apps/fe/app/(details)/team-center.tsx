@@ -59,7 +59,7 @@ export default function TeamCenterScreen(): React.ReactElement {
   const goTeamColors = (): void => router.push("/(details)/team-colors-select");
   const goTeamFilter = (): void => router.push("/(details)/team-filter");
   const goMyTeamsSettings = (): void =>
-    router.push("/(details)/my-teams-settings");
+    router.push("/(details)/my-teams-settings?origin=team-center");
 
   return (
     <SafeAreaView style={themed($container)}>

@@ -438,7 +438,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
       });
 
       // 완료 시 팀 설정으로 이동
-      router.replace("/(details)/my-teams-settings");
+      router.replace("/(details)/my-teams-settings?origin=post-signup-profile");
     } catch (e: any) {
       showToast({
         type: "error",

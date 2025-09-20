@@ -17,6 +17,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@apollo/client";
 import {
   GET_MY_TEAMS,
@@ -64,6 +65,8 @@ const MAX_TEAMS = 5;
 export default function MyTeamsSettingsScreen(): React.ReactElement {
   const { themed, theme, setTeamColorOverride } = useAppTheme();
   const { user: currentUser, accessToken, updateUser } = useAuth();
+  const router = useRouter();
+  const { origin } = useLocalSearchParams();
 
   // --- GraphQL: 내 팀 목록 조회 ---
   const {
@@ -320,9 +323,22 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     });
   }, []);
 
-  /** 저장 */
+  /** 확인 및 저장 */
   const handleSave = useCallback(async () => {
-    if (updatingPriority || updatingDetails || !isDirty) return;
+    if (updatingPriority || updatingDetails) return;
+
+    // 변경사항이 없으면 그냥 이전 페이지로 이동
+    if (!isDirty) {
+      if (origin === "post-signup-profile") {
+        router.replace("/(app)/feed");
+      } else if (origin === "team-center") {
+        router.replace("/(details)/team-center");
+      } else {
+        router.back();
+      }
+      return;
+    }
+
     if (!currentUser) {
       showToast({
         type: "error",
@@ -397,6 +413,17 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
           };
         }),
       );
+
+      // 저장 완료 후 이전 페이지로 이동
+      setTimeout(() => {
+        if (origin === "post-signup-profile") {
+          router.replace("/(app)/feed");
+        } else if (origin === "team-center") {
+          router.replace("/(details)/team-center");
+        } else {
+          router.back();
+        }
+      }, 1800); // 토스트 메시지가 표시되는 시간만큼 대기
     } catch (e: any) {
       showToast({
         type: "error",
@@ -417,6 +444,8 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
     updateMyTeams,
     refetchMyTeams,
     updateUser,
+    origin,
+    router,
   ]);
 
   /** 팀 카드 렌더 */
@@ -582,18 +611,18 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         <Text style={themed($headerTitle)}>응원팀 상세설정</Text>
         <TouchableOpacity
           onPress={handleSave}
-          disabled={!isDirty || updatingPriority || updatingDetails}
+          disabled={updatingPriority || updatingDetails}
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text
             style={[
               themed($saveText),
-              (!isDirty || updatingPriority || updatingDetails) &&
+              (updatingPriority || updatingDetails) &&
                 themed($saveTextDisabled),
             ]}
           >
-            {updatingPriority || updatingDetails ? "저장 중..." : "저장"}
+            {updatingPriority || updatingDetails ? "저장 중..." : "확인"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -732,16 +761,16 @@ export default function MyTeamsSettingsScreen(): React.ReactElement {
         onSelectCard={(cardId) => handleSelectPhotoCard(cardId)}
       />
 
-      {/* 하단 고정 저장 바 (Dirty 시 표시) */}
-      {isDirty && !updatingPriority && !updatingDetails && (
+      {/* 하단 고정 확인 바 (항상 표시) */}
+      {!updatingPriority && !updatingDetails && (
         <View style={themed($bottomBar)}>
           <TouchableOpacity
             style={themed($bottomSaveButton)}
             onPress={handleSave}
             activeOpacity={0.85}
           >
-            <Ionicons name="save" size={18} color="#fff" />
-            <Text style={themed($bottomSaveText)}>변경사항 저장</Text>
+            <Ionicons name="checkmark-done" size={18} color="#fff" />
+            <Text style={themed($bottomSaveText)}>확인</Text>
           </TouchableOpacity>
         </View>
       )}

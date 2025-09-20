@@ -35,7 +35,7 @@ import {
   APPLY_REFERRAL_CODE,
 } from "@/lib/graphql/admin";
 import { useTeams } from "@/hooks/useTeams";
-import TeamList from "@/components/team/TeamList";
+import TeamCongratsList from "@/components/team/TeamCongratsList";
 
 /**
  * 회원가입 직후 경량 프로필 설정 모달
@@ -414,7 +414,9 @@ export default function PostSignupProfileScreen(): React.ReactElement {
               await setTeamColorOverride(firstTeam.id, teamKey);
               // console.log(`첫 번째 팀(${firstTeam.name}) 색상을 앱 테마에 적용했습니다. teamKey: ${teamKey}`);
             } else {
-              console.warn(`팀 색상 설정 실패: 유효하지 않은 teamKey. teamName: ${firstTeam.name}, teamCode: ${firstTeam.code}, teamKey: ${teamKey}`);
+              console.warn(
+                `팀 색상 설정 실패: 유효하지 않은 teamKey. teamName: ${firstTeam.name}, teamCode: ${firstTeam.code}, teamKey: ${teamKey}`,
+              );
             }
           } catch (colorError) {
             console.warn("팀 색상 설정 실패:", colorError);
@@ -550,10 +552,7 @@ export default function PostSignupProfileScreen(): React.ReactElement {
           {/* 선택된 팀 정보 표시 */}
           {selectedTeams.length > 0 && (
             <View style={themed($selectedTeamsContainer)}>
-              <Text style={themed($selectedTeamsLabel)}>
-                선택된 팀 ({selectedTeams.length})
-              </Text>
-              <TeamList
+              <TeamCongratsList
                 teams={selectedTeams.map((team) => ({
                   id: team.id,
                   team: {
@@ -562,32 +561,16 @@ export default function PostSignupProfileScreen(): React.ReactElement {
                     logoUrl: team.logoUrl,
                     icon: team.icon,
                   },
-                  // user.myTeams에서 해당 팀의 teamRegistrationOrder 가져오기
                   teamRegistrationOrder: (() => {
                     const foundUserTeam = user?.myTeams?.find(
-                      (userTeam) => userTeam.teamId === team.id || userTeam.team?.id === team.id
+                      (userTeam) =>
+                        userTeam.teamId === team.id ||
+                        userTeam.team?.id === team.id,
                     );
-                    console.log('🔍 TeamList teamRegistrationOrder debug:', {
-                      teamId: team.id,
-                      teamName: team.name,
-                      foundUserTeam: foundUserTeam ? {
-                        id: foundUserTeam.id,
-                        teamId: foundUserTeam.teamId,
-                        teamRegistrationOrder: foundUserTeam.teamRegistrationOrder,
-                        hasTeam: !!foundUserTeam.team
-                      } : null,
-                      allMyTeams: user?.myTeams?.map(mt => ({
-                        teamId: mt.teamId,
-                        teamRegistrationOrder: mt.teamRegistrationOrder,
-                        teamName: mt.team?.name
-                      }))
-                    });
                     return foundUserTeam?.teamRegistrationOrder;
                   })(),
                 }))}
-                size={24}
-                horizontal={true}
-                maxItems={5}
+                logoSize={48}
               />
             </View>
           )}

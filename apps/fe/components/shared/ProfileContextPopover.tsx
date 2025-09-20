@@ -59,7 +59,7 @@ export default function ProfileContextPopover({
         title: "로그아웃 성공",
         message: "로그아웃이 완료되었습니다.",
       });
-      router.push("/auth");
+      // router.push("/auth");
     } catch (error) {
       console.error("로그아웃 중 오류 발생:", error);
       showToast({

@@ -519,8 +519,22 @@ export default function ProfileScreen({
   };
 
   const avatarUrl =
-    userProfile.profileImageUrl ||
-    `https://i.pravatar.cc/150?u=${userProfile.id}`;
+    (userProfile.profileImageUrl &&
+      userProfile.profileImageUrl.trim() !== "" &&
+      userProfile.profileImageUrl) ||
+    (() => {
+      // 프로필 이미지가 없으면 첫 번째 팀의 로고를 fallback으로 사용
+      const myTeams = userProfile.myTeams;
+      if (Array.isArray(myTeams) && myTeams.length > 0) {
+        // priority가 0인 주 팀을 찾거나, 없으면 첫 번째 팀 사용
+        const primaryTeam = myTeams.find(team => team.priority === 0) || myTeams[0];
+        if (primaryTeam?.team?.logoUrl) {
+          return primaryTeam.team.logoUrl;
+        }
+      }
+      // 팀 로고도 없으면 기본 placeholder 사용
+      return `https://i.pravatar.cc/150?u=${userProfile.id}`;
+    })();
   const backgroundImageUrl = "https://picsum.photos/seed/picsum/400/200"; // Placeholder
 
   return (

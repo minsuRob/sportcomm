@@ -662,7 +662,7 @@ export default function CreatePostScreen() {
         showToast({
           type: "success",
           title: "게시글 작성 완료",
-          message: "게시글 작성으로 10포인트를 받았습니다!",
+          message: "게시글 작성으로 팀 경험치를 획득했습니다!",
           duration: 3000,
         });
       } catch (reloadError) {

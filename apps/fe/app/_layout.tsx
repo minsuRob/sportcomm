@@ -39,9 +39,20 @@ SplashScreen.preventAutoHideAsync();
 function RootLayoutNav() {
   const { navigationTheme, themeContext } = useAppTheme();
 
+  // 웹 환경에서 expo-router 의 Head 컴포넌트가 제공되지 않는 경우를 대비한 기본 타이틀 설정
+  React.useEffect(() => {
+    if (typeof document !== "undefined") {
+      // 이미 다른 곳(useDocumentTitle 등)에서 설정했다면 덮어쓰지 않도록 최소 조건
+      if (!document.title || document.title.trim().length === 0) {
+        document.title = "Sportalk - 스포톡";
+      }
+    }
+  }, []);
+
   return (
     <NavigationThemeProvider value={navigationTheme}>
       <StatusBar style={themeContext === "dark" ? "light" : "dark"} />
+      {/* Head 컴포넌트 미지원 환경 fallback: document.title 직접 지정 */}
       <GlobalWebLayout>
         <SafeAreaWrapper edges={["top", "bottom"]}>
           <Slot />

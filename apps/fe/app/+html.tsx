@@ -7,21 +7,22 @@ export default function Root({ children }: PropsWithChildren) {
   return (
     <html lang="ko">
       <head>
+        <title>Sportalk - 스포톡</title>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
         {/* Open Graph 메타 태그 - 소셜 미디어 공유용 */}
-        <meta property="og:title" content="SportComm - 스포츠 커뮤니티" />
-        <meta property="og:description" content="스포츠 팬들을 위한 최고의 커뮤니티 플랫폼" />
+        <meta property="og:title" content="Sportalk - 스포톡" />
+        <meta property="og:description" content="야구, 축구, e스포츠 팬들 통합 커뮤니티 플랫폼" />
         <meta property="og:image" content="/thumnails.jpg" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://sportcomm.com" />
 
         {/* Twitter Card 메타 태그 */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="SportComm - 스포츠 커뮤니티" />
-        <meta name="twitter:description" content="스포츠 팬들을 위한 최고의 커뮤니티 플랫폼" />
+        <meta name="twitter:title" content="Sportalk - 스포톡" />
+        <meta name="twitter:description" content="야구, 축구, e스포츠 팬들 통합 커뮤니티 플랫폼" />
         <meta name="twitter:image" content="/thumnails.jpg" />
 
         {/* 기본 메타 태그 */}

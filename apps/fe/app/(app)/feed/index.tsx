@@ -86,7 +86,7 @@ import FeedHeader from "@/components/feed/FeedHeader";
 import { onRefresh } from "@/lib/refresh/refreshBus";
 import AuthModal from "@/components/feed/AuthModal";
 import ListFooter from "@/components/feed/ListFooter";
-import UploadTaskBar from "../../components/upload/UploadTaskBar";
+import UploadTaskBar from "../../../components/upload/UploadTaskBar";
 
 import TeamFilterSelector from "@/components/TeamFilterSelector"; // 팀 필터 모달 (외부 제어)
 import { useAuth } from "@/lib/auth/context/AuthContext";

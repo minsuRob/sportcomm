@@ -447,6 +447,62 @@ export async function fetchLatestActiveBannerNotice(options?: {
 }
 
 /**
+ * 특정 ID의 공지 조회
+ * - draft 제외
+ * - 활성 상태 확인
+ */
+export async function fetchNoticeById(
+  noticeId: string,
+  options?: {
+    tableName?: string;
+    now?: Date;
+    debug?: boolean;
+  },
+): Promise<Notice | null> {
+  const {
+    tableName = DEFAULT_NOTICE_TABLE,
+    now = new Date(),
+    debug = false,
+  } = options ?? {};
+
+  try {
+    const client: any = supabase as any;
+
+    // snake_case 우선 (DB 스키마에 맞춤)
+    const { data, error } = await client
+      .from(tableName)
+      .select("*")
+      .eq("id", noticeId)
+      .eq("draft", false)
+      .single();
+
+    if (error) {
+      if (debug) {
+        console.warn("[notice/api] fetchNoticeById 에러:", error);
+      }
+      return null;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    // 매핑 및 활성 필터
+    const notice = mapDbRowToNotice(data);
+    if (!isActive(notice, now)) {
+      return null;
+    }
+
+    return notice;
+  } catch (e) {
+    if (debug) {
+      console.warn("[notice/api] fetchNoticeById 예외:", e);
+    }
+    return null;
+  }
+}
+
+/**
  * 예시 사용 방법
  *
  * const banner = await fetchLatestActiveBannerNotice({ debug: __DEV__ });
@@ -454,5 +510,10 @@ export async function fetchLatestActiveBannerNotice(options?: {
  *   // 배너 렌더
  * } else {
  *   // 기본 문구/배너 미표시 처리
+ * }
+ *
+ * const notice = await fetchNoticeById("notice-id", { debug: __DEV__ });
+ * if (notice) {
+ *   // 공지 상세 표시
  * }
  */

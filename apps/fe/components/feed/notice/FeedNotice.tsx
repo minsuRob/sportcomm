@@ -308,17 +308,18 @@ export const FeedNotice: React.FC<FeedNoticeProps> = ({
 
   /**
    * 공지 클릭 → 상세/목록 이동
+   * 피드 탭 내 Stack을 이용하여 iOS 뒤로가기 제스처 지원
    */
   const handlePressNotice = useCallback(() => {
     if (!navigateOnPress) return;
     const target = entries[index] ?? null;
     if (target?.id) {
       router.push({
-        pathname: "/(details)/notice/[noticeId]",
+        pathname: "/feed/notice/[noticeId]",
         params: { noticeId: target.id },
       });
     } else {
-      router.push("/(details)/notice");
+      router.push("/feed/notice");
     }
   }, [navigateOnPress, entries, index, router]);
 

@@ -209,7 +209,8 @@ export default function ProfileScreen({
   );
 
   useEffect(() => {
-    const nextId = currentUser?.id || null;
+    // targetUserId가 변경될 때만 refetch 수행
+    const nextId = targetUserId;
 
     // ID 없거나 변경 없음 → 조기 종료
     if (!nextId || nextId === prevUserIdRef.current) return;
@@ -242,7 +243,7 @@ export default function ProfileScreen({
       }
     };
   }, [
-    currentUser?.id,
+    targetUserId, // currentUser?.id 대신 targetUserId 사용
     isOwnProfile,
     refetchProfile,
     refetchPosts,
@@ -328,7 +329,7 @@ export default function ProfileScreen({
   };
 
   const handleTeamSelection = () => {
-    router.push("/(modals)/team-selection");
+    router.push("/(details)/team-center");
   };
 
   const handleAdminDashboard = () => {
@@ -616,38 +617,44 @@ export default function ProfileScreen({
             {[...userProfile.myTeams]
               .sort((a, b) => a.priority - b.priority)
               .slice(0, 3)
-              .map((userTeam) => (
-                <View key={userTeam.id} style={themed($teamItem)}>
-                  <TeamLogo
-                    logoUrl={userTeam.team.logoUrl}
-                    fallbackIcon={userTeam.team.icon}
-                    teamName={userTeam.team.name}
-                    size={24}
-                  />
-                  {/* 팀명과 일수 */}
-                  <Text style={themed($teamInfo)}>
-                    {userTeam.team.name}
-                    {userTeam.favoriteDate && (
-                      <Text style={themed($teamYear)}>
-                        {" "}
-                        {formatFanDuration(userTeam.favoriteDate).years > 0
-                          ? `${formatFanDuration(userTeam.favoriteDate).years}년째`
-                          : `${formatFanDuration(userTeam.favoriteDate).months}개월째`}
-                        <Text style={themed($teamDays)}>
-                          {" "}
-                          ({formatFanDuration(userTeam.favoriteDate).totalDays}
-                          일)
-                        </Text>
+              .map((userTeam) => {
+                const duration = userTeam.favoriteDate
+                  ? formatFanDuration(userTeam.favoriteDate)
+                  : null;
+                return (
+                  <View key={userTeam.id} style={themed($teamItem)}>
+                    {/* 경험치 표시 - 맨 위에 배치 */}
+                    {/* <Text style={themed($experienceText)}>
+                      {(userTeam as any).experience || 0} EXP
+                    </Text> */}
+                    {/* 팀 로고와 이름을 가로로 배치 */}
+                    <View style={themed($teamLogoAndName)}>
+                      <TeamLogo
+                        logoUrl={userTeam.team.logoUrl}
+                        fallbackIcon={userTeam.team.icon}
+                        teamName={userTeam.team.name}
+                        size={24}
+                      />
+                      {/* 팀명과 함께한 기간 */}
+                      <Text style={themed($teamInfo)}>
+                        {userTeam.team.name}
+                        {duration && (
+                          <Text style={themed($teamYear)}>
+                            {", 함께한지"}
+                            <Text style={themed($teamDays)}>
+                              {" "}
+                              ({duration.totalDays}일){" "}
+                            </Text>
+                            {duration.years > 0
+                              ? `${duration.years}년째`
+                              : `${duration.months}개월째`}
+                          </Text>
+                        )}
                       </Text>
-                    )}
-                    {/* 경험치 표시 */}
-                    <Text style={themed($experienceText)}>
-                      {" "}
-                      {userTeam.experience || 0} EXP
-                    </Text>
-                  </Text>
-                </View>
-              ))}
+                    </View>
+                  </View>
+                );
+              })}
           </View>
         ) : (
           <Text style={themed($noTeamText)}>아직 선택한 팀이 없습니다</Text>
@@ -863,7 +870,7 @@ const $teamsContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
 });
 
 const $teamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
-  flexDirection: "row",
+  flexDirection: "column",
   alignItems: "center",
   backgroundColor: colors.backgroundAlt,
   paddingHorizontal: spacing.md,
@@ -878,10 +885,16 @@ const $teamItem: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   minWidth: "80%",
 });
 
+const $teamLogoAndName: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  flexDirection: "row",
+  alignItems: "center",
+  // marginTop: spacing.xs,
+});
+
 const $teamInfo: ThemedStyle<TextStyle> = ({ colors, spacing }) => ({
   fontSize: 16,
   fontWeight: "600",
-  color: colors.text,
+  color: colors.tint,
   marginLeft: spacing.sm,
   flex: 1,
 });

@@ -237,6 +237,8 @@ export interface UserTeam {
   favoritePlayerNumber?: number;
   teamRegistrationOrder?: number;
   createdAt: string;
+  experience: number;
+  experienceToNextLevel: number;
   team: Team;
 }
 

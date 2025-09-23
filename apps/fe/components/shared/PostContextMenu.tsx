@@ -37,10 +37,10 @@ const REPORT_TYPE_OPTIONS = [
  * 피드백(건의) 유형 옵션
  */
 const FEEDBACK_TYPE_OPTIONS = [
+  { value: "GENERAL", label: "일반 의견" },
   { value: "BUG_REPORT", label: "버그 신고" },
   { value: "FEATURE_REQUEST", label: "기능 요청" },
   { value: "IMPROVEMENT", label: "개선 제안" },
-  { value: "GENERAL", label: "일반 의견" },
   { value: "COMPLIMENT", label: "칭찬" },
   { value: "COMPLAINT", label: "불만" },
 ] as const;
@@ -379,7 +379,7 @@ export default function PostContextMenu({
             placeholder={
               dialogMode === "REPORT"
                 ? "신고 사유를 구체적으로 작성해 주세요 (최소 10자)"
-                : "건의/의견을 입력해 주세요 (최소 10자)"
+                : "건의/의견을 입력해 주세요 (최소 10자)\n확인시 피드백 포인트가 증정됩니다."
             }
             placeholderTextColor={theme.colors.textDim}
             multiline

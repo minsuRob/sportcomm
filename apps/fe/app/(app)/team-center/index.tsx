@@ -1,5 +1,5 @@
 import React from "react";
-import TeamCenterDetailsScreen from "../(details)/team-center";
+import TeamCenterDetailsScreen from "../../(details)/team-center";
 
 /**
  * 탭 전용 래퍼 스크린 (Team Center)

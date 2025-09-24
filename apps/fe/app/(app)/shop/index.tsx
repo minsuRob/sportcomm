@@ -1,5 +1,5 @@
 import React from "react";
-import ShopDetailsPage from "../(details)/shop";
+import ShopDetailsPage from "../../(details)/shop";
 
 /**
  * 탭 전용 래퍼 스크린 (Shop)

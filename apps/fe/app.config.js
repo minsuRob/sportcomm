@@ -19,7 +19,8 @@ module.exports = {
     },
     ios: {
       bundleIdentifier: "com.releaseteamginger2.sportalkdev", // iOS용 고유 식별자
-      supportsTablet: true // 필요에 따라 true/false
+      supportsTablet: true, // 필요에 따라 true/false
+      icon: "./assets/images/icon.png",
     },
     android: {
       package: "com.releaseteamginger2.sportalkdev"
